@@ -1,16 +1,11 @@
 deepgnn:
-  data_dir: 
   batch_size: 140
   num_epochs: 100
+  mode: train
   feature_idx: 1
   feature_dim: 50
   label_idx: 0
   label_dim: 121
-  mode: train
-  algo:
-  model_dir:
-  metric_dir:
-  save_path:
   seed: 123
   backend: snark
   graph_type: local

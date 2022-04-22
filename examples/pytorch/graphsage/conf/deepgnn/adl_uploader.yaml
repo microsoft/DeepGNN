@@ -1,0 +1,6 @@
+mode: inference
+save_path: /integration_test/test_adl_uploader
+enable_adl_uploader: true
+uploader_store_name: snrgnndls
+uploader_process_num: 2
+uploader_threads_num: 10
