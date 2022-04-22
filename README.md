@@ -16,7 +16,7 @@ Install pip package:
 ```bash
 python -m pip install deepgnn-torch
 ```
-If you want to build package from source, see instructions in `CONTRIBUTING.md`.
+If you want to build package from source, see instructions in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 Train and evaluate a graphsage model with pytorch on cora dataset:
 ```bash
