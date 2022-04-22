@@ -1,0 +1,4 @@
+# for different TF version, we need different addon version,
+# please follow the instruction here: https://github.com/tensorflow/addons
+# to find which addon version is correct.
+tensorflow-addons==0.13.0

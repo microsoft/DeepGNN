@@ -1,0 +1,92 @@
+parameters:
+  platform: 'tensorflow'
+  device: ''
+  testModels:
+
+steps:
+- ${{ if eq(parameters.device, 'cpu') }}:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.7'
+      displayName: 'Use Python 3.7'
+
+- task: DownloadBuildArtifacts@0
+  inputs:
+    artifactName: examples
+    downloadPath: $(Build.StagingDirectory)
+
+- script: |
+    sudo apt update
+    sudo apt install -y --no-install-recommends cmake
+    pip install --upgrade pip
+  displayName: 'Install system requirements.'
+
+- ${{ if and(eq(parameters.device, 'gpu'), eq(parameters.platform, 'tensorflow')) }}:
+  - task: Bash@3
+    retryCountOnTaskFailure: 3
+    displayName: 'Install specific version of TF on GPU agent.'
+    inputs:
+      targetType: 'inline'
+      script: |
+        pip install --timeout 300 tensorflow==2.3.3;
+
+- ${{ if eq(parameters.platform, 'tensorflow') }}:
+  - task: Bash@3
+    retryCountOnTaskFailure: 3
+    displayName: 'Install deepgnn tensorflow pip packages.'
+    inputs:
+      targetType: 'inline'
+      script: |
+        pip install --timeout 300 deepgnn-tf==$(build_version) --index-url https://$(deepgnnFEEDToken)@msasg.pkgs.visualstudio.com/Bing_Ads/_packaging/DeepGraph/pypi/simple
+        pip install --timeout 300 -r $(Build.StagingDirectory)/examples/tensorflow/requirements.txt
+        export HOROVOD_WITH_GLOO=1
+        export HOROVOD_WITHOUT_MPI=1
+        export HOROVOD_WITH_TENSORFLOW=1
+        export HOROVOD_WITHOUT_PYTORCH=1
+        export HOROVOD_WITHOUT_MXNET=1
+        pip install --no-cache-dir horovod
+
+- ${{ if eq(parameters.platform, 'pytorch') }}:
+  - task: Bash@3
+    retryCountOnTaskFailure: 3
+    displayName: 'Install deepgnn pytorch pip packages.'
+    inputs:
+      targetType: 'inline'
+      script: |
+        pip install --timeout 300 deepgnn-torch==$(build_version) --index-url https://$(deepgnnFEEDToken)@msasg.pkgs.visualstudio.com/Bing_Ads/_packaging/DeepGraph/pypi/simple
+        pip install --timeout 300 -r $(Build.StagingDirectory)/examples/pytorch/requirements.txt
+        export HOROVOD_WITH_GLOO=1
+        export HOROVOD_WITHOUT_MPI=1
+        export HOROVOD_WITH_PYTORCH=1
+        export HOROVOD_WITHOUT_TENSORFLOW=1
+        export HOROVOD_WITHOUT_MXNET=1
+        pip install --no-cache-dir horovod
+
+- ${{ if ne(parameters.testModels, '') }}:
+  - ${{ each testModel in parameters.testModels }}:
+    - script: |
+        cd $(Build.StagingDirectory)
+        export USER=DeepGraphCI
+        export PYTHONPATH=$(Build.StagingDirectory)
+        sh -c "${job_command}"
+      displayName: 'Run script test for ${{ testModel }}.'
+      ${{ if eq(parameters.platform, 'pytorch') }}:
+        ${{ if eq(testModel, 'gat') }}:
+          env: { job_command: 'cd ./examples/pytorch/gat/ && sudo chmod +x *.sh && bash ./run.sh ${{ parameters.device}}'}
+        ${{ if eq(testModel, 'geometric_gat') }}:
+          env: { job_command: 'cd ./examples/pytorch/geometric/gat/ && sudo chmod +x *.sh && bash ./run.sh ${{ parameters.device}}'}
+        ${{ if eq(testModel, 'graphsage_supervised') }}:
+          env: { job_command: 'cd ./examples/pytorch/graphsage/ && sudo chmod +x *.sh && bash ./run.sh supervised no ${{ parameters.device}} && bash ./run.sh supervised no ${{ parameters.device}} disk yes'}
+        ${{ if eq(testModel, 'graphsage_unsupervised') }}:
+          env: { job_command: 'cd ./examples/pytorch/graphsage/ && sudo chmod +x *.sh && bash ./run.sh unsupervised no ${{parameters.device}}'}
+        ${{ if eq(testModel, 'hetgnn') }}:
+          env: { job_command: 'cd ./examples/pytorch/hetgnn/ && sudo chmod +x *.sh && bash ./run.sh ${{ parameters.device}}'}
+      ${{ if eq(parameters.platform, 'tensorflow') }}:
+        ${{ if eq(testModel, 'graphsage') }}:
+          env: { job_command: 'cd ./examples/tensorflow/sage/ && sudo chmod +x *.sh && bash ./run.sh ${{ parameters.device}} && bash ./run.sh ${{ parameters.device}} disk yes'}
+        ${{ if eq(testModel, 'gcn') }}:
+          env: { job_command: 'cd ./examples/tensorflow/gcn/ && sudo chmod +x *.sh && bash ./run.sh ${{ parameters.device}} cleanup'}
+        ${{ if eq(testModel, 'han') }}:
+          env: { job_command: 'cd ./examples/tensorflow/han/ && sudo chmod +x *.sh && bash ./run.sh ${{ parameters.device}} cleanup'}
+        ${{ if eq(testModel, 'gat') }}:
+          env: { job_command: 'cd ./examples/tensorflow/gat/ && sudo chmod +x *.sh && bash ./run.sh ${{ parameters.device}} cleanup'}

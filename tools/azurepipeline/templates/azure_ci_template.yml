@@ -1,0 +1,20 @@
+parameters:
+  jobGroupName: ''
+  device: ''
+  platform:
+    name: ''
+  testModels:
+
+jobs:
+- job: Agent_Integration_test_${{ parameters.platform.name }}_${{ parameters.device }}
+  pool:
+    vmImage: 'ubuntu-18.04'
+  timeoutInMinutes: 120
+  steps:
+  - checkout: none
+
+  - template: azure_ci_job_on_agent_template.yml
+    parameters:
+      platform: ${{ parameters.platform.name }}
+      device: ${{ parameters.device}}
+      testModels: ${{parameters.testModels}}

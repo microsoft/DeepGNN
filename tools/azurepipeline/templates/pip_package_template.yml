@@ -1,0 +1,394 @@
+  jobs:
+  - job:
+    pool:
+      vmImage: 'ubuntu-18.04'
+    strategy:
+      matrix:
+        Python37:
+            python.version: '3.7'
+        Python38:
+            python.version: '3.8'
+    displayName: 'Linux'
+    timeoutInMinutes: 180
+
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '$(python.version)'
+
+    - task: AzureKeyVault@1
+      inputs:
+        azureSubscription: snrgnnkvconnection
+        keyVaultName: snrgnnkv
+        secretsFilter: 'utcoresitexml'
+
+    # Installing build tools
+    - script: |
+        sudo apt install curl gnupg cmake
+        curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel.gpg
+        sudo mv bazel.gpg /etc/apt/trusted.gpg.d/
+        echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
+        sudo apt update && sudo apt install bazel
+        sudo apt install g++-10
+        pip install wheel twine artifacts-keyring --pre
+      displayName: Install build prerequisites.
+
+    - script: |
+        mkdir -p /tmp/snark/etc/hadoop/
+        echo '$(utcoresitexml)' > /tmp/snark/etc/hadoop/core-site.xml
+      displayName: Install core-site.xml for test cases.
+
+    # Running tests. It is important to run them in debug build to trigger C++ asserts.
+    - task: Bash@3
+      retryCountOnTaskFailure: 3
+      displayName: Run snark tests.
+      inputs:
+        targetType: 'inline'
+        script: |
+          bazel test -c dbg //src/cc/tests:* --test_output=all --test_timeout 20 --config=linux
+
+    - task: PublishTestResults@2
+      displayName: 'Publish test results for c++ GE.'
+      inputs:
+        testResultsFiles: bazel-testlogs/src/cc/**/test.xml
+        testRunTitle: bazel_tests
+        platform: '$(python.version)'
+        mergeTestResults: true
+
+    - task: Bash@3
+      retryCountOnTaskFailure: 3
+      displayName: Run python tests for deepgnn.
+      inputs:
+        targetType: 'inline'
+        script: |
+          bazel test -c dbg //src/python/deepgnn/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=linux
+
+    - task: PublishTestResults@2
+      displayName: 'Publish test results for python.'
+      inputs:
+        testResultsFiles: bazel-testlogs/src/python/**/test.xml
+        testRunTitle: bazel_tests
+        platform: '$(python.version)'
+        mergeTestResults: true
+
+    - task: Bash@3
+      retryCountOnTaskFailure: 3
+      displayName: Run python tests for deepgnn TF.
+      inputs:
+        targetType: 'inline'
+        script: |
+          bazel test -c dbg //examples/tensorflow/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=linux
+
+    - task: PublishTestResults@2
+      displayName: 'Publish test results for deepgnn TF.'
+      inputs:
+        testResultsFiles: bazel-testlogs/examples/tensorflow/**/test.xml
+        testRunTitle: bazel_tests
+        platform: '$(python.version)'
+        mergeTestResults: true
+
+    # TODO (tiantiaw):
+    # 1. here we don't include examples/pytorch/geometric test cases because I tried it doesn't work in bazel,
+    # pytorch geometric requires torch-scatter, torch-geometric, torch-sparse packages which depends on torch, we cannot do it
+    # in single pip install.
+    # 2. currently debug build will raise exception when testing examples/pytorch/graphsage model, here we
+    # use multijob (default bazel setting) to build a release target and then use --jobs 1 to run the pytorch
+    # test cases sequencially.
+    - task: Bash@3
+      retryCountOnTaskFailure: 3
+      displayName: Run python tests for deepgnn torch.
+      inputs:
+        targetType: 'inline'
+        script: |
+          bazel build -c opt //src/cc/lib:wrapper --config=linux
+          bazel test -c opt //examples/pytorch/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=linux
+
+    - task: PublishTestResults@2
+      displayName: 'Publish test results for deepgnn torch.'
+      inputs:
+        testResultsFiles: bazel-testlogs/examples/pytorch/**/test.xml
+        testRunTitle: bazel_tests
+        platform: '$(python.version)'
+        mergeTestResults: true
+
+    - task: Bash@3
+      displayName: Run deepgnn notebook tests.
+      inputs:
+        targetType: 'inline'
+        script: |
+          bazel test -c opt //docs/tutorials:notebook_test --test_output=all --test_timeout 6000 --config=linux
+
+    - task: PublishTestResults@2
+      displayName: 'Publish test results for deepgnn notebooks.'
+      inputs:
+        testResultsFiles: bazel-testlogs/docs/**/test.xml
+        testRunTitle: bazel_tests
+        platform: '$(python.version)'
+        mergeTestResults: true
+
+    # Run benchmarks
+    - script: |
+        bazel run -c opt src/cc/lib/benchmark:grpc_benchmark --config=linux
+        bazel run -c opt src/cc/lib/benchmark:sampler_benchmark --config=linux
+        bazel run -c opt src/cc/lib/benchmark:euler_sampler_benchmark --config=linux
+        bazel run -c opt src/cc/lib/benchmark:neighbor_sampler_benchmark --config=linux
+      displayName: Run benchmark tests.
+
+    - script: |
+        cd $(Build.SourcesDirectory)
+        cd tools/manylinux
+        sudo ./install-gcc11.sh
+        cd ../..
+        bazel build -c opt //src/cc/lib:wrapper --config=manylinux --force_pic
+        cp -f ./bazel-bin/src/cc/lib/libwrapper.so $(Build.SourcesDirectory)/src/python/deepgnn/graph_engine/snark/
+        sudo chmod -R a+rw $(Build.SourcesDirectory)/src/python
+        cd $(Build.SourcesDirectory)/src/python
+        python setup.py deepgnn-ge bdist_wheel --plat-name manylinux1_x86_64 clean --all
+
+        pip install auditwheel
+        echo 'Verify external libraries for deepgnn-ge package...'
+        auditwheel show ./dist/deepgnn_ge-$(build_version)-py3-none-manylinux1_x86_64.whl
+
+        python setup.py deepgnn-tf bdist_wheel --plat-name manylinux1_x86_64 clean --all
+        python setup.py deepgnn-torch bdist_wheel --plat-name manylinux1_x86_64 clean --all
+      displayName: Build pip packages.
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathtoPublish: '$(Build.SourcesDirectory)/src/python/dist'
+        artifactName: dist
+
+    - task: TwineAuthenticate@1
+      displayName: 'Twine Authenticate'
+      inputs:
+        artifactFeed: Bing_Ads/DeepGraph
+
+    - script: |
+        python -m twine upload -r DeepGraph --skip-existing --config-file $(PYPIRC_PATH) $(Build.SourcesDirectory)/src/python/dist/deepgnn_*.whl
+      displayName: Upload artifacts.
+
+  - job:
+    pool:
+      vmImage: 'windows-2019'
+    strategy:
+      matrix:
+        Python37:
+            python.version: '3.7'
+        Python38:
+            python.version: '3.8'
+    displayName: 'Windows'
+    timeoutInMinutes: 300
+
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '$(python.version)'
+
+    - task: AzureKeyVault@1
+      inputs:
+        azureSubscription: snrgnnkvconnection
+        keyVaultName: snrgnnkv
+        secretsFilter: 'utcoresitexml'
+
+    # Running tests. For some reason tests are running slower on windows, hence larger timeouts.
+    - task: PowerShell@2
+      retryCountOnTaskFailure: 3
+      inputs:
+        targetType: 'inline'
+        script: |
+          bazel test -c dbg //src/cc/tests:* --test_output=all --test_timeout 60 --config=windows --build_python_zip=false --enable_runfiles=true
+
+    - task: PublishTestResults@2
+      displayName: 'Publish test results for GE.'
+      inputs:
+        testResultsFiles: bazel-testlogs/src/cc/**/test.xml
+        testRunTitle: bazel_tests
+        platform: '$(python.version)'
+        mergeTestResults: true
+
+    - task: PowerShell@2
+      retryCountOnTaskFailure: 3
+      displayName: Install required dependencies.
+      inputs:
+        targetType: 'inline'
+        script: |
+          $maxAttempts = 5
+          $wc = New-Object System.Net.WebClient
+
+          $source = "https://deepgraphpub.blob.core.windows.net/public/testdata/rust-1.57.0-x86_64-pc-windows-msvc.msi"
+          $dest = "$(Build.SourcesDirectory)\rust-1.57.0-x86_64-pc-windows-msvc.msi"
+          $attemptCount = 0
+          Do {
+              $attemptCount++
+              $wc.DownloadFile($source, $dest)
+          } while (((Test-Path $dest) -eq $false) -and ($attemptCount -le $maxAttempts))
+
+          $source = "https://deepgraphpub.blob.core.windows.net/public/testdata/Win64OpenSSL-1_1_1L.msi"
+          $dest = "$(Build.SourcesDirectory)\Win64OpenSSL-1_1_1L.msi"
+          $attemptCount = 0
+          Do {
+              $attemptCount++
+              $wc.DownloadFile($source, $dest)
+          } while (((Test-Path $dest) -eq $false) -and ($attemptCount -le $maxAttempts))
+
+          Start-Process msiexec.exe -Wait -ArgumentList '/I $(Build.SourcesDirectory)\Win64OpenSSL-1_1_1L.msi /quiet' -NoNewWindow
+          Start-Process msiexec.exe -Wait -ArgumentList '/I $(Build.SourcesDirectory)\rust-1.57.0-x86_64-pc-windows-msvc.msi /quiet' -NoNewWindow
+
+          mkdir -p C:/usr/local/hadoop/etc/hadoop/
+          mkdir -p C:/usr/local/hadoop/etc/hadoop/datalake
+          echo '$(utcoresitexml)' > C:/usr/local/hadoop/etc/hadoop/core-site.xml
+
+    - task: PowerShell@2
+      retryCountOnTaskFailure: 3
+      displayName: Run python tests for deepgnn.
+      inputs:
+        targetType: 'inline'
+        script: |
+          bazel test -c dbg //src/python/deepgnn/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=windows --build_python_zip=false --enable_runfiles=true
+
+    - task: PublishTestResults@2
+      displayName: 'Publish test results for deepgnn.'
+      inputs:
+        testResultsFiles: bazel-testlogs/src/python/**/test.xml
+        testRunTitle: bazel_tests
+        platform: '$(python.version)'
+        mergeTestResults: true
+
+    - task: PowerShell@2
+      inputs:
+        targetType: 'inline'
+        script: |
+          pip install wheel twine artifacts-keyring --pre
+
+    - task: TwineAuthenticate@1
+      inputs:
+        artifactFeed: 'Bing_Ads/DeepGraph'
+
+    - task: PowerShell@2
+      inputs:
+        targetType: 'inline'
+        script: |
+          $env:PATH+=";"+${env:ProgramFiles(x86)}+"\Microsoft Visual Studio\2019\Enterprise\VC\Tools\Llvm\bin"
+          bazel build -c opt //src/cc/lib:wrapper --config=windows
+
+          cd $(Build.SourcesDirectory)/src/python
+          python setup.py deepgnn-ge bdist_wheel --plat-name win-amd64 clean --all
+          python setup.py deepgnn-tf bdist_wheel --plat-name win-amd64 clean --all
+          python setup.py deepgnn-torch bdist_wheel --plat-name win-amd64 clean --all
+          python -m twine upload -r DeepGraph $(Build.SourcesDirectory)/src/python/dist/deepgnn_*.whl --config-file $(PYPIRC_PATH) --skip-existing
+
+  - job:
+    pool:
+      vmImage: 'macOS-11'
+    strategy:
+      matrix:
+        Python37:
+            python.version: '3.7'
+        Python38:
+            python.version: '3.8'
+    displayName: 'MacOS'
+    timeoutInMinutes: 120
+
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '$(python.version)'
+
+    - task: AzureKeyVault@1
+      inputs:
+        azureSubscription: snrgnnkvconnection
+        keyVaultName: snrgnnkv
+        secretsFilter: 'utcoresitexml'
+
+    - script: |
+        mkdir -p /tmp/snark/etc/hadoop/
+        echo '$(utcoresitexml)' > /tmp/snark/etc/hadoop/core-site.xml
+      displayName: Install core-site.xml for test cases.
+
+    # Running tests. For some reason tests are running slower on MacOS, hence larger timeouts.
+    - task: Bash@3
+      retryCountOnTaskFailure: 3
+      displayName: Run snark tests for GE.
+      inputs:
+        targetType: 'inline'
+        script: |
+          bazel test -c dbg //src/cc/tests:* --test_output=all --test_timeout 60 --config=darwin
+
+    - task: PublishTestResults@2
+      displayName: 'Publish test results'
+      inputs:
+        testResultsFiles: bazel-testlogs/src/cc/**/test.xml
+        testRunTitle: bazel_tests
+        platform: '$(python.version)'
+        mergeTestResults: true
+
+    - task: Bash@3
+      retryCountOnTaskFailure: 3
+      displayName: Run python tests for deepgnn.
+      inputs:
+        targetType: 'inline'
+        script: |
+          bazel test -c dbg //src/python/deepgnn/...:* --jobs 1 --test_output=all --test_timeout 0 --config=darwin
+
+    - task: PublishTestResults@2
+      displayName: 'Publish test results for python.'
+      inputs:
+        testResultsFiles: bazel-testlogs/src/python/**/test.xml
+        testRunTitle: bazel_tests
+        platform: '$(python.version)'
+        mergeTestResults: true
+
+    - task: Bash@3
+      retryCountOnTaskFailure: 3
+      displayName: Run python tests for deepgnn TF.
+      inputs:
+        targetType: 'inline'
+        script: |
+          bazel test -c dbg //examples/tensorflow/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=darwin
+
+    - task: PublishTestResults@2
+      displayName: 'Publish test results for deepgnn TF.'
+      inputs:
+        testResultsFiles: bazel-testlogs/examples/tensorflow/**/test.xml
+        testRunTitle: bazel_tests
+        platform: '$(python.version)'
+        mergeTestResults: true
+
+    # TODO: currently debug build will raise exception when testing examples/pytorch/graphsage model, here we
+    # use multijob (default bazel setting) to build a release target and then use --jobs 1 to run the pytorch
+    # test cases sequencially.
+    - task: Bash@3
+      retryCountOnTaskFailure: 3
+      displayName: Run python tests for deepgnn torch.
+      inputs:
+        targetType: 'inline'
+        script: |
+          bazel build -c opt //src/cc/lib:wrapper --config=darwin
+          bazel test -c opt //examples/pytorch/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=darwin
+
+    - task: PublishTestResults@2
+      displayName: 'Publish test results for deepgnn torch.'
+      inputs:
+        testResultsFiles: bazel-testlogs/examples/pytorch/**/test.xml
+        testRunTitle: bazel_tests
+        platform: '$(python.version)'
+        mergeTestResults: true
+
+    - bash: |
+        pip install wheel twine artifacts-keyring --pre
+    - task: TwineAuthenticate@1
+      inputs:
+        artifactFeed: 'Bing_Ads/DeepGraph'
+
+    - bash: |
+        bazel build -c opt //src/cc/lib:wrapper --config=darwin
+        echo 'Verify there are no links to external libraries'
+        ldd bazel-bin/src/cc/lib/libwrapper.so
+        cp -f ./bazel-bin/src/cc/lib/libwrapper.so $(Build.SourcesDirectory)/src/python/deepgnn/graph_engine/snark/
+
+        sudo chmod -R a+rw $(Build.SourcesDirectory)/src/python
+        cd $(Build.SourcesDirectory)/src/python
+        python setup.py deepgnn-ge bdist_wheel --plat-name macosx-10.9-x86_64 clean --all
+        python setup.py deepgnn-tf bdist_wheel --plat-name macosx-10.9-x86_64 clean --all
+        python setup.py deepgnn-torch bdist_wheel --plat-name macosx-10.9-x86_64 clean --all
+        python -m twine upload -r DeepGraph $(Build.SourcesDirectory)/src/python/dist/deepgnn_*.whl --config-file $(PYPIRC_PATH) --skip-existing

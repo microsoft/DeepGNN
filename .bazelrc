@@ -1,0 +1,31 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# We want to have a dynamic library without any dependencies,
+# that's why we statically link standard libs.
+build:linux --repo_env=CC=gcc-10
+build:linux --action_env=BAZEL_LINKLIBS=-l%:libstdc++.a
+build:linux --action_env=BAZEL_LINKOPTS=-static-libgcc:-lm:-pthread
+build:linux --action_env=SETUPTOOLS_USE_DISTUTILS="false"
+build:linux --action_env=HADOOP_HOME="/tmp/snark/"
+build:linux --action_env=SNARK_LIB_PATH="./src/cc/lib/libwrapper.so"
+build:linux --action_env=LD_LIBRARY_PATH="./external/jvm/jre/lib/amd64/server"
+
+build:manylinux --crosstool_top=//tools/toolchain:manylinux
+build:manylinux --cpu=k8
+build:manylinux --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
+
+build:darwin --action_env=BAZEL_LINKLIBS=-l%:libstdc++.a
+build:darwin --action_env=BAZEL_LINKOPTS=-static-libgcc:-lm:-pthread
+build:darwin --action_env=SETUPTOOLS_USE_DISTUTILS="false"
+build:darwin --action_env=HADOOP_HOME="/tmp/snark/"
+build:darwin --action_env=SNARK_LIB_PATH="./src/cc/lib/libwrapper.so"
+
+build:windows --action_env=BAZEL_LINKOPTS=/MT
+build:windows --action_env=SETUPTOOLS_USE_DISTUTILS="false"
+build:windows --action_env=HADOOP_HOME="C:/usr/local/hadoop/"
+build:windows --action_env=APPDATA="C:/usr/local/hadoop/datalake"
+build:windows --action_env=LIB="C:/Program Files/OpenSSL-Win64/lib"
+build:windows --action_env=INCLUDE="C:/Program Files/OpenSSL-Win64/include"
+build:windows --action_env=SNARK_LIB_PATH="./src/cc/lib/wrapper.dll"
+build:windows --action_env=USERPROFILE="."  # needed for python3.8 pathlib Path.home()
