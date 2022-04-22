@@ -7,7 +7,7 @@ grpcio-health-checking==1.35.0
 importlib_metadata==2.0.0
 iniconfig==1.0.1
 networkx==2.5.1
-numpy==1.19.2
+numpy==1.21.0
 packaging==20.4
 pluggy==0.13.1
 py==1.10.0
