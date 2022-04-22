@@ -4,6 +4,8 @@
 import argparse
 import torch
 import numpy as np
+import os
+import sys
 import random
 from deepgnn import TrainMode, setup_default_logging_config
 from deepgnn import get_logger
@@ -115,6 +117,10 @@ def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int
 
 
 def _main():
+    run_args = None
+    if len(sys.argv) >= 3 and sys.argv[1] == "--conf-dir":
+        run_args = f"{os.path.dirname(os.path.abspath(__file__))}/{sys.argv[2]}"
+
     # setup default logging component.
     setup_default_logging_config(enable_telemetry=True)
 
@@ -127,7 +133,8 @@ def _main():
         init_dataset_fn=create_dataset,
         init_optimizer_fn=create_optimizer,
         init_args_fn=init_args,
-    )
+        run_args=run_args,
+    )    
 
 
 if __name__ == "__main__":

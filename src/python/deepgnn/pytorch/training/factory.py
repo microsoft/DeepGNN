@@ -1,10 +1,12 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+import os
+import sys
 import argparse
 import torch
 from typing import Optional, Union, Callable, List
-from hydra import compose, initialize
+from hydra import compose, initialize, initialize_config_dir
 from omegaconf import DictConfig
 from deepgnn import TrainerType
 from deepgnn import get_logger
@@ -38,8 +40,10 @@ def get_args(
     elif isinstance(run_args, list):
         args = parser.parse_args(run_args)
     elif isinstance(run_args, str):
-        with initialize(config_path=run_args, job_name="deepgnn"):
-            args = compose(config_name="config")
+        initialize_fn = initialize_config_dir if os.path.isabs(run_args[0]) else initialize
+        with initialize_fn(run_args, job_name="deepgnn"):
+            argv = [v.replace('--', '++deepgnn.') for v in sys.argv[3:]]
+            args = compose(config_name="config", overrides=argv)
     elif isinstance(run_args, DictConfig):
         args = run_args
 
@@ -48,7 +52,7 @@ def get_args(
             [f"--{key}", f"{value}"] for key, value in args["deepgnn"].items()
         ]
         hydra_args = sum(hydra_args, [])
-        args = parser.parse_args(hydra_args)
+        args = parser.parse_known_args(hydra_args)[0]
 
     for arg in dir(args):
         if not arg.startswith("_"):
