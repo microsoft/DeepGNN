@@ -1,0 +1,3 @@
+deepgnn:
+  backend: snark
+  batch_size: 140

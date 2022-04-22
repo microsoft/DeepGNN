@@ -3,7 +3,9 @@
 
 import argparse
 import torch
-from typing import Optional, Callable, List
+from typing import Optional, Union, Callable, List
+from hydra import compose, initialize
+from omegaconf import DictConfig
 from deepgnn import TrainerType
 from deepgnn import get_logger
 from contextlib import closing
@@ -14,7 +16,9 @@ from deepgnn.graph_engine import create_backend, BackendOptions
 from deepgnn.graph_engine.samplers import GENodeSampler, GEEdgeSampler
 
 
-def get_args(init_arg_fn: Optional[Callable] = None, run_args: Optional[List] = None):
+def get_args(
+    init_arg_fn: Optional[Callable] = None, run_args: Union[None, str, List] = None
+):
     parser = argparse.ArgumentParser(allow_abbrev=False)
 
     # Initialize common parameters, including model, dataset, optimizer etc.
@@ -29,7 +33,23 @@ def get_args(init_arg_fn: Optional[Callable] = None, run_args: Optional[List] = 
     if init_arg_fn is not None:
         init_arg_fn(parser)
 
-    args = parser.parse_args() if run_args is None else parser.parse_args(run_args)
+    if run_args is None:
+        args = parser.parse_args()
+    elif isinstance(run_args, list):
+        args = parser.parse_args(run_args)
+    elif isinstance(run_args, str):
+        with initialize(config_path=run_args, job_name="deepgnn"):
+            args = compose(config_name="config")
+    elif isinstance(run_args, DictConfig):
+        args = run_args
+
+    if isinstance(args, DictConfig):
+        hydra_args = [
+            [f"--{key}", f"{value}"] for key, value in args["deepgnn"].items()
+        ]
+        hydra_args = sum(hydra_args, [])
+        args = parser.parse_args(hydra_args)
+
     for arg in dir(args):
         if not arg.startswith("_"):
             get_logger().info(f"{arg}={getattr(args, arg)}")

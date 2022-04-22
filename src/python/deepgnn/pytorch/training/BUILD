@@ -82,3 +82,19 @@ py_test(
         ],
     }),
 )
+
+py_test(
+    name = "test_factory",
+    main = "test_factory.py",
+    srcs = ["test_factory.py"],
+    imports = ["../../../"],
+    python_version = "PY3",
+    srcs_version = "PY3",
+    deps = [
+            ":deepgnn_pytorch_training",
+            requirement("pytest"),
+            requirement("hydra-core"),
+            requirement("omegaconf"),
+            requirement("torch"),
+    ]
+)
