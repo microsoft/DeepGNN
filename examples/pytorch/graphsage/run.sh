@@ -17,7 +17,7 @@ rm -fr $GRAPH
 
 python -m deepgnn.graph_engine.data.citation --data_dir $GRAPH
 
-MODEL_DIR=/tmp/model_fix
+MODEL_DIR=/tmp/model_dir
 rm -rf $MODEL_DIR
 
 if [[ "${DEVICE}" == "gpu" ]]
@@ -33,7 +33,7 @@ python ${DIR_NAME}/main.py --conf-dir conf \
 
 python ${DIR_NAME}/main.py --conf-dir conf \
     --mode=evaluate --batch_size=1000 --sample_file=/tmp/cora/test.nodes \
-    --data_dir=$GRAPH --algo=supervised --model_dir=$MODEL_DIR \
+    --data_dir=$GRAPH --algo=$ALGO --model_dir=$MODEL_DIR \
     --metric_dir=$MODEL_DIR --save_path=$MODEL_DIR $PLATFORM_DEVICE
 
 if [[ "$ADL_UPLOADER" == "no" ]]; then

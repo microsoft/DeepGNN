@@ -1,0 +1,7 @@
+data_dir: /tmp/cora
+batch_size: 140
+feature_idx: 1
+feature_dim: 50
+label_idx: 0
+label_dim: 121
+learning_rate: 0.005
