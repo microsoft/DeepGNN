@@ -40,9 +40,11 @@ def get_args(
     elif isinstance(run_args, list):
         args = parser.parse_args(run_args)
     elif isinstance(run_args, str):
-        initialize_fn = initialize_config_dir if os.path.isabs(run_args[0]) else initialize
+        initialize_fn = (
+            initialize_config_dir if os.path.isabs(run_args[0]) else initialize
+        )
         with initialize_fn(run_args, job_name="deepgnn"):
-            argv = [v.replace('--', '++deepgnn.') for v in sys.argv[3:]]
+            argv = [v.replace("--", "++deepgnn.") for v in sys.argv[3:]]
             args = compose(config_name="config", overrides=argv)
     elif isinstance(run_args, DictConfig):
         args = run_args
@@ -52,7 +54,9 @@ def get_args(
             [f"--{key}", f"{value}"] for key, value in args["deepgnn"].items()
         ]
         hydra_args = sum(hydra_args, [])
-        args = parser.parse_known_args(hydra_args)[0]
+        args, args_skipped = parser.parse_known_args(hydra_args)
+        if len(args_skipped):
+            print(f"WARNING: Skipped the following arguments: {args_skipped}!")
 
     for arg in dir(args):
         if not arg.startswith("_"):

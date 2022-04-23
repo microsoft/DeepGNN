@@ -134,7 +134,7 @@ def _main():
         init_optimizer_fn=create_optimizer,
         init_args_fn=init_args,
         run_args=run_args,
-    )    
+    )
 
 
 if __name__ == "__main__":

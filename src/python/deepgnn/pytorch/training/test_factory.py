@@ -11,11 +11,13 @@ from omegaconf import DictConfig
 def test_args():
     args = get_args(None, "conf")
     assert args.batch_size == 140
+    assert hasattr(args, "num_epochs")
 
     args = get_args(
         None, DictConfig({"deepgnn": {"backend": "snark", "batch_size": 140}})
     )
     assert args.batch_size == 140
+    assert hasattr(args, "num_epochs")
 
 
 if __name__ == "__main__":
