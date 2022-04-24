@@ -1,0 +1,45 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+- hosts: linux
+  tasks:
+  - name: OS-specific tasks
+    include_tasks: "{{ ansible_distribution|lower }}.yml"
+
+  - name: Upgrade pip
+    ansible.builtin.shell: |
+      python -m pip install pip --upgrade
+
+  # here we install deepgnn pytorch package for demo purpose, user can install deepgnn tensorflow package
+  # by python -m pip install deepgnn-tf
+  - name: Install artifacts-keyring python package
+    ansible.builtin.shell: |
+      python -m pip install artifacts-keyring keyring
+      python -m pip install deepgnn-torch=={{ VERSION }} --index-url https://{{ TOKEN }}@msasg.pkgs.visualstudio.com/Bing_Ads/_packaging/DeepGraph/pypi/simple
+
+- hosts: windows
+  tasks:
+  - name: "Install Python 3"
+    win_chocolatey:
+      name: python3
+      version: 3.7.7
+      force: yes
+    tags: python3
+
+  - name: "Provide python3 alias"
+    win_shell: copy C:\Python37\python.exe C:\Python37\python3.exe
+    args:
+      creates: C:\Python37\python3.exe
+    tags: python3
+
+  - name: Update pip
+    win_command: c:\Python37\python.exe -m pip install --upgrade pip
+
+  # here we install deepgnn pytorch package for demo purpose, user can install deepgnn tensorflow package
+  # by python -m pip install deepgnn-tf
+  - name: Install python3 modules
+    win_command: c:\Python37\python.exe -m pip install {{ item }}
+    with_items:
+      - artifacts-keyring
+      - keyring
+      - deepgnn-torch=={{ VERSION }} --index-url https://{{ TOKEN }}@msasg.pkgs.visualstudio.com/Bing_Ads/_packaging/DeepGraph/pypi/simple

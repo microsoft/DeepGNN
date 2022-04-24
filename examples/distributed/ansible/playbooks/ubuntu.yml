@@ -1,0 +1,43 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+- name: Get python version
+  ansible.builtin.shell: python --version | cut -c8-
+  ignore_errors: yes
+  register: pythonVersion
+
+- name: Update and upgrade apt packages
+  when: pythonVersion["stdout"] is version('3.6', '<=')
+  become: true
+  apt:
+    upgrade: yes
+    update_cache: yes
+    cache_valid_time: 86400
+
+- name: Install common software properties
+  when: pythonVersion["stdout"] is version('3.6', '<=')
+  become: true
+  package:
+    name:
+      - software-properties-common
+    state: present
+
+- name: Add deadsnake python repo
+  when: pythonVersion["stdout"] is version('3.6', '<=')
+  ansible.builtin.apt_repository:
+    repo: ppa:deadsnakes/ppa
+
+- name: Install python 3.7
+  when: pythonVersion["stdout"] is version('3.6', '<=')
+  become: true
+  package:
+    name:
+      - python3.7
+    state: present
+
+- name: Link python3 to python
+  when: pythonVersion["stdout"] is version('3.6', '<=')
+  become: true
+  ansible.builtin.shell: |
+    ln -fs /usr/bin/python3.7 /usr/bin/python
+    ln -fs /usr/bin/python3.7 /usr/local/bin/python

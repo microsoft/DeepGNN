@@ -1,0 +1,25 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+{% for item in hosts %}
+  {% if item[1] == "linux" %}
+
+- hosts: {{ item[0] }}
+  tasks:
+  - name: Start graph engine
+    shell: |
+      python -m deepgnn.graph_engine.snark.server --data_dir {{ data_dir }} --partitions {{ item[2] }} --port {{ port }} &
+
+  {% endif %}
+
+  {% if item[1] == "windows" %}
+
+- hosts: {{ item[0] }}
+  tasks:
+  - name: Start graph engine
+    win_shell: start /b python -m deepgnn.graph_engine.snark.server --data_dir {{ data_dir }} --partitions {{ item[2] }} --port {{ port }}
+    args:
+      executable: cmd.exe
+
+  {% endif %}
+{% endfor%}

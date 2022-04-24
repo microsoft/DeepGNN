@@ -1,0 +1,36 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+- name: Get python version
+  ansible.builtin.shell: python --version | cut -c8-
+  ignore_errors: yes
+  register: pythonVersion
+
+- name: Install requirements for package install
+  when: pythonVersion["stdout"] is version('3.6', '<=')
+  block:
+    - name: Install system packages
+      become: true
+      package:
+        name:
+        - gcc
+        - openssl-devel
+        - bzip2-devel
+        - libffi-devel
+        - zlib-devel
+        - xz-devel
+        state: present
+
+- name: Get python 3.7
+  when: pythonVersion["stdout"] is version('3.6', '<=')
+  become: true
+  ansible.builtin.shell: |
+    mkdir /usr/src
+    cd /usr/src
+    wget https://www.python.org/ftp/python/3.7.11/Python-3.7.11.tgz
+    tar xzf Python-3.7.11.tgz
+    cd Python-3.7.11
+    ./configure --enable-optimizations
+    make altinstall
+
+    ln -fs /usr/bin/python3.7 /usr/bin/python

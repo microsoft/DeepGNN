@@ -7,8 +7,8 @@ steps:
 - ${{ if eq(parameters.device, 'cpu') }}:
   - task: UsePythonVersion@0
     inputs:
-      versionSpec: '3.7'
-      displayName: 'Use Python 3.7'
+      versionSpec: '3.8'
+      displayName: 'Use Python 3.8'
 
 - task: DownloadBuildArtifacts@0
   inputs:
@@ -70,6 +70,8 @@ steps:
         export PYTHONPATH=$(Build.StagingDirectory)
         sh -c "${job_command}"
       displayName: 'Run script test for ${{ testModel }}.'
+      ${{ if eq(testModel, 'gat_ansible') }}:
+        env: { job_command: 'cd ./examples/distributed/ansible/ && sudo chmod +x *.sh && bash ./run.sh $(deepgnnFEEDToken) $(build_version)'}
       ${{ if eq(parameters.platform, 'pytorch') }}:
         ${{ if eq(testModel, 'gat') }}:
           env: { job_command: 'cd ./examples/pytorch/gat/ && sudo chmod +x *.sh && bash ./run.sh ${{ parameters.device}}'}
