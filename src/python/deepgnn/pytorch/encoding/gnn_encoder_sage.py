@@ -74,14 +74,24 @@ class SageEncoder(nn.Module):
         neigh_nodes = graph.sample_neighbors(nodes, self.edge_types, self.num_sample)[
             0
         ].flatten()
+        neigh_nodes_unique, idx = np.unique(neigh_nodes, return_inverse=True)
 
         context["node_feats"] = self.query_func(
             nodes, graph, feature_type, feature_idx, feature_dim
         )
 
-        context["neighbor_feats"] = self.query_func(
-            neigh_nodes, graph, feature_type, feature_idx, feature_dim
+        neigh_feats_unique = self.query_func(
+            neigh_nodes_unique, graph, feature_type, feature_idx, feature_dim
         )
+
+        if isinstance(neigh_feats_unique, dict):
+            context["neighbor_feats"] = {
+                "node_feats": neigh_feats_unique["node_feats"][idx],
+                "neighbor_feats": neigh_feats_unique["neighbor_feats"][idx],
+                "node_count": idx.size,
+            }
+        else:
+            context["neighbor_feats"] = neigh_feats_unique[idx]
         context["node_count"] = len(nodes)
         return context
 
