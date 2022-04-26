@@ -103,4 +103,4 @@ HDFS Localhost Example
 
 ## Graph Engine Usage
 
-Leverage this by setting --data_dir to an hdfs or adl link, --stream True and --config_path path/to/core-site.xml
+Leverage this feature by setting --data_dir to an hdfs or adl link, adding --stream and --config_path path/to/core-site.xml.
