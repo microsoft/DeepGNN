@@ -65,9 +65,23 @@ def graph_engine(version: str):
             "Source": "https://github.com/microsoft/DeepGNN",
         },
         include_package_data=True,
-        python_requires=">=3.7, <4",
+        python_requires=">=3.7",
         cmdclass={"clean": clean},
         license="MIT",
+        classifiers=[
+            "Development Status :: 3 - Alpha",
+            "Intended Audience :: Developers",
+            "Intended Audience :: Science/Research",
+            "License :: OSI Approved :: MIT License",
+            "Programming Language :: C++",
+            "Programming Language :: Python :: 3",
+            "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3.8",
+            "Programming Language :: Python :: 3.9",
+            "Programming Language :: Python :: 3.10",
+            "Topic :: Scientific/Engineering",
+            "Topic :: Software Development :: Libraries",
+        ],
     )
 
     # Clean up files after build.
@@ -93,6 +107,8 @@ def deepgnn_tf(version: str):
         name="deepgnn-tf",
         version=version,
         description="DeepGNN algorithms for tensorflow.",
+        long_description="See [DeepGNN package](https://pypi.org/project/deepgnn-ge/) for detailed description.",
+        long_description_content_type="text/markdown",
         url=CODE_URL,
         author=AUTHOR,
         author_email=AUTHOR_EMAIL,
@@ -100,9 +116,22 @@ def deepgnn_tf(version: str):
             include=["deepgnn", "deepgnn.tf", "deepgnn.tf.*"]
         ),
         install_requires=depens,
-        python_requires=">=3.7, <4",
+        python_requires=">=3.7",
         cmdclass={"clean": clean},
         license="MIT",
+        classifiers=[
+            "Development Status :: 3 - Alpha",
+            "Intended Audience :: Developers",
+            "Intended Audience :: Science/Research",
+            "License :: OSI Approved :: MIT License",
+            "Programming Language :: Python :: 3",
+            "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3.8",
+            "Programming Language :: Python :: 3.9",
+            "Programming Language :: Python :: 3.10",
+            "Topic :: Scientific/Engineering",
+            "Topic :: Software Development :: Libraries",
+        ],
     )
 
 
@@ -128,6 +157,8 @@ def deepgnn_pytorch(version: str):
         name=f"deepgnn-torch",
         version=version,
         description="DeepGNN algorithms for pytorch.",
+        long_description="See [DeepGNN package](https://pypi.org/project/deepgnn-ge/) for detailed description.",
+        long_description_content_type="text/markdown",
         url=CODE_URL,
         author=AUTHOR,
         author_email=AUTHOR_EMAIL,
@@ -135,9 +166,22 @@ def deepgnn_pytorch(version: str):
             include=["deepgnn", "deepgnn.pytorch", "deepgnn.pytorch.*"]
         ),
         install_requires=depens,
-        python_requires=">=3.7, <4",
+        python_requires=">=3.7",
         cmdclass={"clean": clean},
         license="MIT",
+        classifiers=[
+            "Development Status :: 3 - Alpha",
+            "Intended Audience :: Developers",
+            "Intended Audience :: Science/Research",
+            "License :: OSI Approved :: MIT License",
+            "Programming Language :: Python :: 3",
+            "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3.8",
+            "Programming Language :: Python :: 3.9",
+            "Programming Language :: Python :: 3.10",
+            "Topic :: Scientific/Engineering",
+            "Topic :: Software Development :: Libraries",
+        ],
     )
 
 
