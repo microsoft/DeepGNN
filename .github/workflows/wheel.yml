@@ -1,0 +1,86 @@
+name: Wheel
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_version:
+        required: true
+        type: string
+        description: DeepGNN version to put in wheel
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.8"
+      - name: Build wheels
+        run: |
+          export BUILD_VERSION=${{ inputs.package_version }}
+          cd tools/manylinux
+          sudo ./install-gcc11.sh
+          cd ../..
+          bazel build -c opt //src/cc/lib:wrapper --config=manylinux --force_pic
+          pip install wheel twine artifacts-keyring --pre
+          ldd -v ./bazel-bin/src/cc/lib/libwrapper.so
+          cp -f ./bazel-bin/src/cc/lib/libwrapper.so src/python/deepgnn/graph_engine/snark/
+          sudo chmod -R a+rw src/python
+          cd src/python
+          python setup.py deepgnn-ge bdist_wheel --plat-name manylinux1_x86_64 clean --all
+          pip install auditwheel
+          auditwheel show ./dist/deepgnn_ge-"${BUILD_VERSION}"-py3-none-manylinux1_x86_64.whl
+          python setup.py deepgnn-tf bdist_wheel --plat-name manylinux1_x86_64 clean --all
+          python setup.py deepgnn-torch bdist_wheel --plat-name manylinux1_x86_64 clean --all
+      - name: Upload wheel file
+        uses: actions/upload-artifact@v3
+        with:
+          name: deepgnn
+          path: src/python/dist/*.whl
+  macos:
+    runs-on: macos-11
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.8"
+      - name: Build wheels
+        run: |
+          export BUILD_VERSION=${{ inputs.package_version }}
+          bazel build -c opt //src/cc/lib:wrapper --config=darwin
+          cd src/python
+          pip install wheel twine artifacts-keyring --pre
+          python setup.py deepgnn-ge bdist_wheel --plat-name macosx-10.9-x86_64 clean --all
+          python setup.py deepgnn-tf bdist_wheel --plat-name macosx-10.9-x86_64 clean --all
+          python setup.py deepgnn-torch bdist_wheel --plat-name macosx-10.9-x86_64 clean --all
+      - name: Upload wheel file
+        uses: actions/upload-artifact@v3
+        with:
+          name: deepgnn
+          path: src/python/dist/*.whl
+  windows:
+    runs-on: windows-2019
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.8"
+      - name: Build wheels
+        run: |
+          $env:PATH+=";"+${env:ProgramFiles(x86)}+"\Microsoft Visual Studio\2019\Enterprise\VC\Tools\Llvm\bin"
+          $env:BUILD_VERSION=${{ inputs.package_version }}
+          pip install wheel twine artifacts-keyring --pre
+          bazel build -c opt //src/cc/lib:wrapper --config=windows
+          cd src/python
+          python setup.py deepgnn-ge bdist_wheel --plat-name win-amd64 clean --all
+          python setup.py deepgnn-tf bdist_wheel --plat-name win-amd64 clean --all
+          python setup.py deepgnn-torch bdist_wheel --plat-name win-amd64 clean --all
+      - name: Upload wheel file
+        uses: actions/upload-artifact@v3
+        with:
+          name: deepgnn
+          path: src/python/dist/*.whl
