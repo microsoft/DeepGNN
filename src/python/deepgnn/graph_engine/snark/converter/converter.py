@@ -43,7 +43,6 @@ class NodeWriter:
         )
         self.count = 0
         self.feature_writer = NodeFeatureWriter(folder, partition)
-        self.edge_writer = EdgeWriter(folder, partition)
 
     def add(self, node: typing.Any):
         """Write node features and data about edges from this node to binary.
@@ -55,14 +54,12 @@ class NodeWriter:
         self.nm.write(ctypes.c_uint64(self.count))  # type: ignore
         self.nm.write(ctypes.c_int32(node["node_type"]))  # type: ignore
         self.feature_writer.add(node)
-        self.edge_writer.add(node)
         self.count += 1
 
     def close(self):
         """Close output binary files."""
         self.nm.close()
         self.feature_writer.close()
-        self.edge_writer.close()
 
 
 class NodeFeatureWriter:
@@ -153,25 +150,18 @@ class EdgeWriter:
 
         self.feature_writer = EdgeFeatureWriter(folder, partition, self.efi)
 
-    def add(self, node: typing.Any):
+    def add(self, edge: typing.Any):
         """Append edges starting at node to the output.
 
         Args:
             node (typing.Any): node with edges data
         """
-        self.nbi.write(  # type: ignore
-            ctypes.c_uint64(self.ei.tell() // (4 + 8 + 8 + 4))
-        )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
-        edge_list = sorted(
-            node["edge"], key=lambda x: (int(x["edge_type"]), int(x["dst_id"]))
-        )
-        for item in edge_list:
-            # Record order is important for C++ reader: order fields by size for faster load.
-            self.ei.write(ctypes.c_uint64(item["dst_id"]))  # type: ignore
-            self.ei.write(ctypes.c_uint64(self.efi.tell() // 8))  # type: ignore
-            self.ei.write(ctypes.c_int32(item["edge_type"]))  # type: ignore
-            self.ei.write(ctypes.c_float(item["weight"]))  # type: ignore
-            self.feature_writer.add(item)
+        # Record order is important for C++ reader: order fields by size for faster load.
+        self.ei.write(ctypes.c_uint64(edge["dst_id"]))  # type: ignore
+        self.ei.write(ctypes.c_uint64(self.efi.tell() // 8))  # type: ignore
+        self.ei.write(ctypes.c_int32(edge["edge_type"]))  # type: ignore
+        self.ei.write(ctypes.c_float(edge["weight"]))  # type: ignore
+        self.feature_writer.add(edge)
 
     def close(self):
         """Close output binary files."""

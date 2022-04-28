@@ -20,12 +20,13 @@ import fsspec
 from deepgnn import get_logger
 from deepgnn.graph_engine._adl_reader import TextFileIterator
 from deepgnn.graph_engine._base import get_fs
-import deepgnn.graph_engine.snark.converter.json_converter as json_converter
+import deepgnn.graph_engine.snark.converter.converter as converter
 from deepgnn.graph_engine.snark.decoders import (
     Decoder,
     DecoderType,
     JsonDecoder,
     TsvDecoder,
+    LinearDecoder,
 )
 from deepgnn.graph_engine.snark.dispatcher import (
     PipeDispatcher,
@@ -73,6 +74,8 @@ def output(
         decoder = JsonDecoder()
     elif decoder_type == DecoderType.TSV:
         decoder = TsvDecoder()
+    elif decoder_type == DecoderType.LINEAR:
+        decoder = LinearDecoder()
     else:
         raise ValueError("Unsupported decoder type.")
 
@@ -84,16 +87,17 @@ def output(
     node_type_count = [0] * node_type_num
     edge_weight = [0] * edge_type_num
     edge_type_count = [0] * edge_type_num
-    writer = json_converter.NodeWriter(str(folder), suffix)
-    node_alias: typing.Union[json_converter.NodeAliasWriter, _NoOpWriter] = (
+    node_writer = converter.NodeWriter(str(folder), suffix)
+    edge_writer = converter.EdgeWriter(str(folder), suffix)
+    node_alias: typing.Union[converter.NodeAliasWriter, _NoOpWriter] = (
         _NoOpWriter()
         if skip_node_sampler
-        else json_converter.NodeAliasWriter(str(folder), suffix, node_type_num)
+        else converter.NodeAliasWriter(str(folder), suffix, node_type_num)
     )
-    edge_alias: typing.Union[json_converter.EdgeAliasWriter, _NoOpWriter] = (
+    edge_alias: typing.Union[converter.EdgeAliasWriter, _NoOpWriter] = (
         _NoOpWriter()
         if skip_edge_sampler
-        else json_converter.EdgeAliasWriter(str(folder), suffix, edge_type_num)
+        else converter.EdgeAliasWriter(str(folder), suffix, edge_type_num)
     )
     count = 0
     while True:
@@ -106,21 +110,67 @@ def output(
         if line == FLAG_ALL_DONE:
             break
 
-        node = decoder.decode(line)
-        writer.add(node)
-        node_alias.add(node)
+        if decoder_type != DecoderType.LINEAR:
+            node = decoder.decode(line)
+            node_writer.add(node)
 
-        for eet in node["edge"]:
-            edge_alias.add(eet)
-            edge_weight[eet["edge_type"]] += eet["weight"]
-            edge_type_count[eet["edge_type"]] += 1
+            # Works if sorted Node, src edge, ... Nodei+1
+            import ctypes
+            edge_writer.nbi.write(  # type: ignore
+                ctypes.c_uint64(edge_writer.ei.tell() // (4 + 8 + 8 + 4))
+            )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
 
-        edge_count += len(node["edge"])
-        node_count += 1
-        node_weight[node["node_type"]] += float(node["node_weight"])
-        node_type_count[node["node_type"]] += 1
 
-    writer.close()
+            edge_list = sorted(
+                node["edge"], key=lambda x: (int(x["edge_type"]), int(x["dst_id"]))
+            )
+            for edge in edge_list:
+                edge_writer.add(edge)
+
+            node_alias.add(node)
+
+            for eet in node["edge"]:
+                edge_alias.add(eet)
+                edge_weight[eet["edge_type"]] += eet["weight"]
+                edge_type_count[eet["edge_type"]] += 1
+
+            edge_count += len(node["edge"])
+            node_count += 1
+            node_weight[node["node_type"]] += float(node["node_weight"])
+            node_type_count[node["node_type"]] += 1
+        else:
+            item = decoder.decode(line)
+            if "node_id" in item:
+                node = item
+                node_writer.add(node)
+
+                # Works if sorted Node, src edge, ... Nodei+1
+                import ctypes
+                edge_writer.nbi.write(  # type: ignore
+                    ctypes.c_uint64(edge_writer.ei.tell() // (4 + 8 + 8 + 4))
+                )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
+
+                node_alias.add(node)
+
+                node_count += 1
+
+                node_weight[node["node_type"]] += float(node["node_weight"])
+                node_type_count[node["node_type"]] += 1
+
+            # edge_list = sorted(
+            #     node["edge"], key=lambda x: (int(x["edge_type"]), int(x["dst_id"]))
+            # )
+            else:
+                edge_writer.add(edge)
+
+                edge_alias.add(eet)
+                edge_weight[eet["edge_type"]] += eet["weight"]
+                edge_type_count[eet["edge_type"]] += 1
+
+                edge_count += 1
+
+    node_writer.close()
+    edge_writer.close()
     node_alias.close()
     edge_alias.close()
     q_out.put(
