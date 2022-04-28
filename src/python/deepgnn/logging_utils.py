@@ -127,7 +127,7 @@ def setup_default_logging_config(enable_telemetry: bool = False):
 
 
 def set_logger(customized_logger: logging.Logger) -> None:
-    ''' client could provide the contomized logger.
+    ''' client could provide the customized logger.
 
     This function will override the underlying logger `_logger`.
     '''
