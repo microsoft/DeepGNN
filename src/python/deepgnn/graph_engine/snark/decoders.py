@@ -203,7 +203,7 @@ class LinearDecoder(Decoder):
     def decode(self, line: str):
         """Use json package to convert the json text line into node object."""
         src, dst, type, weight, features = line.split()
-        if dst == -1:  # is node
+        if int(dst) == -1:  # is node
             output = {
                 "node_id": int(src),
                 "node_type": int(type),
@@ -222,9 +222,6 @@ class LinearDecoder(Decoder):
                 "weight": float(weight),
             }
             output.update(json.loads(features))
-            #"uint64_feature": {"feature id": ["int", "..."], "...": ["int", "..."]},
-            #"float_feature": {"feature id": ["float", "..."], "...": ["float", "..."]},
-            #"binary_feature": {"feature id": "string", "...": "..."},
             #"sparse_int32_feature": {"feature id": {"coordinates": [["non zero coordinates 0"], ["non zero coordinates 1", "..."]], "values": ["value 0", "value 1", "..."]}},
 
         return output
@@ -239,15 +236,16 @@ def json_to_linear(filename_in, filename_out):
 
         # TODO sparse features
 
-        features = str({key: node[key] for key in ["uint64_feature", "float_feature", "binary_feature"]}).replace(" ", "")
-        file_out.write(f'{node["node_id"]} -1 {node["node_type"]} {node["node_weight"]} {features}')
+        features = json.dumps({key: node[key] for key in ["uint64_feature", "float_feature", "binary_feature"]}).replace(" ", "")
+        file_out.write(f'{node["node_id"]} -1 {node["node_type"]} {node["node_weight"]} {features}\n')
 
         edge_list = sorted(
              node["edge"], key=lambda x: (int(x["edge_type"]), int(x["dst_id"]))
         )
         for edge in edge_list:
-            features = str({key: edge[key] for key in ["uint64_feature", "float_feature", "binary_feature"]}).replace(" ", "")
-            file_out.write(f'{edge["src_id"]} {edge["dst_id"]} {edge["edge_type"]} {edge["weight"]} {features}')
+            features = json.dumps({key: edge[key] for key in ["uint64_feature", "float_feature", "binary_feature"]}).replace(" ", "")
+            file_out.write(f'{edge["src_id"]} {edge["dst_id"]} {edge["edge_type"]} {edge["weight"]} {features}\n')
+            print(edge["edge_type"])
 
     file_in.close()
     file_out.close()

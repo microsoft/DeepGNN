@@ -120,7 +120,6 @@ def output(
                 ctypes.c_uint64(edge_writer.ei.tell() // (4 + 8 + 8 + 4))
             )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
 
-
             edge_list = sorted(
                 node["edge"], key=lambda x: (int(x["edge_type"]), int(x["dst_id"]))
             )
@@ -152,20 +151,18 @@ def output(
 
                 node_alias.add(node)
 
-                node_count += 1
 
                 node_weight[node["node_type"]] += float(node["node_weight"])
                 node_type_count[node["node_type"]] += 1
 
-            # edge_list = sorted(
-            #     node["edge"], key=lambda x: (int(x["edge_type"]), int(x["dst_id"]))
-            # )
+                node_count += 1
             else:
+                edge = item
                 edge_writer.add(edge)
 
-                edge_alias.add(eet)
-                edge_weight[eet["edge_type"]] += eet["weight"]
-                edge_type_count[eet["edge_type"]] += 1
+                edge_alias.add(edge)
+                edge_weight[edge["edge_type"]] += edge["weight"]
+                edge_type_count[edge["edge_type"]] += 1
 
                 edge_count += 1
 
@@ -261,10 +258,7 @@ class MultiWorkersConverter:
                 output,
                 self.decoder_type,
                 self.partition_offset,
-                False
-                if hasattr(fsspec.implementations, "hdfs")
-                and isinstance(self.fs, fsspec.implementations.hdfs.PyArrowHDFS)
-                else True,  # when converting data in HDFS make sure to turn it off: https://hdfs3.readthedocs.io/en/latest/limitations.html
+                True,
                 skip_node_sampler,
                 skip_edge_sampler,
             )
