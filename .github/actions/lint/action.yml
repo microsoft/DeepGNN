@@ -1,0 +1,23 @@
+name: "Lint"
+description: "run pre-commit linters"
+runs:
+  using: "composite"
+  steps:
+    - run: sudo apt-get install clang-format
+      shell: bash
+      if: runner.os == 'Linux'
+    - run: $env:PATH+=";"+${env:ProgramFiles(x86)}+"\Microsoft Visual Studio\2019\Enterprise\VC\Tools\Llvm\bin"
+      shell: pwsh
+      if: runner.os == 'Windows'
+    - run: brew install clang-format
+      shell: bash
+      if: runner.os == 'macOS'
+    - run: pip install wheel pre-commit==2.17.0 mypy==0.780
+      shell: bash
+      name: install dependencies
+    - run: pre-commit install
+      shell: bash
+      name: initialize pre-commit
+    - run: pre-commit run --all-files
+      shell: bash
+      name: run linters

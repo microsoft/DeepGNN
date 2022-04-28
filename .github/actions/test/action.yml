@@ -1,0 +1,26 @@
+name: "Test"
+description: "Run unit tests"
+runs:
+  using: "composite"
+  steps:
+    - run: echo "BAZEL_CONFIG=linux" >> $GITHUB_ENV
+      shell: bash
+      if: runner.os == 'Linux'
+    - run: echo "BAZEL_CONFIG=windows" >> $GITHUB_ENV
+      shell: bash
+      if: runner.os == 'Windows'
+    - run: echo "BAZEL_CONFIG=darwin" >> $GITHUB_ENV
+      shell: bash
+      if: runner.os == 'macOS'
+    - run: echo ${{ env.BAZEL_CONFIG }}
+      shell: bash
+    - run: bazel test -c dbg //src/cc/tests:* --test_output=all --test_timeout 30 --config=${{ env.BAZEL_CONFIG }}
+      shell: bash
+      name: run cpp tests
+    - run: bazel test -c dbg //src/python/deepgnn/...:* --jobs 1 --test_output=all --test_timeout 600 --config=${{ env.BAZEL_CONFIG }}
+      shell: bash
+      name: run python tests
+    - run: bazel build -c dbg src/cc/lib/benchmark:* --config=${{ env.BAZEL_CONFIG }}
+      shell: bash
+      name: build benchmarks
+      if: runner.os == 'Linux'

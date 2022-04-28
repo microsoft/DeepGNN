@@ -95,12 +95,7 @@ def graph_engine(version: str):
 
 def deepgnn_tf(version: str):
     """DeepGNN runtime and algorithms for tensorflow."""
-    depens = ["tensorflow>=2"]
-    if "dev" in version:
-        depens.append(f"deepgnn-ge=={version}")
-    else:
-        depens.append("deepgnn-ge>=0.1")
-
+    depens = ["tensorflow>=2", "deepgnn-ge>=0.1"]
     depens.extend(COMMON_PACKAGES)
 
     setuptools.setup(
@@ -137,13 +132,8 @@ def deepgnn_tf(version: str):
 
 def deepgnn_pytorch(version: str):
     """DeepGNN runtime and algorithms for pytorch."""
-    if "dev" in version:
-        depens = [f"deepgnn-ge=={version}"]
-    else:
-        depens = ["deepgnn-ge>=0.1"]
-
-    depens.extend(
-        [
+    depens = [
+            "deepgnn-ge>=0.1",
             "torch>=1.8",
             "boto3>=1.15.16",
             "transformers>=4.3.3",

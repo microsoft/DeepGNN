@@ -31,6 +31,42 @@ namespace
 {
 const size_t num_nodes = 100;
 const size_t fv_size = 2;
+
+// Helper to work with temporary folders: we run test with bazel,
+// so it is ok to create local folders, because they run in a hermetic sandbox.
+struct TempFolder
+{
+    std::filesystem::path path;
+    bool last;
+
+    explicit TempFolder(std::string name) : path(std::filesystem::temp_directory_path() / std::move(name))
+    {
+        if (!std::filesystem::create_directory(path))
+        {
+            throw std::logic_error("Failed to create path");
+        }
+
+        last = true;
+    }
+
+    TempFolder(TempFolder &&other) : path(std::move(other.path))
+    {
+        other.last = false;
+    }
+
+    std::string string() const
+    {
+        return path.string();
+    }
+
+    ~TempFolder()
+    {
+        if (last)
+        {
+            std::filesystem::remove_all(path);
+        }
+    }
+};
 } // namespace
 
 TEST(DistributedTest, NodeFeaturesSingleServer)
@@ -45,8 +81,9 @@ TEST(DistributedTest, NodeFeaturesSingleServer)
         m.m_nodes.push_back(TestGraph::Node{
             .m_id = snark::NodeId(n), .m_type = 0, .m_weight = 1.0f, .m_float_features = {std::move(vals)}});
     }
-    auto path = std::filesystem::temp_directory_path();
-    auto partition = TestGraph::convert(path, "0_0", std::move(m), 1);
+
+    TempFolder path("NodeFeaturesSingleServer");
+    auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
 
     snark::GRPCServer server(std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
                                                                              snark::PartitionStorageType::memory, ""),
@@ -64,7 +101,7 @@ namespace
 {
 using TestChannels = std::vector<std::shared_ptr<grpc::Channel>>;
 using TestServers = std::vector<std::unique_ptr<snark::GRPCServer>>;
-std::pair<TestChannels, TestServers> MockServers(size_t num_partitions, size_t num_node_types = 1)
+std::pair<TestChannels, TestServers> MockServers(size_t num_partitions, std::string name, size_t num_node_types = 1)
 {
     std::vector<std::unique_ptr<snark::GRPCServer>> servers;
     std::vector<std::shared_ptr<grpc::Channel>> channels;
@@ -82,8 +119,8 @@ std::pair<TestChannels, TestServers> MockServers(size_t num_partitions, size_t n
                                                 .m_float_features = {std::move(vals)}});
         }
 
-        auto path = std::filesystem::temp_directory_path();
-        auto partition = TestGraph::convert(path, "0_0", std::move(m), num_node_types);
+        TempFolder path(name);
+        auto partition = TestGraph::convert(path.path, "0_0", std::move(m), num_node_types);
 
         servers.emplace_back(std::make_unique<snark::GRPCServer>(
             std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
@@ -98,7 +135,7 @@ std::pair<TestChannels, TestServers> MockServers(size_t num_partitions, size_t n
 
 TEST(DistributedTest, NodeFeaturesMultipleServers)
 {
-    auto mocks = MockServers(10);
+    auto mocks = MockServers(10, "NodeFeaturesMultipleServers");
     snark::GRPCClient c(std::move(mocks.first), 1, 1);
 
     std::vector<snark::NodeId> input_nodes = {0, 11, 22};
@@ -111,7 +148,7 @@ TEST(DistributedTest, NodeFeaturesMultipleServers)
 
 TEST(DistributedTest, NodeTypeMultipleServers)
 {
-    auto mocks = MockServers(10, 3);
+    auto mocks = MockServers(10, "NodeTypeMultipleServers", 3);
     snark::GRPCClient c(std::move(mocks.first), 1, 1);
     std::vector<snark::NodeId> input_nodes = {42, 0, 11, 22, 123};
     std::vector<snark::Type> types(5, -2);
@@ -121,7 +158,7 @@ TEST(DistributedTest, NodeTypeMultipleServers)
 
 TEST(DistributedTest, NodeFeaturesMultipleServersMissingFeatureId)
 {
-    auto mocks = MockServers(10);
+    auto mocks = MockServers(10, "NodeFeaturesMultipleServersMissingFeatureId");
     snark::GRPCClient c(std::move(mocks.first), 1, 1);
 
     std::vector<snark::NodeId> input_nodes = {0, 11, 22};
@@ -134,7 +171,7 @@ TEST(DistributedTest, NodeFeaturesMultipleServersMissingFeatureId)
 
 TEST(DistributedTest, NodeFeaturesMultipleServersBackFillLargeRequestFeatureSize)
 {
-    auto mocks = MockServers(10);
+    auto mocks = MockServers(10, "NodeFeaturesMultipleServersBackFillLargeRequestFeatureSize");
     snark::GRPCClient c(std::move(mocks.first), 1, 1);
 
     std::vector<snark::NodeId> input_nodes = {0, 11, 22};
@@ -145,7 +182,8 @@ TEST(DistributedTest, NodeFeaturesMultipleServersBackFillLargeRequestFeatureSize
     EXPECT_EQ(output, std::vector<float>({0, 1, 0, 0, 11, 12, 0, 0, 22, 23, 0, 0}));
 }
 
-std::pair<std::shared_ptr<snark::GRPCServer>, std::shared_ptr<snark::GRPCClient>> CreateSingleServerEnvironment()
+std::pair<std::shared_ptr<snark::GRPCServer>, std::shared_ptr<snark::GRPCClient>> CreateSingleServerEnvironment(
+    std::string name)
 {
     TestGraph::MemoryGraph m;
     size_t curr_node = 0;
@@ -164,8 +202,8 @@ std::pair<std::shared_ptr<snark::GRPCServer>, std::shared_ptr<snark::GRPCClient>
                                                             TestGraph::NeighborRecord{curr_node + 4, 0, 1.0f}}});
     }
 
-    auto path = std::filesystem::temp_directory_path();
-    auto partition = TestGraph::convert(path, "0_0", std::move(m), 1);
+    TempFolder path(name);
+    auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
 
     auto service = std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
                                                                    snark::PartitionStorageType::memory, "");
@@ -178,7 +216,7 @@ std::pair<std::shared_ptr<snark::GRPCServer>, std::shared_ptr<snark::GRPCClient>
 
 TEST(DistributedTest, SampleNeighborsSingleServer)
 {
-    auto env = CreateSingleServerEnvironment();
+    auto env = CreateSingleServerEnvironment("SampleNeighborsSingleServer");
     auto &client = *env.second;
     std::vector<snark::NodeId> input_nodes = {0, 1, 2};
     std::vector<snark::Type> input_types = {0};
@@ -195,7 +233,7 @@ TEST(DistributedTest, SampleNeighborsSingleServer)
 
 TEST(DistributedTest, UniformSampleNeighborsSingleServer)
 {
-    auto env = CreateSingleServerEnvironment();
+    auto env = CreateSingleServerEnvironment("UniformSampleNeighborsSingleServer");
     auto &client = *env.second;
     std::vector<snark::NodeId> input_nodes = {0, 1, 2};
     std::vector<snark::Type> input_types = {0};
@@ -210,7 +248,7 @@ TEST(DistributedTest, UniformSampleNeighborsSingleServer)
 
 TEST(DistributedTest, UniformSampleNeighborsWithoutReplacementSingleServer)
 {
-    auto env = CreateSingleServerEnvironment();
+    auto env = CreateSingleServerEnvironment("UniformSampleNeighborsSingleServer");
     auto &client = *env.second;
     std::vector<snark::NodeId> input_nodes = {0, 1, 2};
     std::vector<snark::Type> input_types = {0};
@@ -224,7 +262,7 @@ TEST(DistributedTest, UniformSampleNeighborsWithoutReplacementSingleServer)
 }
 
 using ServerList = std::vector<std::shared_ptr<snark::GRPCServer>>;
-std::pair<ServerList, std::shared_ptr<snark::GRPCClient>> CreateMultiServerEnvironment()
+std::pair<ServerList, std::shared_ptr<snark::GRPCClient>> CreateMultiServerEnvironment(std::string name)
 {
     const size_t num_servers = 10;
     ServerList servers;
@@ -246,8 +284,8 @@ std::pair<ServerList, std::shared_ptr<snark::GRPCClient>> CreateMultiServerEnvir
                                                                 TestGraph::NeighborRecord{curr_node + 4, 0, 2.0f}}});
         }
 
-        auto path = std::filesystem::temp_directory_path();
-        auto partition = TestGraph::convert(path, "0_0", std::move(m), 1);
+        TempFolder path(name);
+        auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
         servers.emplace_back(std::make_shared<snark::GRPCServer>(
             std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
                                                             snark::PartitionStorageType::memory, ""),
@@ -260,7 +298,7 @@ std::pair<ServerList, std::shared_ptr<snark::GRPCClient>> CreateMultiServerEnvir
 
 TEST(DistributedTest, SampleNeighborsMultipleServers)
 {
-    auto environment = CreateMultiServerEnvironment();
+    auto environment = CreateMultiServerEnvironment("SampleNeighborsMultipleServers");
     auto &c = *environment.second;
 
     std::vector<snark::NodeId> input_nodes = {0, 55, 77};
@@ -278,7 +316,7 @@ TEST(DistributedTest, SampleNeighborsMultipleServers)
 
 TEST(DistributedTest, SampleNeighborsMultipleServersMissingNeighbors)
 {
-    auto environment = CreateMultiServerEnvironment();
+    auto environment = CreateMultiServerEnvironment("SampleNeighborsMultipleServersMissingNeighbors");
     auto &c = *environment.second;
 
     std::vector<snark::NodeId> input_nodes = {0, 55, 77};
@@ -296,7 +334,7 @@ TEST(DistributedTest, SampleNeighborsMultipleServersMissingNeighbors)
 
 TEST(DistributedTest, UniformSampleNeighborsMultipleServers)
 {
-    auto environment = CreateMultiServerEnvironment();
+    auto environment = CreateMultiServerEnvironment("UniformSampleNeighborsMultipleServers");
     auto &c = *environment.second;
 
     std::vector<snark::NodeId> input_nodes = {0, 55, 77};
@@ -312,7 +350,7 @@ TEST(DistributedTest, UniformSampleNeighborsMultipleServers)
 
 TEST(DistributedTest, UniformSampleNeighborsWithoutReplacementMultipleServers)
 {
-    auto environment = CreateMultiServerEnvironment();
+    auto environment = CreateMultiServerEnvironment("UniformSampleNeighborsWithoutReplacementMultipleServers");
     auto &c = *environment.second;
 
     std::vector<snark::NodeId> input_nodes = {0, 55, 77};
@@ -348,8 +386,8 @@ TEST(DistributedTest, FullNeighborsMultipleTypesMultipleServers)
                                                                 TestGraph::NeighborRecord{curr_node + 4, 2, 2.0f}}});
         }
 
-        auto path = std::filesystem::temp_directory_path();
-        auto partition = TestGraph::convert(path, "0_0", std::move(m), 1);
+        TempFolder path("FullNeighborsMultipleTypesMultipleServers");
+        auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
         servers.emplace_back(std::make_shared<snark::GRPCServer>(
             std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
                                                             snark::PartitionStorageType::memory, ""),
@@ -374,7 +412,7 @@ TEST(DistributedTest, FullNeighborsMultipleTypesMultipleServers)
 
 TEST(DistributedTest, FullNeighborsMultipleServers)
 {
-    auto environment = CreateMultiServerEnvironment();
+    auto environment = CreateMultiServerEnvironment("FullNeighborsMultipleServers");
     auto &c = *environment.second;
 
     std::vector<snark::NodeId> input_nodes = {0, 55};
@@ -390,41 +428,8 @@ TEST(DistributedTest, FullNeighborsMultipleServers)
     EXPECT_EQ(output_weights, std::vector<float>({1, 2, 1, 2, 1, 2, 1, 2}));
     EXPECT_EQ(output_counts, std::vector<uint64_t>({4, 4}));
 }
-
 namespace
 {
-
-// Helper to work with temporary folders: we run test with bazel,
-// so it is ok to create local folders, because they run in a hermetic sandbox.
-struct TempFolder
-{
-    std::filesystem::path path;
-    bool last;
-
-    explicit TempFolder(std::string name)
-    {
-        path = std::filesystem::path(std::filesystem::path(name));
-        if (!std::filesystem::create_directory(path))
-        {
-            throw std::logic_error("Failed to create path");
-        }
-
-        last = true;
-    }
-
-    TempFolder(TempFolder &&other) : path(std::move(other.path))
-    {
-        other.last = false;
-    }
-
-    ~TempFolder()
-    {
-        if (last)
-        {
-            std::filesystem::remove_all(path);
-        }
-    }
-};
 
 struct SamplerData
 {
@@ -630,8 +635,8 @@ TEST(DistributedTest, TestSamplerFromGEOnlyServer)
             .m_id = snark::NodeId(n), .m_type = 0, .m_weight = 1.0f, .m_float_features = {std::move(vals)}});
     }
 
-    auto path = std::filesystem::temp_directory_path();
-    auto partition = TestGraph::convert(path, "0_0", std::move(m), 1);
+    TempFolder path("TestSamplerFromGEOnlyServer");
+    auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
     snark::GRPCServer server(std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
                                                                              snark::PartitionStorageType::memory, ""),
                              {}, "localhost:0", "", "", "");

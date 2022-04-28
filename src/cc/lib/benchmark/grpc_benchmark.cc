@@ -50,10 +50,10 @@ void BM_DISTRIBUTED_GRAPH_SINGLE_NODE(benchmark::State &state)
 
     std::vector<snark::NodeId> input_nodes(num_nodes);
     std::iota(std::begin(input_nodes), std::end(input_nodes), 0);
-    std::random_shuffle(std::begin(input_nodes), std::end(input_nodes));
-    std::vector<uint8_t> output(4 * fv_size * num_nodes);
     std::random_device rd;
     snark::Xoroshiro128PlusGenerator gen(rd());
+    std::shuffle(std::begin(input_nodes), std::end(input_nodes), gen);
+    std::vector<uint8_t> output(4 * fv_size * num_nodes);
     boost::random::uniform_int_distribution<size_t> distrib(0, num_nodes - (max_batch_size)-1);
     std::vector<snark::FeatureMeta> feature = {{0, fv_size}};
     for (auto _ : state)
@@ -96,10 +96,10 @@ void BM_DISTRIBUTED_GRAPH_MULTIPLE_NODES(benchmark::State &state)
 
     std::vector<snark::NodeId> input_nodes(num_nodes);
     std::iota(std::begin(input_nodes), std::end(input_nodes), 0);
-    std::random_shuffle(std::begin(input_nodes), std::end(input_nodes));
-    std::vector<uint8_t> output(4 * fv_size * num_nodes);
     std::random_device rd;
     snark::Xoroshiro128PlusGenerator gen(rd());
+    std::shuffle(std::begin(input_nodes), std::end(input_nodes), gen);
+    std::vector<uint8_t> output(4 * fv_size * num_nodes);
     boost::random::uniform_int_distribution<size_t> distrib(0, num_nodes - (max_batch_size)-1);
     std::vector<snark::FeatureMeta> feature = {{0, 4 * fv_size}};
     for (auto _ : state)
@@ -125,10 +125,10 @@ static void BM_REGULAR_GRAPH(benchmark::State &state)
     snark::Graph g(path.string(), std::vector<uint32_t>{0}, snark::PartitionStorageType::memory, "");
     std::vector<snark::NodeId> input_nodes(num_nodes);
     std::iota(std::begin(input_nodes), std::end(input_nodes), 0);
-    std::random_shuffle(std::begin(input_nodes), std::end(input_nodes));
-    std::vector<uint8_t> output(4 * fv_size * num_nodes);
     std::random_device rd;
     snark::Xoroshiro128PlusGenerator gen(rd());
+    std::shuffle(std::begin(input_nodes), std::end(input_nodes), gen);
+    std::vector<uint8_t> output(4 * fv_size * num_nodes);
     boost::random::uniform_int_distribution<size_t> distrib(0, num_nodes - (max_batch_size)-1);
     std::vector<snark::FeatureMeta> feature = {{0, 4 * fv_size}};
     for (auto _ : state)

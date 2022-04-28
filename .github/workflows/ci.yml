@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request_target:
+    branches:
+      - main
+
+jobs:
+  pre-commit:
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9"]
+        os: ["ubuntu-latest", "macos-11", "windows-2019"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run lint
+        uses: ./.github/actions/lint
+  test:
+    strategy:
+      matrix:
+        python-version: ["3.7", "3.8"]
+        os: ["ubuntu-latest", "macos-11", "windows-2019"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run tests
+        uses: ./.github/actions/test
+      - name: Run examples
+        uses: ./.github/actions/examples
+      - name: Run benchmarks
+        uses: ./.github/actions/benchmarks
