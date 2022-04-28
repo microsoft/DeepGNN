@@ -133,14 +133,13 @@ def deepgnn_tf(version: str):
 def deepgnn_pytorch(version: str):
     """DeepGNN runtime and algorithms for pytorch."""
     depens = [
-            "deepgnn-ge>=0.1",
-            "torch>=1.8",
-            "boto3>=1.15.16",
-            "transformers>=4.3.3",
-            "sentencepiece>=0.1.95",
-            "tqdm>=4.51.0",
-        ]
-    )
+        "deepgnn-ge>=0.1",
+        "torch>=1.8",
+        "boto3>=1.15.16",
+        "transformers>=4.3.3",
+        "sentencepiece>=0.1.95",
+        "tqdm>=4.51.0",
+    ]
     depens.extend(COMMON_PACKAGES)
 
     setuptools.setup(
