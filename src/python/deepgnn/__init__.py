@@ -34,5 +34,6 @@ from .logging_utils import (
     get_current_user,
     log_telemetry,
     get_logger,
+    set_logger,
     setup_default_logging_config,
 )

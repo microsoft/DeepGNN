@@ -126,6 +126,22 @@ def setup_default_logging_config(enable_telemetry: bool = False):
     _init = True
 
 
+def set_logger(customized_logger: logging.Logger) -> None:
+    ''' client could provide the contomized logger.
+
+    This function will override the underlying logger `_logger`.
+    '''
+    global _logger
+
+    _logger_lock.acquire()
+
+    try:
+        _logger = customized_logger
+
+    finally:
+        _logger_lock.release()
+
+
 def get_logger():
     global _logger
     global _init
