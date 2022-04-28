@@ -1,0 +1,11 @@
+name: "Examples"
+description: "Run examples"
+runs:
+  using: "composite"
+  steps:
+    - run: |
+        bazel test -c dbg //examples/pytorch/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=linux
+        bazel test -c dbg //examples/tensorflow/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=linux
+        bazel test -c dbg //docs/tutorials:notebook_test --test_output=all --test_timeout 6000 --config=linux
+      shell: bash
+      if: runner.os == 'Linux'

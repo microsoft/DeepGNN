@@ -1,0 +1,11 @@
+name: "Benchmarks"
+description: "Run benchmarks"
+runs:
+  using: "composite"
+  steps:
+    - run: |
+        bazel run -c opt src/cc/lib/benchmark:grpc_benchmark --config=linux
+        bazel run -c opt src/cc/lib/benchmark:sampler_benchmark --config=linux
+        bazel run -c opt src/cc/lib/benchmark:neighbor_sampler_benchmark --config=linux
+      shell: bash
+      if: runner.os == 'Linux'
