@@ -65,9 +65,23 @@ def graph_engine(version: str):
             "Source": "https://github.com/microsoft/DeepGNN",
         },
         include_package_data=True,
-        python_requires=">=3.7, <4",
+        python_requires=">=3.7",
         cmdclass={"clean": clean},
         license="MIT",
+        classifiers=[
+            "Development Status :: 3 - Alpha",
+            "Intended Audience :: Developers",
+            "Intended Audience :: Science/Research",
+            "License :: OSI Approved :: MIT License",
+            "Programming Language :: C++",
+            "Programming Language :: Python :: 3",
+            "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3.8",
+            "Programming Language :: Python :: 3.9",
+            "Programming Language :: Python :: 3.10",
+            "Topic :: Scientific/Engineering",
+            "Topic :: Software Development :: Libraries",
+        ],
     )
 
     # Clean up files after build.
@@ -81,18 +95,15 @@ def graph_engine(version: str):
 
 def deepgnn_tf(version: str):
     """DeepGNN runtime and algorithms for tensorflow."""
-    depens = ["tensorflow>=2"]
-    if "dev" in version:
-        depens.append(f"deepgnn-ge=={version}")
-    else:
-        depens.append("deepgnn-ge>=0.1")
-
+    depens = ["tensorflow>=2", "deepgnn-ge>=0.1"]
     depens.extend(COMMON_PACKAGES)
 
     setuptools.setup(
         name="deepgnn-tf",
         version=version,
         description="DeepGNN algorithms for tensorflow.",
+        long_description="See [DeepGNN package](https://pypi.org/project/deepgnn-ge/) for detailed description.",
+        long_description_content_type="text/markdown",
         url=CODE_URL,
         author=AUTHOR,
         author_email=AUTHOR_EMAIL,
@@ -100,21 +111,29 @@ def deepgnn_tf(version: str):
             include=["deepgnn", "deepgnn.tf", "deepgnn.tf.*"]
         ),
         install_requires=depens,
-        python_requires=">=3.7, <4",
+        python_requires=">=3.7",
         cmdclass={"clean": clean},
         license="MIT",
+        classifiers=[
+            "Development Status :: 3 - Alpha",
+            "Intended Audience :: Developers",
+            "Intended Audience :: Science/Research",
+            "License :: OSI Approved :: MIT License",
+            "Programming Language :: Python :: 3",
+            "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3.8",
+            "Programming Language :: Python :: 3.9",
+            "Programming Language :: Python :: 3.10",
+            "Topic :: Scientific/Engineering",
+            "Topic :: Software Development :: Libraries",
+        ],
     )
 
 
 def deepgnn_pytorch(version: str):
     """DeepGNN runtime and algorithms for pytorch."""
-    if "dev" in version:
-        depens = [f"deepgnn-ge=={version}"]
-    else:
-        depens = ["deepgnn-ge>=0.1"]
-
-    depens.extend(
-        [
+    depens = [
+            "deepgnn-ge>=0.1",
             "torch>=1.8",
             "boto3>=1.15.16",
             "transformers>=4.3.3",
@@ -128,6 +147,8 @@ def deepgnn_pytorch(version: str):
         name=f"deepgnn-torch",
         version=version,
         description="DeepGNN algorithms for pytorch.",
+        long_description="See [DeepGNN package](https://pypi.org/project/deepgnn-ge/) for detailed description.",
+        long_description_content_type="text/markdown",
         url=CODE_URL,
         author=AUTHOR,
         author_email=AUTHOR_EMAIL,
@@ -135,9 +156,22 @@ def deepgnn_pytorch(version: str):
             include=["deepgnn", "deepgnn.pytorch", "deepgnn.pytorch.*"]
         ),
         install_requires=depens,
-        python_requires=">=3.7, <4",
+        python_requires=">=3.7",
         cmdclass={"clean": clean},
         license="MIT",
+        classifiers=[
+            "Development Status :: 3 - Alpha",
+            "Intended Audience :: Developers",
+            "Intended Audience :: Science/Research",
+            "License :: OSI Approved :: MIT License",
+            "Programming Language :: Python :: 3",
+            "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3.8",
+            "Programming Language :: Python :: 3.9",
+            "Programming Language :: Python :: 3.10",
+            "Topic :: Scientific/Engineering",
+            "Topic :: Software Development :: Libraries",
+        ],
     )
 
 
