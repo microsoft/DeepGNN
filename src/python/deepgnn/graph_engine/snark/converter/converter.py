@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-"""Set of writers to convert graph from json format to binary."""
+"""Set of writers to convert graph from linar format to binary."""
 import ctypes
 import os
 import tempfile

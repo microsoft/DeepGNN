@@ -98,7 +98,6 @@ def triangle_graph_json(folder):
     data.close()
     meta.close()
 
-
     output_name = os.path.join(folder, "graph.linear")
     json_to_linear(data.name, output_name)
 
@@ -170,7 +169,7 @@ def test_sanity_node_map(triangle_graph):
         assert result[48:56] == (2).to_bytes(8, byteorder=sys.byteorder)
         assert result[56:60] == (2).to_bytes(4, byteorder=sys.byteorder)
 
-'''
+
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
 def test_sanity_node_index(triangle_graph):
     output = tempfile.TemporaryDirectory()
@@ -451,6 +450,16 @@ def test_node_alias_tables(triangle_graph):
         assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
         assert result[16:20] == struct.pack("=f", 1.0)
 
+    for v in os.listdir(output.name):
+        if 'alias' in v and 'node' in v:
+            with open("{}/{}".format(output.name, v), "rb") as ea:
+                result = ea.read(20 + 1)
+                print(v, len(result))
+
+
+
+    assert False, [v for v in  [1]]
+
     with open("{}/node_1_1.alias".format(output.name), "rb") as ea:
         expected_size = 20  # Only 1 record
         result = ea.read(expected_size + 1)
@@ -583,13 +592,16 @@ def graph_with_sparse_features_json(folder):
 
     data.close()
     meta.close()
-    return data.name, meta.name
-'''
-"""
+
+    output_name = os.path.join(folder, "graph.linear")
+    json_to_linear(data.name, output_name)
+
+    return output_name, meta.name
+
 @pytest.fixture(scope="module")
 def graph_with_sparse_features(request):
     workdir = tempfile.TemporaryDirectory()
-    if request.param == DecoderType.JSON:
+    if request.param == DecoderType.JSON or request.param == DecoderType.LINEAR:
         data_name, meta_name = graph_with_sparse_features_json(workdir.name)
     else:
         raise ValueError("Unsupported format.")
@@ -599,7 +611,7 @@ def graph_with_sparse_features(request):
 
 
 @pytest.mark.parametrize(
-    "graph_with_sparse_features", [DecoderType.JSON], indirect=True
+    "graph_with_sparse_features", [DecoderType.LINEAR], indirect=True
 )
 def test_sanity_node_sparse_features_index(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
@@ -623,7 +635,7 @@ def test_sanity_node_sparse_features_index(graph_with_sparse_features):
 
 
 @pytest.mark.parametrize(
-    "graph_with_sparse_features", [DecoderType.JSON], indirect=True
+    "graph_with_sparse_features", [DecoderType.LINEAR], indirect=True
 )
 def test_sanity_node_sparse_features_data(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
@@ -670,7 +682,7 @@ def test_sanity_node_sparse_features_data(graph_with_sparse_features):
 
 
 @pytest.mark.parametrize(
-    "graph_with_sparse_features", [DecoderType.JSON], indirect=True
+    "graph_with_sparse_features", [DecoderType.LINEAR], indirect=True
 )
 def test_sanity_edge_sparse_features_index(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
@@ -695,7 +707,7 @@ def test_sanity_edge_sparse_features_index(graph_with_sparse_features):
 
 
 @pytest.mark.parametrize(
-    "graph_with_sparse_features", [DecoderType.JSON], indirect=True
+    "graph_with_sparse_features", [DecoderType.LINEAR], indirect=True
 )
 def test_sanity_edge_sparse_features_data(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
@@ -789,7 +801,7 @@ def test_sanity_edge_sparse_features_data(graph_with_sparse_features):
         npt.assert_allclose(
             np.frombuffer(result[386:expected_size], dtype=np.float32), [5.5, 6.7]
         )
-"""
+
 
 if __name__ == "__main__":
     sys.exit(

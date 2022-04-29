@@ -143,14 +143,12 @@ def output(
                 node = item
                 node_writer.add(node)
 
-                # Works if sorted Node, src edge, ... Nodei+1
                 import ctypes
                 edge_writer.nbi.write(  # type: ignore
                     ctypes.c_uint64(edge_writer.ei.tell() // (4 + 8 + 8 + 4))
                 )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
 
                 node_alias.add(node)
-
 
                 node_weight[node["node_type"]] += float(node["node_weight"])
                 node_type_count[node["node_type"]] += 1
