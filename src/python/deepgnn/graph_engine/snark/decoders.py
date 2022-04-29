@@ -241,7 +241,61 @@ def json_to_linear(filename_in, filename_out):
         )
         for edge in edge_list:
             file_out.write(f'{edge["src_id"]} {edge["dst_id"]} {edge["edge_type"]} {edge["weight"]} {_dump_features(edge)}\n')
-            print(edge["edge_type"])
 
     file_in.close()
     file_out.close()
+
+
+def src_sort(filename_in, filename_out):
+    file_in = open(filename_in, 'r')
+    file_out = open(filename_out, 'w')
+
+    lines = {}
+    for line in file_in.readlines():
+        src, dst, *_ = line.split()
+        src, dst = int(src), int(dst)
+        if src not in lines:
+            lines[src] = []
+        lines[src].append((src, dst, line))
+
+    for (key, values) in sorted(lines.items()):
+        for line in sorted(values, key=lambda v: v[1]):
+            file_out.write(line[2])
+
+    file_in.close()
+    file_out.close()
+
+
+def dst_sort(filename_in, filename_out):
+    file_in = open(filename_in, 'r')
+    file_out = open(filename_out, 'w')
+
+    lines = {}
+    for line in file_in.readlines():
+        src, dst, *_ = line.split()
+        src, dst = int(src), int(dst)
+        if dst == -1:
+            dst = src
+            src = -1
+        if dst not in lines:
+            lines[dst] = []
+        lines[dst].append((src, dst, line))
+
+    for (key, values) in sorted(lines.items()):
+        for line in sorted(values, key=lambda v: v[0]):
+            file_out.write(line[2])
+
+    file_in.close()
+    file_out.close()
+
+
+if __name__ == '__main__':
+    file_in = "/tmp/ppi/graph.json"
+    file_out = "/tmp/ppi/graph.linear"
+    file_src = "/tmp/ppi/graph_src.linear"
+    file_dst = "/tmp/ppi/graph_dst.linear"
+
+    #json_to_linear(file_in, file_out)
+
+    src_sort(file_out, file_src)
+    dst_sort(file_out, file_dst)

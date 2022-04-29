@@ -13,7 +13,7 @@ import numpy as np
 import numpy.testing as npt
 
 import deepgnn.graph_engine.snark.convert as convert
-from deepgnn.graph_engine.snark.decoders import DecoderType, json_to_linear
+from deepgnn.graph_engine.snark.decoders import DecoderType, json_to_linear, dst_sort
 from deepgnn.graph_engine.snark.dispatcher import QueueDispatcher
 
 
@@ -456,10 +456,6 @@ def test_node_alias_tables(triangle_graph):
                 result = ea.read(20 + 1)
                 print(v, len(result))
 
-
-
-    assert False, [v for v in  [1]]
-
     with open("{}/node_1_1.alias".format(output.name), "rb") as ea:
         expected_size = 20  # Only 1 record
         result = ea.read(expected_size + 1)
@@ -801,6 +797,444 @@ def test_sanity_edge_sparse_features_data(graph_with_sparse_features):
         npt.assert_allclose(
             np.frombuffer(result[386:expected_size], dtype=np.float32), [5.5, 6.7]
         )
+
+
+def triangle_graph_json_reversed(folder):
+    data = open(os.path.join(folder, "graph.json"), "w+")
+    graph = [
+        {
+            "node_id": 9,
+            "node_type": 0,
+            "node_weight": 1,
+            "neighbor": {"0": {"0": 0.5}, "1": {}},
+            "uint64_feature": {},
+            "float_feature": {"0": [0, 1], "1": [-0.01, -0.02]},
+            "binary_feature": {},
+            "edge": [
+                {
+                    "src_id": 9,
+                    "dst_id": 0,
+                    "edge_type": 0,
+                    "weight": 0.5,
+                    "uint64_feature": {"0": [1, 2, 3]},
+                    "float_feature": {},
+                    "binary_feature": {},
+                }
+            ],
+        },
+        {
+            "node_id": 0,
+            "node_type": 1,
+            "node_weight": 1,
+            "neighbor": {"0": {}, "1": {"5": 1}},
+            "uint64_feature": {},
+            "float_feature": {"0": [1], "1": [-0.03, -0.04]},
+            "binary_feature": {},
+            "edge": [
+                {
+                    "src_id": 0,
+                    "dst_id": 5,
+                    "edge_type": 1,
+                    "weight": 1,
+                    "uint64_feature": {},
+                    "float_feature": {"1": [3, 4]},
+                    "binary_feature": {},
+                }
+            ],
+        },
+        {
+            "node_id": 5,
+            "node_type": 2,
+            "node_weight": 1,
+            "neighbor": {"0": {}, "1": {"9": 0.7}},
+            "uint64_feature": {},
+            "float_feature": {"0": [1, 1], "1": [-0.05, -0.06]},
+            "binary_feature": {},
+            "edge": [
+                {
+                    "src_id": 5,
+                    "dst_id": 9,
+                    "edge_type": 1,
+                    "weight": 0.7,
+                    "uint64_feature": {},
+                    "float_feature": {},
+                    "binary_feature": {"0": "hello"},
+                }
+            ],
+        },
+    ]
+    for el in graph:
+        json.dump(el, data)
+        data.write("\n")
+    data.flush()
+
+    meta = open(os.path.join(folder, "meta.txt"), "w+")
+    meta.write(
+        '{"node_type_num": 3, "edge_type_num": 2, \
+        "node_uint64_feature_num": 0, "node_float_feature_num": 2, \
+        "node_binary_feature_num": 0, "edge_uint64_feature_num": 1, \
+        "edge_float_feature_num": 1, "edge_binary_feature_num": 1}'
+    )
+    meta.flush()
+
+    data.close()
+    meta.close()
+
+    output_name = os.path.join(folder, "graph.linear")
+    dst_sort_name = os.path.join(folder, "graph_dst.linear")
+    json_to_linear(data.name, output_name)
+    dst_sort(output_name, dst_sort_name)
+
+    return dst_sort_name, meta.name
+
+
+@pytest.fixture(scope="module")
+def triangle_graph_reversed(request):
+    workdir = tempfile.TemporaryDirectory()
+    if request.param == DecoderType.JSON or request.param == DecoderType.LINEAR:
+        data_name, meta_name = triangle_graph_json_reversed(workdir.name)
+    else:
+        raise ValueError("Unsupported format.")
+
+    yield data_name, meta_name, request.param
+    workdir.cleanup()
+
+
+param = [DecoderType.LINEAR]  #, DecoderType.TSV]
+
+
+@pytest.mark.parametrize("triangle_graph_reversed", param, indirect=True)
+def test_sanity_node_map_reversed(triangle_graph_reversed):
+    output = tempfile.TemporaryDirectory()
+    data_name, meta_name, decoder = triangle_graph_reversed
+    convert.MultiWorkersConverter(
+        graph_path=data_name,
+        meta_path=meta_name,
+        partition_count=1,
+        output_dir=output.name,
+        decoder_type=decoder,
+    ).convert()
+
+    with open("{}/node_{}_{}.map".format(output.name, 0, 0), "rb") as nm:
+        expected_size = 3 * (2 * 8 + 4)
+        result = nm.read(expected_size + 8)
+        assert len(result) == expected_size
+        assert result[0:8] == (9).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:20] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[20:28] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[28:36] == (1).to_bytes(8, byteorder=sys.byteorder)
+        assert result[36:40] == (1).to_bytes(4, byteorder=sys.byteorder)
+        assert result[40:48] == (5).to_bytes(8, byteorder=sys.byteorder)
+        assert result[48:56] == (2).to_bytes(8, byteorder=sys.byteorder)
+        assert result[56:60] == (2).to_bytes(4, byteorder=sys.byteorder)
+
+
+@pytest.mark.parametrize("triangle_graph_reversed", param, indirect=True)
+def test_sanity_node_index_reversed(triangle_graph_reversed):
+    output = tempfile.TemporaryDirectory()
+    data_name, meta_name, decoder = triangle_graph_reversed
+    convert.MultiWorkersConverter(
+        graph_path=data_name,
+        meta_path=meta_name,
+        partition_count=1,
+        output_dir=output.name,
+        decoder_type=decoder,
+    ).convert()
+    with open("{}/node_{}_{}.index".format(output.name, 0, 0), "rb") as ni:
+        expected_size = 3 * 8 + 8
+        result = ni.read(expected_size + 8)
+        assert len(result) == expected_size
+        assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (2).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:24] == (4).to_bytes(8, byteorder=sys.byteorder)
+        assert result[24:32] == (6).to_bytes(8, byteorder=sys.byteorder)
+
+
+@pytest.mark.parametrize("triangle_graph_reversed", param, indirect=True)
+def test_sanity_node_feature_index_reversed(triangle_graph_reversed):
+    output = tempfile.TemporaryDirectory()
+    data_name, meta_name, decoder = triangle_graph_reversed
+    convert.MultiWorkersConverter(
+        graph_path=data_name,
+        meta_path=meta_name,
+        partition_count=1,
+        output_dir=output.name,
+        decoder_type=decoder,
+    ).convert()
+    with open("{}/node_features_{}_{}.index".format(output.name, 0, 0), "rb") as ni:
+        expected_size = (
+            3 * 8 * 2 + 8
+        )  # 3 nodes, 2 features each with 2 float + 8 as final close
+        result = ni.read(expected_size + 1)
+        assert len(result) == expected_size
+        assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (8).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:24] == (16).to_bytes(8, byteorder=sys.byteorder)
+        assert result[24:32] == (20).to_bytes(8, byteorder=sys.byteorder)
+        assert result[32:40] == (28).to_bytes(8, byteorder=sys.byteorder)
+        assert result[40:48] == (36).to_bytes(8, byteorder=sys.byteorder)
+        assert result[48:56] == (44).to_bytes(8, byteorder=sys.byteorder)
+
+
+@pytest.mark.parametrize("triangle_graph_reversed", param, indirect=True)
+def test_sanity_neighbors_index_reversed(triangle_graph_reversed):
+    output = tempfile.TemporaryDirectory()
+    data_name, meta_name, decoder = triangle_graph_reversed
+    convert.MultiWorkersConverter(
+        graph_path=data_name,
+        meta_path=meta_name,
+        partition_count=1,
+        output_dir=output.name,
+        decoder_type=decoder,
+    ).convert()
+    with open("{}/neighbors_{}_{}.index".format(output.name, 0, 0), "rb") as ni:
+        expected_size = 3 * 8 + 8  # 3 nodes + 8 as final close
+        result = ni.read(expected_size + 1)
+        assert len(result) == expected_size
+        assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (1).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:24] == (2).to_bytes(8, byteorder=sys.byteorder)
+        assert result[24:32] == (3).to_bytes(8, byteorder=sys.byteorder)
+
+
+@pytest.mark.parametrize("triangle_graph_reversed", param, indirect=True)
+def test_sanity_edge_index_reversed(triangle_graph_reversed):
+    output = tempfile.TemporaryDirectory()
+    data_name, meta_name, decoder = triangle_graph_reversed
+    convert.MultiWorkersConverter(
+        graph_path=data_name,
+        meta_path=meta_name,
+        partition_count=1,
+        output_dir=output.name,
+        decoder_type=decoder,
+    ).convert()
+    with open("{}/edge_{}_{}.index".format(output.name, 0, 0), "rb") as ei:
+        expected_size = 4 * 24  # 3 nodes + last line as final close
+        result = ei.read(expected_size + 100)
+        assert len(result) == expected_size
+        assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:20] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[20:24] == struct.pack("f", 0.5)
+
+        assert result[24:32] == (5).to_bytes(8, byteorder=sys.byteorder)
+        assert result[32:40] == (1).to_bytes(8, byteorder=sys.byteorder)
+        assert result[40:44] == (1).to_bytes(4, byteorder=sys.byteorder)
+        assert result[44:48] == struct.pack("f", 1.0)
+
+        assert result[48:56] == (9).to_bytes(8, byteorder=sys.byteorder)
+        assert result[56:64] == (3).to_bytes(8, byteorder=sys.byteorder)
+        assert result[64:68] == (1).to_bytes(4, byteorder=sys.byteorder)
+        assert result[68:72] == struct.pack("f", 0.7)
+
+        assert result[72:80] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[80:88] == (4).to_bytes(8, byteorder=sys.byteorder)
+        assert result[88:92] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[92:96] == struct.pack("f", -1)
+
+
+@pytest.mark.parametrize("triangle_graph_reversed", param, indirect=True)
+def test_sanity_edge_features_index_reversed(triangle_graph_reversed):
+    output = tempfile.TemporaryDirectory()
+    data_name, meta_name, decoder = triangle_graph_reversed
+    convert.MultiWorkersConverter(
+        graph_path=data_name,
+        meta_path=meta_name,
+        partition_count=1,
+        output_dir=output.name,
+        decoder_type=decoder,
+    ).convert()
+    with open("{}/edge_features_{}_{}.index".format(output.name, 0, 0), "rb") as ni:
+        expected_values = [0, 24, 24, 32, 37]
+
+        expected_size = len(expected_values) * 8
+        result = ni.read(expected_size)
+        assert len(result) == expected_size
+        for i in range(len(expected_values)):
+            assert result[i * 8 : (i + 1) * 8] == (expected_values[i]).to_bytes(
+                8, byteorder=sys.byteorder
+            )
+
+
+@pytest.mark.parametrize("triangle_graph_reversed", param, indirect=True)
+def test_sanity_edge_features_data_reversed(triangle_graph_reversed):
+    output = tempfile.TemporaryDirectory()
+    data_name, meta_name, decoder = triangle_graph_reversed
+    convert.MultiWorkersConverter(
+        graph_path=data_name,
+        meta_path=meta_name,
+        partition_count=1,
+        output_dir=output.name,
+        decoder_type=decoder,
+    ).convert()
+    with open("{}/edge_features_{}_{}.data".format(output.name, 0, 0), "rb") as ni:
+        expected_size = 37  # last value in edge_features_index
+        result = ni.read(expected_size + 1)
+        assert len(result) == expected_size
+        assert result[0:8] == (1).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (2).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:24] == (3).to_bytes(8, byteorder=sys.byteorder)
+
+        assert result[24:28] == struct.pack("=f", 3)
+        assert result[28:32] == struct.pack("=f", 4)
+
+        assert result[32:37] == bytes("hello", "utf-8")
+
+
+@pytest.mark.parametrize("triangle_graph_reversed", param, indirect=True)
+def test_sanity_metadata_reversed(triangle_graph_reversed):
+    output = tempfile.TemporaryDirectory()
+    data_name, meta_name, decoder = triangle_graph_reversed
+    convert.MultiWorkersConverter(
+        graph_path=data_name,
+        meta_path=meta_name,
+        partition_count=1,
+        output_dir=output.name,
+        decoder_type=decoder,
+    ).convert()
+    with open("{}/meta.txt".format(output.name), "r") as ni:
+        result = ni.readlines()
+
+        assert len(result) == 18
+        assert int(result[0]) == 3
+        assert int(result[1]) == 3
+        assert int(result[2]) == 3
+        assert int(result[3]) == 2
+        assert int(result[4]) == 2
+        assert int(result[5]) == 3
+
+        # partition information
+        assert int(result[6]) == 1
+        assert int(result[7]) == 0
+        assert float(result[8]) == 1
+        assert float(result[9]) == 1
+        assert float(result[10]) == 1
+        assert float(result[11]) == 0.5
+        assert float(result[12]) == 1.7
+
+        # type counts
+        assert int(result[13]) == 1
+        assert int(result[14]) == 1
+        assert int(result[15]) == 1
+        assert int(result[16]) == 1
+        assert int(result[17]) == 2
+
+
+@pytest.mark.parametrize("triangle_graph_reversed", param, indirect=True)
+def test_edge_alias_tables_reversed(triangle_graph_reversed):
+    output = tempfile.TemporaryDirectory()
+    data_name, meta_name, decoder = triangle_graph_reversed
+
+    class Counter:
+        def __init__(self):
+            self.count = -1
+
+        def __call__(self, x):
+            self.count += 1
+            return self.count % 2
+
+    d = QueueDispatcher(
+        Path(output.name), 2, meta_name, convert.output, Counter(), decoder
+    )
+    convert.MultiWorkersConverter(
+        graph_path=data_name,
+        meta_path=meta_name,
+        partition_count=2,
+        output_dir=output.name,
+        decoder_type=decoder,
+        dispatcher=d,
+    ).convert()
+    with open("{}/edge_0_0.alias".format(output.name), "rb") as ea:
+        expected_size = 36  # Only 1 record
+        result = ea.read(expected_size + 1)
+        assert len(result) == expected_size
+        assert result[0:8] == (9).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:24] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[24:32] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[32:36] == struct.pack("=f", 1.0)
+
+    with open("{}/edge_1_0.alias".format(output.name), "rb") as ea:
+        expected_size = 36  # Only 1 record
+        result = ea.read(expected_size + 1)
+        assert len(result) == expected_size
+        assert result[0:8] == (5).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (9).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:24] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[24:32] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[32:36] == struct.pack("=f", 1.0)
+
+    with open("{}/edge_1_1.alias".format(output.name), "rb") as ea:
+        expected_size = 36  # Only 1 record
+        result = ea.read(expected_size + 1)
+        assert len(result) == expected_size
+        assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (5).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:24] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[24:32] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[32:36] == struct.pack("=f", 1.0)
+    assert os.path.getsize("{}/edge_0_1.alias".format(output.name)) == 0
+
+
+@pytest.mark.parametrize("triangle_graph_reversed", param, indirect=True)
+def test_node_alias_tables_reversed(triangle_graph_reversed):
+    output = tempfile.TemporaryDirectory()
+    data_name, meta_name, decoder = triangle_graph_reversed
+
+    class Counter:
+        def __init__(self):
+            self.count = -1
+
+        def __call__(self, x):
+            self.count += 1
+            return self.count % 2
+
+    d = QueueDispatcher(
+        Path(output.name), 2, meta_name, convert.output, Counter(), decoder
+    )
+    convert.MultiWorkersConverter(
+        graph_path=data_name,
+        meta_path=meta_name,
+        partition_count=2,
+        output_dir=output.name,
+        decoder_type=decoder,
+        dispatcher=d,
+    ).convert()
+
+    with open("{}/node_0_0.alias".format(output.name), "rb") as ea:
+        expected_size = 20  # Only 1 record
+        result = ea.read(expected_size + 1)
+        assert len(result) == expected_size
+        assert result[0:8] == (9).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:20] == struct.pack("=f", 1.0)
+
+    for v in os.listdir(output.name):
+        if 'alias' in v and 'node' in v:
+            with open("{}/{}".format(output.name, v), "rb") as ea:
+                result = ea.read(20 + 1)
+                print(v, len(result))
+
+    with open("{}/node_1_1.alias".format(output.name), "rb") as ea:
+        expected_size = 20  # Only 1 record
+        result = ea.read(expected_size + 1)
+        assert len(result) == expected_size
+        assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:20] == struct.pack("=f", 1.0)
+
+    with open("{}/node_2_0.alias".format(output.name), "rb") as ea:
+        expected_size = 20  # Only 1 record
+        result = ea.read(expected_size + 1)
+        assert len(result) == expected_size
+        assert result[0:8] == (5).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:20] == struct.pack("=f", 1.0)
+
+    assert os.path.getsize("{}/node_0_1.alias".format(output.name)) == 0
+    assert os.path.getsize("{}/node_2_1.alias".format(output.name)) == 0
+    assert os.path.getsize("{}/node_1_0.alias".format(output.name)) == 0
 
 
 if __name__ == "__main__":
