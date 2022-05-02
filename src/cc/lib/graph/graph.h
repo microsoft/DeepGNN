@@ -25,12 +25,18 @@ class Graph
   public:
     Graph(std::string path, std::vector<uint32_t> partitions, PartitionStorageType storage_type,
           std::string config_path);
+
     void GetNodeType(std::span<const NodeId> node_ids, std::span<Type> output, Type default_type) const;
+
     void GetNodeFeature(std::span<const NodeId> node_ids, std::span<snark::FeatureMeta> features,
                         std::span<uint8_t> output) const;
+
     void GetNodeSparseFeature(std::span<const NodeId> node_ids, std::span<const snark::FeatureId> features,
                               std::span<int64_t> out_dimensions, std::vector<std::vector<int64_t>> &out_indices,
                               std::vector<std::vector<uint8_t>> &out_data) const;
+
+    void GetNodeStringFeature(std::span<const NodeId> node_ids, std::span<const snark::FeatureId> features,
+                              std::span<int64_t> out_dimensions, std::vector<uint8_t> &out_data) const;
 
     void GetEdgeFeature(std::span<const NodeId> input_edge_src, std::span<const NodeId> input_edge_dst,
                         std::span<const Type> input_edge_type, std::span<snark::FeatureMeta> features,
@@ -40,6 +46,10 @@ class Graph
                               std::span<const Type> input_edge_type, std::span<const snark::FeatureId> features,
                               std::span<int64_t> out_dimensions, std::vector<std::vector<int64_t>> &out_indices,
                               std::vector<std::vector<uint8_t>> &out_values) const;
+
+    void GetEdgeStringFeature(std::span<const NodeId> input_edge_src, std::span<const NodeId> input_edge_dst,
+                              std::span<const Type> input_edge_type, std::span<const snark::FeatureId> features,
+                              std::span<int64_t> out_dimensions, std::vector<uint8_t> &out_values) const;
 
     void FullNeighbor(std::span<const NodeId> input_node_ids, std::span<const Type> input_edge_types,
                       std::vector<NodeId> &output_neighbor_ids, std::vector<Type> &output_neighbor_types,

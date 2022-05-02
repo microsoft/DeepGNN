@@ -328,4 +328,61 @@ void EdgeSparseFeaturesCallData::Proceed()
     }
 }
 
+NodeStringFeaturesCallData::NodeStringFeaturesCallData(GraphEngine::AsyncService &service,
+                                                       grpc::ServerCompletionQueue &cq,
+                                                       snark::GraphEngine::Service &service_impl)
+    : CallData(cq), m_responder(&m_ctx), m_service_impl(service_impl), m_service(service)
+{
+    Proceed();
+}
+
+void NodeStringFeaturesCallData::Proceed()
+{
+    if (m_status == CREATE)
+    {
+        m_status = PROCESS;
+        m_service.RequestGetNodeStringFeatures(&m_ctx, &m_request, &m_responder, &m_cq, &m_cq, this);
+    }
+    else if (m_status == PROCESS)
+    {
+        new NodeStringFeaturesCallData(m_service, m_cq, m_service_impl);
+        const auto status = m_service_impl.GetNodeStringFeatures(&m_ctx, &m_request, &m_reply);
+        m_status = FINISH;
+        m_responder.Finish(m_reply, status, this);
+    }
+    else
+    {
+        GPR_ASSERT(m_status == FINISH);
+        delete this;
+    }
+}
+
+EdgeStringFeaturesCallData::EdgeStringFeaturesCallData(GraphEngine::AsyncService &service,
+                                                       grpc::ServerCompletionQueue &cq,
+                                                       snark::GraphEngine::Service &service_impl)
+    : CallData(cq), m_responder(&m_ctx), m_service_impl(service_impl), m_service(service)
+{
+    Proceed();
+}
+
+void EdgeStringFeaturesCallData::Proceed()
+{
+    if (m_status == CREATE)
+    {
+        m_status = PROCESS;
+        m_service.RequestGetEdgeStringFeatures(&m_ctx, &m_request, &m_responder, &m_cq, &m_cq, this);
+    }
+    else if (m_status == PROCESS)
+    {
+        new EdgeStringFeaturesCallData(m_service, m_cq, m_service_impl);
+        m_service_impl.GetEdgeStringFeatures(&m_ctx, &m_request, &m_reply);
+        m_status = FINISH;
+        m_responder.Finish(m_reply, grpc::Status::OK, this);
+    }
+    else
+    {
+        GPR_ASSERT(m_status == FINISH);
+        delete this;
+    }
+}
 } // namespace snark

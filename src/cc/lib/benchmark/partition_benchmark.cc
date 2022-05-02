@@ -54,7 +54,7 @@ static void BM_NODE_FEATURES(benchmark::State &state, snark::PartitionStorageTyp
     std::vector<snark::NodeId> input_nodes(total_nodes);
     std::iota(std::begin(input_nodes), std::end(input_nodes), 0);
     std::shuffle(std::begin(input_nodes), std::end(input_nodes), snark::Xoroshiro128PlusGenerator(23));
-    size_t max_count = (1 << 13);
+    size_t max_count = (1 << 11);
     std::vector<float> feature_holder_init(fv_size * max_count, -1);
     std::span<uint8_t> feature_holder =
         std::span(reinterpret_cast<uint8_t *>(feature_holder_init.data()), sizeof(float) * feature_holder_init.size());
@@ -64,6 +64,43 @@ static void BM_NODE_FEATURES(benchmark::State &state, snark::PartitionStorageTyp
         const size_t batch_size = state.range(0);
         g_client->GetNodeFeature(std::span(input_nodes).subspan(offset, batch_size), std::span(features),
                                  std::span(feature_holder).subspan(0, fv_size * sizeof(float) * batch_size));
+        offset += batch_size;
+        if (offset + batch_size > max_count)
+        {
+            offset = 0;
+        }
+    }
+    if (state.thread_index() == 0)
+    {
+        std::filesystem::remove_all(path);
+    }
+}
+
+static void BM_NODE_STRING_FEATURES(benchmark::State &state, snark::PartitionStorageType storage_type)
+{
+    const size_t num_nodes = 100000;
+    const size_t fv_size = 602;
+    std::vector<snark::FeatureId> features = {0};
+    std::string path;
+    if (state.thread_index() == 0)
+    {
+        path = create_features_graph(num_nodes, fv_size);
+        g_client = std::make_shared<snark::Graph>(snark::Graph(path, {0}, storage_type, ""));
+    }
+    const auto total_nodes = num_nodes;
+    std::vector<snark::NodeId> input_nodes(total_nodes);
+    std::iota(std::begin(input_nodes), std::end(input_nodes), 0);
+    std::shuffle(std::begin(input_nodes), std::end(input_nodes), snark::Xoroshiro128PlusGenerator(23));
+    size_t max_count = (1 << 11);
+    std::vector<int64_t> dimensions(max_count);
+    size_t offset = 0;
+    for (auto _ : state)
+    {
+        std::vector<uint8_t> feature_data;
+        const size_t batch_size = state.range(0);
+        g_client->GetNodeStringFeature(std::span(input_nodes).subspan(offset, batch_size), std::span(features),
+                                       std::span(std::begin(dimensions), std::begin(dimensions) + batch_size),
+                                       feature_data);
         offset += batch_size;
         if (offset + batch_size > max_count)
         {
@@ -86,10 +123,18 @@ static void BM_NODE_FEATURES_MEMORY(benchmark::State &state)
     BM_NODE_FEATURES(state, snark::PartitionStorageType::memory);
 }
 
-BENCHMARK(BM_NODE_FEATURES_DISK)->RangeMultiplier(2)->Range(1 << 3, 1 << 12)->Threads(1);
-BENCHMARK(BM_NODE_FEATURES_MEMORY)->RangeMultiplier(2)->Range(1 << 3, 1 << 12)->Threads(1);
-BENCHMARK(BM_NODE_FEATURES_DISK)->RangeMultiplier(2)->Range(1 << 3, 1 << 12)->Threads(2);
-BENCHMARK(BM_NODE_FEATURES_MEMORY)->RangeMultiplier(2)->Range(1 << 3, 1 << 12)->Threads(2);
-BENCHMARK(BM_NODE_FEATURES_DISK)->RangeMultiplier(2)->Range(1 << 3, 1 << 12)->Threads(4);
-BENCHMARK(BM_NODE_FEATURES_MEMORY)->RangeMultiplier(2)->Range(1 << 3, 1 << 12)->Threads(4);
+static void BM_NODE_STRING_FEATURES_MEMORY(benchmark::State &state)
+{
+    BM_NODE_STRING_FEATURES(state, snark::PartitionStorageType::memory);
+}
+
+BENCHMARK(BM_NODE_FEATURES_DISK)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(1);
+BENCHMARK(BM_NODE_FEATURES_MEMORY)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(1);
+BENCHMARK(BM_NODE_FEATURES_DISK)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(2);
+BENCHMARK(BM_NODE_FEATURES_MEMORY)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(2);
+BENCHMARK(BM_NODE_FEATURES_DISK)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(4);
+BENCHMARK(BM_NODE_FEATURES_MEMORY)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(4);
+BENCHMARK(BM_NODE_STRING_FEATURES_MEMORY)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(1);
+BENCHMARK(BM_NODE_STRING_FEATURES_MEMORY)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(2);
+BENCHMARK(BM_NODE_STRING_FEATURES_MEMORY)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(4);
 BENCHMARK_MAIN();

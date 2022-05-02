@@ -114,6 +114,26 @@ _SPARSE_FEATURE_CALLBACKFUNC = CFUNCTYPE(
 )
 
 
+class _StringFeatureCallback:
+    def __init__(self, dtype):
+        self.values = np.empty(0, dtype=dtype)
+        self.dtype = dtype
+
+    def __call__(self, values_len, values):
+        if values_len == 0:
+            return
+        self.values = np.copy(np.ctypeslib.as_array(values, [values_len])).view(
+            dtype=self.dtype
+        )
+
+
+_STRING_FEATURE_CALLBACKFUNC = CFUNCTYPE(
+    None,
+    c_size_t,
+    POINTER(c_uint8),
+)
+
+
 def _make_sorted_list(input: Union[int, List[int]]) -> List[int]:
     if isinstance(input, int):
         input = [input]
@@ -235,6 +255,36 @@ class MemoryGraph:
             "extract edge sparse features"
         )
 
+        self.lib.GetNodeStringFeature.argtypes = [
+            POINTER(_DEEP_GRAPH),
+            POINTER(c_int64),
+            c_size_t,
+            POINTER(c_int32),
+            c_size_t,
+            POINTER(c_int64),
+            _STRING_FEATURE_CALLBACKFUNC,
+        ]
+        self.lib.GetNodeStringFeature.restype = c_int32
+        self.lib.GetNodeStringFeature.errcheck = _ErrCallback(  # type: ignore
+            "extract node string features"
+        )
+
+        self.lib.GetEdgeStringFeature.argtypes = [
+            POINTER(_DEEP_GRAPH),
+            POINTER(c_int64),
+            POINTER(c_int64),
+            POINTER(c_int32),
+            c_size_t,
+            POINTER(c_int32),
+            c_size_t,
+            POINTER(c_int64),
+            _STRING_FEATURE_CALLBACKFUNC,
+        ]
+        self.lib.GetEdgeStringFeature.restype = c_int32
+        self.lib.GetEdgeStringFeature.errcheck = _ErrCallback(  # type: ignore
+            "extract edge string features"
+        )
+
         self.lib.GetNeighbors.argtypes = [
             POINTER(_DEEP_GRAPH),
             POINTER(c_int64),
@@ -331,10 +381,10 @@ class MemoryGraph:
         Returns:
             np.array: Features values ordered by node ids first and then by feature ids
         """
-        assert features.shape[1] == 2
-
         nodes = np.array(nodes, dtype=np.int64)
         features = np.array(features, dtype=np.int32)
+        assert features.shape[1] == 2
+
         result = np.zeros((len(nodes), features[:, 1].sum()), dtype=dtype)
         features_in_bytes = features.copy()
         features_in_bytes *= (1, result.itemsize)
@@ -366,10 +416,10 @@ class MemoryGraph:
             np.array: dimensions of returned sparse features.
 
         """
-        assert len(features.shape) == 1
-
         nodes = np.array(nodes, dtype=np.int64)
         features = np.array(features, dtype=np.int32)
+        assert len(features.shape) == 1
+
         py_cb = _SparseFeatureCallback(dtype, features.size)
         self.lib.GetNodeSparseFeature(
             self.g_,
@@ -381,6 +431,38 @@ class MemoryGraph:
         )
 
         return py_cb.indices, py_cb.values, py_cb.dimensions
+
+    def node_string_features(
+        self, nodes: np.array, features: np.array, dtype: np.dtype
+    ) -> np.array:
+        """Retrieve node string features, i.e. each feature has variable length.
+
+        Args:
+            nodes (np.array): list of nodes
+            features (np.array): list of feature ids
+            dtype (np.dtype): feature types to extract
+
+        Returns:
+            np.array: dimensions of returned features (#nodes, #features)
+            np.array: feature values
+        """
+        nodes = np.array(nodes, dtype=np.int64)
+        features = np.array(features, dtype=np.int32)
+        assert len(features.shape) == 1
+        dimensions = np.zeros((nodes.size, features.size), dtype=np.int64)
+        py_cb = _StringFeatureCallback(dtype)
+
+        self.lib.GetNodeStringFeature(
+            self.g_,
+            nodes.ctypes.data_as(POINTER(c_int64)),
+            c_size_t(len(nodes)),
+            features.ctypes.data_as(POINTER(c_int32)),
+            c_size_t(len(features)),
+            dimensions.ctypes.data_as(POINTER(c_int64)),
+            _STRING_FEATURE_CALLBACKFUNC(py_cb),
+        )
+
+        return py_cb.values, dimensions // py_cb.values.itemsize
 
     def edge_features(
         self,
@@ -404,12 +486,13 @@ class MemoryGraph:
         """
         assert len(edge_src) == len(edge_dst)
         assert len(edge_src) == len(edge_tp)
-        assert features.shape[1] == 2
 
         edge_src = np.array(edge_src, dtype=np.int64)
         edge_dst = np.array(edge_dst, dtype=np.int64)
         edge_tp = np.array(edge_tp, dtype=np.int32)
         features = np.array(features, dtype=np.int32)
+        assert features.shape[1] == 2
+
         result = np.zeros((len(edge_src), features[:, 1].sum()), dtype=dtype)
         features_in_bytes = features.copy()
         features_in_bytes *= (1, result.itemsize)
@@ -472,6 +555,53 @@ class MemoryGraph:
         )
 
         return py_cb.indices, py_cb.values, py_cb.dimensions
+
+    def edge_string_features(
+        self,
+        edge_src: np.array,
+        edge_dst: np.array,
+        edge_tp: np.array,
+        features: np.array,
+        dtype: np.dtype,
+    ) -> np.array:
+        """Retrieve edge string features.
+
+        Args:
+            edges_src (np.array): array of edge source node_ids
+            edges_dst (np.array): array of edge destination node_ids
+            edges_tp (np.array): array of edge types
+            features (np.array): list of feature ids
+            dtype (np.dtype): Feature type as numpy array type.
+
+        Returns:
+            np.array: dimensions of returned features (#edges, #features)
+            np.array: feature values
+        """
+        assert len(edge_src) == len(edge_dst)
+        assert len(edge_src) == len(edge_tp)
+
+        edge_src = np.array(edge_src, dtype=np.int64)
+        edge_dst = np.array(edge_dst, dtype=np.int64)
+        edge_tp = np.array(edge_tp, dtype=np.int32)
+        features = np.array(features, dtype=np.int32)
+        assert len(features.shape) == 1
+
+        dimensions = np.zeros((edge_src.size, features.size), dtype=np.int64)
+        py_cb = _StringFeatureCallback(dtype)
+
+        self.lib.GetEdgeStringFeature(
+            self.g_,
+            edge_src.ctypes.data_as(POINTER(c_int64)),
+            edge_dst.ctypes.data_as(POINTER(c_int64)),
+            edge_tp.ctypes.data_as(POINTER(c_int32)),
+            c_size_t(len(edge_src)),
+            features.ctypes.data_as(POINTER(c_int32)),
+            c_size_t(len(features)),
+            dimensions.ctypes.data_as(POINTER(c_int64)),
+            _STRING_FEATURE_CALLBACKFUNC(py_cb),
+        )
+
+        return py_cb.values, dimensions // py_cb.values.itemsize
 
     def neighbors(
         self, nodes: np.array, edge_types: Union[List[int], int]
