@@ -36,14 +36,20 @@ def generate_json(folder, N, fan_out):
             }
             for ii in range(fan_out)
         ]
-        
+
         node = {
             "node_id": i,
             "node_type": int(i > (N // 2)),
             "node_weight": 1,
-            "neighbor": {"0": {str((dst_id + ii) % N): 0.5 for ii in range(fan_out)}, "1": {}},
+            "neighbor": {
+                "0": {str((dst_id + ii) % N): 0.5 for ii in range(fan_out)},
+                "1": {},
+            },
             "uint64_feature": {},
-            "float_feature": {"0": [0, 1, 2, 3, 4, 5], "1": [-0.01, -0.02, .3, .4, .5]},
+            "float_feature": {
+                "0": [0, 1, 2, 3, 4, 5],
+                "1": [-0.01, -0.02, 0.3, 0.4, 0.5],
+            },
             "binary_feature": {},
             "edge": edges,
         }
@@ -74,7 +80,8 @@ def benchmark_json_to_linear(data_name, meta_name, linear_name):
 
 def benchmark_to_binary(data_name, meta_name, output_dir, decoder_type):
     from deepgnn.graph_engine.snark import dispatcher
-    dispatcher.PROCESS_PRINT_INTERVAL = 10 ** 10
+
+    dispatcher.PROCESS_PRINT_INTERVAL = 10**10
     time_start = time()
     convert.MultiWorkersConverter(
         graph_path=data_name,
@@ -101,7 +108,19 @@ if __name__ == "__main__":
 
     linear_name = os.path.join(input_dir.name, "graph.linear")
 
-    data_name, meta_name = generate_json(input_dir.name, 10 ** 5, 20)  # TODO 1B
-    print(f"JSON to Linear: {benchmark_json_to_linear(data_name, meta_name, linear_name)}")
-    print(f"JSON to Binary: {benchmark_json_to_binary(data_name, meta_name, json_binary_dir.name)}")
-    print(f"Linear to Binary: {benchmark_linear_to_binary(linear_name, meta_name, linear_binary_dir.name)}")
+    data_name, meta_name = generate_json(input_dir.name, 10**5, 20)  # TODO 1B
+    print(
+        f"JSON to Linear: {benchmark_json_to_linear(data_name, meta_name, linear_name)}"
+    )
+    # print(f"JSON to Binary: {benchmark_json_to_binary(data_name, meta_name, json_binary_dir.name)}")
+
+    import cProfile, pstats
+    from pstats import SortKey
+
+    pr = cProfile.Profile()
+    pr.enable()
+    print(
+        f"Linear to Binary: {benchmark_linear_to_binary(linear_name, meta_name, linear_binary_dir.name)}"
+    )
+    pr.disable()
+    ps = pstats.Stats(pr).sort_stats(SortKey.CUMULATIVE).print_stats()

@@ -116,6 +116,7 @@ def output(
 
             # Works if sorted Node, src edge, ... Nodei+1
             import ctypes
+
             edge_writer.nbi.write(  # type: ignore
                 ctypes.c_uint64(edge_writer.ei.tell() // (4 + 8 + 8 + 4))
             )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
@@ -146,6 +147,7 @@ def output(
                     node_writer.add(node)
 
                     import ctypes
+
                     edge_writer.nbi.write(  # type: ignore
                         ctypes.c_uint64(edge_writer.ei.tell() // (4 + 8 + 8 + 4))
                     )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
@@ -258,7 +260,10 @@ class MultiWorkersConverter:
                 output,
                 self.decoder_type,
                 self.partition_offset,
-                True,
+                False
+                if hasattr(fsspec.implementations, "hdfs")
+                and isinstance(self.fs, fsspec.implementations.hdfs.PyArrowHDFS)
+                else True,  # when converting data in HDFS make sure to turn it off: https://hdfs3.readthedocs.io/en/latest/limitations.html
                 skip_node_sampler,
                 skip_edge_sampler,
             )
@@ -291,7 +296,7 @@ class MultiWorkersConverter:
 
                 if self.decoder_type == DecoderType.LINEAR:
                     i = line.find(" ")
-                    if line[i+1:i+3] == "-1":  # if line is node
+                    if line[i + 1 : i + 3] == "-1":  # if line is node
                         if len(lines):
                             d.dispatch(lines)
                         lines = []

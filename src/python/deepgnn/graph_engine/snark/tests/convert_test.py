@@ -140,7 +140,7 @@ def triangle_graph(request):
     workdir.cleanup()
 
 
-param = [DecoderType.LINEAR]  #, DecoderType.TSV]
+param = [DecoderType.LINEAR]  # , DecoderType.TSV]
 
 
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
@@ -451,7 +451,7 @@ def test_node_alias_tables(triangle_graph):
         assert result[16:20] == struct.pack("=f", 1.0)
 
     for v in os.listdir(output.name):
-        if 'alias' in v and 'node' in v:
+        if "alias" in v and "node" in v:
             with open("{}/{}".format(output.name, v), "rb") as ea:
                 result = ea.read(20 + 1)
                 print(v, len(result))
@@ -593,6 +593,7 @@ def graph_with_sparse_features_json(folder):
     json_to_linear(data.name, output_name)
 
     return output_name, meta.name
+
 
 @pytest.fixture(scope="module")
 def graph_with_sparse_features(request):
@@ -900,7 +901,7 @@ def triangle_graph_reversed(request):
     workdir.cleanup()
 
 
-param = [DecoderType.LINEAR]  #, DecoderType.TSV]
+param = [DecoderType.LINEAR]  # , DecoderType.TSV]
 
 
 @pytest.mark.parametrize("triangle_graph_reversed", param, indirect=True)
@@ -971,7 +972,9 @@ def test_sanity_node_feature_index_reversed(triangle_graph_reversed):
         assert len(result) == expected_size
         assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
         assert result[8:16] == (4).to_bytes(8, byteorder=sys.byteorder)  # 8
-        assert result[16:24] == (12).to_bytes(8, byteorder=sys.byteorder)  # 12 -- difference because sorted now
+        assert result[16:24] == (12).to_bytes(
+            8, byteorder=sys.byteorder
+        )  # 12 -- difference because sorted now
         assert result[24:32] == (20).to_bytes(8, byteorder=sys.byteorder)
         assert result[32:40] == (28).to_bytes(8, byteorder=sys.byteorder)
         assert result[40:48] == (36).to_bytes(8, byteorder=sys.byteorder)
@@ -1212,7 +1215,7 @@ def test_node_alias_tables_reversed(triangle_graph_reversed):
         assert result[16:20] == struct.pack("=f", 1.0)
 
     for v in os.listdir(output.name):
-        if 'alias' in v and 'node' in v:
+        if "alias" in v and "node" in v:
             with open("{}/{}".format(output.name, v), "rb") as ea:
                 result = ea.read(20 + 1)
                 print(v, len(result))

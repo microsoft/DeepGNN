@@ -193,7 +193,18 @@ class TsvDecoder(Decoder):
 
 
 class LinearDecoder(Decoder):
-    """
+    """Convert the text line into node object.
+
+    Linear format:
+        node_id -1 node_type node_weight feature_dict(no spaces)
+        src_id dst_id edge_type edge_weight feature_dict(no spaces)
+        ...
+
+        sorted by src with node before edges.
+
+    Linear format example:
+        0 -1 1 1 {"float_feature":{"0":[1],"1":[-0.03,-0.04]}}
+        0 5 1 1 {"1":[3,4]}
     """
 
     def __init__(self):
@@ -224,31 +235,44 @@ class LinearDecoder(Decoder):
 
 
 def _dump_features(features: dict) -> str:
-    return json.dumps({key: value for key, value in features.items() if isinstance(value, (list, dict))}).replace(" ", "")
+    """Serialize features for linear format."""
+    return json.dumps(
+        {
+            key: value
+            for key, value in features.items()
+            if isinstance(value, (list, dict))
+        }
+    ).replace(" ", "")
 
 
 def json_to_linear(filename_in, filename_out):
-    file_in = open(filename_in, 'r')
-    file_out = open(filename_out, 'w')
+    """Convert graph.json to graph.linear."""
+    file_in = open(filename_in, "r")
+    file_out = open(filename_out, "w")
 
     for line in file_in.readlines():
         node = json.loads(line)
 
-        file_out.write(f'{node["node_id"]} -1 {node["node_type"]} {node["node_weight"]} {_dump_features(node)}\n')
+        file_out.write(
+            f'{node["node_id"]} -1 {node["node_type"]} {node["node_weight"]} {_dump_features(node)}\n'
+        )
 
         edge_list = sorted(
-             node["edge"], key=lambda x: (int(x["edge_type"]), int(x["dst_id"]))
+            node["edge"], key=lambda x: (int(x["edge_type"]), int(x["dst_id"]))
         )
         for edge in edge_list:
-            file_out.write(f'{edge["src_id"]} {edge["dst_id"]} {edge["edge_type"]} {edge["weight"]} {_dump_features(edge)}\n')
+            file_out.write(
+                f'{edge["src_id"]} {edge["dst_id"]} {edge["edge_type"]} {edge["weight"]} {_dump_features(edge)}\n'
+            )
 
     file_in.close()
     file_out.close()
 
 
 def src_sort(filename_in, filename_out):
-    file_in = open(filename_in, 'r')
-    file_out = open(filename_out, 'w')
+    """Sort linear graph by src node."""
+    file_in = open(filename_in, "r")
+    file_out = open(filename_out, "w")
 
     lines = {}
     for line in file_in.readlines():
@@ -267,8 +291,9 @@ def src_sort(filename_in, filename_out):
 
 
 def dst_sort(filename_in, filename_out):
-    file_in = open(filename_in, 'r')
-    file_out = open(filename_out, 'w')
+    """Sort linear graph by edge dst."""
+    file_in = open(filename_in, "r")
+    file_out = open(filename_out, "w")
 
     lines = {}
     for line in file_in.readlines():
@@ -289,13 +314,13 @@ def dst_sort(filename_in, filename_out):
     file_out.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     file_in = "/tmp/ppi/graph.json"
     file_out = "/tmp/ppi/graph.linear"
     file_src = "/tmp/ppi/graph_src.linear"
     file_dst = "/tmp/ppi/graph_dst.linear"
 
-    #json_to_linear(file_in, file_out)
+    # json_to_linear(file_in, file_out)
 
     src_sort(file_out, file_src)
     dst_sort(file_out, file_dst)
