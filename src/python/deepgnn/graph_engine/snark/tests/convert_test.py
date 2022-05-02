@@ -370,8 +370,10 @@ def test_edge_alias_tables(triangle_graph):
         def __init__(self):
             self.count = -1
 
-        def __call__(self, x):
-            self.count += 1
+        def __call__(self, line):
+            i = line.find(" ")
+            if line[i+1:i+3] == "-1":  # if line is node
+                self.count += 1
             return self.count % 2
 
     d = QueueDispatcher(
@@ -426,8 +428,10 @@ def test_node_alias_tables(triangle_graph):
         def __init__(self):
             self.count = -1
 
-        def __call__(self, x):
-            self.count += 1
+        def __call__(self, line):
+            i = line.find(" ")
+            if line[i+1:i+3] == "-1":  # if line is node
+                self.count += 1
             return self.count % 2
 
     d = QueueDispatcher(
@@ -919,15 +923,16 @@ def test_sanity_node_map_reversed(triangle_graph_reversed):
         expected_size = 3 * (2 * 8 + 4)
         result = nm.read(expected_size + 8)
         assert len(result) == expected_size
-        assert result[0:8] == (9).to_bytes(8, byteorder=sys.byteorder)
+
+        assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
         assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
-        assert result[16:20] == (0).to_bytes(4, byteorder=sys.byteorder)
-        assert result[20:28] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:20] == (1).to_bytes(4, byteorder=sys.byteorder)
+        assert result[20:28] == (5).to_bytes(8, byteorder=sys.byteorder)
         assert result[28:36] == (1).to_bytes(8, byteorder=sys.byteorder)
-        assert result[36:40] == (1).to_bytes(4, byteorder=sys.byteorder)
-        assert result[40:48] == (5).to_bytes(8, byteorder=sys.byteorder)
+        assert result[36:40] == (2).to_bytes(4, byteorder=sys.byteorder)
+        assert result[40:48] == (9).to_bytes(8, byteorder=sys.byteorder)
         assert result[48:56] == (2).to_bytes(8, byteorder=sys.byteorder)
-        assert result[56:60] == (2).to_bytes(4, byteorder=sys.byteorder)
+        assert result[56:60] == (0).to_bytes(4, byteorder=sys.byteorder)
 
 
 @pytest.mark.parametrize("triangle_graph_reversed", param, indirect=True)
@@ -969,8 +974,8 @@ def test_sanity_node_feature_index_reversed(triangle_graph_reversed):
         result = ni.read(expected_size + 1)
         assert len(result) == expected_size
         assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
-        assert result[8:16] == (8).to_bytes(8, byteorder=sys.byteorder)
-        assert result[16:24] == (16).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (4).to_bytes(8, byteorder=sys.byteorder)  # 8
+        assert result[16:24] == (12).to_bytes(8, byteorder=sys.byteorder)  # 12 -- difference because sorted now
         assert result[24:32] == (20).to_bytes(8, byteorder=sys.byteorder)
         assert result[32:40] == (28).to_bytes(8, byteorder=sys.byteorder)
         assert result[40:48] == (36).to_bytes(8, byteorder=sys.byteorder)
@@ -1130,8 +1135,10 @@ def test_edge_alias_tables_reversed(triangle_graph_reversed):
         def __init__(self):
             self.count = -1
 
-        def __call__(self, x):
-            self.count += 1
+        def __call__(self, line):
+            i = line.find(" ")
+            if line[i+1:i+3] == "-1":  # if line is node
+                self.count += 1
             return self.count % 2
 
     d = QueueDispatcher(
@@ -1186,8 +1193,10 @@ def test_node_alias_tables_reversed(triangle_graph_reversed):
         def __init__(self):
             self.count = -1
 
-        def __call__(self, x):
-            self.count += 1
+        def __call__(self, line):
+            i = line.find(" ")
+            if line[i+1:i+3] == "-1":  # if line is node
+                self.count += 1
             return self.count % 2
 
     d = QueueDispatcher(
@@ -1216,7 +1225,7 @@ def test_node_alias_tables_reversed(triangle_graph_reversed):
                 result = ea.read(20 + 1)
                 print(v, len(result))
 
-    with open("{}/node_1_1.alias".format(output.name), "rb") as ea:
+    with open("{}/node_1_0.alias".format(output.name), "rb") as ea:
         expected_size = 20  # Only 1 record
         result = ea.read(expected_size + 1)
         assert len(result) == expected_size
@@ -1224,7 +1233,7 @@ def test_node_alias_tables_reversed(triangle_graph_reversed):
         assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
         assert result[16:20] == struct.pack("=f", 1.0)
 
-    with open("{}/node_2_0.alias".format(output.name), "rb") as ea:
+    with open("{}/node_2_1.alias".format(output.name), "rb") as ea:
         expected_size = 20  # Only 1 record
         result = ea.read(expected_size + 1)
         assert len(result) == expected_size
@@ -1233,8 +1242,8 @@ def test_node_alias_tables_reversed(triangle_graph_reversed):
         assert result[16:20] == struct.pack("=f", 1.0)
 
     assert os.path.getsize("{}/node_0_1.alias".format(output.name)) == 0
-    assert os.path.getsize("{}/node_2_1.alias".format(output.name)) == 0
-    assert os.path.getsize("{}/node_1_0.alias".format(output.name)) == 0
+    assert os.path.getsize("{}/node_1_1.alias".format(output.name)) == 0
+    assert os.path.getsize("{}/node_2_0.alias".format(output.name)) == 0
 
 
 if __name__ == "__main__":
