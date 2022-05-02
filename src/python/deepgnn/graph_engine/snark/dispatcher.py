@@ -99,7 +99,7 @@ class PipeDispatcher(Dispatcher):
             parallel_func = threading.Thread  # type: ignore
 
         self.parallel = parallel
-        self.count = -1
+        self.count = 0
         self.q_in = [mp.Pipe(False) for _ in range(parallel)]
         self.q_out: mp.Queue = mp.Queue(parallel)
         processes = [
@@ -132,14 +132,11 @@ class PipeDispatcher(Dispatcher):
         Args:
             line (str): graph element.
         """
-        i = line.find(" ")
-        if line[i+1:i+3] == "-1":  # if line is node
-            self.count += 1
-
-            if self.count % PROCESS_PRINT_INTERVAL == 0:
-                get_logger().info(f"record processed: {self.count}")
-
         self.q_in[self.count % self.parallel][1].send(line)
+        self.count += 1
+
+        if self.count % PROCESS_PRINT_INTERVAL == 0:
+            get_logger().info(f"record processed: {self.count}")
 
     def join(self):
         """Wait for all processes to finish work."""
@@ -219,7 +216,7 @@ class QueueDispatcher(Dispatcher):
         if use_threads:
             parallel_func = threading.Thread  # type: ignore
 
-        self.count = -1
+        self.count = 0
         self.num_partitions = num_partitions
         self.q_in: typing.List[mp.Queue] = [mp.Queue(2) for _ in range(num_partitions)]
         self.q_out: mp.Queue = mp.Queue(num_partitions)
@@ -258,15 +255,13 @@ class QueueDispatcher(Dispatcher):
         Args:
             line (str): String representation of a graph element.
         """
-        i = line.find(" ")
-        if line[i+1:i+3] == "-1":  # if line is node
-            self.count += 1
-            if self.count % PROCESS_PRINT_INTERVAL == 0:
-                get_logger().info(f"record processed: {self.count}")
-
         partition = self.partition_func(line)
         self.q_in[partition].put(line)
         self.active_partitions.add(partition)
+
+        self.count += 1
+        if self.count % PROCESS_PRINT_INTERVAL == 0:
+            get_logger().info(f"record processed: {self.count}")
 
     def join(self):
         """Wrapup conversion."""

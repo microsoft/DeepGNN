@@ -371,9 +371,7 @@ def test_edge_alias_tables(triangle_graph):
             self.count = -1
 
         def __call__(self, line):
-            i = line.find(" ")
-            if line[i+1:i+3] == "-1":  # if line is node
-                self.count += 1
+            self.count += 1
             return self.count % 2
 
     d = QueueDispatcher(
@@ -429,9 +427,7 @@ def test_node_alias_tables(triangle_graph):
             self.count = -1
 
         def __call__(self, line):
-            i = line.find(" ")
-            if line[i+1:i+3] == "-1":  # if line is node
-                self.count += 1
+            self.count += 1
             return self.count % 2
 
     d = QueueDispatcher(
@@ -1136,9 +1132,7 @@ def test_edge_alias_tables_reversed(triangle_graph_reversed):
             self.count = -1
 
         def __call__(self, line):
-            i = line.find(" ")
-            if line[i+1:i+3] == "-1":  # if line is node
-                self.count += 1
+            self.count += 1
             return self.count % 2
 
     d = QueueDispatcher(
@@ -1194,9 +1188,7 @@ def test_node_alias_tables_reversed(triangle_graph_reversed):
             self.count = -1
 
         def __call__(self, line):
-            i = line.find(" ")
-            if line[i+1:i+3] == "-1":  # if line is node
-                self.count += 1
+            self.count += 1
             return self.count % 2
 
     d = QueueDispatcher(

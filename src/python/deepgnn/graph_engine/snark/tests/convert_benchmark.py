@@ -101,7 +101,7 @@ if __name__ == "__main__":
 
     linear_name = os.path.join(input_dir.name, "graph.linear")
 
-    data_name, meta_name = generate_json(input_dir.name, 10 ** 4, 20)  # TODO 1B
+    data_name, meta_name = generate_json(input_dir.name, 10 ** 5, 20)  # TODO 1B
     print(f"JSON to Linear: {benchmark_json_to_linear(data_name, meta_name, linear_name)}")
     print(f"JSON to Binary: {benchmark_json_to_binary(data_name, meta_name, json_binary_dir.name)}")
     print(f"Linear to Binary: {benchmark_linear_to_binary(linear_name, meta_name, linear_binary_dir.name)}")

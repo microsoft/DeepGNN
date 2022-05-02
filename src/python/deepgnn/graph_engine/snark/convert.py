@@ -138,31 +138,33 @@ def output(
             node_weight[node["node_type"]] += float(node["node_weight"])
             node_type_count[node["node_type"]] += 1
         else:
-            item = decoder.decode(line)
-            if "node_id" in item:
-                node = item
-                node_writer.add(node)
+            lines = line
+            for line in lines:
+                item = decoder.decode(line)
+                if "node_id" in item:
+                    node = item
+                    node_writer.add(node)
 
-                import ctypes
-                edge_writer.nbi.write(  # type: ignore
-                    ctypes.c_uint64(edge_writer.ei.tell() // (4 + 8 + 8 + 4))
-                )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
+                    import ctypes
+                    edge_writer.nbi.write(  # type: ignore
+                        ctypes.c_uint64(edge_writer.ei.tell() // (4 + 8 + 8 + 4))
+                    )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
 
-                node_alias.add(node)
+                    node_alias.add(node)
 
-                node_weight[node["node_type"]] += float(node["node_weight"])
-                node_type_count[node["node_type"]] += 1
+                    node_weight[node["node_type"]] += float(node["node_weight"])
+                    node_type_count[node["node_type"]] += 1
 
-                node_count += 1
-            else:
-                edge = item
-                edge_writer.add(edge)
+                    node_count += 1
+                else:
+                    edge = item
+                    edge_writer.add(edge)
 
-                edge_alias.add(edge)
-                edge_weight[edge["edge_type"]] += edge["weight"]
-                edge_type_count[edge["edge_type"]] += 1
+                    edge_alias.add(edge)
+                    edge_weight[edge["edge_type"]] += edge["weight"]
+                    edge_type_count[edge["edge_type"]] += 1
 
-                edge_count += 1
+                    edge_count += 1
 
     node_writer.close()
     edge_writer.close()
@@ -283,9 +285,23 @@ class MultiWorkersConverter:
             num_workers=self.worker_count,
         )
 
+        lines = []
         for _, data in enumerate(dataset):
             for line in data:
-                d.dispatch(line)
+
+                if self.decoder_type == DecoderType.LINEAR:
+                    i = line.find(" ")
+                    if line[i+1:i+3] == "-1":  # if line is node
+                        if len(lines):
+                            d.dispatch(lines)
+                        lines = []
+                    lines.append(line)
+
+                else:
+                    d.dispatch(line)
+
+        if self.decoder_type == DecoderType.LINEAR and len(lines):
+            d.dispatch(lines)
 
         d.join()
 
