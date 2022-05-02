@@ -269,7 +269,8 @@ def test_supervised_graphsage_model(mock_graph):  # noqa: F811
     # is deterministic.
     nodes = torch.as_tensor([2700])
     expected = np.array(
-        [[0.074278, -0.069181, 0.003444, -0.008916, -0.013685, -0.036867, 0.042985]]
+        [[0.094184, -0.06748, -0.000671, 0.00233, -0.010543, -0.058825, 0.038054]],
+        dtype=np.float32,
     )
     graphsage = SupervisedGraphSage(
         num_classes=num_classes,
@@ -288,7 +289,7 @@ def test_supervised_graphsage_model(mock_graph):  # noqa: F811
     trainloader = torch.utils.data.DataLoader(simpler)
     it = iter(trainloader)
     output = graphsage.get_score(it.next())
-    npt.assert_allclose(output.detach().numpy(), expected, rtol=1e-4)
+    npt.assert_allclose(output.detach().numpy(), expected, rtol=1e-3)
 
 
 # test the correctness of the loss function.
@@ -327,7 +328,7 @@ def test_supervised_graphsage_loss_value(mock_graph):  # noqa: F811
     loss, _, _ = graphsage(it.next())
     loss.backward()
     optimizer.step()
-    npt.assert_allclose(loss.detach().numpy(), np.array([1.930452]), rtol=1e-5)
+    npt.assert_allclose(loss.detach().numpy(), np.array([1.923]), rtol=1e-3)
 
 
 # test the correctness of the unsupervised graphsage's model.
@@ -344,7 +345,8 @@ def test_unsupervised_graphsage_model(mock_graph):  # noqa: F811
     # is deterministic.
     nodes = torch.as_tensor([2700])
     expected = np.array(
-        [[0.074278, -0.069181, 0.003444, -0.008916, -0.013685, -0.036867, 0.042985]]
+        [[0.094184, -0.06748, -0.000671, 0.00233, -0.010543, -0.058825, 0.038054]],
+        dtype=np.float32,
     )
     graphsage = UnSupervisedGraphSage(
         num_classes=label_dim,
@@ -362,7 +364,7 @@ def test_unsupervised_graphsage_model(mock_graph):  # noqa: F811
     trainloader = torch.utils.data.DataLoader(simpler)
     it = iter(trainloader)
     output = graphsage.get_score(it.next()["encoder"])
-    npt.assert_allclose(output.detach().numpy(), expected, rtol=1e-4)
+    npt.assert_allclose(output.detach().numpy(), expected, rtol=1e-3)
 
 
 # test the correctness of the unsupervised graphsage loss function.
