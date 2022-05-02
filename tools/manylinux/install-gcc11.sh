@@ -18,7 +18,7 @@
 # libstdc++ 4.4).
 
 TARGET="/dt11"
-LIBSTDCXX_VERSION="6.0.28"
+LIBSTDCXX_VERSION="6.0.29"
 
 apt install unar flex rpm2cpio --yes
 
@@ -49,10 +49,10 @@ sed -i '54i#define TCP_USER_TIMEOUT 18' "${TARGET}/usr/include/netinet/tcp.h"
 # Download binary libstdc++ 4.4 release we are going to link against.
 # We only need the shared library, as we're going to develop against the
 # libstdc++ provided by devtoolset.
-wget "https://old-releases.ubuntu.com/ubuntu/pool/main/g/gcc-10/libstdc++6_10.2.0-13ubuntu1_amd64.deb" \
-    && unar "libstdc++6_10.2.0-13ubuntu1_amd64.deb" \
-    && tar -C "${TARGET}" -xvf "libstdc++6_10.2.0-13ubuntu1_amd64/data.tar.xz" "./usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.28" \
-    && rm -rf "libstdc++6_10.2.0-13ubuntu1_amd64.deb" "libstdc++6_10.2.0-13ubuntu1_amd64"
+wget "http://old-releases.ubuntu.com/ubuntu/pool/main/g/gcc-4.4/libstdc++6_4.4.3-4ubuntu5_amd64.deb" && \
+    unar "libstdc++6_4.4.3-4ubuntu5_amd64.deb" && \
+    tar -C "/${TARGET}" -xvzf "libstdc++6_4.4.3-4ubuntu5_amd64/data.tar.gz" "./usr/lib/libstdc++.so.6.0.13" && \
+    rm -rf "libstdc++6_4.4.3-4ubuntu5_amd64.deb" "libstdc++6_4.4.3-4ubuntu5_amd64"
 
 mkdir -p "${TARGET}-src"
 cp rpm-patch.sh "${TARGET}-src"
@@ -78,7 +78,6 @@ cd "${TARGET}-build"
       --disable-libmpx \
       --disable-libsanitizer \
       --disable-libunwind-exceptions \
-      --disable-libunwind-exceptions \
       --disable-lto \
       --disable-multilib \
       --enable-__cxa_atexit \
@@ -100,6 +99,6 @@ cd "${TARGET}-build"
 
 # Create the devtoolset libstdc++ linkerscript that links dynamically against
 # the system libstdc++ 4.4 and provides all other symbols statically.
-mv "${TARGET}/usr/lib/x86_64-linux-gnu/libstdc++.so.${LIBSTDCXX_VERSION}" "${TARGET}/usr/lib/libstdc++.so.${LIBSTDCXX_VERSION}.backup"
-echo -e "OUTPUT_FORMAT(elf64-x86-64)\nINPUT ( libstdc++.so.${LIBSTDCXX_VERSION} -lstdc++_nonshared44 )" > "${TARGET}/usr/lib/x86_64-linux-gnu/libstdc++.so.${LIBSTDCXX_VERSION}"
+mv "${TARGET}/usr/lib64/libstdc++.so.${LIBSTDCXX_VERSION}" "${TARGET}/usr/lib/libstdc++.so.${LIBSTDCXX_VERSION}.backup"
+echo -e "OUTPUT_FORMAT(elf64-x86-64)\nINPUT ( libstdc++.so.6.0.13 -lstdc++_nonshared44 )" > "${TARGET}/usr/lib/x86_64-linux-gnu/libstdc++.so.${LIBSTDCXX_VERSION}"
 cp "./x86_64-pc-linux-gnu/libstdc++-v3/src/.libs/libstdc++_nonshared44.a" "${TARGET}/usr/lib"
