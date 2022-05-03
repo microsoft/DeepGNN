@@ -213,14 +213,18 @@ class LinearDecoder(Decoder):
 
     def decode(self, line: str):
         """Use json package to convert the json text line into node object."""
-        src, dst, type, weight, features = line.split()
+        src, dst, type, weight, *features = line.split()
         if int(dst) == -1:  # is node
             output = {
                 "node_id": int(src),
                 "node_type": int(type),
                 "node_weight": float(weight),
             }
-            output.update(json.loads(features))
+            for feature in features:
+                key, idx, value = feature.split("/")
+                if key not in output:
+                    output[key] = {}
+                output[key][idx] = list(map(float if '.' in value else int, value.split(",")))
             # ignores neighbors
         else:  # is edge
             output = {
@@ -229,20 +233,26 @@ class LinearDecoder(Decoder):
                 "edge_type": int(type),
                 "weight": float(weight),
             }
-            output.update(json.loads(features))
+            for feature in features:
+                key, idx, value = feature.split("/")
+                if key not in output:
+                    output[key] = {}
+                output[key][idx] = list(map(float if '.' in value else int, value.split(",")))
 
         return output
 
 
 def _dump_features(features: dict) -> str:
     """Serialize features for linear format."""
-    return json.dumps(
-        {
-            key: value
-            for key, value in features.items()
-            if isinstance(value, (list, dict))
-        }
-    ).replace(" ", "")
+    output = []
+    for key, values in features.items():
+        if not isinstance(values, dict) or key == "neighbor":
+            continue
+
+        for idx, value in values.items():
+            output.append(f"{key}/{idx}/{','.join(map(str, value))}")
+    
+    return " ".join(output)
 
 
 def json_to_linear(filename_in, filename_out):

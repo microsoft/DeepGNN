@@ -112,15 +112,15 @@ if __name__ == "__main__":
     print(
         f"JSON to Linear: {benchmark_json_to_linear(data_name, meta_name, linear_name)}"
     )
-    # print(f"JSON to Binary: {benchmark_json_to_binary(data_name, meta_name, json_binary_dir.name)}")
+    print(f"JSON to Binary: {benchmark_json_to_binary(data_name, meta_name, json_binary_dir.name)}")
 
-    import cProfile, pstats
-    from pstats import SortKey
+    #import cProfile, pstats
+    #from pstats import SortKey
 
-    pr = cProfile.Profile()
-    pr.enable()
+    #pr = cProfile.Profile()
+    #pr.enable()
     print(
         f"Linear to Binary: {benchmark_linear_to_binary(linear_name, meta_name, linear_binary_dir.name)}"
     )
-    pr.disable()
-    ps = pstats.Stats(pr).sort_stats(SortKey.CUMULATIVE).print_stats()
+    #pr.disable()
+    #ps = pstats.Stats(pr).sort_stats(SortKey.CUMULATIVE).print_stats()
