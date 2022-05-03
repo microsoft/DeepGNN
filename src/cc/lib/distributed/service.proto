@@ -11,6 +11,8 @@ service GraphEngine {
   rpc GetEdgeFeatures (EdgeFeaturesRequest) returns (EdgeFeaturesReply) {}
   rpc GetNodeSparseFeatures (NodeSparseFeaturesRequest) returns (SparseFeaturesReply) {}
   rpc GetEdgeSparseFeatures (EdgeSparseFeaturesRequest) returns (SparseFeaturesReply) {}
+  rpc GetNodeStringFeatures (NodeSparseFeaturesRequest) returns (StringFeaturesReply) {}
+  rpc GetEdgeStringFeatures (EdgeSparseFeaturesRequest) returns (StringFeaturesReply) {}
 
   rpc GetNeighbors (GetNeighborsRequest) returns (GetNeighborsReply) {}
 
@@ -139,6 +141,11 @@ message SparseFeaturesReply {
   repeated int64 dimensions = 3;
   repeated int64 indices_counts = 4;
   repeated int64 values_counts = 5;
+}
+
+message StringFeaturesReply {
+  bytes values = 1;
+  repeated int64 dimensions = 2;
 }
 
 message GetNeighborsRequest {

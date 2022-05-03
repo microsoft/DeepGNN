@@ -215,5 +215,36 @@ class EdgeSparseFeaturesCallData final : public CallData
     GraphEngine::AsyncService &m_service;
 };
 
+class NodeStringFeaturesCallData final : public CallData
+{
+  public:
+    NodeStringFeaturesCallData(GraphEngine::AsyncService &service, grpc::ServerCompletionQueue &cq,
+                               snark::GraphEngine::Service &service_impl);
+
+    void Proceed() override;
+
+  private:
+    NodeSparseFeaturesRequest m_request;
+    StringFeaturesReply m_reply;
+    grpc::ServerAsyncResponseWriter<StringFeaturesReply> m_responder;
+    snark::GraphEngine::Service &m_service_impl;
+    GraphEngine::AsyncService &m_service;
+};
+
+class EdgeStringFeaturesCallData final : public CallData
+{
+  public:
+    EdgeStringFeaturesCallData(GraphEngine::AsyncService &service, grpc::ServerCompletionQueue &cq,
+                               snark::GraphEngine::Service &service_impl);
+
+    void Proceed() override;
+
+  private:
+    EdgeSparseFeaturesRequest m_request;
+    StringFeaturesReply m_reply;
+    grpc::ServerAsyncResponseWriter<StringFeaturesReply> m_responder;
+    snark::GraphEngine::Service &m_service_impl;
+    GraphEngine::AsyncService &m_service;
+};
 } // namespace snark
 #endif

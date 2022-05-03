@@ -253,6 +253,77 @@ grpc::Status GraphEngineServiceImpl::GetEdgeSparseFeatures(::grpc::ServerContext
     return grpc::Status::OK;
 }
 
+grpc::Status GraphEngineServiceImpl::GetNodeStringFeatures(::grpc::ServerContext *context,
+                                                           const snark::NodeSparseFeaturesRequest *request,
+                                                           snark::StringFeaturesReply *response)
+{
+    std::span<const snark::FeatureId> features =
+        std::span(std::begin(request->feature_ids()), std::end(request->feature_ids()));
+    const auto features_size = features.size();
+    const auto nodes_size = request->node_ids().size();
+    auto *reply_dimensions = response->mutable_dimensions();
+
+    reply_dimensions->Resize(int(features_size * nodes_size), 0);
+    auto dimensions = std::span(reply_dimensions->begin(), reply_dimensions->end());
+    std::vector<uint8_t> values;
+
+    for (int node_offset = 0; node_offset < request->node_ids().size(); ++node_offset)
+    {
+        auto internal_id = m_node_map.find(request->node_ids()[node_offset]);
+        if (internal_id == std::end(m_node_map))
+        {
+            continue;
+        }
+
+        const auto index = internal_id->second;
+        m_partitions[m_partitions_indices[index]].GetNodeStringFeature(
+            m_internal_indices[index], features, dimensions.subspan(features_size * node_offset, features_size),
+            values);
+    }
+
+    response->mutable_values()->append(std::begin(values), std::end(values));
+    return grpc::Status::OK;
+}
+
+grpc::Status GraphEngineServiceImpl::GetEdgeStringFeatures(::grpc::ServerContext *context,
+                                                           const snark::EdgeSparseFeaturesRequest *request,
+                                                           snark::StringFeaturesReply *response)
+{
+    const size_t len = request->types().size();
+
+    // First part is source, second is destination
+    assert(2 * len == size_t(request->node_ids().size()));
+    std::span<const snark::FeatureId> features =
+        std::span(std::begin(request->feature_ids()), std::end(request->feature_ids()));
+    const auto features_size = features.size();
+    auto *reply_dimensions = response->mutable_dimensions();
+    reply_dimensions->Resize(int(features_size * len), 0);
+    auto dimensions = std::span(reply_dimensions->begin(), reply_dimensions->end());
+    std::vector<uint8_t> values;
+
+    for (size_t edge_offset = 0; edge_offset < len; ++edge_offset)
+    {
+        auto internal_id = m_node_map.find(request->node_ids()[edge_offset]);
+        if (internal_id == std::end(m_node_map))
+        {
+            continue;
+        }
+
+        auto index = internal_id->second;
+        size_t partition_count = m_counts[index];
+        bool found_edge = false;
+        for (size_t partition = 0; partition < partition_count && !found_edge; ++partition, ++index)
+        {
+            found_edge = m_partitions[m_partitions_indices[index]].GetEdgeStringFeature(
+                m_internal_indices[index], request->node_ids()[len + edge_offset], request->types()[edge_offset],
+                features, dimensions.subspan(features_size * edge_offset, features_size), values);
+        }
+    }
+
+    response->mutable_values()->append(std::begin(values), std::end(values));
+    return grpc::Status::OK;
+}
+
 grpc::Status GraphEngineServiceImpl::GetNeighbors(::grpc::ServerContext *context,
                                                   const snark::GetNeighborsRequest *request,
                                                   snark::GetNeighborsReply *response)

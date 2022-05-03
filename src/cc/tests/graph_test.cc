@@ -527,6 +527,28 @@ TEST_P(StorageTypeGraphTest, NodeSparseFeaturesMissingFeature)
     EXPECT_EQ(std::vector<int64_t>({3}), dimensions);
 }
 
+TEST_P(StorageTypeGraphTest, NodeStringFeaturesMultipleNodesSingleFeature)
+{
+    TestGraph::MemoryGraph m;
+    std::vector<std::vector<float>> f1 = {std::vector<float>{11.0f, 12.0f}};
+    std::vector<std::vector<float>> f2 = {std::vector<float>{1.0f, 2.0f, 3.0f}};
+    m.m_nodes.push_back(TestGraph::Node{.m_id = 0, .m_type = 0, .m_weight = 1.0f, .m_float_features = f1});
+    m.m_nodes.push_back(TestGraph::Node{.m_id = 1, .m_type = 1, .m_weight = 1.0f});
+    m.m_nodes.push_back(TestGraph::Node{.m_id = 2, .m_type = 1, .m_weight = 1.0f, .m_float_features = f2});
+    auto path = std::filesystem::temp_directory_path();
+    TestGraph::convert(path, "0_0", std::move(m), 2);
+    snark::Graph g(path.string(), std::vector<uint32_t>{0}, GetParam(), "");
+    std::vector<snark::NodeId> nodes = {0, 1, 2};
+    std::vector<uint8_t> output;
+    std::vector<int64_t> dimensions(3);
+    std::vector<snark::FeatureId> features = {0};
+
+    g.GetNodeStringFeature(std::span(nodes), std::span(features), std::span(dimensions), output);
+    std::span res(reinterpret_cast<float *>(output.data()), output.size() / 4);
+    EXPECT_EQ(std::vector<float>(std::begin(res), std::end(res)), std::vector<float>({11, 12, 1, 2, 3}));
+    EXPECT_EQ(dimensions, std::vector<int64_t>({8, 0, 12}));
+}
+
 TEST_P(StorageTypeGraphTest, NeighborSamplesWithSingleNodeNoNeighbors)
 {
     TestGraph::MemoryGraph m;

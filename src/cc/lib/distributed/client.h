@@ -40,6 +40,13 @@ class GRPCClient final
                               std::span<int64_t> out_dimensions, std::vector<std::vector<int64_t>> &out_indices,
                               std::vector<std::vector<uint8_t>> &out_values);
 
+    void GetNodeStringFeature(std::span<const NodeId> node_ids, std::span<const FeatureId> features,
+                              std::span<int64_t> out_dimensions, std::vector<uint8_t> &out_values);
+
+    void GetEdgeStringFeature(std::span<const NodeId> edge_src_ids, std::span<const NodeId> edge_dst_ids,
+                              std::span<const Type> edge_types, std::span<const FeatureId> features,
+                              std::span<int64_t> out_dimensions, std::vector<uint8_t> &out_values);
+
     void FullNeighbor(std::span<const NodeId> node_ids, std::span<const Type> edge_types,
                       std::vector<NodeId> &output_nodes, std::vector<Type> &output_types,
                       std::vector<float> &output_weights, std::span<uint64_t> output_neighbor_counts);

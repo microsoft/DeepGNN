@@ -383,7 +383,6 @@ int32_t GetNodeSparseFeature(PyGraph *py_graph, NodeID *node_ids, size_t node_id
     }
     else
     {
-
         try
         {
             py_graph->graph->client->GetNodeSparseFeature(
@@ -412,6 +411,41 @@ int32_t GetNodeSparseFeature(PyGraph *py_graph, NodeID *node_ids, size_t node_id
     }
 
     callback(indices_ptrs.data(), indices_sizes.data(), data_ptrs.data(), data_sizes.data(), dimensions.data());
+    return 0;
+}
+
+int32_t GetNodeStringFeature(PyGraph *py_graph, NodeID *node_ids, size_t node_ids_size, Feature *features,
+                             size_t features_size, int64_t *dimensions, GetStringFeaturesCallback callback)
+{
+    if (py_graph->graph == nullptr)
+    {
+        RAW_LOG_ERROR("Internal graph is not initialized");
+        return 1;
+    }
+
+    std::vector<uint8_t> data;
+    if (py_graph->graph->graph)
+    {
+        py_graph->graph->graph->GetNodeStringFeature(
+            std::span(reinterpret_cast<snark::NodeId *>(node_ids), node_ids_size), std::span(features, features_size),
+            std::span(dimensions, node_ids_size * features_size), data);
+    }
+    else
+    {
+        try
+        {
+            py_graph->graph->client->GetNodeStringFeature(
+                std::span(reinterpret_cast<snark::NodeId *>(node_ids), node_ids_size),
+                std::span(features, features_size), std::span(dimensions, node_ids_size * features_size), data);
+        }
+        catch (const std::exception &e)
+        {
+            RAW_LOG_ERROR("Exception while fetching node features: %s", e.what());
+            return 1;
+        }
+    }
+
+    callback(data.size(), data.data());
     return 0;
 }
 
@@ -504,6 +538,47 @@ int32_t GetEdgeSparseFeature(PyGraph *py_graph, NodeID *edge_src_ids, NodeID *ed
     }
 
     callback(indices_ptrs.data(), indices_sizes.data(), data_ptrs.data(), data_sizes.data(), dimensions.data());
+    return 0;
+}
+
+int32_t GetEdgeStringFeature(PyGraph *py_graph, NodeID *edge_src_ids, NodeID *edge_dst_ids, Type *edge_types,
+                             size_t edge_size, Feature *features, size_t features_size, int64_t *dimensions,
+                             GetStringFeaturesCallback callback)
+{
+    if (py_graph->graph == nullptr)
+    {
+        RAW_LOG_ERROR("Internal graph is not initialized");
+        return 1;
+    }
+
+    std::vector<uint8_t> data;
+    if (py_graph->graph->graph)
+    {
+        py_graph->graph->graph->GetEdgeStringFeature(
+            std::span(reinterpret_cast<snark::NodeId *>(edge_src_ids), edge_size),
+            std::span(reinterpret_cast<snark::NodeId *>(edge_dst_ids), edge_size),
+            std::span(reinterpret_cast<snark::Type *>(edge_types), edge_size), std::span(features, features_size),
+            std::span(dimensions, features_size * edge_size), data);
+    }
+
+    else
+    {
+        try
+        {
+            py_graph->graph->client->GetEdgeStringFeature(
+                std::span(reinterpret_cast<snark::NodeId *>(edge_src_ids), edge_size),
+                std::span(reinterpret_cast<snark::NodeId *>(edge_dst_ids), edge_size),
+                std::span(reinterpret_cast<snark::Type *>(edge_types), edge_size), std::span(features, features_size),
+                std::span(dimensions, features_size * edge_size), data);
+        }
+        catch (const std::exception &e)
+        {
+            RAW_LOG_ERROR("Exception while fetching node features: %s", e.what());
+            return 1;
+        }
+    }
+
+    callback(data.size(), data.data());
     return 0;
 }
 

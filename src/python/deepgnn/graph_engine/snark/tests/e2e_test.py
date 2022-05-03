@@ -365,6 +365,19 @@ def test_node_features_graph_multiple_partitions(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+def test_node_string_features_graph_multiple_partitions(
+    multi_partition_graph_data, storage_type
+):
+    cl = client.MemoryGraph(multi_partition_graph_data, [0, 1], storage_type)
+    v, d = cl.node_string_features([0], features=[0, 1], dtype=np.float32)
+    npt.assert_equal(d, [[1, 2]])
+    npt.assert_array_almost_equal(v, [1, -0.03, -0.04])
+
+
+@pytest.mark.parametrize(
+    "storage_type",
+    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
+)
 def test_node_features_graph_multiple_partitions(
     multi_partition_graph_data, storage_type
 ):
@@ -753,6 +766,32 @@ def test_remote_client_node_features_multiple_servers(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+def test_remote_client_node_string_features_multiple_servers(
+    multi_partition_graph_data, storage_type
+):
+    address = ["localhost:1234", "localhost:1235"]
+    if platform.system() != "Darwin":
+        address = [a + f"{int(storage_type)}" for a in address]
+    s1 = server.Server(
+        multi_partition_graph_data, [0], address[0], storage_type=storage_type
+    )
+    s2 = server.Server(
+        multi_partition_graph_data, [1], address[1], storage_type=storage_type
+    )
+
+    cl = client.DistributedGraph(address)
+    v, d = cl.node_string_features([9, 0], features=[1], dtype=np.float32)
+
+    npt.assert_array_equal(d, [[2], [2]])
+    npt.assert_array_almost_equal(v, [-0.01, -0.02, -0.03, -0.04])
+    s1.reset()
+    s2.reset()
+
+
+@pytest.mark.parametrize(
+    "storage_type",
+    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
+)
 def test_remote_client_node_extra_features(multi_partition_graph_data, storage_type):
     address = ["localhost:11234", "localhost:11235"]
     if platform.system() != "Darwin":
@@ -870,8 +909,39 @@ def test_remote_client_missing_edge_features_graph_multiple_partitions(
         dtype=np.uint8,
     )
 
-    assert v.shape == (2, 5)
-    v == [[5, 6, 7, 15, 16], [0, 0, 0, 0, 0]]
+    npt.assert_array_equal(v, [[5, 6, 7, 15, 16], [0, 0, 0, 0, 0]])
+    s1.reset()
+    s2.reset()
+
+
+@pytest.mark.parametrize(
+    "storage_type",
+    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
+)
+def test_remote_client_missing_edge_string_features_graph_multiple_partitions(
+    multi_partition_graph_data, storage_type
+):
+    address = ["localhost:9236", "localhost:9237"]
+    if platform.system() != "Darwin":
+        address = [a + f"{int(storage_type)}" for a in address]
+    s1 = server.Server(
+        multi_partition_graph_data, [0], address[0], storage_type=storage_type
+    )
+    s2 = server.Server(
+        multi_partition_graph_data, [1], address[1], storage_type=storage_type
+    )
+
+    cl = client.DistributedGraph(address)
+    v, d = cl.edge_string_features(
+        np.array([5, -1], dtype=np.int64),
+        np.array([9, 0], dtype=np.int64),
+        np.array([1, 1], dtype=np.int32),
+        features=np.array([4, 5], dtype=np.int8),
+        dtype=np.uint8,
+    )
+
+    npt.assert_equal(d, [[3, 3], [0, 0]])
+    npt.assert_equal(v, [5, 6, 7, 15, 16, 17])
     s1.reset()
     s2.reset()
 

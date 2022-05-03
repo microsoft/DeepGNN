@@ -41,9 +41,13 @@ struct TempFolder
 
     explicit TempFolder(std::string name) : path(std::filesystem::temp_directory_path() / std::move(name))
     {
+        if (std::filesystem::exists(path))
+        {
+            std::filesystem::remove_all(path);
+        }
         if (!std::filesystem::create_directory(path))
         {
-            throw std::logic_error("Failed to create path");
+            throw std::logic_error("Failed to create path" + path.string());
         }
 
         last = true;
@@ -97,6 +101,51 @@ TEST(DistributedTest, NodeFeaturesSingleServer)
                      std::span(reinterpret_cast<uint8_t *>(output.data()), sizeof(float) * output.size()));
     EXPECT_EQ(output, std::vector<float>({0, 1, 1, 2, 2, 3}));
 }
+
+TEST(DistributedTest, NodeStringFeaturesMultipleServers)
+{
+    const size_t num_nodes = 4;
+    const size_t num_servers = 2;
+    size_t start_node = 1;
+    std::vector<std::unique_ptr<snark::GRPCServer>> servers;
+    std::vector<std::shared_ptr<grpc::Channel>> channels;
+    for (size_t server_index = 0; server_index < num_servers; ++server_index)
+    {
+        TestGraph::MemoryGraph m;
+        for (size_t n = start_node; n < start_node + num_nodes; n++)
+        {
+            std::vector<float> vals_1(n);
+            std::iota(std::begin(vals_1), std::end(vals_1), float(n));
+            std::vector<float> vals_2 = {float(n), float(n - 1)};
+            m.m_nodes.push_back(TestGraph::Node{.m_id = snark::NodeId(n),
+                                                .m_type = 0,
+                                                .m_weight = 1.0f,
+                                                .m_float_features = {std::move(vals_1), std::move(vals_2)}});
+        }
+        start_node += num_nodes;
+
+        TempFolder path("NodeStringFeaturesSingleServer");
+        auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
+
+        servers.emplace_back(std::make_unique<snark::GRPCServer>(
+            std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
+                                                            snark::PartitionStorageType::memory, ""),
+            std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", ""));
+        channels.emplace_back(servers.back()->InProcessChannel());
+    }
+    snark::GRPCClient c(channels, 1, 1);
+
+    std::vector<snark::NodeId> input_nodes = {2, 5, 0, 1};
+    std::vector<snark::FeatureId> features = {1, 0};
+    std::vector<uint8_t> values;
+    std::vector<int64_t> dimensions(input_nodes.size() * features.size());
+    c.GetNodeStringFeature(std::span(input_nodes), std::span(features), std::span(dimensions), values);
+    std::span res(reinterpret_cast<float *>(values.data()), values.size() / 4);
+    EXPECT_EQ(std::vector<float>(std::begin(res), std::end(res)),
+              std::vector<float>({2, 1, 2, 3, 5, 4, 5, 6, 7, 8, 9, 1, 0, 1}));
+    EXPECT_EQ(dimensions, std::vector<int64_t>({8, 8, 8, 20, 0, 0, 8, 4}));
+}
+
 namespace
 {
 using TestChannels = std::vector<std::shared_ptr<grpc::Channel>>;

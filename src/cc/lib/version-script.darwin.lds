@@ -5,8 +5,10 @@ _StartServer
 _CreateRemoteClient
 _GetNodeFeature
 _GetNodeSparseFeature
+_GetNodeStringFeature
 _GetEdgeFeature
 _GetEdgeSparseFeature
+_GetEdgeStringFeature
 _StartServer
 _GetNeighbors
 _WeightedSampleNeighbor
