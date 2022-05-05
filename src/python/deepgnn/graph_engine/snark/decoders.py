@@ -214,9 +214,9 @@ class LinearDecoder(Decoder):
     def decode(self, line: str):
         """Use json package to convert the json text line into node object."""
         src, dst, type, weight, *features = line.split()
-        if int(dst) == -1:  # is node
+        if int(src) == -1:  # is node
             output = {
-                "node_id": int(src),
+                "node_id": int(dst),
                 "node_type": int(type),
                 "node_weight": float(weight),
             }
@@ -264,7 +264,7 @@ def json_to_linear(filename_in, filename_out):
         node = json.loads(line)
 
         file_out.write(
-            f'{node["node_id"]} -1 {node["node_type"]} {node["node_weight"]} {_dump_features(node)}\n'
+            f'-1 {node["node_id"]} {node["node_type"]} {node["node_weight"]} {_dump_features(node)}\n'
         )
 
         edge_list = sorted(
@@ -288,6 +288,9 @@ def src_sort(filename_in, filename_out):
     for line in file_in.readlines():
         src, dst, *_ = line.split()
         src, dst = int(src), int(dst)
+        if src == -1:
+            src = dst
+            dst = -1
         if src not in lines:
             lines[src] = []
         lines[src].append((src, dst, line))
@@ -309,9 +312,6 @@ def dst_sort(filename_in, filename_out):
     for line in file_in.readlines():
         src, dst, *_ = line.split()
         src, dst = int(src), int(dst)
-        if dst == -1:
-            dst = src
-            src = -1
         if dst not in lines:
             lines[dst] = []
         lines[dst].append((src, dst, line))

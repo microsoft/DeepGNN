@@ -291,17 +291,16 @@ class MultiWorkersConverter:
         )
 
         lines = []
+        not_first = False
         for _, data in enumerate(dataset):
             for line in data:
-
                 if self.decoder_type == DecoderType.LINEAR:
-                    i = line.find(" ")
-                    if line[i + 1 : i + 3] == "-1":  # if line is node
-                        if len(lines):
+                    if line[0] == "-":  # if line is node
+                        if not_first:
                             d.dispatch(lines)
                         lines = []
+                        not_first = True
                     lines.append(line)
-
                 else:
                     d.dispatch(line)
 
