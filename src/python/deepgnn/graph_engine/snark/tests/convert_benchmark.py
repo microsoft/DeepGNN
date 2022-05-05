@@ -102,25 +102,42 @@ def benchmark_linear_to_binary(data_name, meta_name, output_dir):
 
 
 if __name__ == "__main__":
-    input_dir = tempfile.TemporaryDirectory()
-    json_binary_dir = tempfile.TemporaryDirectory()
-    linear_binary_dir = tempfile.TemporaryDirectory()
+    input_dir = "/tmp/convert_benchmark"
+    json_binary_dir = "/tmp/json_binary_dir"
+    linear_binary_dir = "/tmp/linear_binary_dir"
 
-    linear_name = os.path.join(input_dir.name, "graph.linear")
+    linear_name = os.path.join(input_dir, "graph.linear")
 
-    data_name, meta_name = generate_json(input_dir.name, 10**5, 20)  # TODO 1B
+    data_name, meta_name = generate_json(input_dir, 10**5, 20)#5 * 10**4, 20)
     print(
         f"JSON to Linear: {benchmark_json_to_linear(data_name, meta_name, linear_name)}"
     )
-    print(f"JSON to Binary: {benchmark_json_to_binary(data_name, meta_name, json_binary_dir.name)}")
 
-    #import cProfile, pstats
-    #from pstats import SortKey
+    import cProfile, pstats
+    from pstats import SortKey
 
-    #pr = cProfile.Profile()
-    #pr.enable()
-    print(
-        f"Linear to Binary: {benchmark_linear_to_binary(linear_name, meta_name, linear_binary_dir.name)}"
-    )
-    #pr.disable()
-    #ps = pstats.Stats(pr).sort_stats(SortKey.CUMULATIVE).print_stats()
+    profile = False
+    if profile:
+        pr = cProfile.Profile()
+        pr.enable()
+
+    print(f"JSON to Binary: {benchmark_json_to_binary(data_name, meta_name, json_binary_dir)}")
+
+    if profile:
+        pr.disable()
+        ps = pstats.Stats(pr)
+        ps.strip_dirs()
+        ps.sort_stats(SortKey.CUMULATIVE) #.print_stats()
+        ps.dump_stats("/home/user/DeepGNN/profile_json")
+
+        pr = cProfile.Profile()
+        pr.enable()
+
+    print(f"Linear to Binary: {benchmark_linear_to_binary(linear_name, meta_name, linear_binary_dir)}")
+
+    if profile:
+        pr.disable()
+        ps = pstats.Stats(pr)
+        ps.strip_dirs()
+        ps.sort_stats(SortKey.CUMULATIVE) #.print_stats()
+        ps.dump_stats("/home/user/DeepGNN/profile")
