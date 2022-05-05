@@ -78,7 +78,7 @@ def benchmark_json_to_linear(data_name, meta_name, linear_name):
     return time() - time_start
 
 
-def benchmark_to_binary(data_name, meta_name, output_dir, decoder_type):
+def benchmark_to_binary(data_name, meta_name, output_dir, decoder_type, **kw):
     from deepgnn.graph_engine.snark import dispatcher
 
     dispatcher.PROCESS_PRINT_INTERVAL = 10**10
@@ -89,6 +89,7 @@ def benchmark_to_binary(data_name, meta_name, output_dir, decoder_type):
         partition_count=1,
         output_dir=output_dir,
         decoder_type=decoder_type,
+        **kw,
     ).convert()
     return time() - time_start
 
@@ -98,7 +99,8 @@ def benchmark_json_to_binary(data_name, meta_name, output_dir):
 
 
 def benchmark_linear_to_binary(data_name, meta_name, output_dir):
-    return benchmark_to_binary(data_name, meta_name, output_dir, DecoderType.LINEAR)
+    # buffer_size reduces number of TextFileIterator q.get calls == json, record_per_step reduces number TextFileIterator.__next__ == json
+    return benchmark_to_binary(data_name, meta_name, output_dir, DecoderType.LINEAR, buffer_size=50 // 4, record_per_step=512 * 21)
 
 
 if __name__ == "__main__":
@@ -116,7 +118,7 @@ if __name__ == "__main__":
     import cProfile, pstats
     from pstats import SortKey
 
-    profile = False
+    profile = True
     if profile:
         pr = cProfile.Profile()
         pr.enable()
