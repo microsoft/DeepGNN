@@ -220,12 +220,7 @@ class LinearDecoder(Decoder):
                 "node_type": int(type),
                 "node_weight": float(weight),
             }
-            for feature in features:
-                key, idx, value = feature.split("/")
-                if key not in output:
-                    output[key] = {}
-                output[key][idx] = list(map(float if '.' in value else int, value.split(",")))
-            # ignores neighbors
+            _load_features(output, features)
         else:  # is edge
             output = {
                 "src_id": int(src),
@@ -233,13 +228,28 @@ class LinearDecoder(Decoder):
                 "edge_type": int(type),
                 "weight": float(weight),
             }
-            for feature in features:
-                key, idx, value = feature.split("/")
-                if key not in output:
-                    output[key] = {}
-                output[key][idx] = list(map(float if '.' in value else int, value.split(",")))
+            _load_features(output, features)
 
         return output
+
+
+convert_map = {  # TODO all + sparse
+    "float_feature": float,
+    "uint64_feature": int,
+    "binary_feature": lambda x: x,
+}
+
+def _load_features(output, features):
+    for feature in features:
+        key, idx, value = feature.split("/")
+        if key not in output:
+            output[key] = {}
+        
+
+        if key == "binary_feature":
+            output[key][idx] = value.replace(",", "")
+        else:
+            output[key][idx] = list(map(convert_map[key], value.split(",")))
 
 
 def _dump_features(features: dict) -> str:
