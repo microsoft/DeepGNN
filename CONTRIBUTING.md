@@ -48,7 +48,14 @@ Get the repo and build it:
 ```bash
 git clone https://github.com/microsoft/DeepGNN
 # for Windows and MacOS builds use `windows` and `darwin` config values.
-bazel build //src/cc/lib:* --config=linux
+bazel build -c opt //src/cc/lib:* --config=linux
+```
+
+For Debug builds use:
+
+```bash
+# for Windows and MacOS builds use `windows` and `darwin` config values.
+bazel build -c dbg //src/cc/lib:* --config=linux
 ```
 
 ## Install python package:
