@@ -100,8 +100,11 @@ def benchmark_json_to_binary(data_name, meta_name, output_dir):
 
 def benchmark_linear_to_binary(data_name, meta_name, output_dir):
     # buffer_size reduces number of TextFileIterator q.get calls == json, record_per_step reduces number TextFileIterator.__next__ == json
-    return benchmark_to_binary(data_name, meta_name, output_dir, DecoderType.LINEAR, buffer_size=50 // 4, record_per_step=512 * 21)
+    return benchmark_to_binary(data_name, meta_name, output_dir, DecoderType.LINEAR, buffer_size=50 // 4, record_per_step=512 * (EDGES + 1))
 
+
+NODES = 10**5
+EDGES = 20
 
 if __name__ == "__main__":
     input_dir = "/tmp/convert_benchmark"
@@ -110,7 +113,7 @@ if __name__ == "__main__":
 
     linear_name = os.path.join(input_dir, "graph.linear")
 
-    data_name, meta_name = generate_json(input_dir, 10**5, 20)#5 * 10**4, 20)
+    data_name, meta_name = generate_json(input_dir, NODES, EDGES)
     print(
         f"JSON to Linear: {benchmark_json_to_linear(data_name, meta_name, linear_name)}"
     )
@@ -118,20 +121,23 @@ if __name__ == "__main__":
     import cProfile, pstats
     from pstats import SortKey
 
-    profile = True
+    profile = False
+
+    if True:
+        if profile:
+            pr = cProfile.Profile()
+            pr.enable()
+
+        print(f"JSON to Binary: {benchmark_json_to_binary(data_name, meta_name, json_binary_dir)}")
+
+        if profile:
+            pr.disable()
+            ps = pstats.Stats(pr)
+            ps.strip_dirs()
+            ps.sort_stats(SortKey.CUMULATIVE) #.print_stats()
+            ps.dump_stats("/home/user/DeepGNN/profile_json")
+
     if profile:
-        pr = cProfile.Profile()
-        pr.enable()
-
-    print(f"JSON to Binary: {benchmark_json_to_binary(data_name, meta_name, json_binary_dir)}")
-
-    if profile:
-        pr.disable()
-        ps = pstats.Stats(pr)
-        ps.strip_dirs()
-        ps.sort_stats(SortKey.CUMULATIVE) #.print_stats()
-        ps.dump_stats("/home/user/DeepGNN/profile_json")
-
         pr = cProfile.Profile()
         pr.enable()
 

@@ -216,43 +216,25 @@ class LinearDecoder(Decoder):
 
     def decode(self, line: str):
         """Use json package to convert the json text line into node object."""
-        #from time import time
-        #time_start = time()
-        lines = " ".join(line)
-        #print((time() - time_start) * 10 ** 5)
-        #print(lines)
+        src, dst, typ, weight, *features = line.split()
 
-        #time_start = time()
-        groups = self.pattern.findall(lines)
-        #print((time() - time_start) * 10 ** 5)
-        #time_stp
-        #print(groups.groups())
-        #print(groups)
-        #print(groups.groups())
-        #src, dst, typ, weight, features = groups.groups()
-        #assert False
+        if line[0] == "-":  # is node
+            output = {
+                "node_id": int(dst),
+                "node_type": int(typ),
+                "node_weight": float(weight),
+            }
+            _load_features(output, features)
+        else:  # is edge
+            output = {
+                "src_id": int(src),
+                "dst_id": int(dst),
+                "edge_type": int(typ),
+                "weight": float(weight),
+            }
+            _load_features(output, features)
 
-        for src, dst, typ, weight, features in groups:
-            #print(line, groups, src, dst, type, weight, features)
-            #if src is None:
-            #    exit()
-            if line[0] == "-":  # is node
-                output = {
-                    "node_id": int(dst),
-                    "node_type": int(typ),
-                    "node_weight": float(weight),
-                }
-                _load_features(output, features)
-            else:  # is edge
-                output = {
-                    "src_id": int(src),
-                    "dst_id": int(dst),
-                    "edge_type": int(typ),
-                    "weight": float(weight),
-                }
-                _load_features(output, features)
-
-            yield output
+        return output
 
 
 convert_map = {  # TODO all + sparse
@@ -261,12 +243,10 @@ convert_map = {  # TODO all + sparse
 }
 
 def _load_features(output, features):
-    features = features.split()
     for feature in features:
         key, idx, value = feature.split("/")
         if key not in output:
             output[key] = {}
-        
 
         if key == "binary_feature":
             output[key][idx] = value.replace(",", "")
