@@ -7,6 +7,7 @@ import json
 import logging
 import csv
 from enum import Enum
+import re
 from typing import Any, Dict
 
 logger = logging.getLogger()
@@ -210,14 +211,20 @@ class LinearDecoder(Decoder):
     def __init__(self):
         """Initialize the Decoder."""
         super().__init__()
+        definition = r"((?P<src>-1|\d+) (?P<dst>\d+) (?P<type>\d+) (?P<weight>[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+))(?P<features>( (uint64|float)_feature\/[0-9]*\/([+-]?([0-9]+([.][0-9]*)?|[.][0-9]+),)*[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+))*))"
+        self.pattern = re.compile(definition)
 
     def decode(self, line: str):
         """Use json package to convert the json text line into node object."""
-        src, dst, type, weight, *features = line.split()
-        if int(src) == -1:  # is node
+        groups = self.pattern.match(line)
+        src, dst, typ, weight, features = groups.group("src", "dst", "type", "weight", "features")
+        #print(line, groups, src, dst, type, weight, features)
+        #if src is None:
+        #    exit()
+        if line[0] == "-":  # is node
             output = {
                 "node_id": int(dst),
-                "node_type": int(type),
+                "node_type": int(typ),
                 "node_weight": float(weight),
             }
             _load_features(output, features)
@@ -225,7 +232,7 @@ class LinearDecoder(Decoder):
             output = {
                 "src_id": int(src),
                 "dst_id": int(dst),
-                "edge_type": int(type),
+                "edge_type": int(typ),
                 "weight": float(weight),
             }
             _load_features(output, features)
@@ -236,10 +243,10 @@ class LinearDecoder(Decoder):
 convert_map = {  # TODO all + sparse
     "float_feature": float,
     "uint64_feature": int,
-    "binary_feature": lambda x: x,
 }
 
 def _load_features(output, features):
+    features = features.split()
     for feature in features:
         key, idx, value = feature.split("/")
         if key not in output:
