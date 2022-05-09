@@ -211,13 +211,14 @@ class LinearDecoder(Decoder):
     def __init__(self):
         """Initialize the Decoder."""
         super().__init__()
-        definition = r"((?P<src>-1|\d+) (?P<dst>\d+) (?P<type>\d+) (?P<weight>[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+))(?P<features>( (uint64|float)_feature\/[0-9]*\/([+-]?([0-9]+([.][0-9]*)?|[.][0-9]+),)*[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+))*))"
+        definition = r"(-1|\d+) (\d+) (\d+) ([-]?(?:[0-9]+(?:[.][0-9]*)?|[.][0-9]+))((?: (?:uint64|float)_feature\/[0-9]*\/(?:[-]?(?:[0-9]+(?:[.][0-9]*)?|[.][0-9]+),)*[-]?(?:[0-9]+(?:[.][0-9]*)?|[.][0-9]+))*)"
         self.pattern = re.compile(definition)
 
     def decode(self, line: str):
         """Use json package to convert the json text line into node object."""
         groups = self.pattern.match(line)
-        src, dst, typ, weight, features = groups.group("src", "dst", "type", "weight", "features")
+        #print(groups.groups())
+        src, dst, typ, weight, features = groups.groups()
         #print(line, groups, src, dst, type, weight, features)
         #if src is None:
         #    exit()
