@@ -218,7 +218,8 @@ class LinearDecoder(Decoder):
         """Use json package to convert the json text line into node object."""
         src, dst, typ, weight, features = line.split(maxsplit=4)
 
-        if line[0] == "-":  # is node
+        src = int(src)
+        if src == -1:  # is node
             output = {
                 "node_id": int(dst),
                 "node_type": int(typ),
@@ -227,7 +228,7 @@ class LinearDecoder(Decoder):
             _load_features(output, features)
         else:  # is edge
             output = {
-                "src_id": int(src),
+                "src_id": src,
                 "dst_id": int(dst),
                 "edge_type": int(typ),
                 "weight": float(weight),
@@ -248,11 +249,9 @@ def _load_features(output, features):
         key, idx, value = values[i*3:i*3+3]
         if key not in output:
             output[key] = {}
-
-        if key == "binary_feature":
-            output[key][idx] = value.replace(",", "")
-        else:
-            output[key][idx] = list(map(convert_map[key], value.split(",")))
+        if key != "binary_feature":
+            value = list(map(convert_map[key], value.split(",")))
+        output[key][idx] = value
 
 
 def _dump_features(features: dict) -> str:
@@ -263,7 +262,11 @@ def _dump_features(features: dict) -> str:
             continue
 
         for idx, value in values.items():
-            output.append(f"{key}/{idx}/{','.join(map(str, value))}")
+            if key == "binary_feature":
+                v = str(value)
+            else:
+                v = ",".join(map(str, value))
+            output.append(f"{key}/{idx}/{v}")
     
     return "/".join(output)
 
