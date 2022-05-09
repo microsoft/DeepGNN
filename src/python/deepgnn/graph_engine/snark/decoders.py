@@ -216,7 +216,7 @@ class LinearDecoder(Decoder):
 
     def decode(self, line: str):
         """Use json package to convert the json text line into node object."""
-        src, dst, typ, weight, *features = line.split()
+        src, dst, typ, weight, features = line.split(maxsplit=4)
 
         if line[0] == "-":  # is node
             output = {
@@ -243,8 +243,9 @@ convert_map = {  # TODO all + sparse
 }
 
 def _load_features(output, features):
-    for feature in features:
-        key, idx, value = feature.split("/")
+    values = features.split("/")
+    for i in range(len(values) // 3):
+        key, idx, value = values[i*3:i*3+3]
         if key not in output:
             output[key] = {}
 
@@ -264,7 +265,7 @@ def _dump_features(features: dict) -> str:
         for idx, value in values.items():
             output.append(f"{key}/{idx}/{','.join(map(str, value))}")
     
-    return " ".join(output)
+    return "/".join(output)
 
 
 def json_to_linear(filename_in, filename_out):
