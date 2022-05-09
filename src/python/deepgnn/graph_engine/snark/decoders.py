@@ -211,34 +211,48 @@ class LinearDecoder(Decoder):
     def __init__(self):
         """Initialize the Decoder."""
         super().__init__()
-        definition = r"(-1|\d+) (\d+) (\d+) ([-]?(?:[0-9]+(?:[.][0-9]*)?|[.][0-9]+))((?: (?:uint64|float)_feature\/[0-9]*\/(?:[-]?(?:[0-9]+(?:[.][0-9]*)?|[.][0-9]+),)*[-]?(?:[0-9]+(?:[.][0-9]*)?|[.][0-9]+))*)"
+        definition = r"(-1|[0-9]+) ([0-9]+) ([0-9]+) ([-]?(?:[0-9.]+))((?: (?:uint64|float)_feature\/[0-9]*\/(?:[-]?(?:[0-9.]+?),)*[-]?(?:[0-9.]+))*)"
         self.pattern = re.compile(definition)
 
     def decode(self, line: str):
         """Use json package to convert the json text line into node object."""
-        groups = self.pattern.match(line)
-        #print(groups.groups())
-        src, dst, typ, weight, features = groups.groups()
-        #print(line, groups, src, dst, type, weight, features)
-        #if src is None:
-        #    exit()
-        if line[0] == "-":  # is node
-            output = {
-                "node_id": int(dst),
-                "node_type": int(typ),
-                "node_weight": float(weight),
-            }
-            _load_features(output, features)
-        else:  # is edge
-            output = {
-                "src_id": int(src),
-                "dst_id": int(dst),
-                "edge_type": int(typ),
-                "weight": float(weight),
-            }
-            _load_features(output, features)
+        #from time import time
+        #time_start = time()
+        lines = " ".join(line)
+        #print((time() - time_start) * 10 ** 5)
+        #print(lines)
 
-        return output
+        #time_start = time()
+        groups = self.pattern.findall(lines)
+        #print((time() - time_start) * 10 ** 5)
+        #time_stp
+        #print(groups.groups())
+        #print(groups)
+        #print(groups.groups())
+        #src, dst, typ, weight, features = groups.groups()
+        #assert False
+
+        for src, dst, typ, weight, features in groups:
+            #print(line, groups, src, dst, type, weight, features)
+            #if src is None:
+            #    exit()
+            if line[0] == "-":  # is node
+                output = {
+                    "node_id": int(dst),
+                    "node_type": int(typ),
+                    "node_weight": float(weight),
+                }
+                _load_features(output, features)
+            else:  # is edge
+                output = {
+                    "src_id": int(src),
+                    "dst_id": int(dst),
+                    "edge_type": int(typ),
+                    "weight": float(weight),
+                }
+                _load_features(output, features)
+
+            yield output
 
 
 convert_map = {  # TODO all + sparse
