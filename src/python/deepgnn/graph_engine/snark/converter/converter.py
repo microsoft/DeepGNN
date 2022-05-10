@@ -44,16 +44,16 @@ class NodeWriter:
         self.count = 0
         self.feature_writer = NodeFeatureWriter(folder, partition)
 
-    def add(self, node: typing.Any):
+    def add(self, node_id, node_type, features):
         """Write node features and data about edges from this node to binary.
 
         Args:
             node (typing.Any): dictionary with information about
         """
-        self.nm.write(ctypes.c_uint64(node["node_id"]))  # type: ignore
+        self.nm.write(ctypes.c_uint64(node_id))  # type: ignore
         self.nm.write(ctypes.c_uint64(self.count))  # type: ignore
-        self.nm.write(ctypes.c_int32(node["node_type"]))  # type: ignore
-        self.feature_writer.add(node)
+        self.nm.write(ctypes.c_int32(node_type))  # type: ignore
+        self.feature_writer.add(features)
         self.count += 1
 
     def close(self):
@@ -150,18 +150,18 @@ class EdgeWriter:
 
         self.feature_writer = EdgeFeatureWriter(folder, partition, self.efi)
 
-    def add(self, edge: typing.Any):
+    def add(self, dst, tp, weight, features: typing.Any):
         """Append edges starting at node to the output.
 
         Args:
             node (typing.Any): node with edges data
         """
         # Record order is important for C++ reader: order fields by size for faster load.
-        self.ei.write(ctypes.c_uint64(edge["dst_id"]))  # type: ignore
+        self.ei.write(ctypes.c_uint64(dst))  # type: ignore
         self.ei.write(ctypes.c_uint64(self.efi.tell() // 8))  # type: ignore
-        self.ei.write(ctypes.c_int32(edge["edge_type"]))  # type: ignore
-        self.ei.write(ctypes.c_float(edge["weight"]))  # type: ignore
-        self.feature_writer.add(edge)
+        self.ei.write(ctypes.c_int32(tp))  # type: ignore
+        self.ei.write(ctypes.c_float(weight))  # type: ignore
+        self.feature_writer.add(features)
 
     def close(self):
         """Close output binary files."""
@@ -275,15 +275,15 @@ class NodeAliasWriter:
             for tp in range(node_type_count)
         ]
 
-    def add(self, node: typing.Any):
+    def add(self, node_id, typ, weight):
         """Record node information.
 
         Args:
             node (typing.Any): Node with information about it's id, type and weight
         """
-        tp = node["node_type"]
-        self.nodes[tp].write(ctypes.c_uint64(node["node_id"]))
-        self.weights[tp].write(ctypes.c_float(node["node_weight"]))
+        tp = typ
+        self.nodes[tp].write(ctypes.c_uint64(node_id))
+        self.weights[tp].write(ctypes.c_float(weight))
 
     def close(self):
         """Convert temporary files to the final alias tables."""
@@ -365,16 +365,15 @@ class EdgeAliasWriter:
             for tp in range(edge_type_count)
         ]
 
-    def add(self, edge: typing.Dict):
+    def add(self, src, dst, tp, weight: typing.Dict):
         """Add edge to the alias tables.
 
         Args:
             edge (typing.Dict): Edge with information about it's source/destination ids, type and weight
         """
-        tp = edge["edge_type"]
-        self.pairs[tp].write(ctypes.c_uint64(edge["src_id"]))  # type: ignore
-        self.pairs[tp].write(ctypes.c_uint64(edge["dst_id"]))  # type: ignore
-        self.weights[tp].write(ctypes.c_float(edge["weight"]))  # type: ignore
+        self.pairs[tp].write(ctypes.c_uint64(src))  # type: ignore
+        self.pairs[tp].write(ctypes.c_uint64(dst))  # type: ignore
+        self.weights[tp].write(ctypes.c_float(weight))  # type: ignore
 
     def close(self):
         """Convert temporary files to the final alias tables."""

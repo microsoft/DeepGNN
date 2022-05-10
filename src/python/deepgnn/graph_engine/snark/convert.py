@@ -69,6 +69,8 @@ def output(
         skip_node_sampler(bool): skip generation of node alias tables
         skip_edge_sampler(bool): skip generation of edge alias tables
     """
+    import ctypes
+
     decoder: Optional[Decoder] = None
     if decoder_type == DecoderType.JSON:
         decoder = JsonDecoder()
@@ -112,11 +114,12 @@ def output(
 
         if decoder_type != DecoderType.LINEAR:
             node = decoder.decode(line)
-            node_writer.add(node)
+
+            dst, typ, weight, features = node["node_id"], node["node_type"], node["node_weight"], node
+
+            node_writer.add(dst, typ, features)
 
             # Works if sorted Node, src edge, ... Nodei+1
-            import ctypes
-
             edge_writer.nbi.write(  # type: ignore
                 ctypes.c_uint64(edge_writer.ei.tell() // (4 + 8 + 8 + 4))
             )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
@@ -125,12 +128,15 @@ def output(
                 node["edge"], key=lambda x: (int(x["edge_type"]), int(x["dst_id"]))
             )
             for edge in edge_list:
-                edge_writer.add(edge)
+                dst, typ, weight, features = edge["dst_id"], edge["edge_type"], edge["weight"], edge
+                edge_writer.add(dst, typ, weight, features)
 
-            node_alias.add(node)
+            node_alias.add(dst, typ, weight)
 
             for eet in node["edge"]:
-                edge_alias.add(eet)
+                src, dst, typ, weight, features = edge["src_id"], edge["dst_id"], edge["edge_type"], edge["weight"], edge
+
+                edge_alias.add(src, dst, typ, weight)
                 edge_weight[eet["edge_type"]] += eet["weight"]
                 edge_type_count[eet["edge_type"]] += 1
 
@@ -141,31 +147,22 @@ def output(
         else:
             lines = line
             for line in lines:
-                item = decoder.decode(line)
-                if "node_id" in item:
-                    node = item
-                    node_writer.add(node)
-
-                    import ctypes
-
+                src, dst, typ, weight, features = decoder.decode(line)
+                src, dst, typ, weight = int(src), int(dst), int(typ), float(weight)
+                if src == -1:
+                    node_writer.add(dst, typ, features)
                     edge_writer.nbi.write(  # type: ignore
                         ctypes.c_uint64(edge_writer.ei.tell() // (4 + 8 + 8 + 4))
                     )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
-
-                    node_alias.add(node)
-
-                    node_weight[node["node_type"]] += float(node["node_weight"])
-                    node_type_count[node["node_type"]] += 1
-
+                    node_alias.add(dst, typ, weight)
+                    node_weight[typ] += float(typ)
+                    node_type_count[typ] += 1
                     node_count += 1
                 else:
-                    edge = item
-                    edge_writer.add(edge)
-
-                    edge_alias.add(edge)
-                    edge_weight[edge["edge_type"]] += edge["weight"]
-                    edge_type_count[edge["edge_type"]] += 1
-
+                    edge_writer.add(dst, typ, weight, features)
+                    edge_alias.add(src, dst, typ, weight)
+                    edge_weight[typ] += weight
+                    edge_type_count[typ] += 1
                     edge_count += 1
 
     node_writer.close()
