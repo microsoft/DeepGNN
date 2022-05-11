@@ -1,3 +1,4 @@
-torch-geometric
-torch-scatter
-torch-sparse
+horovod[torch]==0.24.3
+torch-geometric==2.0.4
+torch-scatter==2.0.9
+torch-sparse==0.6.13
