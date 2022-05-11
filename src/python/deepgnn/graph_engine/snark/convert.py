@@ -20,12 +20,13 @@ import fsspec
 from deepgnn import get_logger
 from deepgnn.graph_engine._adl_reader import TextFileIterator
 from deepgnn.graph_engine._base import get_fs
-import deepgnn.graph_engine.snark.converter.json_converter as json_converter
+import deepgnn.graph_engine.snark.converter.converter as converter
 from deepgnn.graph_engine.snark.decoders import (
     Decoder,
     DecoderType,
     JsonDecoder,
     TsvDecoder,
+    LinearDecoder,
 )
 from deepgnn.graph_engine.snark.dispatcher import (
     PipeDispatcher,
@@ -68,11 +69,15 @@ def output(
         skip_node_sampler(bool): skip generation of node alias tables
         skip_edge_sampler(bool): skip generation of edge alias tables
     """
+    import ctypes
+
     decoder: Optional[Decoder] = None
     if decoder_type == DecoderType.JSON:
         decoder = JsonDecoder()
     elif decoder_type == DecoderType.TSV:
         decoder = TsvDecoder()
+    elif decoder_type == DecoderType.LINEAR:
+        decoder = LinearDecoder()
     else:
         raise ValueError("Unsupported decoder type.")
 
@@ -84,43 +89,49 @@ def output(
     node_type_count = [0] * node_type_num
     edge_weight = [0] * edge_type_num
     edge_type_count = [0] * edge_type_num
-    writer = json_converter.NodeWriter(str(folder), suffix)
-    node_alias: typing.Union[json_converter.NodeAliasWriter, _NoOpWriter] = (
+    node_writer = converter.NodeWriter(str(folder), suffix)
+    edge_writer = converter.EdgeWriter(str(folder), suffix)
+    node_alias: typing.Union[converter.NodeAliasWriter, _NoOpWriter] = (
         _NoOpWriter()
         if skip_node_sampler
-        else json_converter.NodeAliasWriter(str(folder), suffix, node_type_num)
+        else converter.NodeAliasWriter(str(folder), suffix, node_type_num)
     )
-    edge_alias: typing.Union[json_converter.EdgeAliasWriter, _NoOpWriter] = (
+    edge_alias: typing.Union[converter.EdgeAliasWriter, _NoOpWriter] = (
         _NoOpWriter()
         if skip_edge_sampler
-        else json_converter.EdgeAliasWriter(str(folder), suffix, edge_type_num)
+        else converter.EdgeAliasWriter(str(folder), suffix, edge_type_num)
     )
     count = 0
     while True:
         count += 1
         if type(q_in) == Connection:
-            line = q_in.recv()  # type: ignore
+            lines = q_in.recv()  # type: ignore
         else:
-            line = q_in.get()  # type: ignore
+            lines = q_in.get()  # type: ignore
 
-        if line == FLAG_ALL_DONE:
+        if lines == FLAG_ALL_DONE:
             break
 
-        node = decoder.decode(line)
-        writer.add(node)
-        node_alias.add(node)
+        for line in lines:
+            src, dst, typ, weight, features = decoder.decode(line)
+            if src == -1:
+                node_writer.add(dst, typ, features)
+                edge_writer.nbi.write(  # type: ignore
+                    ctypes.c_uint64(edge_writer.ei.tell() // (4 + 8 + 8 + 4))
+                )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
+                node_alias.add(dst, typ, weight)
+                node_weight[typ] += float(typ)
+                node_type_count[typ] += 1
+                node_count += 1
+            else:
+                edge_writer.add(dst, typ, weight, features)
+                edge_alias.add(src, dst, typ, weight)
+                edge_weight[typ] += weight
+                edge_type_count[typ] += 1
+                edge_count += 1
 
-        for eet in node["edge"]:
-            edge_alias.add(eet)
-            edge_weight[eet["edge_type"]] += eet["weight"]
-            edge_type_count[eet["edge_type"]] += 1
-
-        edge_count += len(node["edge"])
-        node_count += 1
-        node_weight[node["node_type"]] += float(node["node_weight"])
-        node_type_count[node["node_type"]] += 1
-
-    writer.close()
+    node_writer.close()
+    edge_writer.close()
     node_alias.close()
     edge_alias.close()
     q_out.put(
@@ -241,9 +252,22 @@ class MultiWorkersConverter:
             num_workers=self.worker_count,
         )
 
+        lines = []
+        not_first = False
         for _, data in enumerate(dataset):
             for line in data:
-                d.dispatch(line)
+                if self.decoder_type == DecoderType.LINEAR:
+                    if line[0] == "-":  # if line is node
+                        if not_first:
+                            d.dispatch(lines)
+                        lines = []
+                        not_first = True
+                    lines.append(line)
+                else:
+                    d.dispatch(line)
+
+        if self.decoder_type == DecoderType.LINEAR and len(lines):
+            d.dispatch(lines)
 
         d.join()
 

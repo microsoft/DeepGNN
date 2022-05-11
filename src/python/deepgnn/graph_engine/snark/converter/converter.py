@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-"""Set of writers to convert graph from json format to binary."""
+"""Set of writers to convert graph from linar format to binary."""
 import ctypes
 import os
 import tempfile
@@ -20,7 +20,6 @@ from deepgnn.graph_engine.snark.meta import _Element
 class NodeWriter:
     """
     NodeWriter is an entry point for conversion from euler json files to DeepGNN files.
-
     Every record is parsed one by one and passed to the relevant writers below. These writers
     put data in files with the partition suffix: `node_{partition}...`. We reserve one more
     suffix to follow after partition to split large files into smaller ones, so files will have names
@@ -29,7 +28,6 @@ class NodeWriter:
 
     def __init__(self, folder: str, partition: int):
         """Initialize writer and create binary files.
-
         Args:
             folder (str): location to write output
             partition (int): first part of the suffix to identify files from this writer.
@@ -43,26 +41,22 @@ class NodeWriter:
         )
         self.count = 0
         self.feature_writer = NodeFeatureWriter(folder, partition)
-        self.edge_writer = EdgeWriter(folder, partition)
 
-    def add(self, node: typing.Any):
+    def add(self, node_id, node_type, features):
         """Write node features and data about edges from this node to binary.
-
         Args:
             node (typing.Any): dictionary with information about
         """
-        self.nm.write(ctypes.c_uint64(node["node_id"]))  # type: ignore
+        self.nm.write(ctypes.c_uint64(node_id))  # type: ignore
         self.nm.write(ctypes.c_uint64(self.count))  # type: ignore
-        self.nm.write(ctypes.c_int32(node["node_type"]))  # type: ignore
-        self.feature_writer.add(node)
-        self.edge_writer.add(node)
+        self.nm.write(ctypes.c_int32(node_type))  # type: ignore
+        self.feature_writer.add(features)
         self.count += 1
 
     def close(self):
         """Close output binary files."""
         self.nm.close()
         self.feature_writer.close()
-        self.edge_writer.close()
 
 
 class NodeFeatureWriter:
@@ -70,7 +64,6 @@ class NodeFeatureWriter:
 
     def __init__(self, folder: str, partition: int):
         """Construct writer.
-
         Args:
             folder (str): path to output save output
             partition (int): first part of the suffix for binary files
@@ -100,7 +93,6 @@ class NodeFeatureWriter:
 
     def add(self, node: typing.Any):
         """Add node to binary output.
-
         Args:
             node (typing.Any): graph node with all node features and edges from it.
         """
@@ -125,7 +117,6 @@ class EdgeWriter:
 
     def __init__(self, folder: str, partition: int):
         """Initialize writer.
-
         Args:
             folder (str): path to save binary files
             partition (int): first part of a suffix in filename to identify partition
@@ -153,25 +144,17 @@ class EdgeWriter:
 
         self.feature_writer = EdgeFeatureWriter(folder, partition, self.efi)
 
-    def add(self, node: typing.Any):
+    def add(self, dst, tp, weight, features: typing.Any):
         """Append edges starting at node to the output.
-
         Args:
             node (typing.Any): node with edges data
         """
-        self.nbi.write(  # type: ignore
-            ctypes.c_uint64(self.ei.tell() // (4 + 8 + 8 + 4))
-        )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
-        edge_list = sorted(
-            node["edge"], key=lambda x: (int(x["edge_type"]), int(x["dst_id"]))
-        )
-        for item in edge_list:
-            # Record order is important for C++ reader: order fields by size for faster load.
-            self.ei.write(ctypes.c_uint64(item["dst_id"]))  # type: ignore
-            self.ei.write(ctypes.c_uint64(self.efi.tell() // 8))  # type: ignore
-            self.ei.write(ctypes.c_int32(item["edge_type"]))  # type: ignore
-            self.ei.write(ctypes.c_float(item["weight"]))  # type: ignore
-            self.feature_writer.add(item)
+        # Record order is important for C++ reader: order fields by size for faster load.
+        self.ei.write(ctypes.c_uint64(dst))  # type: ignore
+        self.ei.write(ctypes.c_uint64(self.efi.tell() // 8))  # type: ignore
+        self.ei.write(ctypes.c_int32(tp))  # type: ignore
+        self.ei.write(ctypes.c_float(weight))  # type: ignore
+        self.feature_writer.add(features)
 
     def close(self):
         """Close output binary files."""
@@ -197,7 +180,6 @@ class EdgeFeatureWriter:
 
     def __init__(self, folder: str, partition: int, efi: typing.BinaryIO):
         """Create writer and open binary files for output.
-
         Args:
             folder (str): location to store binary files
             partition (int): suffix to identify binary files from this writer
@@ -217,7 +199,6 @@ class EdgeFeatureWriter:
 
     def add(self, head: typing.Any):
         """Add edge features the binary output.
-
         Args:
             head (typing.Dict): collection of float/uint64/binary features.
         """
@@ -228,7 +209,6 @@ class EdgeFeatureWriter:
 
     def tell(self) -> int:
         """Tell start position for the next feature data.
-
         Returns:
             [int]: Last position in data file.
         """
@@ -242,7 +222,6 @@ class EdgeFeatureWriter:
 class NodeAliasWriter:
     """
     NodeAliasWriter creates alias tables for weighted node sampling.
-
     To avoid using lots of memory it utilizes temp files to store all nodes added to
     it and creates alias tables from them when the writer is closed.
     Each file has a fixed record format: node[8 bytes], alias node[8 bytes]
@@ -251,7 +230,6 @@ class NodeAliasWriter:
 
     def __init__(self, folder: str, partition: int, node_type_count: int):
         """Initialize alias tables.
-
         Args:
             folder (str): where to store files
             partition (int): suffix identifier for alias tables created with this writer.
@@ -285,15 +263,14 @@ class NodeAliasWriter:
             for tp in range(node_type_count)
         ]
 
-    def add(self, node: typing.Any):
+    def add(self, node_id, typ, weight):
         """Record node information.
-
         Args:
             node (typing.Any): Node with information about it's id, type and weight
         """
-        tp = node["node_type"]
-        self.nodes[tp].write(ctypes.c_uint64(node["node_id"]))
-        self.weights[tp].write(ctypes.c_float(node["node_weight"]))
+        tp = typ
+        self.nodes[tp].write(ctypes.c_uint64(node_id))
+        self.weights[tp].write(ctypes.c_float(weight))
 
     def close(self):
         """Convert temporary files to the final alias tables."""
@@ -331,7 +308,6 @@ class NodeAliasWriter:
 class EdgeAliasWriter:
     """
     EdgeAliasWriter creates alias tables for edges.
-
     These tables can be used for weighted edge sampling with the same pattern
     as NodeAliasWriter. Final files have a fixed record format with following contents:
     (edge source[8 bytes], alias edge_source[8_bytes],
@@ -341,7 +317,6 @@ class EdgeAliasWriter:
 
     def __init__(self, folder: str, partition: int, edge_type_count: int):
         """Initialize alias tables.
-
         Args:
             folder (str): where to store files
             partition (int): suffix identifier for alias tables created with this writer.
@@ -375,16 +350,14 @@ class EdgeAliasWriter:
             for tp in range(edge_type_count)
         ]
 
-    def add(self, edge: typing.Dict):
+    def add(self, src, dst, tp, weight: typing.Dict):
         """Add edge to the alias tables.
-
         Args:
             edge (typing.Dict): Edge with information about it's source/destination ids, type and weight
         """
-        tp = edge["edge_type"]
-        self.pairs[tp].write(ctypes.c_uint64(edge["src_id"]))  # type: ignore
-        self.pairs[tp].write(ctypes.c_uint64(edge["dst_id"]))  # type: ignore
-        self.weights[tp].write(ctypes.c_float(edge["weight"]))  # type: ignore
+        self.pairs[tp].write(ctypes.c_uint64(src))  # type: ignore
+        self.pairs[tp].write(ctypes.c_uint64(dst))  # type: ignore
+        self.weights[tp].write(ctypes.c_float(weight))  # type: ignore
 
     def close(self):
         """Convert temporary files to the final alias tables."""

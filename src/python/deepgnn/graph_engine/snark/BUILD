@@ -16,7 +16,7 @@ py_library(
         "convert.py",
         "meta_merger.py",
         "converter/__init__.py",
-        "converter/json_converter.py",
+        "converter/converter.py",
         "converter/options.py",
         "decoders.py",
         "dispatcher.py",

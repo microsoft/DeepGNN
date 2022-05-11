@@ -17,6 +17,7 @@ class DecoderType(Enum):
 
     JSON = "json"
     TSV = "tsv"
+    LINEAR = "linear"
 
     def __str__(self):
         """Convert instance to string."""
@@ -189,3 +190,87 @@ class TsvDecoder(Decoder):
                 node["edge"].append(edge_info)
 
         return node
+
+
+class LinearDecoder(Decoder):
+    """Convert the text line into node object.
+    Linear format:
+        node_id -1 node_type node_weight feature_dict(no spaces)
+        src_id dst_id edge_type edge_weight feature_dict(no spaces)
+        ...
+        sorted by src with node before edges.
+    Linear format example:
+        0 -1 1 1 {"float_feature":{"0":[1],"1":[-0.03,-0.04]}}
+        0 5 1 1 {"1":[3,4]}
+    """
+
+    def __init__(self):
+        """Initialize the Decoder."""
+        super().__init__()
+        self.convert_map = {  # TODO all + sparse
+            "float_feature": float,
+            "uint64_feature": int,
+        }
+
+    def decode(self, line: str):
+        """Use json package to convert the json text line into node object."""
+        return 0, 0, 0, .1, {}
+        src, dst, typ, weight, *feature_data = line.split()
+        features = {}
+        feature_len = len(feature_data)
+        idx = 0
+        while idx < feature_len:
+            key, idx, length = feature_data[idx:idx+3]
+            idx, length = int(idx), int(length)
+            if key not in features:
+                features[key] = {}
+            if key == "binary_feature":
+                value = feature_data[idx+3]
+            else:
+                value = list(map(self.convert_map[key], feature_data[idx+3:idx+3+length]))
+            features[key][idx] = value
+            idx += length + 3
+        return int(src), int(dst), int(typ), float(weight), features
+
+
+def _dump_features(features: dict) -> str:
+    """Serialize features for linear format."""
+    output = []
+    for key, values in features.items():
+        if not isinstance(values, dict) or key == "neighbor":
+            continue
+
+        for idx, value in values.items():
+            if key == "binary_feature":
+                v = str(value)
+                length = 1
+            else:
+                v = " ".join(map(str, value))
+                length = len(value)
+            output.append(f"{key} {idx} {length} {v}")
+    
+    return " ".join(output)
+
+
+def json_to_linear(filename_in, filename_out):
+    """Convert graph.json to graph.linear."""
+    file_in = open(filename_in, "r")
+    file_out = open(filename_out, "w")
+
+    for line in file_in.readlines():
+        node = json.loads(line)
+
+        file_out.write(
+            f'-1 {node["node_id"]} {node["node_type"]} {node["node_weight"]} {_dump_features(node)}\n'
+        )
+
+        edge_list = sorted(
+            node["edge"], key=lambda x: (int(x["edge_type"]), int(x["dst_id"]))
+        )
+        for edge in edge_list:
+            file_out.write(
+                f'{edge["src_id"]} {edge["dst_id"]} {edge["edge_type"]} {edge["weight"]} {_dump_features(edge)}\n'
+            )
+
+    file_in.close()
+    file_out.close()
