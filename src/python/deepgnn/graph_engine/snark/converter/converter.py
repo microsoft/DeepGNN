@@ -263,12 +263,11 @@ class NodeAliasWriter:
             for tp in range(node_type_count)
         ]
 
-    def add(self, node_id, typ, weight):
+    def add(self, node_id, tp, weight):
         """Record node information.
         Args:
             node (typing.Any): Node with information about it's id, type and weight
         """
-        tp = typ
         self.nodes[tp].write(ctypes.c_uint64(node_id))
         self.weights[tp].write(ctypes.c_float(weight))
 
@@ -436,12 +435,8 @@ def __add_dense(node, feature, tp, container):
         return
     for k in node[feature]:
         values = node[feature][k]
-        #
-        #buf = (tp * len(values))()
-        #buf[:] = values
-        buf = values.tobytes()
         assert int(k) not in container, "Duplicate feature ids found for a node"
-        container[int(k)] = buf
+        container[int(k)] = values.tobytes()
 
 
 def __add(node, feature, tp, container):
@@ -464,12 +459,6 @@ def convert_features(node: typing.Any):
     __add(node, "int16_feature", ctypes.c_int16, container)
     __add(node, "uint8_feature", ctypes.c_uint8, container)
     __add(node, "int8_feature", ctypes.c_int8, container)
-
-    if "float16_feature" in node and node["float16_feature"] is not None:
-        for k in node["float16_feature"]:
-            container[int(k)] = np.array(
-                node["float16_feature"][k], dtype=np.float16
-            ).tobytes()
 
     if "sparse_float16_feature" in node and node["sparse_float16_feature"] is not None:
         for k in node["sparse_float16_feature"]:
