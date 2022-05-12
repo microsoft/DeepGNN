@@ -1,0 +1,86 @@
+name: "Wheel"
+description: "Build wheels"
+inputs:
+  package_version:
+    description: 'Package version'
+    required: true
+    default: '0.1.1'
+  disk_cache:
+    description: 'Build system cache key'
+    required: false
+    default: wheel-${{ github.ref }}-${{ runner.os }}
+runs:
+  using: "composite"
+  steps:
+    - run: echo "BUILD_VERSION=${{ inputs.package_version }}" >> $GITHUB_ENV
+      name: Set package version
+      shell: bash
+    - if: runner.os == 'Linux'
+      run: |
+        echo "BAZEL_CONFIG=manylinux" >> $GITHUB_ENV
+        echo "PLAT_NAME=manylinux1_x86_64" >> $GITHUB_ENV
+        sudo mkdir /dt11
+        sudo chown $USER /dt11
+      shell: bash
+      name: Configure env variables for linux
+    - uses: actions/cache@v3
+      id: compiler-cache
+      with:
+        path: /dt11
+        key: ${{ runner.os }}-${{ hashFiles('tools/manylinux/install-gcc11.sh') }}
+
+    - name: Install Dependencies
+      if: runner.os == 'Linux' && steps.compiler-cache.outputs.cache-hit != 'true'
+      run: |
+        cd tools/manylinux
+        sudo ./install-gcc11.sh
+      shell: bash
+
+    - if: runner.os == 'Windows'
+      run: |
+        echo "BAZEL_CONFIG=windows" >> $GITHUB_ENV
+        echo "PLAT_NAME=win-amd64" >> $GITHUB_ENV
+      shell: bash
+      name: Configure env variables for windows
+
+    - if: runner.os == 'macOS'
+      run: |
+        echo "BAZEL_CONFIG=darwin" >> $GITHUB_ENV
+        echo "PLAT_NAME=macosx-10.9-x86_64" >> $GITHUB_ENV
+      shell: bash
+      name: Configure env variables for macos
+
+    - uses: actions/cache@v3
+      id: build-cache
+      with:
+        path: ~/bazel-cache
+        key: ${{ inputs.disk_cache }}
+        restore-keys: |
+          wheel-${{ github.ref }}-${{ runner.os }}
+
+    - run: bazel build -c opt //src/cc/lib:wrapper --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
+      shell: bash
+      name: Build shared library
+
+    - if: runner.os == 'Linux'
+      run: |
+        cp -f ./bazel-bin/src/cc/lib/libwrapper.so src/python/deepgnn/graph_engine/snark/
+        sudo chmod -R a+rw src/python
+      shell: bash
+      name: tweak linux dependencies
+
+    - run: |
+        cd src/python
+        pip install wheel twine artifacts-keyring
+        python setup.py deepgnn-ge bdist_wheel --plat-name "${PLAT_NAME}" clean --all
+        python setup.py deepgnn-tf bdist_wheel --plat-name "${PLAT_NAME}" clean --all
+        python setup.py deepgnn-torch bdist_wheel --plat-name "${PLAT_NAME}" clean --all
+      name: build wheels
+      shell: bash
+
+    - if: runner.os == 'Linux'
+      run: |
+        pip install auditwheel
+        auditwheel show src/python/dist/deepgnn_ge-"${BUILD_VERSION}"-py3-none-"${PLAT_NAME}".whl
+      name: Audit linux wheel
+      shell: bash

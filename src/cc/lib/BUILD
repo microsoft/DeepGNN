@@ -21,6 +21,7 @@ cc_binary(
         ],
         "@platforms//os:linux": [
             "-Wl,--version-script=$(location version-script.linux.lds)",
+            "-fwhole-program",
         ],
     }),
     linkshared = True,

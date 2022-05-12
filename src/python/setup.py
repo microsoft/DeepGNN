@@ -88,7 +88,7 @@ def graph_engine(version: str):
     os.remove("MANIFEST.in")
     os.remove(
         os.path.join(
-            os.path.dirname(__file__), "deepgnn/graph_engine/snark", _shared_lib()
+            os.path.dirname(__file__), "deepgnn", "graph_engine", "snark", _shared_lib()
         )
     )
 

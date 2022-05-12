@@ -62,6 +62,23 @@ def _impl(ctx):
 
     features = [
         feature(
+            name = "c_compile_flags",
+            enabled = True,
+            flag_sets = [
+                flag_set(
+                    actions = [ACTION_NAMES.c_compile],
+                    flag_groups = ([
+                        flag_group(
+                            flags = [
+                                "-fPIC",
+                                "-O3",
+                            ],
+                        ),
+                    ]),
+                ),
+            ],
+        ),
+        feature(
             name = "default_compile_flags",
             enabled = True,
             flag_sets = [
@@ -70,7 +87,10 @@ def _impl(ctx):
                     flag_groups = ([
                         flag_group(
                             flags = [
+                                "-O3",
                                 "-std=c++20",
+                                "-fno-semantic-interposition",
+                                "-fPIC",
                             ],
                         ),
                     ]),

@@ -15,5 +15,6 @@ jobs:
         uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip'
       - name: Run lint
         uses: ./.github/actions/lint
