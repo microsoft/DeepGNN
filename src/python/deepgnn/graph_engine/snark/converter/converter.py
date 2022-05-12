@@ -436,8 +436,10 @@ def __add_dense(node, feature, tp, container):
         return
     for k in node[feature]:
         values = node[feature][k]
-        buf = (tp * len(values))()
-        buf[:] = values
+        #
+        #buf = (tp * len(values))()
+        #buf[:] = values
+        buf = values.tobytes()
         assert int(k) not in container, "Duplicate feature ids found for a node"
         container[int(k)] = buf
 

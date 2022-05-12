@@ -190,7 +190,7 @@ class TsvDecoder(Decoder):
                 node["edge"].append(edge_info)
 
         return node
-
+import numpy as np
 
 class LinearDecoder(Decoder):
     """Convert the text line into node object.
@@ -226,7 +226,7 @@ class LinearDecoder(Decoder):
             if key == "binary_feature":
                 value = feature_data[idx+3]
             else:
-                value = list(map(self.convert_map[key], feature_data[idx+3:idx+3+length]))
+                value = np.fromiter(map(self.convert_map[key], feature_data[idx+3:idx+3+length]), dtype=self.convert_map[key])
             features[key][feature_idx] = value
             idx += length + 3
         return int(src), int(dst), int(typ), float(weight), features
