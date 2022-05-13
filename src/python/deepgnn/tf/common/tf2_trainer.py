@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Train TF models in eager mode."""
 import os
 import time
 import tensorflow as tf
@@ -20,7 +20,7 @@ from deepgnn import (
 )
 
 
-class Stopwatch:
+class _Stopwatch:
     def __init__(self):
         self._prev_time = time.time()
 
@@ -31,7 +31,7 @@ class Stopwatch:
         return delta
 
 
-class LoggerCallback(tf.keras.callbacks.Callback):
+class _LoggerCallback(tf.keras.callbacks.Callback):
     def __init__(
         self,
         name: str = "train",
@@ -42,7 +42,7 @@ class LoggerCallback(tf.keras.callbacks.Callback):
         self._name = name
         self._log_save_steps = log_save_steps
         self._logger = logger
-        self._timer = Stopwatch()
+        self._timer = _Stopwatch()
         self._first = True
         self._steps = 0
         self._epoch = 0
@@ -77,6 +77,8 @@ class LoggerCallback(tf.keras.callbacks.Callback):
 
 
 class EagerTrainer(Trainer):
+    """Train models in eager mode."""
+
     def __init__(
         self,
         model_dir: str,
@@ -90,6 +92,7 @@ class EagerTrainer(Trainer):
         profile_batch: List[int] = [100, 100],
         logger: logging.Logger = None,
     ):
+        """Initialize trainer."""
         task_index = 0
         worker_size = 1
         tf_config_str = os.environ.get("TF_CONFIG")
@@ -123,6 +126,7 @@ class EagerTrainer(Trainer):
         self.profile_batch = ",".join([str(i) for i in profile_batch])
 
     def set_random_seed(self, seed: int = None):
+        """Set random seed for every module used by trainer."""
         if seed:
             tf.random.set_seed(seed)
             np.random.seed(seed)
@@ -151,6 +155,8 @@ class EagerTrainer(Trainer):
         steps_per_epoch: int = None,
     ):
         """
+        Train model in eager mode.
+
         Args:
         * dataset: tf.data.Dataset which is used to get training batches.
         * model: `tf.keras.Model`, train() will call `tf.keras.Model.__call__()` to calcluate embedding, loss and metrics.
@@ -168,7 +174,7 @@ class EagerTrainer(Trainer):
         mode = "training"
         log_telemetry(
             self.logger,
-            f"Training worker started.",
+            "Training worker started.",
             LOG_PROPS_EVENT_START_WORKER,
             mode,
             type(model).__name__,
@@ -190,7 +196,7 @@ class EagerTrainer(Trainer):
 
         log_telemetry(
             self.logger,
-            f"Training worker finished.",
+            "Training worker finished.",
             LOG_PROPS_EVENT_END_WORKER,
             mode,
             type(model).__name__,
@@ -232,13 +238,13 @@ class EagerTrainer(Trainer):
         callbacks: List[tf.keras.callbacks.Callback] = None,
         epochs: int = 1,
     ):
-        timer = Stopwatch()
+        timer = _Stopwatch()
 
         model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
 
         checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(self.checkpoint_file)
 
-        log_callback = LoggerCallback("train", self.logger, self.log_save_steps)
+        log_callback = _LoggerCallback("train", self.logger, self.log_save_steps)
         log_callback.set_model(model)
         tb_callback = tf.keras.callbacks.TensorBoard(
             log_dir=os.path.join(self.model_dir, "tboard"),
@@ -269,6 +275,8 @@ class EagerTrainer(Trainer):
         steps: int = None,
     ):
         """
+        Evaluate model.
+
         Args:
         * dataset: tf.data.Dataset which is used to get subgraph.
         * model: `tf.keras.Model`, evaluate() will call `tf.keras.Model.__call__()` to calcluate embedding, loss and metrics.
@@ -284,7 +292,7 @@ class EagerTrainer(Trainer):
         mode = "evaluate"
         log_telemetry(
             self.logger,
-            f"Training worker started.",
+            "Training worker started.",
             LOG_PROPS_EVENT_START_WORKER,
             mode,
             type(model).__name__,
@@ -302,7 +310,7 @@ class EagerTrainer(Trainer):
 
         log_telemetry(
             self.logger,
-            f"Training worker finished.",
+            "Training worker finished.",
             LOG_PROPS_EVENT_END_WORKER,
             mode,
             type(model).__name__,
@@ -322,7 +330,7 @@ class EagerTrainer(Trainer):
                 log_model_info(model, use_tf_compat=False)
             self._save_summary(writer, batch, logs)
 
-        log_callback = LoggerCallback("eval", self.logger, self.log_save_steps)
+        log_callback = _LoggerCallback("eval", self.logger, self.log_save_steps)
         log_callback.set_model(model)
         batch_callback = tf.keras.callbacks.LambdaCallback(
             on_test_batch_end=_log_fn, on_test_end=lambda _: writer.close()
@@ -348,6 +356,8 @@ class EagerTrainer(Trainer):
         steps: int = None,
     ):
         """
+        Generate embeddings.
+
         Args:
         * dataset: tf.data.Dataset which is used to get subgraph.
         * model: `tf.keras.Model`, train() will call `tf.keras.Model.__call__()` to calcluate embedding, loss and metrics.
@@ -363,7 +373,7 @@ class EagerTrainer(Trainer):
         mode = "inference"
         log_telemetry(
             self.logger,
-            f"Training worker started.",
+            "Training worker started.",
             LOG_PROPS_EVENT_START_WORKER,
             mode,
             type(model).__name__,
@@ -383,7 +393,7 @@ class EagerTrainer(Trainer):
 
         log_telemetry(
             self.logger,
-            f"Training worker finished.",
+            "Training worker finished.",
             LOG_PROPS_EVENT_END_WORKER,
             mode,
             type(model).__name__,

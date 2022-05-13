@@ -1,5 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+"""Distributed training with horovod."""
 
 import argparse
 import torch
@@ -14,6 +15,7 @@ class HVDTrainer(FP16Trainer):
     """Horovod based distributed trainer."""
 
     def __init__(self, args: argparse.Namespace):
+        """Initialize horovod."""
         super().__init__(args)
         self._init_hvd()
 
@@ -29,7 +31,6 @@ class HVDTrainer(FP16Trainer):
         return metric, loss
 
     def _init_hvd(self):
-        """Initialize Horovod."""
         if self.args.disable_ib:
             disable_infini_band()
         hvd.init()

@@ -1,8 +1,13 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import random, json, tempfile, logging
-import os, sys, pytest
+import random
+import json
+import tempfile
+import logging
+import os
+import sys
+import pytest
 import networkx as nx
 import numpy as np
 from copy import deepcopy

@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Trainer classes for TF models."""
 import os
 import time
 import logging
@@ -29,6 +29,8 @@ tf.compat.v1.disable_v2_behavior()
 
 
 class BaseTFTrainer(Trainer):
+    """Base class to share common training functionality between PS and horovod."""
+
     def __init__(
         self,
         model_dir: str,
@@ -42,6 +44,7 @@ class BaseTFTrainer(Trainer):
         profiler_save_secs: int = 180,
         logger: logging.Logger = None,
     ):
+        """Initialize trainer."""
         super().__init__(
             model_dir=model_dir,
             seed=seed,
@@ -57,7 +60,7 @@ class BaseTFTrainer(Trainer):
         self.lr_scaler = 1
         self.parameter_server_num = None
 
-        ## MonitoredTrainingSession parameters.
+        # MonitoredTrainingSession parameters.
         self.checkpoint_dir = self.model_dir
         self.is_chief = True
         self.session_target = ""
@@ -68,12 +71,14 @@ class BaseTFTrainer(Trainer):
         self.profiler_save_secs = profiler_save_secs
 
     def set_random_seed(self, seed: int = None):
+        """Set seed in all modules used by the trainer."""
         if seed:
             tf.compat.v1.set_random_seed(seed)
             np.random.seed(seed)
             random.seed(seed)
 
     def tf_device(self):
+        """Return current device."""
         return tf.compat.v1.device(
             tf.compat.v1.train.replica_device_setter(cluster=None)
         )
@@ -90,6 +95,8 @@ class BaseTFTrainer(Trainer):
         steps_per_epoch: int = None,
     ):
         """
+        Train model on a dataset.
+
         Args:
         * dataset: tf.data.Dataset which is used to get subgraph.
         * model: `tf.keras.Model`, train() will call `tf.keras.Model.__call__()` to calcluate embedding, loss and metrics.
@@ -108,7 +115,7 @@ class BaseTFTrainer(Trainer):
 
         log_telemetry(
             self.logger,
-            f"Training worker started.",
+            "Training worker started.",
             LOG_PROPS_EVENT_START_WORKER,
             model.mode,
             type(model).__name__,
@@ -127,7 +134,7 @@ class BaseTFTrainer(Trainer):
 
         log_telemetry(
             self.logger,
-            f"Training worker finished.",
+            "Training worker finished.",
             LOG_PROPS_EVENT_END_WORKER,
             model.mode,
             type(model).__name__,
@@ -163,7 +170,7 @@ class BaseTFTrainer(Trainer):
             dist_sync=self.dist_sync,
         )
 
-        ## debug log
+        # debug log
         log_model_info(model)
         s1 = time.time()
         first_batch = True
@@ -197,6 +204,8 @@ class BaseTFTrainer(Trainer):
         steps: int = None,
     ):
         """
+        Run inference on a dataset.
+
         Args:
         * dataset: tf.data.Dataset which is used to get subgraph.
         * model: `tf.keras.Model`, train() will call `tf.keras.Model.__call__()` to calcluate embedding, loss and metrics.
@@ -209,7 +218,7 @@ class BaseTFTrainer(Trainer):
 
         log_telemetry(
             self.logger,
-            f"Training worker started.",
+            "Training worker started.",
             LOG_PROPS_EVENT_START_WORKER,
             model.mode,
             type(model).__name__,
@@ -230,7 +239,7 @@ class BaseTFTrainer(Trainer):
 
         log_telemetry(
             self.logger,
-            f"Training worker finished.",
+            "Training worker finished.",
             LOG_PROPS_EVENT_END_WORKER,
             model.mode,
             type(model).__name__,
@@ -293,6 +302,8 @@ class BaseTFTrainer(Trainer):
         steps: int = None,
     ):
         """
+        Evaluate model on a dataset.
+
         Args:
         * dataset: tf.data.Dataset which is used to get subgraph.
         * model: `tf.keras.Model`, evaluate() will call `tf.keras.Model.__call__()` to calcluate embedding, loss and metrics.
@@ -308,7 +319,7 @@ class BaseTFTrainer(Trainer):
 
         log_telemetry(
             self.logger,
-            f"Training worker started.",
+            "Training worker started.",
             LOG_PROPS_EVENT_START_WORKER,
             model.mode,
             type(model).__name__,
@@ -327,7 +338,7 @@ class BaseTFTrainer(Trainer):
 
         log_telemetry(
             self.logger,
-            f"Training worker finished.",
+            "Training worker finished.",
             LOG_PROPS_EVENT_END_WORKER,
             model.mode,
             type(model).__name__,
@@ -366,7 +377,7 @@ class BaseTFTrainer(Trainer):
             raise ValueError(f"context type: {type(context)}, {context}")
         tf_ops = [add_step_op, tmp]
 
-        ## debug log
+        # debug log
         log_model_info(model)
         with tf.compat.v1.train.MonitoredTrainingSession(
             master=self.session_target,
@@ -438,6 +449,7 @@ class BaseTFTrainer(Trainer):
         return hooks
 
     def make_dataset_iterator(self, graph_dataset, epochs: int = 1):
+        """Create iterator from a dataset."""
         if epochs > 1:
             graph_dataset = graph_dataset.repeat(epochs)
         source = tf.compat.v1.data.make_one_shot_iterator(graph_dataset).get_next()

@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Encoders for HAN model."""
 import numpy as np
 import tensorflow as tf
 
@@ -12,13 +12,15 @@ from typing import Tuple
 
 
 class SimpleAttLayer(tf.keras.layers.Layer):
-    """Reference: https://github.com/Jhy1993/HAN/blob/master/utils/layers.py#L132"""
+    """Reference: https://github.com/Jhy1993/HAN/blob/master/utils/layers.py#L132."""
 
     def __init__(self, attention_size):
+        """Initialize encoder."""
         super().__init__()
         self.att_size = attention_size
 
     def build(self, input_shape):
+        """Create internal variables."""
         hidden_size = input_shape[2].value  # D value - hidden size of the RNN layer
         # Trainable parameters
         # fmt:off
@@ -28,6 +30,7 @@ class SimpleAttLayer(tf.keras.layers.Layer):
         # fmt:on
 
     def call(self, inputs, time_major=False, return_alphas=False):
+        """Compute embeddings."""
         if time_major:
             # (T,B,D) => (B,T,D)
             inputs = tf.array_ops.transpose(inputs, [1, 0, 2])
@@ -51,9 +54,7 @@ class SimpleAttLayer(tf.keras.layers.Layer):
 
 
 class HANEncoder(AttEncoder):
-    """
-    HAN Encoder (https://arxiv.org/pdf/1903.07293)
-    """
+    """HAN Encoder (https://arxiv.org/pdf/1903.07293)."""
 
     def __init__(
         self,
@@ -67,6 +68,7 @@ class HANEncoder(AttEncoder):
         out_dim=128,
         **kwargs
     ):
+        """Initialize encoder."""
         if len(head_num) == 0:
             raise ValueError("head_num can't be empty.")
         if len(hidden_dim) == 0:
@@ -105,7 +107,7 @@ class HANEncoder(AttEncoder):
                         layers.AttentionHeader(self.hidden_dim[layer_id], act=tf.nn.elu)
                     )
 
-    def multi_head_layer(self, inputs: tf.Tensor, metapath_id: int, layer_id: int):
+    def _multi_head_layer(self, inputs: tf.Tensor, metapath_id: int, layer_id: int):
         hidden = []
         for i in range(0, self.head_num[layer_id]):
             hidden_val = self.att_headers[metapath_id][layer_id][i](inputs)
@@ -119,15 +121,16 @@ class HANEncoder(AttEncoder):
         return tf.concat(hidden, -1)
 
     def call(self, inputs: Tuple[np.array, np.array]):  # type: ignore
+        """Compute embeddings."""
         node_feats_arr, neighbor_feats_arr = inputs
         embed_list = []
         total_nb_num = np.prod(self.nb_num)
         for i in range(self.metapath_num):
             seq = tf.concat([node_feats_arr[i], neighbor_feats_arr[i]], 1)
 
-            h_1 = self.multi_head_layer(seq, metapath_id=i, layer_id=0)
+            h_1 = self._multi_head_layer(seq, metapath_id=i, layer_id=0)
             for j in range(1, len(self.head_num)):
-                h_1 = self.multi_head_layer(h_1, metapath_id=i, layer_id=j)
+                h_1 = self._multi_head_layer(h_1, metapath_id=i, layer_id=j)
 
             output_dim = self.hidden_dim[-1] * self.head_num[-1]
             out = tf.reshape(h_1, [-1, total_nb_num + 1, output_dim])

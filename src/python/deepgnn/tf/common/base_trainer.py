@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Base class for all TF trainers."""
 import abc
 import os
 import tensorflow as tf
@@ -10,7 +10,7 @@ from typing import Callable, Union, List
 
 
 class Trainer(abc.ABC):
-    """Abstract class for TF1/TF2 trainers."""
+    """Abstract class for TF trainers."""
 
     def __init__(
         self,
@@ -26,9 +26,11 @@ class Trainer(abc.ABC):
         checkpoint_save_secs: int = 3600,
         logger: logging.Logger = None,
     ):
-        # keras checkpoint callback will use the basename/dirname
-        # to construct the full checkpoint path. here we add a "/"
-        # to the end of the path.
+        """Initialize common fields.
+
+        Keras checkpoint callback will use the basename/dirname to construct the full
+        checkpoint path. Here we add a "/" to the end of the path.
+        """
         self.model_dir = os.path.join(model_dir, "./")
         self.seed = seed
         self.task_index = task_index
@@ -45,7 +47,7 @@ class Trainer(abc.ABC):
 
     @abc.abstractmethod
     def set_random_seed(self, seed: int = None):
-        """Set random seed"""
+        """Set random seed."""
 
     @abc.abstractmethod
     def train(
@@ -60,6 +62,7 @@ class Trainer(abc.ABC):
         steps_per_epoch: int = None,
     ):
         """Training interface.
+
         Args:
         * dataset: tf.data.Dataset which is used to get subgraph.
         * model: `tf.keras.Model`, train() will call `tf.keras.Model.__call__()` to calcluate embedding, loss and metrics.
@@ -85,6 +88,7 @@ class Trainer(abc.ABC):
         steps: int = None,
     ):
         """Inference interface.
+
         Args:
         * dataset: tf.data.Dataset which is used to get subgraph.
         * model: `tf.keras.Model`, train() will call `tf.keras.Model.__call__()` to calcluate embedding, loss and metrics.
@@ -103,7 +107,8 @@ class Trainer(abc.ABC):
         callbacks: List[tf.keras.callbacks.Callback] = None,
         steps: int = None,
     ):
-        """Evaluation interface.
+        """Evaluate model.
+
         Args:
         * dataset: tf.data.Dataset which is used to get subgraph.
         * model: `tf.keras.Model`, evaluate() will call `tf.keras.Model.__call__()` to calcluate embedding, loss and metrics.

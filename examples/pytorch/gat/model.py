@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""GAT model implementation."""
 from dataclasses import dataclass
 import numpy as np
 import torch
@@ -16,6 +16,8 @@ from deepgnn.graph_engine import Graph, FeatureType, graph_ops
 
 @dataclass
 class GATQueryParameter:
+    """Graph query configuration for GAT model."""
+
     neighbor_edge_types: np.array
     feature_idx: int
     feature_dim: int
@@ -27,12 +29,16 @@ class GATQueryParameter:
 
 
 class GATQuery:
+    """Graph query to generate data for GAT model."""
+
     def __init__(self, p: GATQueryParameter):
+        """Initialize graph query."""
         self.p = p
         self.label_meta = np.array([[p.label_idx, p.label_dim]], np.int32)
         self.feat_meta = np.array([[p.feature_idx, p.feature_dim]], np.int32)
 
     def query_training(self, graph: Graph, inputs):
+        """Query used to generate data for training."""
         nodes, edges, src_idx = graph_ops.sub_graph(
             graph,
             inputs,
@@ -57,6 +63,8 @@ class GATQuery:
 
 
 class GAT(BaseModel):
+    """GAT model implementation."""
+
     def __init__(
         self,
         in_dim: int,
@@ -67,6 +75,7 @@ class GAT(BaseModel):
         attn_drop: float = 0.0,
         q_param: GATQueryParameter = None,
     ):
+        """Initialize GAT model."""
         self.q = GATQuery(q_param)
         super().__init__(FeatureType.FLOAT, 0, 0, None)
         self.num_classes = num_classes
@@ -83,7 +92,7 @@ class GAT(BaseModel):
             attn_aggregate="concat",
         )
         layer0_output_dim = head_num[0] * hidden_dim
-        ## TODO: support hidden layer
+        # TODO: support hidden layer
         assert len(head_num) == 2
         self.out_layer = GATConv(
             in_dim=layer0_output_dim,
@@ -98,6 +107,7 @@ class GAT(BaseModel):
         self.metric = Accuracy()
 
     def forward(self, inputs):
+        """Evaluate model, calculate loss, predictions and extract labels."""
         # fmt: off
         nodes, feat, mask, labels, edges, edges_value, adj_shape = inputs
         nodes = torch.squeeze(nodes)                # [N], N: num of nodes in subgraph

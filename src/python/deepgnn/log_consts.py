@@ -1,5 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+"""Common strings used for logging."""
 
 LOG_NAME_DEEPGNN = "deepgnn"
 LOG_PROPS_CUSTOM_DIMENSIONS = "custom_dimensions"

@@ -1,9 +1,13 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import random, json, tempfile, logging
+import random
+import json
+import tempfile
+import logging
 import pytest
-import os, sys
+import os
+import sys
 import networkx as nx
 import numpy as np
 from deepgnn.tf.common.utils import run_commands, load_embeddings
@@ -117,9 +121,9 @@ def run_graphsage_supervised(data_dir, agg_type, epochs):
             + f" --model_dir {model_dir} --data_dir {data_dir}"
             + f" --mode train --node_files {train_nodes}"
             + f" --epochs {epochs} --batch_size 512"
-            + f" --neighbor_edge_types 0 --num_samples 25,10"
-            + f" --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 121"
-            + f" --layer_dims 128,128 --num_classes 121"
+            + " --neighbor_edge_types 0 --num_samples 25,10"
+            + " --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 121"
+            + " --layer_dims 128,128 --num_classes 121"
             + f" --loss_name sigmoid --agg_type {agg_type} --backend snark --converter local"
         )
         res = run_commands(training_cmd)
@@ -131,11 +135,11 @@ def run_graphsage_supervised(data_dir, agg_type, epochs):
             f"python {mainfile} --gpu --eager --seed 123"
             + f" --model_dir {model_dir} --data_dir {data_dir}"
             + f" --mode evaluate --node_files {val_nodes}"
-            + f" --neighbor_edge_types 0,1 --num_samples 25,10"
-            + f" --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 121"
-            + f" --layer_dims 128,128 --num_classes 121"
+            + " --neighbor_edge_types 0,1 --num_samples 25,10"
+            + " --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 121"
+            + " --layer_dims 128,128 --num_classes 121"
             + f" --loss_name sigmoid --agg_type {agg_type}"
-            + f" --log_save_steps 1 --summary_save_steps 1 --backend snark --converter local"
+            + " --log_save_steps 1 --summary_save_steps 1 --backend snark --converter local"
         )
         res = run_commands(eval_cmd)
         assert res == 0
@@ -149,11 +153,11 @@ def run_graphsage_supervised(data_dir, agg_type, epochs):
             f"python {mainfile} --gpu --eager --seed 123"
             + f" --model_dir {model_dir} --data_dir {data_dir}"
             + f" --mode inference --node_files {train_nodes}"
-            + f" --neighbor_edge_types 0,1 --num_samples 25,10"
-            + f" --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 121"
-            + f" --layer_dims 128,128 --num_classes 121"
+            + " --neighbor_edge_types 0,1 --num_samples 25,10"
+            + " --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 121"
+            + " --layer_dims 128,128 --num_classes 121"
             + f" --loss_name sigmoid --agg_type {agg_type}"
-            + f" --log_save_steps 1 --summary_save_steps 1 --backend snark --converter local"
+            + " --log_save_steps 1 --summary_save_steps 1 --backend snark --converter local"
         )
         res = run_commands(inf_cmd)
         assert res == 0
@@ -183,14 +187,14 @@ def test_sage_supervised():
 def test_sage_supervised_other_agg():
     g = PPI()
     data_dir = g.data_dir()
-    ## MaxPool: 10 epoch results
-    ## eval_f1 >= 0.594302915 - 0.0098 # f1 > average_f1 - stddev
-    ## test_f1 >= 0.605199247 - 0.0096 # f1 > average_f1 - stddev
+    # MaxPool: 10 epoch results
+    # eval_f1 >= 0.594302915 - 0.0098 # f1 > average_f1 - stddev
+    # test_f1 >= 0.605199247 - 0.0096 # f1 > average_f1 - stddev
     run_graphsage_supervised(data_dir, agg_type="maxpool", epochs=1)
 
-    ## LSTM : 10 epoch results
-    ## eval_f1 >= 0.597000355 - 0.0065 # f1 > average_f1 - stddev
-    ## test_f1 >= 0.607637893 - 0.0064 # f1 > average_f1 - stddev
+    # LSTM : 10 epoch results
+    # eval_f1 >= 0.597000355 - 0.0065 # f1 > average_f1 - stddev
+    # test_f1 >= 0.607637893 - 0.0064 # f1 > average_f1 - stddev
     run_graphsage_supervised(data_dir, agg_type="lstm", epochs=1)
 
 
@@ -202,12 +206,12 @@ def test_sage_supervised_identity_feature():
         training_cmd = (
             f"python {mainfile} --gpu --eager --seed 123"
             + f" --model_dir {model_dir} --data_dir {data_dir}"
-            + f" --mode train --node_types 0 "
-            + f" --epochs 30 --batch_size 5 --learning_rate 0.01"
-            + f" --neighbor_edge_types 0 --num_samples 5,5"
-            + f" --identity_feature True --all_node_count 50 --identity_dim 8 --label_idx 1 --label_dim 1"
-            + f" --layer_dims 8,8 --num_classes 5"
-            + f" --loss_name softmax --agg_type mean --backend snark --converter skip"
+            + " --mode train --node_types 0 "
+            + " --epochs 30 --batch_size 5 --learning_rate 0.01"
+            + " --neighbor_edge_types 0 --num_samples 5,5"
+            + " --identity_feature True --all_node_count 50 --identity_dim 8 --label_idx 1 --label_dim 1"
+            + " --layer_dims 8,8 --num_classes 5"
+            + " --loss_name softmax --agg_type mean --backend snark --converter skip"
         )
         res = run_commands(training_cmd)
         assert res == 0
@@ -221,12 +225,12 @@ def test_sage_supervised_identity_feature():
         inf_cmd = (
             f"python {mainfile} --gpu --eager --seed 123"
             + f" --model_dir {model_dir} --data_dir {data_dir}"
-            + f" --mode inference --node_files {inf_file}"
-            + f" --batch_size 4"
-            + f" --neighbor_edge_types 0 --num_samples 5,5"
-            + f" --identity_feature True --all_node_count 50 --identity_dim 8 --label_idx 1 --label_dim 1"
-            + f" --layer_dims 8,8 --num_classes 5"
-            + f" --loss_name softmax --agg_type mean --backend snark --converter skip"
+            + " --mode inference --node_files {inf_file}"
+            + " --batch_size 4"
+            + " --neighbor_edge_types 0 --num_samples 5,5"
+            + " --identity_feature True --all_node_count 50 --identity_dim 8 --label_idx 1 --label_dim 1"
+            + " --layer_dims 8,8 --num_classes 5"
+            + " --loss_name softmax --agg_type mean --backend snark --converter skip"
         )
         res = run_commands(inf_cmd)
         assert res == 0
@@ -234,9 +238,9 @@ def test_sage_supervised_identity_feature():
     run_training_job()
     run_inf_job()
 
-    ## evaluate embeddings.
-    ## * If node i, j are in the same cluster and node i, k are in different clusters,
-    ##   the node embedding distance(i,j) should be closer than distance(i,k).
+    # evaluate embeddings.
+    # * If node i, j are in the same cluster and node i, k are in different clusters,
+    #   the node embedding distance(i,j) should be closer than distance(i,k).
     max_id = 49
     dim = 5
     emb = load_embeddings(model_dir, max_id + 1, dim)
@@ -301,9 +305,9 @@ def run_sage_unsupervised(hyper_param):
     run_training_job()
     run_inf_job()
 
-    ## evaluate embeddings.
-    ## * If node i, j are in the same cluster and node i, k are in different clusters,
-    ##   the node embedding distance(i,j) should be closer than distance(i,k).
+    # evaluate embeddings.
+    # * If node i, j are in the same cluster and node i, k are in different clusters,
+    #   the node embedding distance(i,j) should be closer than distance(i,k).
     num_nodes = 50
     dim = 5 * 2
     emb = load_embeddings(model_dir, num_nodes + 1, dim)

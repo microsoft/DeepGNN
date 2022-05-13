@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Collection of encoders for GNNs."""
 # flake8: noqa
 from .feature_encoder import (
     FeatureEncoder,

@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Trainer implementation for torch models."""
 import argparse
 import time
 import torch
@@ -36,13 +36,15 @@ from deepgnn.graph_engine.adl_uploader import AdlDataWriter
 
 class Trainer:
     """
-    Pytorch trainer, which controls the workflow of training/evaluation/inference.
+    Pytorch trainer controls the workflow of training/evaluation/inference.
+
     - Implementation in this class only works for sinle worker FP32 training requirement.
     - For FP16 mixed precision training, please use FP16Trainer.
     - For distributed training, please use DDPTrainer or HVDTrainer.
     """
 
     def __init__(self, args: argparse.Namespace):
+        """Initialize trainer."""
         self.logger = get_logger()
         self.args = args
         # Initialize rank, local_rank, world_size.
@@ -66,8 +68,7 @@ class Trainer:
         eval_dataset_for_training: Any = None,
     ):
         """
-        The main entry of trainer, which takes iterable dataset as input and
-        perform training/evaluation/inference according to training mode.
+        Perform training/evaluation/inference according to training mode set in constructor.
 
         Args:
             model: target model.
@@ -76,7 +77,6 @@ class Trainer:
             eval_during_train_dataset: optional dataset for evaluation
                 during training.
         """
-
         self._init_max_steps()
         model = self._initialize(model, dataset, optimizer, eval_dataset_for_training)
 
@@ -124,7 +124,6 @@ class Trainer:
         return result
 
     def _init_model(self, model: BaseModel):
-        """Initialize model related setting."""
         self.model = model
         self.model_name = type(self.model).__name__
 
@@ -145,7 +144,6 @@ class Trainer:
         return model
 
     def _init_optimizer(self, optimizer: Optimizer):
-        """Initialize optimizer related setting."""
         self.lr_scheduler = self._create_lr_scheduler(optimizer)
         return optimizer
 
@@ -156,7 +154,6 @@ class Trainer:
         optimizer: Optional[Optimizer] = None,
         eval_dataset_for_training: Any = None,
     ):
-        """Initialize model, datasets and optimizer and other settings."""
         model = self._init_model(model)
         self.dataset = dataset
         self.eval_dataset_for_training = eval_dataset_for_training
@@ -165,7 +162,6 @@ class Trainer:
         return model
 
     def _train(self, model: Module):
-        """Perform training process on specified dataset."""
         self._init_summary_writer(prefix="train/worker")
         model.train()
 
@@ -192,7 +188,6 @@ class Trainer:
             self._save_checkpoint(epoch + 1)
 
     def _train_one_step(self, model: Module, data: Dict, epoch: int):
-        """Update model state with one step data."""
         self._increment_step()
         self._prepare_data(data)
 
@@ -264,7 +259,7 @@ class Trainer:
                     self.global_step,
                 )
                 self.summary_writer.add_scalar(
-                    f"Validation/Loss", eval_loss, self.global_step
+                    "Validation/Loss", eval_loss, self.global_step
                 )
             self.logger.info(
                 self._wrap_log(
@@ -279,7 +274,6 @@ class Trainer:
             model.train()
 
     def _train_one_step_internal(self, model: Module, data: Dict):
-        """ "Perform one step forward-backward update."""
         loss, pred, label = model(data)
         loss.backward()
         if self.args.clip_grad:
@@ -288,7 +282,6 @@ class Trainer:
         return loss, pred, label
 
     def _evaluate(self, model: Module):
-        """Perform evaluation process on specified dataset."""
         if self.args.mode != TrainMode.TRAIN:
             self._init_summary_writer(prefix="evaluate/worker")
         model.eval()
@@ -335,7 +328,6 @@ class Trainer:
         return eval_metric, eval_loss
 
     def _evaluate_one_step(self, model: Module, data: Dict):
-        """Evaluate model with one step data."""
         is_eval_during_training = self.args.mode == TrainMode.TRAIN
         if not is_eval_during_training:
             self._increment_step()
@@ -368,7 +360,6 @@ class Trainer:
         return model(data)
 
     def _inference(self, model: Module):
-        """Perform inference process on specified dataset."""
         self._init_summary_writer(prefix="inference/worker")
         model.eval()
 
@@ -380,7 +371,6 @@ class Trainer:
                         break
 
     def _inference_one_step(self, model: Module, data: Dict, fp: Any):
-        """Perform inference on step(batch) data, write embedding to specified file."""
         self._increment_step()
         self._prepare_data(data)
 
@@ -398,37 +388,30 @@ class Trainer:
         return self.model.get_embedding(data)
 
     def _increment_step(self):
-        """Increment local and global step."""
         self.step += 1
         self.global_step += 1
 
     def _should_stop(self):
-        """Check whether to stop evaluation/inference or current training epoch."""
         return self.max_steps > 0 and self.step >= self.max_steps
 
     def _init_summary_writer(self, prefix: str):
-        """Initialize tensorboard summary writer."""
         self.summary_writer = SummaryWriter(
             os.path.join(self.args.metric_dir, f"{prefix}-{self.rank}")
         )
 
     def _check_duration(self):
-        """Get duration since last check."""
         duration = time.time() - self.start_time
         self.start_time = time.time()
         return duration
 
     def _prepare_data(self, data: Dict):
-        """Prepare one step data."""
         if self.args.gpu:
             to_cuda(data)
 
     def _wrap_log(self, content: str):
-        """Helper function to append world_size and rank in the front of log content."""
         return f"[{self.world_size},{self.rank}] {content}"
 
     def _create_lr_scheduler(self, optimizer: Optimizer):
-        """Setup the learning rate scheduler."""
         num_training_steps = self.max_steps * self.args.num_epochs
         return (
             get_linear_schedule_with_warmup(
@@ -441,7 +424,6 @@ class Trainer:
         )
 
     def _save_checkpoint(self, epoch: int):
-        """Save model state with trained epoch and steps in epoch."""
         # Don't save for last step to avoid duplication with ckpt after epoch finished.
         if self.max_steps > 0 and self.step == self.max_steps:
             return
@@ -458,9 +440,6 @@ class Trainer:
         rotate_checkpoints(self.args.save_path, self.args.max_saved_ckpts)
 
     def _load_checkpoint(self, ckpt_path: str = None):
-        """Load model state, trained epochs and steps. Load from specified checkpoint if given,
-        or load from latest checkpoint in model_dir.
-        """
         if not ckpt_path:
             # Search and sort checkpoints from model path.
             ckpts = get_sorted_checkpoints(self.args.model_dir)
@@ -485,7 +464,6 @@ class Trainer:
             del init_ckpt
 
     def _init_max_steps(self):
-        """Initialize max steps per epoch."""
         self.max_steps = (
             self.args.max_samples // (self.world_size * self.args.batch_size)
             if self.args.max_samples > 0
@@ -494,7 +472,6 @@ class Trainer:
         self.logger.info(self._wrap_log(f"Max steps per epoch:{self.max_steps}"))
 
     def _get_embedding_writer(self):
-        """Get embedding writer, which could be local file pointer or Adl writer."""
         embed_path = os.path.join(
             self.args.save_path, f"{PREFIX_EMBEDDING}-{self.rank}"
         )

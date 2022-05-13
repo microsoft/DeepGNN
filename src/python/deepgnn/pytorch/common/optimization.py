@@ -43,10 +43,10 @@ def get_constant_schedule_with_warmup(
     optimizer: Optimizer, num_warmup_steps: int, last_epoch: int = -1
 ):
     """
-    Create a schedule with a constant learning rate preceded by a warmup period during which the learning rate
-    increases linearly between 0 and the initial lr set in the optimizer.
+    Create a schedule with a constant learning rate preceded by a warmup period.
 
-    Args:
+    During this period the learning rate increases linearly between 0 and the
+    initial lr set in the optimizer. Args:
         optimizer (:class:`~torch.optim.Optimizer`):
             The optimizer for which to schedule the learning rate.
         num_warmup_steps (:obj:`int`):
@@ -70,10 +70,9 @@ def get_linear_schedule_with_warmup(
     optimizer, num_warmup_steps, num_training_steps, last_epoch=-1
 ):
     """
-    Create a schedule with a learning rate that decreases linearly from the initial lr set in the optimizer to 0, after
-    a warmup period during which it increases linearly from 0 to the initial lr set in the optimizer.
+    Create a schedule with a learning rate that decreases linearly from the initial lr set in the optimizer to 0.
 
-    Args:
+    After a warmup period during which it increases linearly from 0 to the initial lr set in the optimizer. Args:
         optimizer (:class:`~torch.optim.Optimizer`):
             The optimizer for which to schedule the learning rate.
         num_warmup_steps (:obj:`int`):
@@ -107,11 +106,10 @@ def get_cosine_schedule_with_warmup(
     last_epoch: int = -1,
 ):
     """
-    Create a schedule with a learning rate that decreases following the values of the cosine function between the
-    initial lr set in the optimizer to 0, after a warmup period during which it increases linearly between 0 and the
-    initial lr set in the optimizer.
+    Create a schedule with a learning rate that decreases as cosine function from the initial lr set in the optimizer to 0.
 
-    Args:
+    After a warmup period during which it increases linearly between 0 and the
+    initial lr set in the optimizer. Args:
         optimizer (:class:`~torch.optim.Optimizer`):
             The optimizer for which to schedule the learning rate.
         num_warmup_steps (:obj:`int`):
@@ -149,10 +147,9 @@ def get_cosine_with_hard_restarts_schedule_with_warmup(
     last_epoch: int = -1,
 ):
     """
-    Create a schedule with a learning rate that decreases following the values of the cosine function between the
-    initial lr set in the optimizer to 0, with several hard restarts, after a warmup period during which it increases
-    linearly between 0 and the initial lr set in the optimizer.
+    Create a schedule with a learning rate that decreases as cosine function with several hard restarts.
 
+    After a warmup period during which it increases linearly between 0 and the initial lr set in the optimizer.
     Args:
         optimizer (:class:`~torch.optim.Optimizer`):
             The optimizer for which to schedule the learning rate.
@@ -194,10 +191,9 @@ def get_polynomial_decay_schedule_with_warmup(
     last_epoch=-1,
 ):
     """
-    Create a schedule with a learning rate that decreases as a polynomial decay from the initial lr set in the
-    optimizer to end lr defined by `lr_end`, after a warmup period during which it increases linearly from 0 to the
-    initial lr set in the optimizer.
+    Create a schedule with a learning rate that decreases as a polynomial decay.
 
+    After a warmup period during which it increases linearly from 0 to the initial lr set in the optimizer.
     Args:
         optimizer (:class:`~torch.optim.Optimizer`):
             The optimizer for which to schedule the learning rate.
@@ -218,9 +214,7 @@ def get_polynomial_decay_schedule_with_warmup(
 
     Return:
         :obj:`torch.optim.lr_scheduler.LambdaLR` with the appropriate schedule.
-
     """
-
     lr_init = optimizer.defaults["lr"]
     assert (
         lr_init > lr_end
@@ -243,8 +237,7 @@ def get_polynomial_decay_schedule_with_warmup(
 
 class AdamW(Optimizer):
     """
-    Implements Adam algorithm with weight decay fix as introduced in `Decoupled Weight Decay Regularization
-    <https://arxiv.org/abs/1711.05101>`__.
+    Implements Adam algorithm with weight decay fix as introduced in https://arxiv.org/abs/1711.05101`.
 
     Parameters:
         params (:obj:`Iterable[torch.nn.parameter.Parameter]`):
@@ -270,6 +263,7 @@ class AdamW(Optimizer):
         weight_decay: float = 0.0,
         correct_bias: bool = True,
     ):
+        """Initialize AdamW optimizer."""
         if lr < 0.0:
             raise ValueError("Invalid learning rate: {} - should be >= 0.0".format(lr))
         if not 0.0 <= betas[0] < 1.0:
@@ -293,7 +287,7 @@ class AdamW(Optimizer):
 
     def step(self, closure: Callable = None):
         """
-        Performs a single optimization step.
+        Perform a single optimization step.
 
         Arguments:
             closure (:obj:`Callable`, `optional`): A closure that reevaluates the model and returns the loss.
@@ -359,7 +353,9 @@ class AdamW(Optimizer):
 
 class Adafactor(Optimizer):
     """
-    AdaFactor pytorch implementation can be used as a drop in replacement for Adam original fairseq code:
+    AdaFactor pytorch implementation.
+
+    It can be used as a drop in replacement for Adam original fairseq code:
     https://github.com/pytorch/fairseq/blob/master/fairseq/optim/adafactor.py
 
     Paper: `Adafactor: Adaptive Learning Rates with Sublinear Memory Cost` https://arxiv.org/abs/1804.04235 Note that
@@ -435,6 +431,7 @@ class Adafactor(Optimizer):
         relative_step=True,
         warmup_init=False,
     ):
+        """Initialize AdaFactor optimizer."""
         if lr is not None and relative_step:
             raise ValueError("Cannot combine manual lr and relative_step options")
         if warmup_init and not relative_step:
@@ -484,7 +481,7 @@ class Adafactor(Optimizer):
 
     def step(self, closure=None):
         """
-        Performs a single optimization step
+        Perform a single optimization step.
 
         Arguments:
             closure (callable, optional): A closure that reevaluates the model
@@ -581,8 +578,7 @@ class Adafactor(Optimizer):
 
 
 def create_adamw_optimizer(model, weight_decay, learning_rate):
-    """Setup AdamW optimizer."""
-
+    """Create AdamW optimizer."""
     no_decay = ["bias", "LayerNorm.weight"]
     optimizer_grouped_parameters = [
         {

@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Encoder for GAT model."""
 import numpy as np
 import tensorflow as tf
 
@@ -9,9 +9,7 @@ from deepgnn.tf import layers
 
 
 class AttEncoder(layers.Layer):
-    """
-    Attention Encoder with neighbor sampling (https://arxiv.org/abs/1710.10903)
-    """
+    """Attention Encoder with neighbor sampling (https://arxiv.org/abs/1710.10903)."""
 
     def __init__(
         self,
@@ -24,6 +22,7 @@ class AttEncoder(layers.Layer):
         out_dim=1,
         **kwargs
     ):
+        """Initialize encoder."""
         super(AttEncoder, self).__init__(**kwargs)
         self.features_metadata = np.array([[feature_idx, feature_dim]])
         self.feature_dim = feature_dim
@@ -42,6 +41,7 @@ class AttEncoder(layers.Layer):
         ]
 
     def query(self, context: dict, graph: Graph):
+        """Fetch training data from graph."""
         neighbors = graph.sample_neighbors(
             context["inputs"], self.edge_type, self.nb_num
         )[0]
@@ -58,6 +58,7 @@ class AttEncoder(layers.Layer):
         return context
 
     def call(self, context: dict):
+        """Compute embeddings."""
         seq = tf.concat(
             [context["node_feats"], context["neighbor_feats"]], 1
         )  # [bz,nb+1,fdim]

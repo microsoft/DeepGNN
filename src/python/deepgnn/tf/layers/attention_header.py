@@ -1,16 +1,21 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+"""GAT model layer."""
 from .base import Layer
 import tensorflow as tf
 
 
 class AttentionHeader(Layer):
-    "Attention header for GAT, reference: https://github.com/PetarV-/GAT/blob/master/utils/layers.py"
+    """Attention header for GAT, reference: https://github.com/PetarV-/GAT/blob/master/utils/layers.py."""
 
     def __init__(self, out_size, act=None):
+        """Initialize layer."""
         super().__init__()
         self.out_dim = out_size
         self.act = act
 
     def build(self, input_shape):
+        """Create convolution layers."""
         self.conv0 = tf.keras.layers.Conv1D(self.out_dim, 1, use_bias=False)
         self.conv1 = tf.keras.layers.Conv1D(1, 1)
         self.conv2 = tf.keras.layers.Conv1D(1, 1)
@@ -22,6 +27,7 @@ class AttentionHeader(Layer):
         self.built = True
 
     def call(self, seq):
+        """Compute embeddings."""
         seq_fts = self.conv0(seq)
         f_1 = self.conv1(seq_fts)
         f_2 = self.conv2(seq_fts)

@@ -1,5 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+"""Common classes shared between TF and torch."""
 
 from enum import Enum
 from inspect import signature
@@ -15,19 +16,22 @@ INVALID_NODE_ID = -1
 
 
 class BackendType(Enum):
-    """DeepGNN's graph engine backend type. Graph engine servers
-    can be hosted on VM cluster or kubernetes.
+    """Backend types for DeepGNN's graph engine.
+
+    Graph engine servers can be hosted on VM cluster or kubernetes.
     """
 
     SNARK = "snark"
     CUSTOM = "custom"
 
     def __str__(self):
+        """Convert enum to string."""
         return self.value
 
 
 class DeepGNNDataset:
     """Unified dataset shared by both TF and Torch.
+
     A typical dataset consists of:
         sampler which is used to sample seeds.
         query_fn which is a callback to generate batches.
@@ -62,6 +66,7 @@ class DeepGNNDataset:
         # parameters to initialize samplers
         **kwargs,
     ):
+        """Initialize DeepGNN dataset."""
         assert sampler_class is not None
 
         self.num_workers = num_workers
@@ -81,10 +86,12 @@ class DeepGNNDataset:
         self.init_sampler()
 
     def init_graph_client(self):
+        """Create graph client."""
         if self.backend is not None:
             self.graph = self.backend.graph
 
     def init_sampler(self):
+        """Create sampler."""
         sig = signature(self.sampler_class.__init__)
         sampler_args = {}
         for key in sig.parameters:
@@ -103,6 +110,7 @@ class DeepGNNDataset:
         self.sampler = self.sampler_class(**sampler_args)
 
     def __iter__(self):
+        """Create an iterator for graph."""
         if self.enable_prefetch:
             prefetch_size = (
                 self.kwargs["prefetch_queue_size"]
@@ -129,10 +137,12 @@ class DeepGNNDataset:
             )
 
     def __len__(self):
+        """Return number of elements in the sampler."""
         return len(self.sampler)
 
 
 def create_backend(backend_options: BackendOptions, is_leader: bool = False):
+    """Entry function to initialize backends."""
     backend_type = backend_options.backend
     if backend_type == BackendType.CUSTOM:
         backend_class = backend_options.custom_backendclass

@@ -6,7 +6,8 @@ import numpy as np
 import numpy.testing as npt
 import torch
 import json
-import os, sys
+import os
+import sys
 from typing import Tuple
 import urllib.request
 import zipfile

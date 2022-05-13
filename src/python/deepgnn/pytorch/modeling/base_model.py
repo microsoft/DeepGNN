@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Base classes for torch models."""
 from typing import Optional
 
 import torch
@@ -16,6 +16,8 @@ from deepgnn import get_logger
 
 
 class BaseModel(nn.Module):
+    """Define a base class for torch GNNs."""
+
     def __init__(
         self,
         feature_type: FeatureType,
@@ -23,7 +25,7 @@ class BaseModel(nn.Module):
         feature_dim: int,
         feature_enc: Optional[FeatureEncoder],
     ):
-        """Defined a base model for GNN training.
+        """Initialize common fields.
 
         Args:
             feature_type: feature type used for graph querying.
@@ -47,19 +49,24 @@ class BaseModel(nn.Module):
         self.metric: BaseMetric
 
     def get_score(self, context: dict):
+        """Evaluate model."""
         raise NotImplementedError
 
-    # data is array of [node_id, node_type]
-    # [
-    #   [node_id, node_type],
-    #   [node_id, node_type],
-    #   [node_id, node_type],
-    # ]
     def get_embedding(self, context: dict):
+        """
+        Get embedding.
+
+        Data is array of [node_id, node_type]:
+        [
+        [node_id, node_type],
+        [node_id, node_type],
+        [node_id, node_type],
+        ]
+        """
         return self.get_score(context)
 
-    # dump embeddings to a file.
     def output_embedding(self, output, context: dict, embeddings):
+        """Dump embeddings to a file."""
         embeddings = embeddings.data.cpu().numpy()
         inputs = context["inputs"].squeeze(0)
         embedding_strs = []
@@ -73,9 +80,11 @@ class BaseModel(nn.Module):
         output.writelines(embedding_strs)
 
     def metric_name(self):
+        """Metric used for model evaluation."""
         return self.metric.name() if self.metric is not None else ""
 
     def compute_metric(self, preds, labels):
+        """Stub for metric evaluation."""
         if self.metric is not None:
             preds = torch.unsqueeze(torch.cat(preds, 0), 1)
             labels = torch.unsqueeze(torch.cat(labels, 0), 1).type(preds.dtype)
@@ -84,9 +93,8 @@ class BaseModel(nn.Module):
 
     def query(self, context: dict, graph: Graph):
         """Query graph engine to fetch graph data for model execution.
-            This function will be invoked by prefetch.
 
-        Args:
+        This function will be invoked by prefetch. Args:
             context: nested numpy array dictionary.
             graph: Graph to query.
         """
@@ -94,15 +102,15 @@ class BaseModel(nn.Module):
 
     def transform(self, context: dict):
         """Perform necessary transformation after fetching data from graph engine.
-            This function will be invoked by prefetch.
 
-        Args:
+        This function will be invoked by prefetch. Args:
             context: nested numpy array dictionary.
         """
         if self.feature_enc:
             self.feature_enc.transform(context)
 
     def encode_feature(self, context: dict):
+        """Encode feature vectors."""
         if self.feature_enc:
             self.feature_enc.forward(context)
 
@@ -116,6 +124,8 @@ class BaseModel(nn.Module):
 
 
 class BaseSupervisedModel(BaseModel):
+    """Define a base class for supervised models."""
+
     def __init__(
         self,
         feature_type: FeatureType,
@@ -123,6 +133,7 @@ class BaseSupervisedModel(BaseModel):
         feature_dim: int,
         feature_enc: Optional[FeatureEncoder],
     ):
+        """Initialize common fields."""
         super(BaseSupervisedModel, self).__init__(
             feature_type=feature_type,
             feature_idx=feature_idx,
@@ -132,7 +143,6 @@ class BaseSupervisedModel(BaseModel):
 
     def _loss_inner(self, context: dict):
         """Cross entropy loss for a list of nodes."""
-
         labels = context["label"].squeeze()
         device = labels.device
 
@@ -153,10 +163,13 @@ class BaseSupervisedModel(BaseModel):
         )
 
     def forward(self, context: dict):
+        """Return cross entropy loss."""
         return self._loss_inner(context)
 
 
 class BaseUnsupervisedModel(BaseModel):
+    """Define a base class for unsupervised models."""
+
     def __init__(
         self,
         feature_type: FeatureType,
@@ -164,6 +177,7 @@ class BaseUnsupervisedModel(BaseModel):
         feature_dim: int,
         feature_enc: Optional[FeatureEncoder],
     ):
+        """Initialize common fields."""
         super(BaseUnsupervisedModel, self).__init__(
             feature_type=feature_type,
             feature_idx=feature_idx,
@@ -172,9 +186,11 @@ class BaseUnsupervisedModel(BaseModel):
         )
 
     def get_neg_node(self, graph: Graph, num_negs: int, neg_type: int):
+        """Fetch negative examples, random nodes in a graph."""
         return graph.sample_nodes(num_negs, neg_type, SamplingStrategy.Weighted)
 
     def get_pos_node(
         self, graph: Graph, nodes: np.array, edge_types: np.array, count: int = 1
     ):
+        """Return positive examples, node neighbors."""
         return graph.sample_neighbors(nodes, edge_types, count)[0]

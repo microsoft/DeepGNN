@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""GAT model implementation with torch geometric."""
 from dataclasses import dataclass
 import numpy as np
 import torch
@@ -16,6 +16,8 @@ from torch_geometric.nn import GATConv
 
 @dataclass
 class GATQueryParameter:
+    """Confiruration for graph query."""
+
     neighbor_edge_types: np.array
     feature_idx: int
     feature_dim: int
@@ -27,12 +29,16 @@ class GATQueryParameter:
 
 
 class GATQuery:
+    """Query to fetch graph data for the model."""
+
     def __init__(self, p: GATQueryParameter):
+        """Initialize graph query."""
         self.p = p
         self.label_meta = np.array([[p.label_idx, p.label_dim]], np.int32)
         self.feat_meta = np.array([[p.feature_idx, p.feature_dim]], np.int32)
 
     def query_training(self, graph: Graph, inputs):
+        """Fetch training data."""
         nodes, edges, src_idx = graph_ops.sub_graph(
             graph,
             inputs,
@@ -55,6 +61,8 @@ class GATQuery:
 
 
 class GAT(BaseModel):
+    """GAT model."""
+
     def __init__(
         self,
         in_dim: int,
@@ -65,6 +73,7 @@ class GAT(BaseModel):
         attn_drop: float = 0.0,
         q_param: GATQueryParameter = None,
     ):
+        """Initialize model."""
         self.q = GATQuery(q_param)
         super().__init__(FeatureType.FLOAT, 0, 0, None)
         self.num_classes = num_classes
@@ -90,6 +99,7 @@ class GAT(BaseModel):
         self.metric = Accuracy()
 
     def forward(self, inputs):
+        """Calculate loss, make predictions and fetch labels."""
         # fmt: off
         nodes, feat, edge_index, mask, labels = inputs
         nodes = torch.squeeze(nodes)                # [N]

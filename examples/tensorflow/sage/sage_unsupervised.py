@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Unsupervised GraphSAGE implementation."""
 import numpy as np
 import tensorflow as tf
 from dataclasses import dataclass
@@ -16,6 +16,8 @@ from sage import SAGEQuery, SAGEQueryParameter
 
 @dataclass
 class UnsupervisedSamplingParam:
+    """Graph query parameters."""
+
     positive_edge_types: np.array
     positive_sampling_strategy: str = "random"
 
@@ -29,6 +31,7 @@ class UnsupervisedQuery(SAGEQuery):
     def __init__(
         self, param: SAGEQueryParameter, unsupervised_param: UnsupervisedSamplingParam
     ):
+        """Initialize query."""
         super().__init__(param)
         self.unsup_param = unsupervised_param
 
@@ -61,6 +64,7 @@ class UnsupervisedQuery(SAGEQuery):
     def query_training(
         self, graph: Graph, inputs: np.array, return_shape: bool = False
     ):
+        """Retrieve graph data to train model."""
         seed_nodes = inputs
         positive, negative = self._sample_postive_negative_nodes(graph, seed_nodes)
         merged_nodes, src_idx, pos_idx, neg_idx = self._merge_nodes(
@@ -107,6 +111,8 @@ class UnsupervisedQuery(SAGEQuery):
 
 
 class UnsupervisedGraphSAGE(tf.keras.Model):
+    """Unsupervised GraphSAGE model."""
+
     def __init__(
         self,
         in_dim,
@@ -120,6 +126,7 @@ class UnsupervisedGraphSAGE(tf.keras.Model):
         identity_embed_shape: List[int] = None,
         concat: bool = True,
     ):
+        """Initialize model."""
         super().__init__()
         self.logger = get_logger()
         # fmt: off
@@ -138,7 +145,7 @@ class UnsupervisedGraphSAGE(tf.keras.Model):
             agg_type, layer_dims, dropout, self.concat
         )
 
-        ## use identity features
+        # use identity features
         if self.identity_embed_shape is not None:
             self.max_id = identity_embed_shape[0] - 1
             with tf.name_scope("op"):
@@ -149,15 +156,16 @@ class UnsupervisedGraphSAGE(tf.keras.Model):
                     trainable=True,
                 )
 
-    def affinity(self, inputs1, inputs2):
+    def _affinity(self, inputs1, inputs2):
         result = tf.reduce_sum(inputs1 * inputs2, axis=1)
         return result
 
-    def neg_cost(self, inputs1, neg_samples):
+    def _neg_cost(self, inputs1, neg_samples):
         neg_aff = tf.matmul(inputs1, tf.transpose(neg_samples))
         return neg_aff
 
     def call(self, inputs, training=True):
+        """Compute embeddings, loss and MRR metric."""
         # fmt: off
         if self.identity_embed_shape is None:
             nodes, feat, src_idx, pos_idx, neg_idx = inputs[0:5]
@@ -181,27 +189,27 @@ class UnsupervisedGraphSAGE(tf.keras.Model):
             f"src {src_emb.shape}, pos {pos_emb.shape}, neg {neg_emb.shape}"
         )
 
-        ## embedding result
+        # embedding result
         src_nodes_idx = tf.nn.embedding_lookup(neighbor_list[0], src_idx)
         self.src_nodes = tf.nn.embedding_lookup(nodes, src_nodes_idx)
         self.src_emb = src_emb
 
-        ## MRR
-        mrr = self.calc_mrr(src_emb, pos_emb, neg_emb)
+        # MRR
+        mrr = self._calc_mrr(src_emb, pos_emb, neg_emb)
 
-        ## Loss
+        # Loss
         loss = self._xent_loss(src_emb, pos_emb, neg_emb)
         batch_size = tf.cast(tf.shape(src_emb)[0], tf.float32)
         loss = loss / batch_size
 
         return src_emb, loss, {"mrr": mrr}
 
-    def calc_mrr(self, src_emb, pos_emb, neg_emb):
-        ## src_emb, pos_emb, neg_emb
-        ## [N, D],  [N, D], [#neg, D]
+    def _calc_mrr(self, src_emb, pos_emb, neg_emb):
+        # src_emb, pos_emb, neg_emb
+        # [N, D],  [N, D], [#neg, D]
         # fmt: off
-        aff = self.affinity(src_emb, pos_emb)                   # [N]
-        neg_aff = self.neg_cost(src_emb, neg_emb)               # [N, #neg]
+        aff = self._affinity(src_emb, pos_emb)                   # [N]
+        neg_aff = self._neg_cost(src_emb, neg_emb)               # [N, #neg]
         aff = tf.reshape(aff, [-1, 1])                          # [N, 1]
         aff_all = tf.concat(axis=1, values=[neg_aff, aff])      # [N, #neg+1]
         self.logger.info(f"aff {aff.shape}, neg_aff {neg_aff.shape}, all {aff_all.shape}")
@@ -215,8 +223,8 @@ class UnsupervisedGraphSAGE(tf.keras.Model):
         return mrr
 
     def _xent_loss(self, inputs1, inputs2, neg_samples):
-        aff = self.affinity(inputs1, inputs2)
-        neg_aff = self.neg_cost(inputs1, neg_samples)
+        aff = self._affinity(inputs1, inputs2)
+        neg_aff = self._neg_cost(inputs1, neg_samples)
         true_xent = tf.nn.sigmoid_cross_entropy_with_logits(
             labels=tf.ones_like(aff), logits=aff
         )
@@ -229,7 +237,7 @@ class UnsupervisedGraphSAGE(tf.keras.Model):
         return loss
 
     def train_step(self, data: dict):
-        """override base train_step."""
+        """Override base train_step."""
         with tf.GradientTape() as tape:
             _, loss, metrics = self(data, training=True)
 
@@ -240,13 +248,13 @@ class UnsupervisedGraphSAGE(tf.keras.Model):
         return result
 
     def test_step(self, data: dict):
-        """override base test_step."""
+        """Override base test_step."""
         _, loss, metrics = self(data, training=False)
         result = {"loss": loss}
         result.update(metrics)
         return result
 
     def predict_step(self, data: dict):
-        """override base predict_step."""
+        """Override base predict_step."""
         self(data, training=False)
         return [self.src_nodes, self.src_emb]

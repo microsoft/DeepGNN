@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Backend implementation of C++ graph engine."""
 import json
 import os
 import glob
@@ -26,6 +26,7 @@ class SnarkLocalBackend(GraphEngineBackend):
     """SnarkLocalBackend is used to initialize an in-memory graph backend."""
 
     def __init__(self, options: BackendOptions, is_leader: bool = False):
+        """Initialize backend with a local graph."""
         self._client = LocalClient(
             options.data_dir,
             options.partitions,
@@ -36,9 +37,11 @@ class SnarkLocalBackend(GraphEngineBackend):
 
     @property
     def graph(self):
+        """Get graph."""
         return self._client
 
     def close(self):
+        """Typically we don't want to unload graph in local mode, hence no-op."""
         pass
 
 
@@ -46,6 +49,7 @@ class SnarkDistributedBackend(GraphEngineBackend):
     """SnarkDistributedBackend is used to initialize a snark client connected to to a GE server."""
 
     def __init__(self, options: BackendOptions, is_leader: bool = False):
+        """Initialize a distributed backend."""
         self._server: Optional[SynchronizedServer] = None
         # Short circuit the simplest case: connect to existing backends.
         if options.skip_ge_start:
@@ -332,9 +336,11 @@ class SnarkDistributedBackend(GraphEngineBackend):
 
     @property
     def graph(self):
+        """Return distributed graph client."""
         return self._client.client
 
     def close(self):
+        """Stop clients and then servers."""
         if self._client is not None:
             self._client.reset()
         if self._server is not None:

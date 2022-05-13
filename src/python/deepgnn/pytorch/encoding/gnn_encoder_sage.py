@@ -1,6 +1,5 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
 """Various encoders implementations."""
 from typing import Callable
 
@@ -28,7 +27,7 @@ class SageEncoder(nn.Module):
         activation_fn: Callable = F.relu,
         base_model=None,
     ):
-        """Initialization.
+        """Initialize SageEncoder.
 
         Args:
             features: callback used to generate node feature embedding.
@@ -70,6 +69,7 @@ class SageEncoder(nn.Module):
         feature_idx: int,
         feature_dim: int,
     ):
+        """Query graph for training data."""
         context = {}
         neigh_nodes = graph.sample_neighbors(nodes, self.edge_types, self.num_sample)[
             0
@@ -103,6 +103,7 @@ class SageEncoder(nn.Module):
         feature_idx: int,
         feature_dim: int,
     ):
+        """Fetch features."""
         features = graph.node_features(
             nodes, np.array([[feature_idx, feature_dim]]), feature_type
         )

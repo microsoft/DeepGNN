@@ -23,7 +23,7 @@ try:
     from deepgnn.pytorch.training.trainer_hvd import HVDTrainer
 
     hvd_enabled = True
-except:
+except ImportError:
     hvd_enabled = False
 
 

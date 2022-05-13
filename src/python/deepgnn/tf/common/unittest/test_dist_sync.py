@@ -1,7 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import os, subprocess
+import os
+import subprocess
 import tensorflow as tf
 import tempfile
 import time
@@ -79,7 +80,7 @@ def test_dist_training():
 
     reset_tf_graph()
     tf.compat.v1.disable_v2_behavior()
-    ## restore checkpoint and check global step.
+    # restore checkpoint and check global step.
     global_step = tf.compat.v1.train.get_or_create_global_step()
     with tf.compat.v1.train.MonitoredTrainingSession(
         checkpoint_dir=model_path.name,

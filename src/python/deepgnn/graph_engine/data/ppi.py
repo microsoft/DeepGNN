@@ -1,5 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+"""PPI dataset."""
 
 import argparse
 import json
@@ -19,6 +20,7 @@ from deepgnn.graph_engine.snark.local import Client
 class PPI(Client):
     """
     Protein-Protein Interactions graph.
+
     Use positional gene sets, motif gene sets and immunological signatures as features
     and gene ontology sets as labels (121 in total).
 
@@ -36,6 +38,8 @@ class PPI(Client):
 
     def __init__(self, output_dir: str = None):
         """
+        Initialize PPI dataset.
+
         Args:
           output_dir (string): file directory for graph data.
         """
@@ -48,6 +52,7 @@ class PPI(Client):
         super().__init__(path=self.output_dir, partitions=[0])
 
     def data_dir(self):
+        """Graph location on disk."""
         return self.output_dir
 
     def _load_raw_graph(self, data_dir: str):
@@ -74,7 +79,7 @@ class PPI(Client):
         train_neighbors: Dict = {nid: [] for nid in nodes}
         other_neighbors: Dict = {nid: [] for nid in nodes}
 
-        ## edges
+        # edges
         train_mask = np.zeros(len(nodes), np.bool)
         train_mask[train_nodes] = True
         for i, e in enumerate(g["links"]):
@@ -89,12 +94,12 @@ class PPI(Client):
                 if tgt != src:
                     other_neighbors[tgt].append(src)
 
-        ## class map
+        # class map
         fname = os.path.join(data_dir, "ppi-class_map.json")
         class_map = json.load(open(fname))
         class_map = {id_map[int(k)]: v for k, v in class_map.items()}
 
-        ## feat
+        # feat
         feats = np.load(os.path.join(data_dir, "ppi-feats.npy"))
         train_feats = feats[train_nodes]
         scaler = StandardScaler()
@@ -140,7 +145,7 @@ class PPI(Client):
         meta_file = os.path.join(data_dir, "meta.json")
         self._write_meta_file(meta_file)
         self._write_node_files(data_dir, nodes, nodes_type)
-        ## convert graph: JSON -> Binary
+        # convert graph: JSON -> Binary
         convert.MultiWorkersConverter(
             graph_path=graph_file,
             meta_path=meta_file,

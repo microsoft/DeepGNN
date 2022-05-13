@@ -51,6 +51,7 @@ class Graph:
     ) -> np.array:
         """
         Return a list of nodes with a specified type.
+
         Args:
         - size        -- number of nodes to sample.
         - node_types  -- types of nodes to sample.
@@ -67,6 +68,7 @@ class Graph:
     ) -> np.array:
         """
         Return a list of edges with a specified type.
+
         Args:
         - size        -- number of edges to sample.
         - edge_types  -- type of edges to sample.
@@ -87,8 +89,9 @@ class Graph:
         default_node_type: int = -1,
     ) -> Tuple[np.array, np.array, np.array, np.array]:
         """
-        Sample node neighbors. There might be repetition of returned nodes
+        Sample node neighbors.
 
+        There might be repetition of returned nodes, e.g. if count is greater than number of node neighbors.
         nodes -- array of nodes to select neighbors
         edge_types -- type of edges to use for selection.
         count -- fixed number of neighbors to select.
@@ -154,7 +157,6 @@ class Graph:
         Returns a blob array with feature values per node. The shape of the array is
         [len(nodes), sum(map(lambda f: f[1], features)))].
         """
-
         raise NotImplementedError
 
     def edge_features(
@@ -174,15 +176,14 @@ class Graph:
         nodes -- input array of nodes.
         Returns an array of types per each node.
         """
-
         raise NotImplementedError
 
     def node_count(self, types: Union[int, np.array]) -> int:
-        """Return the number of nodes"""
+        """Return the number of nodes."""
         raise NotImplementedError
 
     def edge_count(self, types: Union[int, np.array]) -> int:
-        """Return the number of edges"""
+        """Return the number of edges."""
         raise NotImplementedError
 
 

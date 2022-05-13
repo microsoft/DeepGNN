@@ -1,9 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-"""
-Dataset classes useful for preparing training/evaluation examples.
-"""
+"""Dataset classes useful for preparing training/evaluation examples."""
 import glob
 import math
 import random
@@ -19,6 +17,7 @@ INVALID_NODE_ID = -1
 
 
 def get_files(filenames, worker_index, num_workers):
+    """Parition sampler files across workers."""
     files = sorted(glob.glob(filenames))
     if len(files) < num_workers:
         raise RuntimeError(
@@ -31,6 +30,7 @@ def get_files(filenames, worker_index, num_workers):
 
 
 def get_feature_type(feature_type):
+    """Map numpy to python types."""
     if feature_type not in [np.float32, np.int64]:
         raise RuntimeError("unknown feature_type: {}".format(str(feature_type)))
     if feature_type == np.float32:
@@ -52,6 +52,7 @@ class BaseSampler(object):
         data_parallel_num: int = 1,
         data_parallel_index: int = 0,
     ):
+        """Initialize sampler."""
         self.batch_size = batch_size
         self.sample_num = sample_num
         self.epochs = epochs
@@ -62,36 +63,45 @@ class BaseSampler(object):
         self.logger = get_logger()
 
     def __iter__(self):
+        """Must be implemented in derived classes."""
         raise NotImplementedError()
 
     def __count__(self):
+        """Must be implemented in derived classes."""
         raise NotImplementedError()
 
     def __len__(self):
+        """Must be implemented in derived classes."""
         raise NotImplementedError()
 
     def reset(self):
+        """Skip by default."""
         pass
 
     @property
     def data_parallel_index(self):
+        """Worker index."""
         return self._data_parallel_index
 
     @data_parallel_index.setter
     def data_parallel_index(self, value):
+        """Reset worker index."""
         self._data_parallel_index = value
 
     @property
     def data_parallel_num(self):
+        """Return number of workers."""
         return self._data_parallel_num
 
     @data_parallel_num.setter
     def data_parallel_num(self, value):
+        """Reset number of workers."""
         self._data_parallel_num = value
 
 
 class _GEIterator:
     """Iterable component to iterate using graph API.
+
     For example, if the func is graph.sample_nodes,
     each next() function will return a list of nodes queried
     from graph engine servers.
@@ -134,6 +144,7 @@ class GENodeSampler(BaseSampler):
         data_parallel_num: int = 1,
         data_parallel_index: int = 0,
     ):
+        """Initialize node sampler."""
         super().__init__(
             batch_size,
             epochs,
@@ -161,6 +172,7 @@ class GENodeSampler(BaseSampler):
         return self.graph.sample_nodes(*args, **kwargs)
 
     def __iter__(self):
+        """Create a graph engine iterator."""
         return _GEIterator(
             self.batch_size,
             self.node_types,
@@ -170,6 +182,7 @@ class GENodeSampler(BaseSampler):
         )
 
     def __len__(self):
+        """Total number of minibatches in this sampler."""
         return self.count
 
 
@@ -188,6 +201,7 @@ class GEEdgeSampler(BaseSampler):
         data_parallel_num: int = 1,
         data_parallel_index: int = 0,
     ):
+        """Initialize edge sampler."""
         super().__init__(
             batch_size,
             epochs,
@@ -209,6 +223,7 @@ class GEEdgeSampler(BaseSampler):
         )
 
     def __iter__(self):
+        """Create a graph engine iterator."""
         return _GEIterator(
             self.batch_size,
             self.edge_types,
@@ -218,13 +233,15 @@ class GEEdgeSampler(BaseSampler):
         )
 
     def __len__(self):
+        """Total number of minibatches in this sampler."""
         return self.count
 
 
 class FileEdgeSampler(BaseSampler):
-    """
-    Loading all files and generate edge samples.
-    * Edge Sample File format (default delimeter='\\t')
+    r"""
+    Loads all files and generate edge samples.
+
+    Edge Sample File format (default delimeter='\\t')
          - src_id\\tdst_id[\\tfeature_dim1\\tfeature_dim2...]
     """
 
@@ -245,7 +262,9 @@ class FileEdgeSampler(BaseSampler):
         data_parallel_num: int = 1,
         data_parallel_index: int = 0,
     ):
-        """
+        r"""
+        Initialize FileEdgeSampler.
+
         Args:
           edge_type(int): the edge type for selection.
           sample_files(str): filenames, support pathname pattern expansion `glob.glob(sample_files)`.
@@ -275,9 +294,9 @@ class FileEdgeSampler(BaseSampler):
         self.drop_last = drop_last
         self.backfill_id = backfill_id
         filelist = get_files(sample_files, worker_index, num_workers)
-        self.load_edge_files(filelist, delimeter)
+        self._load_edge_files(filelist, delimeter)
 
-    def load_edge_files(self, filelist, delimeter):
+    def _load_edge_files(self, filelist, delimeter):
         self.logger.info("Edge Sample files: {0}".format(", ".join(filelist)))
         edges = []
         features = []
@@ -300,6 +319,7 @@ class FileEdgeSampler(BaseSampler):
         self.logger.info("total #edges: {0}".format(len(self.edges)))
 
     def __len__(self):
+        """Total number of minibatches in this sampler."""
         if self.drop_last:
             return math.floor(
                 len(self.edges)
@@ -314,6 +334,7 @@ class FileEdgeSampler(BaseSampler):
             )
 
     def __iter__(self):
+        """Create a numpy based iterator."""
         if self.feature_dim == 0:
             return _NumpyIterator(
                 [self.edges],
@@ -348,7 +369,7 @@ class FileEdgeSampler(BaseSampler):
 
 
 class _NumpyIterator:
-    """private iterable component to iterate numpy array."""
+    """Private iterable component to iterate numpy array."""
 
     def __init__(
         self,
@@ -361,6 +382,7 @@ class _NumpyIterator:
         data_parallel_num: int = 1,
         data_parallel_index: int = 0,
     ):
+        """Initialize iterator."""
         self.length = len(data[0])
         assert self.length > 0
         if len(data) > 1:
@@ -384,9 +406,11 @@ class _NumpyIterator:
         return idx
 
     def __iter__(self):
+        """Skip, because this is a private iterator called only from sampler."""
         return self
 
     def __next__(self):
+        """Retrieve next elements."""
         if self.offset >= self.epochs * self.length:
             raise StopIteration
 
@@ -416,9 +440,10 @@ class _NumpyIterator:
 
 
 class FileNodeSampler(BaseSampler):
-    """
+    r"""
     Loading all files and generate node samples.
-    * Node Sample File format: (each line has one node id, linesep='\\n')
+
+    Node Sample File format: (each line has one node id, linesep='\\n')
       - node_id\\n
     """
 
@@ -436,6 +461,8 @@ class FileNodeSampler(BaseSampler):
         data_parallel_index: int = 0,
     ):
         """
+        Initialize FileNodeSampler.
+
         Args:
           sample_files(str): filenames, support pathname pattern expansion `glob.glob(sample_files)`.
           batch_size(int): how many samples per batch to load.
@@ -463,6 +490,7 @@ class FileNodeSampler(BaseSampler):
         )
 
     def __iter__(self):
+        """Return numpy iterator over file data."""
         return _NumpyIterator(
             data=[self.nodes],
             batch_size=self.batch_size,
@@ -475,6 +503,7 @@ class FileNodeSampler(BaseSampler):
         )
 
     def __len__(self):
+        """Total number of minibatches in this sampler."""
         if self.drop_last:
             return math.floor(
                 len(self.nodes)
@@ -490,7 +519,7 @@ class FileNodeSampler(BaseSampler):
 
 
 class _RangeNodeIterator:
-    """private iterable component to iterate a range."""
+    """Private iterable component to iterate a range."""
 
     def __init__(
         self,
@@ -502,6 +531,7 @@ class _RangeNodeIterator:
         data_parallel_num: int = 1,
         data_parallel_index: int = 0,
     ):
+        """Initialize range node iterator."""
         self.first = first + data_parallel_index
         self.last = last
         self.batch_size = batch_size
@@ -511,6 +541,7 @@ class _RangeNodeIterator:
         self.data_parallel_num = data_parallel_num
 
     def __next__(self):
+        """Create a new range and increment offset."""
         if self.first >= self.last:
             raise StopIteration
 
@@ -537,6 +568,7 @@ class RangeNodeSampler(BaseSampler):
         data_parallel_num: int = 1,
         data_parallel_index: int = 0,
     ):
+        """Initialize node sampler."""
         super().__init__(
             batch_size,
             epochs=1,
@@ -553,6 +585,7 @@ class RangeNodeSampler(BaseSampler):
         self.backfill_id = backfill_id
 
     def __iter__(self):
+        """Return a new range iterator."""
         return _RangeNodeIterator(
             self.start_id,
             self.last,
@@ -564,6 +597,7 @@ class RangeNodeSampler(BaseSampler):
         )
 
     def __len__(self):
+        """Total number of minibatches in this sampler."""
         res = math.ceil(
             (self.last - self.start_id)
             / (self.batch_size * self.num_workers * self.data_parallel_num)
@@ -572,7 +606,7 @@ class RangeNodeSampler(BaseSampler):
 
 
 class _RangeEdgeIterator(_RangeNodeIterator):
-    """private component to iterate a range of edge ids."""
+    """Private component to iterate a range of edge ids."""
 
     def __init__(
         self,
@@ -623,6 +657,7 @@ class RangeEdgeSampler(RangeNodeSampler):
         data_parallel_num: int = 1,
         data_parallel_index: int = 0,
     ):
+        """Initialize edge sampler."""
         super().__init__(
             first,
             last,
@@ -636,6 +671,7 @@ class RangeEdgeSampler(RangeNodeSampler):
         self.edge_type = edge_type
 
     def __iter__(self):
+        """Return a new edge iterator."""
         return _RangeEdgeIterator(
             self.edge_type,
             self.start_id,
@@ -659,6 +695,7 @@ class CSVNodeSampler(BaseSampler):
         data_parallel_num: int = 1,
         data_parallel_index: int = 0,
     ):
+        """Initialize node sampler."""
         super().__init__(
             batch_size,
             epoch,
@@ -683,6 +720,7 @@ class CSVNodeSampler(BaseSampler):
         )
 
     def __iter__(self):
+        """No-op."""
         return self
 
     def __next__(self):
@@ -703,13 +741,15 @@ class CSVNodeSampler(BaseSampler):
         return np.array(self.node_list[start_pos : end_pos : self.data_parallel_num])
 
     def __len__(self):
+        """Total number of minibatches in this sampler."""
         return self.count
 
 
 class FileTupleSampler(BaseSampler):
-    """
+    r"""
     Loading all files and generate tuple samples.
-    * File Tuple format (each line):
+
+    File Tuple format (each line):
       - node_id\\tnode_type
     """
 
@@ -727,6 +767,8 @@ class FileTupleSampler(BaseSampler):
         data_parallel_index: int = 0,
     ):
         """
+        Initialize FileTupleSampler.
+
         Args:
           filename(str): filename.
           batch_size(int): how many samples per batch to load.
@@ -748,17 +790,17 @@ class FileTupleSampler(BaseSampler):
         self.logger.info("Sample file: {0}".format(filename))
         self.drop_last = drop_last
         self.backfill = backfill
-        self.data = self.load_tuple_file(filename, worker_index, num_workers)
+        self.data = self._load_tuple_file(filename, worker_index, num_workers)
 
     @staticmethod
-    def tuple_parse_func(line):
+    def _tuple_parse_func(line):
         cols = line.split("\t")
         assert len(cols) == 2
         nid, ntype = int(cols[0]), int(cols[1])
         return nid, ntype
 
-    def load_tuple_file(self, filename, worker_index, num_workers):
-        parse_func = FileTupleSampler.tuple_parse_func
+    def _load_tuple_file(self, filename, worker_index, num_workers):
+        parse_func = FileTupleSampler._tuple_parse_func
         data = []
         self.logger.info("Load tuple file: {}".format(filename))
         for cnt, l in enumerate(open(filename)):
@@ -770,6 +812,7 @@ class FileTupleSampler(BaseSampler):
         return data
 
     def __len__(self):
+        """Total number of minibatches in this sampler."""
         if self.drop_last:
             return math.floor(
                 len(self.data)
@@ -784,6 +827,7 @@ class FileTupleSampler(BaseSampler):
             )
 
     def __iter__(self):
+        """Create a new numpy based iterator from this sampler."""
         return _NumpyIterator(
             [self.data],
             self.batch_size,
@@ -797,9 +841,7 @@ class FileTupleSampler(BaseSampler):
 
 
 class TextFileSampler(BaseSampler):
-    """Sampler to iterate line-based text files which are in local
-    file system or azure data lake gen1 (adl://)
-    """
+    """Sampler to iterate line-based text files which are in local filesystem or azure data lake gen1 (adl://)."""
 
     def __init__(
         self,
@@ -818,6 +860,7 @@ class TextFileSampler(BaseSampler):
         data_parallel_num: int = 1,
         data_parallel_index: int = 0,
     ):
+        """Initialize sampler."""
         super().__init__(
             batch_size,
             epochs=epochs,
@@ -852,16 +895,20 @@ class TextFileSampler(BaseSampler):
         self.end = False
 
     def __len__(self):
+        """Raise error, because data is streamed."""
         raise NotImplementedError
 
     def __iter__(self):
+        """Start iteration from beginning."""
         self.reset()
         return self
 
     def __del__(self):
+        """Stop iteration."""
         self.file_iter.join()
 
     def __next__(self):
+        """Load next elements from file."""
         if self.end and len(self.buf) == 0:
             raise StopIteration
 
@@ -887,14 +934,17 @@ class TextFileSampler(BaseSampler):
         return batch
 
     def reset(self):
+        """Reset iterator and clear buffers."""
         self.file_iter.reset()
         self.buf = []
         self.end = False
 
 
 def _node_label_feature_parser_func(line):
-    """
-    format
+    r"""
+    Tab separated lines.
+
+    Format:
      src_id\tlabel\tfeatures
      features: feature_1 feature_2 ...
      example: 10123\t1.0\t0.5 0.2 0.34 0.3
@@ -911,9 +961,7 @@ def _node_label_feature_parser_func(line):
 
 
 class FileTupleSamplerV2(BaseSampler):
-    """
-    Loading all files and generate tuple samples.
-    """
+    """FileTupleSamplerV2 loads all files and generate tuple samples."""
 
     def __init__(
         self,
@@ -930,6 +978,8 @@ class FileTupleSamplerV2(BaseSampler):
         data_parallel_index: int = 0,
     ):
         """
+        Initialize FileTupleSamplerV2.
+
         Args:
           filename(str): filename.
           batch_size(int): how many samples per batch to load.
@@ -951,11 +1001,11 @@ class FileTupleSamplerV2(BaseSampler):
         self.logger.info("Sample file: {0}".format(filename))
         self.drop_last = drop_last
         self.backfill = backfill
-        self.data = self.load_tuple_file(
+        self.data = self._load_tuple_file(
             filename, worker_index, num_workers, line_parser_func
         )
 
-    def load_tuple_file(self, filename, worker_index, num_workers, parse_func):
+    def _load_tuple_file(self, filename, worker_index, num_workers, parse_func):
         raw_data = []
         self.logger.info("Load tuple file: {}".format(filename))
         for cnt, l in enumerate(open(filename)):
@@ -977,6 +1027,7 @@ class FileTupleSamplerV2(BaseSampler):
         return data
 
     def __len__(self):
+        """Return number of minibatches in this sampler."""
         if self.drop_last:
             return math.floor(
                 len(self.data[0])
@@ -991,6 +1042,7 @@ class FileTupleSamplerV2(BaseSampler):
             )
 
     def __iter__(self):
+        """Create a new iterator."""
         return _NumpyIterator(
             self.data,
             self.batch_size,

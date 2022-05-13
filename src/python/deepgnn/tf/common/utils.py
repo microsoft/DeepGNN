@@ -1,18 +1,21 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
-import os, subprocess, time, glob
+"""Common utility functions for training."""
+import os
+import subprocess
+import time
+import glob
 import numpy as np
 import tensorflow as tf
 
-from deepgnn.tf.common.session_exit_hook import SessionExitHook
-from deepgnn.tf.common.chief_checkpoint_saver_hook import ChiefCheckpointSaverHook
+from deepgnn.tf.common.hooks import SessionExitHook, ChiefCheckpointSaverHook
 from deepgnn import get_logger
 
 
 def reset_tf_graph():
-    ## intentionally move import here.
-    ## legacy code: deepgnn.tf.layers.
+    """Clear global default graph."""
+    # intentionally move import here.
+    # legacy code: deepgnn.tf.layers.
     from deepgnn.tf.layers import base
     import collections
 
@@ -32,21 +35,22 @@ def setup_worker_hooks(
     profiler_save_secs: int = 180,
 ):
     """
-    Setup tensorflow session hooks.
+    Create tensorflow session hooks.
+
     Args:
       * model_dir: output directory for logging tensor and summary saver.
       * task_index: if task_index == 0, add tf.train.ProfilerHook
       * logging_tensor: tf.train.LoggingTensorHook
-      * summay_tensor: tf.train.SummarySaverHook
-      * dist_sync: deepgnn.tf.commom.SessionExitHook
+      * summary_tensor: tf.train.SummarySaverHook
+      * dist_sync: deepgnn.tf.common.hooks.SessionExitHook
     """
     hooks = []
-    ## Logging tensor hook
+    # Logging tensor hook
     if len(logging_tensor) > 0:
         hooks.append(
             tf.estimator.LoggingTensorHook(logging_tensor, every_n_iter=log_save_steps)
         )
-    ## summary saver hook
+    # summary saver hook
     if len(summary_tensor) > 0:
         ops = [
             tf.compat.v1.summary.scalar(name=k, tensor=summary_tensor[k])
@@ -62,7 +66,7 @@ def setup_worker_hooks(
                 save_steps=summary_save_steps, summary_writer=writer, summary_op=ops
             )
         )
-    ## profile hook
+    # profile hook
     if task_index == 0:
         profile_dir = os.path.join(model_dir, "profile")
         hooks.append(
@@ -81,7 +85,8 @@ def setup_chief_only_hooks(
     task_index, checkpoint_dir, dist_sync=None, checkpoint_save_secs: int = 3600
 ):
     """
-    Setup Chief only hooks:
+    Create chief only hooks.
+
     Args:
       * task_index: if task_index == 0, return None
       * checkpoint_dir: save model checkpoint to this directory.
@@ -101,6 +106,7 @@ def setup_chief_only_hooks(
 def node_embedding_to_string(embedding_tensor_list, invalid_id=-1):
     """
     Convert node embedding to output string.
+
     Args:
       - embedding_tensor_list: a list of two tensors.
         * 1st tensor is node id, tensor shape: (batch_size, )
@@ -121,6 +127,7 @@ def node_embedding_to_string(embedding_tensor_list, invalid_id=-1):
 
 
 def run_commands(commands):
+    """Run commands in a separate process."""
     get_logger().info(commands)
     proc = subprocess.Popen(args=commands, shell=True)
     while proc.poll() is None:
@@ -129,6 +136,7 @@ def run_commands(commands):
 
 
 def load_embeddings(model_dir, num_nodes, dim, fileprefix="embedding_*.tsv"):
+    """Load embeddings from files identified by prefix."""
     res = np.zeros((num_nodes, dim), dtype=np.float32)
     files = glob.glob(os.path.join(model_dir, fileprefix))
     for fname in files:
@@ -142,7 +150,7 @@ def load_embeddings(model_dir, num_nodes, dim, fileprefix="embedding_*.tsv"):
 
 
 def get_metrics_from_event_file(model_dir, metric_dir, metric_name):
-    """return a list of metric values from event file"""
+    """Extract a list of metric values from event file."""
     events_file_pattern = os.path.join(model_dir, metric_dir, "events*")
     events_files = sorted(glob.glob(events_file_pattern))
     get_logger().info(f"event files: {events_files}")
@@ -155,7 +163,7 @@ def get_metrics_from_event_file(model_dir, metric_dir, metric_name):
 
 
 def log_model_info(model: tf.keras.Model, use_tf_compat=True):
-    """This function is to print the model's internal variables."""
+    """Print model's internal variables."""
     # fmt: off
     logger = get_logger()
 

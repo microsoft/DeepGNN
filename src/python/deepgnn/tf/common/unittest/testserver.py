@@ -16,7 +16,7 @@ def str2list(v):
 
 
 def define_param_ps_dist_training(parser):
-    ## ps/worker_host
+    # ps/worker_host
     parser.add_argument(
         "--job_name",
         type=str,

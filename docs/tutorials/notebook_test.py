@@ -13,16 +13,16 @@ if platform.system() == "Windows":
 
 def test_notebooks():
     os.environ["SNARK_LIB_PATH"] = f"{os.getcwd()}/src/cc/lib/{LIB_NAME}"
-    ret = os.system(f"python -m pytest -s --nbval-lax -o testpaths=docs/tutorials/tf/")
+    ret = os.system("python -m pytest -s --nbval-lax -o testpaths=docs/tutorials/tf/")
     assert ret == 0
 
     ret = os.system(
-        f"python -m pytest -s --nbval-lax -o testpaths=docs/tutorials/pytorch/"
+        "python -m pytest -s --nbval-lax -o testpaths=docs/tutorials/pytorch/"
     )
     assert ret == 0
 
     ret = os.system(
-        f"python -m pytest -s --nbval-lax -o testpaths=docs/tutorials/other/"
+        "python -m pytest -s --nbval-lax -o testpaths=docs/tutorials/other/"
     )
     assert ret == 0
 

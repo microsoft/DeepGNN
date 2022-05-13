@@ -2,7 +2,8 @@
 # Licensed under the MIT License.
 
 import argparse
-import os, sys
+import os
+import sys
 import pytest
 import random
 import tempfile

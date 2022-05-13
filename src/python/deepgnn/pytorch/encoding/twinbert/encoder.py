@@ -14,6 +14,7 @@ from .pooler import WeightPooler
 class TwinBERTEncoder(nn.Module):
     def __init__(self, config, init_ckpt_file=None, pooler_count=1, local_rank=0):
         """TwinBERT feature encoder.
+
         Args:
             config: parameter dictionary.
             init_ckpt_file: start checkpoint, could be standard bert checkpoint or
@@ -21,7 +22,7 @@ class TwinBERTEncoder(nn.Module):
             pooler_count: support multiple poolers sharing the same bert encoder.
                           this is to specify the number of poolers.
             local_rank: used by DeepSpeed to initialize transformer kernel.
-        """
+        """  # noqa: D403
         super(TwinBERTEncoder, self).__init__()
         self.config = config
         self.deepspeed = False
@@ -115,8 +116,7 @@ class TwinBERTEncoder(nn.Module):
                 self.load_state_dict(torch.load(init_ckpt_file))
 
     def _load_from_other_checkpoint(self, init_ckpt_file):
-        """initialize twinbert encoder with twinbert/bert pre-trained checkpoint."""
-
+        """Initialize twinbert encoder with twinbert/bert pre-trained checkpoint."""
         init_ckpt_prefix = self.config["init_ckpt_prefix"]
 
         state_dict = torch.load(init_ckpt_file, map_location="cpu")

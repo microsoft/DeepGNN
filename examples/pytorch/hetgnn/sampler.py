@@ -1,13 +1,18 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Graph sampler for HetGnn model."""
 import numpy as np
 
 from deepgnn.graph_engine import Graph, SamplingStrategy, BaseSampler, FileNodeSampler
 
 
-# heterogenous triple list used to do the training.
 class HetGnnDataSampler(BaseSampler):
+    """
+    Implementation of BaseSampler for HetGnn model.
+
+    Training is based on heterogenous triple list.
+    """
+
     def __init__(
         self,
         graph: Graph,
@@ -17,6 +22,7 @@ class HetGnnDataSampler(BaseSampler):
         walk_length: int = 5,
         sample_files: str = "",
     ):
+        """Initialize sampler."""
         super().__init__(batch_size, epochs=1, shuffle=False)
         self.graph = graph
         self.num_nodes = num_nodes
@@ -97,6 +103,7 @@ class HetGnnDataSampler(BaseSampler):
         return triple_list
 
     def __len__(self):
+        """Return number of minibatches in this sampler."""
         return self.count
 
     def __iter__(self):

@@ -1,5 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+"""Common function used accross different models."""
 
 import numpy as np
 import os
@@ -29,7 +30,7 @@ def get_feature_type(feature_type_str: str):
 
 def set_seed(seed: int):
     """
-    Helper function for reproducible behavior to set the seed in ``random``, ``numpy``, ``torch``
+    Set the random seed in ``random``, ``numpy`` and ``torch`` modules.
 
     Args:
         seed: The seed to set.
@@ -99,6 +100,7 @@ def get_store_name_and_path(input_path: str):
 
 
 def print_model(model: torch.nn.Module):
+    """Print model state."""
     state_dict = model.state_dict()
     for i, key in enumerate(state_dict):
         get_logger().info(
@@ -107,6 +109,7 @@ def print_model(model: torch.nn.Module):
 
 
 def tally_parameters(model: torch.nn.Module):
+    """Print model named parameters."""
     n_params = 0
     for name, param in model.named_parameters():
         n_params += param.nelement()
@@ -114,6 +117,7 @@ def tally_parameters(model: torch.nn.Module):
 
 
 def dump_gpu_memory(prefix=""):
+    """Return GPU memory usage statistics."""
     MB = 1024 * 1024
     return (
         f"{prefix} Memory Allocated: {torch.cuda.memory_allocated() / MB:.3f} MB"
@@ -126,6 +130,7 @@ def dump_gpu_memory(prefix=""):
 def get_sorted_checkpoints(
     model_dir: str, perfix: str = PREFIX_CHECKPOINT, sort_ckpt_by_mtime: bool = False
 ):
+    """Return model checkpoints."""
     ordering_and_checkpoint_path = []
 
     glob_checkpoints = [str(x) for x in Path(model_dir).glob(f"{perfix}-*")]
@@ -134,7 +139,7 @@ def get_sorted_checkpoints(
         if sort_ckpt_by_mtime:
             ordering_and_checkpoint_path.append((str(os.path.getmtime(path)), path))
         else:
-            regex_match = re.match(f".*{perfix}-([0-9\-]+)", path)
+            regex_match = re.match(f".*{perfix}-([0-9\\-]+)", path)
             if regex_match and regex_match.groups():
                 ordering_and_checkpoint_path.append((regex_match.groups()[0], path))
 
@@ -148,7 +153,6 @@ def rotate_checkpoints(
     sort_ckpt_by_mtime: bool = False,
 ):
     """Remove old checkpoints if total number of checkpoints has exceeded max_saved_ckpts."""
-
     if max_saved_ckpts > 0:
         # Check if we should delete old checkpoint(s)
         checkpoints_sorted = get_sorted_checkpoints(

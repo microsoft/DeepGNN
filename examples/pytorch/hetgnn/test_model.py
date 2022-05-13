@@ -5,7 +5,8 @@ import argparse
 import csv
 import numpy as np
 import numpy.testing as npt
-import os, sys
+import os
+import sys
 import pytest
 import random
 import tempfile
@@ -31,12 +32,13 @@ from deepgnn.graph_engine import (
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
 from model import HetGnnModel
 from sampler import HetGnnDataSampler
-from data_generator import (  # noqa: F401
+from conftest import (  # noqa: F401
     load_data,
     prepare_local_test_files,
     init_het_input_data,
 )
-import evaluation, data_generator
+import evaluation
+import conftest
 
 node_base_index = 1000000
 
@@ -415,7 +417,7 @@ def test_link_prediction_on_het_gnn(
 
     # do evaluation
     args = parse_testing_args([])
-    train_num, test_num = data_generator.a_a_collaborate_train_test(
+    train_num, test_num = conftest.a_a_collaborate_train_test(
         args, model_path, input_data_map, tmpdir
     )
     auc, f1 = evaluation.evaluate_link_prediction(args, train_num, test_num, tmpdir)
@@ -433,7 +435,7 @@ def test_classification_on_het_gnn(
 
     # do evaluation
     args = parse_testing_args([])
-    train_num, test_num, _ = data_generator.a_class_cluster_feature_setting(
+    train_num, test_num, _ = conftest.a_class_cluster_feature_setting(
         args, model_path, tmpdir, prepare_local_test_files
     )
     macroF1, microF1 = evaluation.evaluate_node_classification(

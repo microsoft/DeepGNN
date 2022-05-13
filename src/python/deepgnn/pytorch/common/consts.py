@@ -1,5 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+"""Common strings used across models."""
 
 DOWNSCALE = "downscale"
 EMBEDDING_TYPE = "embedding_type"

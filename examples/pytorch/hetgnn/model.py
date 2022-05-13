@@ -1,5 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+"""HetGnn model implementation."""
 
 from typing import List, Any, Dict, Union
 import torch
@@ -13,9 +14,7 @@ from deepgnn.pytorch.modeling import BaseUnsupervisedModel
 
 
 class HetGnnModel(BaseUnsupervisedModel):
-    """
-    Core heterogenous gnn model.
-    """
+    """Core heterogenous gnn model."""
 
     def __init__(
         self,
@@ -27,6 +26,7 @@ class HetGnnModel(BaseUnsupervisedModel):
         feature_type: FeatureType,
         metric=MRR(),
     ):
+        """Initialize HetGnn model."""
         super(HetGnnModel, self).__init__(
             feature_type=feature_type,
             feature_idx=feature_idx,
@@ -68,24 +68,24 @@ class HetGnnModel(BaseUnsupervisedModel):
         self.init_weights()
 
     def init_weights(self):
+        """Set internal weights."""
         for m in self.modules():
             if isinstance(m, nn.Linear) or isinstance(m, nn.Parameter):
                 nn.init.xavier_normal_(m.weight.data)
                 m.bias.data.fill_(0.1)
 
     def get_score(self, context: dict):
+        """Calculate scores for central, positive and negative nodes."""
         c_out, p_out, n_out = self.aggregate_all(context)
         return c_out, p_out, n_out
 
     def aggregate_all(self, context: dict):
-        # split triples into:
-        # - central node list
-        # - positive node list
-        # - negtive node list
+        """Split triples into: central, positive and negative node lists."""
         c_agg, pos_agg, neg_agg = self.het_agg(context)
         return c_agg, pos_agg, neg_agg
 
     def het_agg(self, context: dict):
+        """Aggregate all neighbor nodes."""
         triple_index = int(context["triple_index"])
         # compute the node type based on the triple index.
         context["c"]["node_type"] = triple_index // self.node_type_count
@@ -99,7 +99,11 @@ class HetGnnModel(BaseUnsupervisedModel):
         return c_agg, p_agg, n_agg
 
     def node_het_agg(self, context: dict):
-        # aggregate neighbor nodes based on node type. this will call content aggregator(NN-1) inside
+        """
+        Aggregate neighbor nodes based on node type.
+
+        This will call content aggregator(NN-1) inside.
+        """
         agg_batch: List[Any] = [[]] * self.node_type_count
         for i in range(self.node_type_count):
             agg_batch[i] = self.node_neigh_agg(i, context["neigh_feats"][i])
@@ -145,11 +149,15 @@ class HetGnnModel(BaseUnsupervisedModel):
 
         return weight_agg_batch
 
-    # Heterogeneous gnn NN-2 implement. Aggregating all the neighbors of node grouped by node types
-    # using BiLSTM and mean pooling.
     def node_neigh_agg(
         self, node_type: int, neigh_feats: torch.Tensor
     ) -> torch.Tensor:  # type based neighbor aggregation with rnn
+        """
+        Heterogeneous gnn NN-2 implementation.
+
+        Aggregating all the neighbors of node grouped by node types
+        using BiLSTM and mean pooling.
+        """
         batch_s = int(neigh_feats.squeeze(0).shape[0] / self.neighbor_count)
 
         neigh_agg = self.content_agg(node_type, neigh_feats).view(
@@ -161,11 +169,14 @@ class HetGnnModel(BaseUnsupervisedModel):
         neigh_agg = torch.mean(all_state, 0).view(batch_s, self.embed_d)
         return neigh_agg
 
-    # Heterogeneous gnn NN-1 implement. Aggregating all the heterogeneous content of node using BiLSTM
-    # and mean pooling.
     def content_agg(
         self, node_type: int, feats: torch.Tensor
     ) -> torch.Tensor:  # heterogeneous content aggregation
+        """
+        Heterogeneous gnn NN-1 implement.
+
+        Aggregating all the heterogeneous content of node using BiLSTM and mean pooling.
+        """
         feature_list = feats.squeeze(0)  # self.features(torch.as_tensor(id_batch[0]))
         concate_embed = feature_list.view(feature_list.shape[0], 1, self.embed_d)
         concate_embed = torch.transpose(concate_embed, 0, 1)
@@ -174,6 +185,7 @@ class HetGnnModel(BaseUnsupervisedModel):
         return torch.mean(all_state, 0)
 
     def metric_name(self):
+        """Metric used for model evaluation."""
         return self.metric.name()
 
     def cross_entropy_loss(
@@ -183,6 +195,7 @@ class HetGnnModel(BaseUnsupervisedModel):
         neg_embed_batch: np.array,
         embed_d: int,
     ):
+        """Evaluate mean loss for all node types."""
         batch_size = c_embed_batch.shape[0] * c_embed_batch.shape[1]
 
         c_embed = c_embed_batch.view(batch_size, 1, embed_d)
@@ -202,6 +215,7 @@ class HetGnnModel(BaseUnsupervisedModel):
         return loss_sum.mean(), scores, labels
 
     def forward(self, context: dict):
+        """Calculate score based on inputs in the context and return loss."""
         feature_list = context["encoder"]
         inputs = context["inputs"]
         size_array = max([len(inputs[k]) for k in range(len(inputs))])
@@ -226,10 +240,12 @@ class HetGnnModel(BaseUnsupervisedModel):
         return self.cross_entropy_loss(c_out, p_out, n_out, self.embed_d)
 
     def get_embedding(self, context: dict):
+        """Calculate embedding."""
         context["encoder"]["node_type"] = int(context["node_type"])
         return self.node_het_agg(context["encoder"])
 
     def build_node_context(self, id_batch, graph):
+        """Fetch node features from graph."""
         context = {}
         neigh_batch = np.empty(
             (self.node_type_count, len(id_batch), self.neighbor_count), dtype=np.int64
@@ -256,6 +272,7 @@ class HetGnnModel(BaseUnsupervisedModel):
         return context
 
     def build_triple_context(self, triple_list_batch, graph):
+        """Fetch features for all node triples."""
         c_id_batch = triple_list_batch[:, 0]
         pos_id_batch = triple_list_batch[:, 1]
         neg_id_batch = triple_list_batch[:, 2]
@@ -269,6 +286,7 @@ class HetGnnModel(BaseUnsupervisedModel):
         return context
 
     def query(self, graph: Graph, inputs: List):
+        """Query graph for training data."""
         context = {"inputs": inputs}
         triple_context: List[Union[Dict, List]] = []
         for triple_index in range(len(inputs)):
@@ -284,6 +302,7 @@ class HetGnnModel(BaseUnsupervisedModel):
         return context
 
     def query_inference(self, graph: Graph, inputs: List):
+        """Query graph to generate embeddings."""
         context = {}
         context["inputs"] = inputs[:, 0]
         context["node_type"] = inputs[0][1]

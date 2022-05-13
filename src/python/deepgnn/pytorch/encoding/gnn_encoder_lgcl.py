@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Reference: https://dl.acm.org/doi/pdf/10.1145/3219819.3219947."""
 import torch
 import torch.nn as nn
 from deepgnn.pytorch.common.consts import (
@@ -12,6 +13,8 @@ from deepgnn.pytorch.common.consts import (
 
 
 class LgclEncoder(nn.Module):
+    """Encoder for learnable graph convolution nbetwork model."""
+
     OUTPUT = "lgcl_output"
     ADD_RES = "lgcl_add"
     LGCL_PREFIX = "lgcl"
@@ -24,6 +27,7 @@ class LgclEncoder(nn.Module):
         residual=MODEL_RESIDUAL_ADD,
         acts=None,
     ):
+        """Initialize encoder."""
         super(LgclEncoder, self).__init__()
 
         self.largest_k_list = largest_k_list
@@ -69,6 +73,7 @@ class LgclEncoder(nn.Module):
             )
 
     def forward(self, context: dict):
+        """Evaluate encoder."""
         samples = context[INPUTS]
         fanouts = context[FANOUTS]
 

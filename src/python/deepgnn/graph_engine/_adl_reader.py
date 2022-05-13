@@ -61,9 +61,7 @@ class AdlCredentialParser:
 
 
 class TextFileIterator:
-    """
-    Iterate lines from data lake gen1 files.
-    """
+    """Iterate lines from data lake gen1 files."""
 
     def __init__(
         self,

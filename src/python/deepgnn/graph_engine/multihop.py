@@ -1,9 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-"""
-Multihop neighbor sampling on graph.
-"""
+"""Multihop neighbor sampling on graph."""
 import numpy as np
 from typing import Tuple
 from deepgnn.graph_engine._base import Graph
@@ -51,7 +49,6 @@ def sample_fanout(
     types: A list of `np.array`s of `int32`, with shapes
         `[num_nodes * count1]`, `[num_nodes * count1 * count2]` ...
     """
-
     neighbors_list = [np.reshape(nodes, [-1])]
     weights_list = []
     types_list = []
