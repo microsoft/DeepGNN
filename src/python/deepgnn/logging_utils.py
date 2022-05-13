@@ -29,7 +29,10 @@ _logger_lock = threading.Lock()
 
 def get_current_user():
     """Get user name."""
-    return os.getenv("USER", socket.gethostbyname(socket.gethostname()), "unknown")
+    try:
+        return os.getenv("USER", socket.gethostbyname(socket.gethostname()))
+    except socket.error:
+        return "unknown"
 
 
 class AzureAppInsightFilter(logging.Filter):
@@ -125,8 +128,10 @@ def setup_default_logging_config(enable_telemetry: bool = False):
         # initialize logging config for default logger
         AzureAppInsightFilter.ENABLE_TELEMETRY = enable_telemetry
         logging.config.dictConfig(LOGGING)
-        if enable_telemetry:
+        try:
             add_azure_handler(LOG_NAME_DEEPGNN)
+        except ValueError:
+            AzureAppInsightFilter.ENABLE_TELEMETRY = False
 
     _init = True
 
