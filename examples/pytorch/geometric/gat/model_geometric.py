@@ -16,7 +16,7 @@ from torch_geometric.nn import GATConv
 
 @dataclass
 class GATQueryParameter:
-    """Confiruration for graph query."""
+    """Configuration for graph query."""
 
     neighbor_edge_types: np.array
     feature_idx: int
