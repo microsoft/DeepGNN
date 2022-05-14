@@ -225,7 +225,7 @@ def test_sage_supervised_identity_feature():
         inf_cmd = (
             f"python {mainfile} --gpu --eager --seed 123"
             + f" --model_dir {model_dir} --data_dir {data_dir}"
-            + " --mode inference --node_files {inf_file}"
+            + f" --mode inference --node_files {inf_file}"
             + " --batch_size 4"
             + " --neighbor_edge_types 0 --num_samples 5,5"
             + " --identity_feature True --all_node_count 50 --identity_dim 8 --label_idx 1 --label_dim 1"
