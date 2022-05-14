@@ -40,7 +40,7 @@ jobs:
       - name: Run tests
         uses: ./.github/actions/test
         with:
-          disk_cache: test-${{ github.base_ref }}-${{ matrix.os }}-${{ matrix.python-version }}
+          disk_cache: test-${{ matrix.os }}-${{ matrix.python-version }}
   benchmarks:
     needs: tests
     runs-on: "ubuntu-latest"
@@ -49,7 +49,7 @@ jobs:
       - name: Run benchmarks
         uses: ./.github/actions/benchmarks
         with:
-          disk_cache: benchmark-${{ github.base_ref }}-${{ matrix.os }}
+          disk_cache: benchmark-${{ matrix.os }}
   wheel:
     runs-on: ubuntu-20.04
     needs: tests

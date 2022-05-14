@@ -26,8 +26,8 @@ runs:
         path: ~/bazel-cache
         key: ${{ inputs.disk_cache }}
         restore-keys: |
-          test-${{ github.ref }}-${{ runner.os }}
-          test-${{ github.ref }}-
+          test-${{ runner.os }}-${{ github.ref }}
+          test-${{ runner.os }}
 
     - run: bazel test -c dbg //src/cc/tests:* --test_output=all --test_timeout 30 --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
       shell: bash
