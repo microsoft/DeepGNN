@@ -1,5 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+"""Convolution layers for sage models."""
 
 import tensorflow as tf
 from typing import Callable
@@ -9,6 +10,7 @@ from typing import List, Optional
 class MeanAggregator(tf.keras.layers.Layer):
     """
     Mean Aggregation for GraphSAGE.
+
     reference: https://github.com/williamleif/GraphSAGE/blob/a0fdef95dca7b456dab01cb35034717c8b6dd017/graphsage/aggregators.py#L6
     """
 
@@ -20,6 +22,7 @@ class MeanAggregator(tf.keras.layers.Layer):
         act: Optional[Callable] = tf.nn.relu,
         concat: bool = False,
     ):
+        """Initialize aggregator."""
         super().__init__()
         self.output_dim = output_dim
         self.dropout = dropout
@@ -27,7 +30,7 @@ class MeanAggregator(tf.keras.layers.Layer):
         self.act = act
         self.concat = concat
 
-        ## build
+        # build
         self.neigh_weight = tf.keras.layers.Dense(
             self.output_dim, use_bias=False, name="neigh_weights"
         )
@@ -44,6 +47,7 @@ class MeanAggregator(tf.keras.layers.Layer):
             )
 
     def call(self, inputs):
+        """Evaluate aggregator."""
         self_vecs, neig_vecs = inputs
 
         if self.dropout != 0.0:
@@ -72,6 +76,7 @@ class MeanAggregator(tf.keras.layers.Layer):
 class MaxPoolingAggregator(tf.keras.layers.Layer):
     """
     Max-pooling Aggregation for GraphSAGE.
+
     reference: https://github.com/williamleif/GraphSAGE/blob/a0fdef95dca7b456dab01cb35034717c8b6dd017/graphsage/aggregators.py#L119
     """
 
@@ -84,6 +89,7 @@ class MaxPoolingAggregator(tf.keras.layers.Layer):
         concat: bool = False,
         hidden_dim: int = 512,
     ):
+        """Initialize aggregator."""
         super().__init__()
         self.output_dim = output_dim
         self.hidden_dim = hidden_dim
@@ -111,6 +117,7 @@ class MaxPoolingAggregator(tf.keras.layers.Layer):
             )
 
     def call(self, inputs):
+        """Evaluate aggregator."""
         self_vecs, neig_vecs = inputs  # [N, in_dim], [N, num_nb, in_dim]
         neigh_h = neig_vecs
         if self.dropout != 0.0:
@@ -136,8 +143,9 @@ class MaxPoolingAggregator(tf.keras.layers.Layer):
 
 class LSTMAggregator(tf.keras.layers.Layer):
     """
-    LSTM Aggregation for GraphSAGE
-    reference: https://github.com/williamleif/GraphSAGE/blob/a0fdef95dca7b456dab01cb35034717c8b6dd017/graphsage/aggregators.py#L363
+    LSTM Aggregation for GraphSAGE.
+
+    Reference: https://github.com/williamleif/GraphSAGE/blob/a0fdef95dca7b456dab01cb35034717c8b6dd017/graphsage/aggregators.py#L363
     """
 
     def __init__(
@@ -149,6 +157,7 @@ class LSTMAggregator(tf.keras.layers.Layer):
         concat: bool = False,
         hidden_dim: int = 128,
     ):
+        """Initialize aggregator."""
         super().__init__()
         self.output_dim = output_dim
         self.hidden_dim = hidden_dim
@@ -175,6 +184,7 @@ class LSTMAggregator(tf.keras.layers.Layer):
         self.rnn = tf.keras.layers.RNN(self.lstm_cell, return_sequences=True)
 
     def call(self, inputs):
+        """Evaluate aggregator."""
         self_vecs, neig_vecs = inputs  # [N, in_dim], [N, num_nb, in_dim]
 
         used = tf.sign(tf.reduce_max(tf.abs(neig_vecs), axis=2))
@@ -204,7 +214,7 @@ class LSTMAggregator(tf.keras.layers.Layer):
         return output
 
 
-AGG_CLASS = {
+_AGG_CLASS = {
     "mean": MeanAggregator,
     "maxpool": MaxPoolingAggregator,
     "lstm": LSTMAggregator,
@@ -214,15 +224,15 @@ AGG_CLASS = {
 def init_aggregators(
     agg_type: str, layer_dims: List[int], dropout: float = 0.0, concat: bool = True
 ):
-    assert agg_type in AGG_CLASS, f"unknown agg_type: {agg_type}"
-    agg_class = AGG_CLASS[agg_type]
+    """Initialize aggregators based on type."""
+    assert agg_type in _AGG_CLASS, f"unknown agg_type: {agg_type}"
+    _agg_class = _AGG_CLASS[agg_type]
 
-    ## init aggregator
     agg_layers = []
     N = len(layer_dims)
     for layer in range(N):
         act = None if layer == N - 1 else tf.nn.relu
-        agg = agg_class(
+        agg = _agg_class(
             output_dim=layer_dims[layer], dropout=dropout, act=act, concat=concat
         )
         agg_layers.append(agg)
@@ -230,7 +240,7 @@ def init_aggregators(
 
 
 def aggregate(hidden, agg_layers, num_samples, dims, concat=True):
-    ## GraphSAGE aggregation
+    """SAGE aggregation."""
     N = len(num_samples)
     for layer in range(N):
         aggregator = agg_layers[layer]

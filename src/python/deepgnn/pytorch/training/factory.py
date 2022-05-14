@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Functions to start distributed training."""
+
 import argparse
 import torch
 from typing import Optional, Callable, List
@@ -15,6 +17,7 @@ from deepgnn.graph_engine.samplers import GENodeSampler, GEEdgeSampler
 
 
 def get_args(init_arg_fn: Optional[Callable] = None, run_args: Optional[List] = None):
+    """Parse command line arguments."""
     parser = argparse.ArgumentParser(allow_abbrev=False)
 
     # Initialize common parameters, including model, dataset, optimizer etc.
@@ -38,6 +41,7 @@ def get_args(init_arg_fn: Optional[Callable] = None, run_args: Optional[List] = 
 
 
 def get_trainer(args: argparse.Namespace) -> Trainer:
+    """Create trainer from command line arguments."""
     if args.trainer == TrainerType.BASE:
         return Trainer(args)
 

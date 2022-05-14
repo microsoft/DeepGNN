@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Options to initialize graph engine."""
 import argparse
 from typing import List
 from enum import Enum
@@ -9,15 +9,21 @@ from deepgnn.graph_engine.snark.client import PartitionStorageType
 
 
 class GraphType(Enum):
+    """Graph engine types."""
+
     LOCAL = "local"
     REMOTE = "remote"
 
     def __str__(self):
+        """Convert enum to string."""
         return self.value
 
 
 class BackendOptions:
+    """Options to start graph engine backend."""
+
     def __init__(self, params: argparse.Namespace):
+        """Initialize options from command line arguments."""
         self.backend = None
         self.data_dir = ""
         # local GE only for local debugging.

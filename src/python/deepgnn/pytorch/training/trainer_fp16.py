@@ -1,9 +1,9 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+"""Torch trainer with half precision floats."""
 
 import argparse
 import torch
-
 from torch.nn import Module
 from torch.optim import Optimizer
 from typing import Any, Optional, Dict
@@ -19,9 +19,10 @@ except ImportError:
 
 
 class FP16Trainer(Trainer):
-    """ "FP16Trainer supports FP16 mixed precision training with torch.amp or apex."""
+    """FP16Trainer supports FP16 mixed precision training with torch.amp or apex."""
 
     def __init__(self, args: argparse.Namespace):
+        """Initialize trainer with command line arguments."""
         assert args.fp16 != FP16_APEX or is_apex_available
         super().__init__(args)
 
@@ -116,4 +117,5 @@ class FP16Trainer(Trainer):
         return super()._inference_one_step_internal(model, data)
 
     def fp16_enabled(self):
+        """Check if trainer should use fp16 mode."""
         return self.args.gpu and self.args.fp16 != FP16_NO

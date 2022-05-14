@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Commmon functions to create datasets in TF."""
 from deepgnn import get_logger
 import tensorflow as tf
 from deepgnn.graph_engine.backends.common import GraphEngineBackend
@@ -19,6 +19,8 @@ def create_tf_dataset(
     # parameters to initialize samplers
     **kwargs,
 ):
+    """Create DeepGNNDataset."""
+
     def _get_tf_dtypes(tensor_list):
         tf_types = []
         for x in tensor_list:
@@ -71,7 +73,7 @@ def create_tf_dataset(
     # otherwise we can use None.
     try:
         length = len(dataset)
-    except:
+    except:  # noqa: E722
         # some of the samplers are unable to provide __len__ function
         length = None  # type: ignore
 
@@ -82,9 +84,11 @@ def create_tf_dataset(
 
 
 def get_distributed_dataset(func: Callable):
-    """Distribute_datasets_from_function is introduced in tensorflow 2.4, for
-    other tensorflow versions >= 2 and < 2.4, please use experimental_distribute_datasets_from_function
-    instead."""
+    """Generate distributed dataset from function.
+
+    Distribute_datasets_from_function is introduced in tensorflow 2.4. For other tensorflow versions >= 2 and < 2.4,
+    please use experimental_distribute_datasets_from_function instead.
+    """
     strategy = tf.distribute.get_strategy()
     if hasattr(strategy, "distribute_datasets_from_function"):
         distributed_dataset = strategy.distribute_datasets_from_function(func)

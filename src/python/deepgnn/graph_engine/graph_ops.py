@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Useful functions to work with graph that are not part of it's API."""
 import numpy as np
 from deepgnn.graph_engine import Graph, FeatureType
 
@@ -16,6 +16,7 @@ def sample_out_edges(
 ):
     """
     Get out edges for each nodes and edge features.
+
     e.g.: `src--(edge,type:1)-->dst`, return the out edge of `src` node is [src, dst, 1].
 
     Args:
@@ -39,10 +40,10 @@ def sample_out_edges(
     )
     assert nbrs.shape == (len(nodes), count)
 
-    ## edges shape: (#edge, 3)
-    ## - edges[:, 0]: src node.
-    ## - edges[:, 1]: dst node.
-    ## - edges[:, 2]: edge type.
+    # edges shape: (#edge, 3)
+    # - edges[:, 0]: src node.
+    # - edges[:, 1]: dst node.
+    # - edges[:, 2]: edge type.
     num_edges = len(nodes) * count
     edges = np.empty((num_edges, 3), dtype=np.int64)
     edges[:, 0] = np.repeat(nodes, count).reshape(-1)
@@ -56,6 +57,7 @@ def sample_out_edges(
 
 
 def get_skipgrams_size(path_len: int, left_win_size: int, right_win_size: int):
+    """Compute skipgrams size."""
     pair_count = 0
     assert path_len > 0
     for i in range(path_len):
@@ -66,7 +68,7 @@ def get_skipgrams_size(path_len: int, left_win_size: int, right_win_size: int):
 
 
 def gen_skipgrams(paths: np.ndarray, left_win_size: int, right_win_size: int):
-    """Generates skipgram word pairs."""
+    """Generate skipgram word pairs."""
     batch_size = paths.shape[0]
     path_len = paths.shape[1]
     pair_count = get_skipgrams_size(path_len, left_win_size, right_win_size)
@@ -75,7 +77,7 @@ def gen_skipgrams(paths: np.ndarray, left_win_size: int, right_win_size: int):
     idx = 0
     for i in range(0, batch_size):
         path = paths[i]
-        ## each path
+        # each path
         for j in range(0, path_len):
             left_start = max(0, j - left_win_size)
             right_end = min(path_len - 1, j + left_win_size)
@@ -124,7 +126,7 @@ def sub_graph(
     unodes = np.unique(nodes)
     nb, _, _, cnt = graph.neighbors(unodes, edge_types)
 
-    ## get all edges
+    # get all edges
     num_edges = np.sum(cnt)
     edges = np.zeros((num_edges, 2), np.int64)
     offset = 0
@@ -134,7 +136,7 @@ def sub_graph(
         offset += int(ucnt)
     edges[:, 1] = nb
 
-    ## use subgraph(edges) to build adj matrix.
+    # use subgraph(edges) to build adj matrix.
     all_nodes = np.concatenate([src_nodes, edges.reshape(-1)])
     unique_nodes, idx = np.unique(all_nodes, return_inverse=True)
     src_nodes_idx = idx[: src_nodes.size]
@@ -155,7 +157,7 @@ def sub_graph(
             edge_idx = np.concatenate([edge_idx, loop_edge])
 
         if self_loop or undirected:
-            ## remove duplicated edges
+            # remove duplicated edges
             edge_idx = np.unique(edge_idx, axis=0)
 
         return unique_nodes, edge_idx, src_nodes_idx
@@ -167,7 +169,7 @@ def sub_graph(
         if undirected:
             adj[edge_idx[:, 1], edge_idx[:, 0]] = 1
 
-        ## add self loop
+        # add self loop
         if self_loop:
             adj += np.eye(n)
 

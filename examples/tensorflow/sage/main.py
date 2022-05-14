@@ -28,7 +28,7 @@ def define_param_algo(parser):
     parser.add_argument("--epochs", type=int, default=10, help="num of epochs for training")
     parser.add_argument("--learning_rate", type=float, default=0.01, help="learning rate")
 
-    ## GraphSAGE Model Parameters.
+    # GraphSAGE Model Parameters.
     parser.add_argument("--agg_type", type=str, default="mean", choices=["mean", "maxpool", "lstm"], help="aggregate functions.")
     parser.add_argument("--layer_dims", type=str2list_int, default="128,128", help="the output dimention for each layer (if concat=True, final dimension is 2x).")
     parser.add_argument("--num_classes", type=int, default=-1, help="number of classes for category")
@@ -38,7 +38,7 @@ def define_param_algo(parser):
     parser.add_argument("--identity_dim", type=int, default=-1, help="Set to positive value to use identity embedding features of that dimension.",)
     parser.add_argument("--all_node_count", type=int, default=0, help="All node count in graph.")
 
-    ## Node Sampler Setting:
+    # Node Sampler Setting:
     parser.add_argument("--node_files", type=str, default=None, help="if not None, use FileNodeSampler.")
     parser.add_argument("--node_types", type=str2list_int, default="0", help="if `node_files` is None, use GENodeSampler.")
 

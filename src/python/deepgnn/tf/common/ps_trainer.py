@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Distributed training with parameter server(s)."""
 import tensorflow as tf
 import logging
 
@@ -10,6 +10,8 @@ from deepgnn.tf.common.trainer import BaseTFTrainer
 
 
 class PSTrainer(BaseTFTrainer):
+    """TF trainer implementation for PS."""
+
     def __init__(
         self,
         trainer: TrainerType,
@@ -28,6 +30,7 @@ class PSTrainer(BaseTFTrainer):
         checkpoint_save_secs: int = 3600,
         logger: logging.Logger = None,
     ):
+        """Initialize trainer."""
         super().__init__(
             model_dir=model_dir,
             seed=seed,
@@ -50,17 +53,17 @@ class PSTrainer(BaseTFTrainer):
 
         self.tfserver, self.cluster = None, None
         if self.__is_worker() or self.__is_parameter_server():
-            ## distributed job will set job_name.
+            # distributed job will set job_name.
             self.tfserver, self.cluster = self.__get_dist_training_server()
 
         if self.__is_parameter_server():
-            ## parameter server will join here and never exits.
+            # parameter server will join here and never exits.
             tf.compat.v1.logging.info(
                 "parameter servier {}-{} starts".format(self.job_name, self.task_index)
             )
             self.__ps_join()
 
-        ## MonitoredTrainingSession parameters.
+        # MonitoredTrainingSession parameters.
         self.is_chief = self.task_index == 0
         self.session_target = self.tfserver.target if self.tfserver is not None else ""
         self.checkpoint_dir = self.model_dir
@@ -74,6 +77,7 @@ class PSTrainer(BaseTFTrainer):
         self.parameter_server_num = len(self.ps_hosts)  # type: ignore
 
     def tf_device(self):
+        """Get current device."""
         return tf.compat.v1.device(
             tf.compat.v1.train.replica_device_setter(
                 cluster=self.cluster,

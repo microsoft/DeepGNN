@@ -5,7 +5,8 @@ import pytest
 import tempfile
 import time
 import numpy.testing as npt
-import os, sys
+import os
+import sys
 import torch
 import numpy as np
 

@@ -1,8 +1,10 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import sys, pytest
-import tempfile, logging
+import sys
+import pytest
+import tempfile
+import logging
 import os
 import numpy as np
 
@@ -82,7 +84,7 @@ def run_citation_graph_test(
             f"python {mainfile} --mode inference --seed 123 --model_dir {model_dir} --data_dir {dataset.data_dir()}"
             + eager_param
             + " --batch_size 10"
-            + f" --inf_min_id 0 --inf_max_id 123"
+            + " --inf_min_id 0 --inf_max_id 123"
             + f" --neighbor_edge_types 0 --dropout 0.0 {hyper_param}"
             + f" --feature_idx 0 --feature_dim {dataset.FEATURE_DIM}"
             + f" --label_idx 1 --label_dim 1 --num_classes {dataset.NUM_CLASSES} --prefetch_worker_size 1 --log_save_steps 1"

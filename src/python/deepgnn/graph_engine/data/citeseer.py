@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Citeseer dataset."""
 import argparse
 import os
 from collections import defaultdict
@@ -11,6 +11,7 @@ from typing import List, Tuple, Dict, Set, DefaultDict
 class CiteseerFull(Dataset):
     """
     The citation network datasets "citeseer".
+
     Args:
       output_dir (string): file directory for graph data.
       train_node_ratio (float): the ratio of training nodes.
@@ -33,6 +34,7 @@ class CiteseerFull(Dataset):
         random_selection: bool = False,
         url="https://deepgraphpub.blob.core.windows.net/public/testdata/citeseer.tgz",
     ):
+        """Initialize dataset."""
         super().__init__(
             name="citeseer_full",
             num_nodes=3312,

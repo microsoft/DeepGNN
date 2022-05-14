@@ -1,30 +1,33 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Main entry point to create TF trainers."""
 from deepgnn import TrainerType, get_logger
 
 
 def get_trainer(param):
+    """Create trainer from command line arguments."""
     if param.eager:
-        ## Current TF2 Trainer only use 2.x code.
-        ## * no v1.Session, placeholder.
-        ## * use for-loop to access dataset.
+        # Current TF2 Trainer only use 2.x code.
+        # * no v1.Session, placeholder.
+        # * use for-loop to access dataset.
         return _get_tf2_trainer(param)
     else:
-        ## TF1Trainer will disable v2 behavior(`tf.disable_v2_behavior()`),
-        ## It use `tf.compat.v1` to manage session and dataset, and other 1.x-style functionality.
-        ## As Tensorflow 2.x support `tf.compat.v1` API, we can still run TF1Trainer in Tensorflow 2.x.
+        # TF1Trainer will disable v2 behavior(`tf.disable_v2_behavior()`),
+        # It use `tf.compat.v1` to manage session and dataset, and other 1.x-style functionality.
+        # As Tensorflow 2.x support `tf.compat.v1` API, we can still run TF1Trainer in Tensorflow 2.x.
         return _get_tf1_trainer(param)
 
 
 def _get_tf1_trainer(param):
     """
-    Supported Trainer:
+    Crete a TF trainer.
+
+    Supported:
       * PSTrainer (parameter server)
       * HorovodTFTrainer
     """
     if param.trainer == TrainerType.HVD:
-        ## Only import hvd_trainer if needed as docker images may not install horovod.
+        # Only import hvd_trainer if needed as docker images may not install horovod.
         from deepgnn.tf.common.horovod_trainer import HorovodTFTrainer
 
         return HorovodTFTrainer(

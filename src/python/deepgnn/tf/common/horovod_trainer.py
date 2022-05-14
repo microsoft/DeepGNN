@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Distributed training with horovod."""
 import logging
 import tensorflow as tf
 from typing import List, Union, Callable
@@ -13,6 +13,8 @@ import horovod.tensorflow as hvd
 
 
 class HorovodTFTrainer(BaseTFTrainer):
+    """Distributed training with horovod."""
+
     def __init__(
         self,
         trainer: TrainerType,
@@ -27,6 +29,7 @@ class HorovodTFTrainer(BaseTFTrainer):
         checkpoint_save_secs: int = 3600,
         logger: logging.Logger = None,
     ):
+        """Initialize horovod for training."""
         super().__init__(
             model_dir=model_dir,
             seed=seed,
@@ -46,12 +49,12 @@ class HorovodTFTrainer(BaseTFTrainer):
         self.worker_size = hvd.size()
         self.lr_scaler = hvd.size()
 
-        ## Hovovod: tf.train.MonitoredTrainingSession: https://github.com/horovod/horovod/blob/master/docs/tensorflow.rst
-        ## * is_chief: True
-        ## * master(session_target): ""
-        ## * checkpoint_dir: accomplish this by passing checkpoint_dir=None to tf.train.MonitoredTrainingSession if hvd.rank() != 0.
-        ##    - training: DeepGNN use ChiefCheckpointSaverHook, rather than a default CheckpointSaverHook.
-        ##    - evaluate/inference: DeepGNN set checkpoint_dir=None if hvd.rank() != 0.
+        # Hovovod: tf.train.MonitoredTrainingSession: https://github.com/horovod/horovod/blob/master/docs/tensorflow.rst
+        # * is_chief: True
+        # * master(session_target): ""
+        # * checkpoint_dir: accomplish this by passing checkpoint_dir=None to tf.train.MonitoredTrainingSession if hvd.rank() != 0.
+        #    - training: DeepGNN use ChiefCheckpointSaverHook, rather than a default CheckpointSaverHook.
+        #    - evaluate/inference: DeepGNN set checkpoint_dir=None if hvd.rank() != 0.
         self.checkpoint_dir = (
             self.model_dir if self.task_index == 0 else None  # type: ignore
         )
@@ -77,10 +80,7 @@ class HorovodTFTrainer(BaseTFTrainer):
         epochs: int = 1,
         steps_per_epoch: int = None,
     ):
-        """
-        HorovodTFTrainer.train(), please override it if needed.
-        * Wrap the optimizer in hvd.DistributedOptimizer.
-        """
+        """Wrap the optimizer in hvd.DistributedOptimizer."""
         hvd_optimizer = hvd.DistributedOptimizer(optimizer)
         super().train(
             dataset=dataset,
@@ -100,9 +100,7 @@ class HorovodTFTrainer(BaseTFTrainer):
         output_embedding_file_prefix: str = "embedding",
         steps: int = None,
     ):
-        """
-        HorovodTFTrainer.inference(), please override it if needed.
-        """
+        """Passthrough to the parent."""
         super().inference(
             dataset, model, embedding_to_str_fn, output_embedding_file_prefix, steps
         )
@@ -116,18 +114,13 @@ class HorovodTFTrainer(BaseTFTrainer):
         _: List[tf.keras.callbacks.Callback] = None,
         steps: int = None,
     ):
-        """
-        HorovodTFTrainer.evaluate(), please override it if needed.
-        """
+        """Passthrough to the parent."""
         super().evaluate(dataset, model, loss=loss, metrics=metrics, steps=steps)
 
     def _setup_training_hooks(
         self, task_index, checkpoint_dir, global_step, loss, metrics, dist_sync=None
     ):
-        """
-        Override BaseTFTrainer._setup_training_hooks().
-        - add hvd.BroadcastGlobalVariablesHook(0) for model variables initliazation.
-        """
+        """Add hvd.BroadcastGlobalVariablesHook(0) for model variables initliazation."""
         hooks, chiefhooks = super()._setup_training_hooks(
             self.task_index,
             self.checkpoint_dir,
@@ -140,10 +133,7 @@ class HorovodTFTrainer(BaseTFTrainer):
         return hooks, chiefhooks
 
     def _setup_inference_hooks(self, task_index, global_step, dist_sync=None):
-        """
-        Override BaseTFTrainer._setup_inference_hooks().
-        - add hvd.BroadcastGlobalVariablesHook(0) for model variables initliazation.
-        """
+        """Add hvd.BroadcastGlobalVariablesHook(0) for model variables initliazation."""
         hooks = super()._setup_inference_hooks(
             self.task_index, global_step, dist_sync=self.dist_sync
         )
@@ -151,10 +141,7 @@ class HorovodTFTrainer(BaseTFTrainer):
         return hooks
 
     def _setup_eval_hooks(self, task_index, global_step, loss, metrics, dist_sync=None):
-        """
-        Override BaseTFTrainer._setup_eval_hooks().
-        - add hvd.BroadcastGlobalVariablesHook(0) for model variables initliazation.
-        """
+        """Add hvd.BroadcastGlobalVariablesHook(0) for model variables initliazation."""
         hooks = super()._setup_eval_hooks(
             self.task_index, global_step, loss, metrics, self.dist_sync
         )

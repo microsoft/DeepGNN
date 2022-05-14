@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Cora dataset."""
 import argparse
 import os
 from collections import defaultdict
@@ -11,6 +11,7 @@ from deepgnn.graph_engine.data.data_util import Dataset, select_training_test_no
 class CoraFull(Dataset):
     """
     The citation network datasets "Cora".
+
     Args:
       output_dir (string): file directory for graph data.
       train_node_ratio (float): the ratio of training nodes.
@@ -33,6 +34,7 @@ class CoraFull(Dataset):
         random_selection: bool = False,
         url="https://deepgraphpub.blob.core.windows.net/public/testdata/cora.tgz",
     ):
+        """Initialize dataset."""
         super().__init__(
             name="cora_full",
             num_nodes=2708,

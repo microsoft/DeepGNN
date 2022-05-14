@@ -56,7 +56,8 @@ runs:
         path: ~/bazel-cache
         key: ${{ inputs.disk_cache }}
         restore-keys: |
-          wheel-${{ github.ref }}-${{ runner.os }}
+          wheel-${{ runner.os }}-${{ github.ref }}
+          wheel-${{ runner.os }}
 
     - run: bazel build -c opt //src/cc/lib:wrapper --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
       shell: bash

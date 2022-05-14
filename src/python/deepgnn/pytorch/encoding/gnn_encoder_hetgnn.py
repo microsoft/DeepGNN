@@ -1,12 +1,18 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Encoder for HetGNN model."""
 import torch
 import torch.nn as nn
 from deepgnn.pytorch.common.consts import INPUTS, FANOUTS
 
 
 class HetGnnEncoder(nn.Module):
+    """
+    HetGNN encoder.
+
+    Reference: https://dl.acm.org/doi/pdf/10.1145/3292500.3330961
+    """
+
     CUSTOM_LAYER = "hetGNN_custom_layer"
     BILSTM_LAYER = "hetGNN_bilstm"
     OUTPUT_LAYER = "hetGNN_out"
@@ -14,6 +20,7 @@ class HetGnnEncoder(nn.Module):
     NODE_LAYER = "hetGNN_node"
 
     def __init__(self, in_features, hidden_dims, fanouts, encoders=None, acts=None):
+        """Initialize encoder."""
         super(HetGnnEncoder, self).__init__()
 
         self.hidden_dims = hidden_dims
@@ -47,6 +54,7 @@ class HetGnnEncoder(nn.Module):
                 self.add_module(f"{HetGnnEncoder.ATT_LAYER}", nn.Linear(outDim * 2, 1))
 
     def forward(self, context: dict):
+        """Evaluate encoder."""
         samples = context[INPUTS]
 
         if len(self.fanouts) == 0:

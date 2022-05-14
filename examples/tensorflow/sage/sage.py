@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""GraphSAGE models implementations."""
 import numpy as np
 import tensorflow as tf
 import tensorflow_addons as tfa
@@ -14,6 +14,8 @@ from deepgnn.graph_engine import Graph, FeatureType
 
 @dataclass
 class LayerInfo:
+    """Layer configuration."""
+
     num_samples: int
     neighbor_edge_types: np.array
     strategy: str
@@ -21,6 +23,8 @@ class LayerInfo:
 
 @dataclass
 class SAGEQueryParameter:
+    """Query configuration for sage models."""
+
     layer_infos: List[LayerInfo]
     feature_idx: int
     feature_dim: int
@@ -35,6 +39,7 @@ class SAGEQuery:
     """GraphSAGE Query."""
 
     def __init__(self, param: SAGEQueryParameter):
+        """Initialize query."""
         self.param = param
         self.label_meta = np.array([[param.label_idx, param.label_dim]], np.int32)
         self.feat_meta = np.array([[param.feature_idx, param.feature_dim]], np.int32)
@@ -48,7 +53,8 @@ class SAGEQuery:
     ):
         """
         GraphSAGE: Sample neighbors for multi-layer convolutions.
-        reference:https://github.com/williamleif/GraphSAGE/blob/a0fdef95dca7b456dab01cb35034717c8b6dd017/graphsage/models.py#L254
+
+        Reference:https://github.com/williamleif/GraphSAGE/blob/a0fdef95dca7b456dab01cb35034717c8b6dd017/graphsage/models.py#L254
         """
         neighbor_list = [inputs]
         support_size = 1
@@ -88,6 +94,7 @@ class SAGEQuery:
     def query_training(
         self, graph: Graph, inputs: np.array, return_shape: bool = False
     ):
+        """Fetch training data from graph."""
         # fmt: off
         seed_nodes = inputs
         all_nodes, neighbor_list_idx = self._query_neighbor(graph, seed_nodes)
@@ -124,6 +131,8 @@ class SAGEQuery:
 
 
 class GraphSAGE(tf.keras.Model):
+    """Base GraphSAGE model."""
+
     def __init__(
         self,
         in_dim,
@@ -137,6 +146,7 @@ class GraphSAGE(tf.keras.Model):
         identity_embed_shape: List[int] = None,
         concat: bool = True,
     ):
+        """Initialize model."""
         super().__init__()
         # fmt: off
         assert len(layer_dims) == len(num_samples), f"layer_dim {layer_dims}, num_samplers {num_samples}"
@@ -156,7 +166,7 @@ class GraphSAGE(tf.keras.Model):
             agg_type, layer_dims, dropout, self.concat
         )
 
-        ## use identity features
+        # use identity features
         if self.identity_embed_shape is not None:
             self.max_id = identity_embed_shape[0] - 1
             with tf.name_scope("op"):
@@ -172,10 +182,12 @@ class GraphSAGE(tf.keras.Model):
         self.f1_macro = tfa.metrics.F1Score(num_classes=num_classes, average="macro")
 
     def reset_metric_states(self):
+        """Reset metric states."""
         self.f1_macro.reset_states()
         self.f1_micro.reset_states()
 
     def call(self, inputs, training=True):
+        """Return input tensors, loss and metric values."""
         # fmt: off
         if self.identity_embed_shape is None:
             nodes, feat, label = inputs[0:3]
@@ -192,28 +204,28 @@ class GraphSAGE(tf.keras.Model):
             hidden, self.aggs, self.num_samples, self.dims, self.concat
         )
 
-        ## output layer
+        # output layer
         output = tf.nn.l2_normalize(output, 1)
 
         if self.dropout != 0.0:
             output = tf.nn.dropout(output, rate=self.dropout)
         node_preds = self.pred_layer(output)
 
-        ## embedding results
+        # embedding results
         src_nodes_idx = neighbor_list[0]
         self.src_nodes = tf.nn.embedding_lookup(nodes, src_nodes_idx)
         self.src_emb = node_preds
 
         if label.shape[1] == 1 and self.num_classes != 1:
-            ## The label_dim of the cora datasets is 1, and num_classes is not 1.
-            ## Here is to convert label to one hot vector if label_dim is 1.
+            # The label_dim of the cora datasets is 1, and num_classes is not 1.
+            # Here is to convert label to one hot vector if label_dim is 1.
             label = tf.cast(label, tf.int32)
             label = tf.one_hot(label, self.num_classes)
             label = tf.reshape(label, [-1, self.num_classes])
 
         loss, pred = self.calc_loss(node_preds, label)
 
-        ## update metrics
+        # update metrics
         acc = self.calc_accuracy(pred, label)
         self.f1_macro.update_state(label, pred)
         self.f1_micro.update_state(label, pred)
@@ -229,6 +241,7 @@ class GraphSAGE(tf.keras.Model):
         )
 
     def calc_accuracy(self, preds, labels):
+        """Caluclate prediction accuracy."""
         if self.loss_name == "sigmoid":
             correct_prediction = tf.equal(preds, labels)
         else:
@@ -239,7 +252,7 @@ class GraphSAGE(tf.keras.Model):
         return acc
 
     def calc_loss(self, node_preds, label):
-        ## classification loss
+        """Classification loss."""
         if self.loss_name == "sigmoid":
             logits = tf.nn.sigmoid_cross_entropy_with_logits(
                 logits=node_preds, labels=label
@@ -264,7 +277,7 @@ class GraphSAGE(tf.keras.Model):
         return l2_loss
 
     def train_step(self, data: dict):
-        """override base train_step."""
+        """Override base train_step."""
         with tf.GradientTape() as tape:
             _, loss, metrics = self(data, training=True)
 
@@ -275,13 +288,13 @@ class GraphSAGE(tf.keras.Model):
         return result
 
     def test_step(self, data: dict):
-        """override base test_step."""
+        """Override base test_step."""
         _, loss, metrics = self(data, training=False)
         result = {"loss": loss}
         result.update(metrics)
         return result
 
     def predict_step(self, data: dict):
-        """override base predict_step."""
+        """Override base predict_step."""
         self(data, training=False)
         return [self.src_nodes, self.src_emb]

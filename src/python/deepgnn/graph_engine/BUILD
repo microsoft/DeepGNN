@@ -13,7 +13,6 @@ py_library(
         "_base.py",
         "adl_uploader.py",
         "graph_dataset.py",
-        "graph_fs.py",
         "graph_ops.py",
         "multihop.py",
         "prefetch.py",

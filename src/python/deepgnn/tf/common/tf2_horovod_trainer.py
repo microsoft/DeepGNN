@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Distributed training with horovod."""
 import time
 import tensorflow as tf
 import logging
@@ -15,6 +15,8 @@ import horovod.tensorflow.keras as hvd
 
 
 class HorovodEagerTrainer(EagerTrainer):
+    """Train models in eager mode."""
+
     def __init__(
         self,
         trainer: TrainerType,
@@ -29,6 +31,7 @@ class HorovodEagerTrainer(EagerTrainer):
         profile_batch: List[int] = [100, 100],
         logger: logging.Logger = None,
     ):
+        """Initialize trainer."""
         hvd.init()
         super().__init__(
             model_dir=model_dir,

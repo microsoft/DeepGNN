@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Prefetch query data in multithreaded queue."""
 import sys
 import traceback
 import numpy as np
@@ -21,7 +21,10 @@ DEFAULT_THREAD_POOL_QUEUE_SIZE = 20
 
 
 class BoundedExecutor:
+    """Executes model queries in a thread pool."""
+
     def __init__(self, max_workers=None, bound=DEFAULT_THREAD_POOL_QUEUE_SIZE):
+        """Initialize executor."""
         if bound <= 0:
             bound = DEFAULT_THREAD_POOL_QUEUE_SIZE
         if max_workers is not None and max_workers > 0 and max_workers > bound:
@@ -31,17 +34,20 @@ class BoundedExecutor:
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
 
     def __enter__(self):
+        """Start executor."""
         return self
 
     def __exit__(self, type, value, traceback):
+        """Stop executor."""
         self.shutdown(wait=True)
         return False
 
     def submit(self, fn, *args, **kwargs):
+        """Submit function to a pool."""
         self.semaphore.acquire()
         try:
             future = self.executor.submit(fn, *args, **kwargs)
-        except:
+        except RuntimeError:
             self.semaphore.release()
             raise
         else:
@@ -49,16 +55,17 @@ class BoundedExecutor:
             return future
 
     def shutdown(self, wait=True):
+        """Shutdown executor."""
         self.executor.shutdown(wait)
 
 
 def remove_threadpool_exit_handler():
-    # Issue: if main thread throw exception, trainer will never exits becuase prefetch threads are keep running and waiting.
-    # ThreadPoolExecutor added an exit handler, which will wait until all threads finish.
-    # for more details, see here: https://github.com/python/cpython/blob/7df32f844efed33ca781a016017eab7050263b90/Lib/concurrent/futures/thread.py#L26
+    """Remove threadpool exit handler.
 
-    # Workaround: remove threadpool exit handler.
-
+    Issue: if main thread throw exception, trainer will never exits becuase prefetch threads are keep running and waiting.
+    ThreadPoolExecutor added an exit handler, which will wait until all threads finish.
+    for more details, see here: https://github.com/python/cpython/blob/7df32f844efed33ca781a016017eab7050263b90/Lib/concurrent/futures/thread.py#L26
+    """
     atexit.unregister(concurrent.futures.thread._python_exit)
 
 
@@ -74,17 +81,14 @@ def _produce_func(
     stop_event: Event = None,
     collate_fn: Callable = None,
 ):
-    """
-    Produce examples for prefetch.
-    """
-
+    """Produce examples for prefetch."""
     with BoundedExecutor(max_workers=max_workers) as pool:
 
         def process(inputs):
             try:
                 graph_tensor = model_query_fn(graph, inputs)
                 outputs.put(graph_tensor)
-            except:
+            except:  # noqa: E722
                 traceback.print_exc(file=sys.stdout)
                 outputs.put(FetchDone(exception=traceback.format_exc()))
                 pool.shutdown(wait=False)
@@ -102,7 +106,7 @@ def _produce_func(
                 count += 1
                 pool.submit(process, sample)
             outputs.put(FetchDone(count))
-        except:
+        except:  # noqa: E722
             traceback.print_exc(file=sys.stdout)
             outputs.put(FetchDone(count, traceback.format_exc()))
             raise
@@ -131,9 +135,7 @@ def _produce(
 # TODO(alsamylk): rebalance load between workers with a global step count
 # TODO(alsamylk): rebalance load inside a worker: optimize queues and queries.
 class Generator:
-    """
-    Generates query results from the context by organizing a publisher/subscriber queue.
-    """
+    """Generates query results from the context by organizing a publisher/subscriber queue."""
 
     def __init__(
         self,
@@ -145,6 +147,7 @@ class Generator:
         max_workers: int = 1,
         collate_fn: Callable = None,
     ):
+        """Initialize generator."""
         self.count = 0
         self.index = 0
         self.outputs: Queue[Tuple[np.array]] = Queue(prefetch_size)
@@ -174,13 +177,15 @@ class Generator:
             self.workers.append(f)
 
     def __iter__(self):
+        """No-op."""
         return self
 
     def __del__(self):
+        """Join processing threads."""
         self.join()
 
-    # parse the queue and get the "count" queue item and use it to decide terminate the iteration or not.
     def __next__(self):
+        """Parse the queue and get the "count" queue item. Use it to decide terminate the iteration or not."""
         if self.count > 0 and self.index == self.count + 1:
             raise StopIteration
 
@@ -207,6 +212,7 @@ class Generator:
             self.outputs.task_done()
 
     def join(self):
+        """Shutdown threadpool."""
         if not threading.main_thread().is_alive():
             self.pool.shutdown(wait=False)
         else:

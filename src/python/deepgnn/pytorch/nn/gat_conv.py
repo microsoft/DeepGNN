@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Modules for GAT models."""
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -8,9 +8,7 @@ from typing import Callable
 
 
 class AttnHead(nn.Module):
-    """
-    Attention Header: https://github.com/PetarV-/GAT/blob/master/utils/layers.py
-    """
+    """Attention Header: https://github.com/PetarV-/GAT/blob/master/utils/layers.py."""
 
     def __init__(
         self,
@@ -21,6 +19,8 @@ class AttnHead(nn.Module):
         coef_drop: float = 0.0,
     ):
         """
+        Initialize Attention Header.
+
         Args:
           * in_dim: input feature dimension
           * out_dim: output feature dimension.
@@ -38,10 +38,11 @@ class AttnHead(nn.Module):
         self.w = nn.Linear(self.in_dim, self.out_dim, bias=False)
         self.attn_l = nn.Linear(self.out_dim, 1)
         self.attn_r = nn.Linear(self.out_dim, 1)
-        ## TODO: add bias
+        # TODO: add bias
         self.bias = nn.Parameter(torch.zeros(self.out_dim))
 
     def forward(self, feat, adj):
+        """Evaluate module."""
         # feat: [N, F], adj: [N, N]
         if self.training:
             feat = self.in_drop(feat)
@@ -51,9 +52,9 @@ class AttnHead(nn.Module):
         f_2 = self.attn_r(seq_fts)  # [N, 1]
 
         if adj.is_sparse:
-            vals = self.call_sparse_version(seq_fts, f_1, f_2, adj)
+            vals = self._call_sparse_version(seq_fts, f_1, f_2, adj)
         else:
-            vals = self.call_dense_version(seq_fts, f_1, f_2, adj)
+            vals = self._call_dense_version(seq_fts, f_1, f_2, adj)
 
         ret = vals + self.bias  # [N, F'], broadcast bias
         if self.act is None:
@@ -61,7 +62,7 @@ class AttnHead(nn.Module):
         else:
             return self.act(ret)
 
-    def call_dense_version(self, seq_fts, f_1, f_2, adj):
+    def _call_dense_version(self, seq_fts, f_1, f_2, adj):
         bias_mat = -1e9 * (1.0 - adj)
         logits = f_1 + f_2.transpose(1, 0)  # [N, N]-broadcasting
         assert logits.shape[0] == logits.shape[1]
@@ -74,7 +75,7 @@ class AttnHead(nn.Module):
         vals = torch.matmul(coefs, seq_fts)  # [N, F']
         return vals
 
-    def call_sparse_version(self, seq_fts, f_1, f_2, adj):
+    def _call_sparse_version(self, seq_fts, f_1, f_2, adj):
         indices = adj._indices()
         adj_shape = adj.shape
         row = indices[0]
@@ -95,7 +96,7 @@ class AttnHead(nn.Module):
 
 
 class GATConv(nn.Module):
-    """Graph Attention Conv Layer"""
+    """Graph Attention Convolution Layer."""
 
     def __init__(
         self,
@@ -108,6 +109,8 @@ class GATConv(nn.Module):
         attn_aggregate: str = "concat",
     ):
         """
+        Initialize GAT convolution layer.
+
         Args:
           * in_dim: input feature dimension
           * out_dim: output feature dimension.
@@ -143,6 +146,7 @@ class GATConv(nn.Module):
             self.add_module(f"att_head-{i}", self.headers[i])
 
     def forward(self, feat, bias_mat):
+        """Evaluate module."""
         attns = []
         for i in range(self.attn_heads):
             v = self.headers[i](feat, bias_mat)
@@ -150,7 +154,7 @@ class GATConv(nn.Module):
         if self.attn_aggregate == "concat":
             h_1 = torch.cat(attns, -1)
         elif self.attn_aggregate == "average":
-            ## attns: [[N, F'], [N, F']...]
+            # attns: [[N, F'], [N, F']...]
             h_1 = torch.stack(attns)  # [attn_heads, N, F']
             h_1 = h_1.sum(dim=0) / self.attn_heads  # [N, F']
         return h_1

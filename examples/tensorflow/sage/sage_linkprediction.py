@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Graphsage models to solve link prediction problem."""
 import numpy as np
 import tensorflow as tf
 
@@ -13,14 +13,16 @@ from sage import SAGEQuery, SAGEQueryParameter
 
 
 class SAGELinkPredictionQuery(SAGEQuery):
-    """GraphSAGE Query for edges."""
+    """GraphSAGE query for edges."""
 
     def __init__(self, param: SAGEQueryParameter):
+        """Initialize query."""
         super().__init__(param)
 
     def query_training(
         self, graph: Graph, inputs: np.array, return_shape: bool = False
     ):
+        """Fetch data to train model."""
         # fmt: off
         seed_edges = inputs  # [Batch_size, 3]
         src_nodes, dst_nodes = seed_edges[:, 0], seed_edges[:, 1]
@@ -55,7 +57,8 @@ class SAGELinkPredictionQuery(SAGEQuery):
     def query_inference(
         self, graph: Graph, inputs: np.array, return_shape: bool = False
     ):
-        """inference `inputs` is different with train `inputs`.
+        """Inference `inputs` is different with train `inputs`.
+
         * for training job, `inputs` are edges.
         * for inference job, `inputs` are nodes.
         """
@@ -83,6 +86,8 @@ class SAGELinkPredictionQuery(SAGEQuery):
 
 
 class GraphSAGELinkPrediction(tf.keras.Model):
+    """GraphSAGE model for link predcition."""
+
     def __init__(
         self,
         in_dim,
@@ -94,6 +99,7 @@ class GraphSAGELinkPrediction(tf.keras.Model):
         identity_embed_shape: List[int] = None,
         concat: bool = True,
     ):
+        """Initialize model."""
         super().__init__()
         self.logger = get_logger()
         # fmt: off
@@ -109,12 +115,12 @@ class GraphSAGELinkPrediction(tf.keras.Model):
         self.inference_node = None
 
         # fmt: off
-        ## init src|dst aggregate layer.
+        # init src|dst aggregate layer.
         self.src_aggs = sage_conv.init_aggregators(agg_type, layer_dims, dropout, self.concat)
         self.dst_aggs = sage_conv.init_aggregators(agg_type, layer_dims, dropout, self.concat)
         # fmt: on
 
-        ## use identity features
+        # use identity features
         if self.identity_embed_shape is not None:
             self.max_id = identity_embed_shape[0] - 1
             with tf.name_scope("op"):
@@ -128,19 +134,21 @@ class GraphSAGELinkPrediction(tf.keras.Model):
         self.auc = tf.keras.metrics.AUC(name="auc")
 
     def set_inference_node(self, node: str):
+        """Fix inference node."""
         assert node in ["src", "dst"]
         self.inference_node = node
 
     def inference(self, inputs):
+        """Calculate embeddings."""
         nodes = inputs[0]
         neighbor_list = inputs[1:]
         valid_nodes = tf.where(nodes >= 0, nodes, tf.ones_like(nodes) * self.max_id)
         feat = tf.nn.embedding_lookup(self.node_emb, tf.reshape(valid_nodes, [-1]))
 
         if self.inference_node == "src":
-            emb = self.sage_embeding(feat, neighbor_list, self.src_aggs)
+            emb = self._sage_embeding(feat, neighbor_list, self.src_aggs)
         else:
-            emb = self.sage_embeding(feat, neighbor_list, self.dst_aggs)
+            emb = self._sage_embeding(feat, neighbor_list, self.dst_aggs)
 
         input_nodes_idx = neighbor_list[0]
         self.node_ids = tf.nn.embedding_lookup(nodes, input_nodes_idx)
@@ -148,7 +156,7 @@ class GraphSAGELinkPrediction(tf.keras.Model):
 
         return self.node_ids, self.out_emb
 
-    def sage_embeding(self, feat, neighbor_list, agg_layer):
+    def _sage_embeding(self, feat, neighbor_list, agg_layer):
         hidden = [tf.nn.embedding_lookup(feat, nb) for nb in neighbor_list]
         output = sage_conv.aggregate(
             hidden, agg_layer, self.num_samples, self.dims, self.concat
@@ -159,6 +167,7 @@ class GraphSAGELinkPrediction(tf.keras.Model):
         return output
 
     def call(self, inputs, training=True):
+        """Compute predictions, loss and AUC metric."""
         if not training and self.inference_node is not None:
             return self.inference(inputs)
 
@@ -174,13 +183,13 @@ class GraphSAGELinkPrediction(tf.keras.Model):
         dst_feat = tf.nn.embedding_lookup(self.node_emb, tf.reshape(valid_dst, [-1]))
         # fmt: on
 
-        src_output = self.sage_embeding(src_feat, src_neighbor_list, self.src_aggs)
-        dst_output = self.sage_embeding(dst_feat, dst_neighbor_list, self.dst_aggs)
+        src_output = self._sage_embeding(src_feat, src_neighbor_list, self.src_aggs)
+        dst_output = self._sage_embeding(dst_feat, dst_neighbor_list, self.dst_aggs)
         self.logger.info(
             f"src|dst output shape: {src_output.shape}, {dst_output.shape}"
         )
 
-        ## loss
+        # loss
         logits = tf.reduce_sum(input_tensor=src_output * dst_output, axis=-1)
         logits = tf.reshape(logits, [-1, 1])
         labels = tf.reshape(labels, [-1, 1])
@@ -188,13 +197,13 @@ class GraphSAGELinkPrediction(tf.keras.Model):
         loss = tf.reduce_mean(input_tensor=entropy)
         predictions = tf.sigmoid(logits)
 
-        ## update metrics
+        # update metrics
         self.auc.update_state(labels, predictions)
 
         return predictions, loss, {"auc": self.auc.result()}
 
     def train_step(self, data: dict):
-        """override base train_step."""
+        """Override base train_step."""
         with tf.GradientTape() as tape:
             _, loss, metrics = self(data, training=True)
 
@@ -205,13 +214,13 @@ class GraphSAGELinkPrediction(tf.keras.Model):
         return result
 
     def test_step(self, data: dict):
-        """override base test_step."""
+        """Override base test_step."""
         _, loss, metrics = self(data, training=False)
         result = {"loss": loss}
         result.update(metrics)
         return result
 
     def predict_step(self, data: dict):
-        """override base predict_step."""
+        """Override base predict_step."""
         self(data, training=False)
         return [self.node_ids, self.out_emb]

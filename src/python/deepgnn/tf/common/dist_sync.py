@@ -1,15 +1,24 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Synchronization for distributed training."""
 import tensorflow as tf
-import os, datetime, time
+import os
+import datetime
+import time
 import glob
 
 
 class DistributedSync:
+    """Distributed synchronization with plain files."""
+
     SYNC_FILE = "sync"
 
     def __init__(self, folder, task_index, num_tasks):
+        """
+        Initialize folder.
+
+        Task with index 0 must be called first to start from a fresh state.
+        """
         self.folder = folder
         self.task_index = task_index
         self.num_tasks = num_tasks
@@ -32,6 +41,7 @@ class DistributedSync:
                     retry -= 1
 
     def sync(self, tag):
+        """Block until all workers are ready."""
         with open(
             os.path.join(
                 self.folder, "{}.{}.{}".format(self.SYNC_FILE, tag, self.task_index)

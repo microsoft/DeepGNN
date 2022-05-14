@@ -10,7 +10,7 @@ py_library(
     name = "example_torch_hetgnn",
     srcs = [
         "args.py",
-        "data_generator.py",
+        "conftest.py",
         "evaluation.py",
         "model.py",
         "main.py",

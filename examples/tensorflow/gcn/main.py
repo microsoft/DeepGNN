@@ -28,17 +28,17 @@ def define_param_gcn(parser):
     parser.add_argument("--epochs", type=int, default=200, help="num of epochs for training")
     parser.add_argument("--learning_rate", type=float, default=0.01, help="learning rate")
 
-    ## Model Parameters.
+    # Model Parameters.
     parser.add_argument("--hidden_dim", type=int, default=16, help="hidden layer dimension.")
     parser.add_argument("--num_classes", type=int, default=-1, help="number of classes for category")
     parser.add_argument("--dropout", type=float, default=0.5, help="dropout rate.")
     parser.add_argument("--l2_coef", type=float, default=0.0005, help="l2 loss")
 
-    ## training node types.
+    # training node types.
     parser.add_argument("--node_types", type=str2list_int, default="0", help="Graph Node for training.")
-    ## evaluate node files.
+    # evaluate node files.
     parser.add_argument("--evaluate_node_files", type=str, help="evaluate node file list.")
-    ## inference node id
+    # inference node id
     parser.add_argument("--inf_min_id", type=int, default=0, help="inferece min node id.")
     parser.add_argument("--inf_max_id", type=int, default=-1, help="inference max node id.")
 

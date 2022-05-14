@@ -1,5 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+"""Graph engine configuration."""
 
 from deepgnn.arg_types import str2bool
 from deepgnn.graph_engine.backends.options import GraphType
@@ -8,6 +9,7 @@ from deepgnn.graph_engine.graph_dataset import BackendType
 
 
 def define_param_graph_engine(parser):
+    """Define command line arguments for graph engine."""
     group = parser.add_argument_group("Graph Client Parameters")
     group.add_argument(
         "--graph_type",
@@ -23,7 +25,7 @@ def define_param_graph_engine(parser):
         help="graph data dir (local path or azure data lake path).",
     )
 
-    ## SSL
+    # SSL
     group.add_argument(
         "--enable_ssl",
         type=str2bool,
