@@ -1,8 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
-
 cc_import(
   name = "hadoop_so",
   shared_library = "lib/native/libhdfs.so",
