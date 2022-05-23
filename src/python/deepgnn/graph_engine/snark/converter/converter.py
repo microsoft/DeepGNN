@@ -399,66 +399,59 @@ class EdgeAliasWriter:
         self.meta_tmp_folder.cleanup()
 
 
-def __add_sparse(node, feature, tp, container):
-    if feature not in node or node[feature] is None:
-        return
-    for k in node[feature]:
-        values = node[feature][k]["values"]
-        values_buf = (tp * len(values))()
-        values_buf[:] = values
-
-        coordinates = np.array(node[feature][k]["coordinates"], dtype=np.int64)
-        assert int(k) not in container, "Duplicate feature ids found for a node"
-        assert (
-            coordinates.shape[0] == len(values)
-            if len(values) > 1
-            else len(coordinates.shape) == 1
-            or coordinates.shape[0]
-            == 1  # relax input requirements for single values, both [[a,b]] and [a,b] are ok.
-        ), f"Coordinates {coordinates} and values {values} dimensions don't match"
-
-        # For matrices the number of values might be different than number of coordinates
-        # Pack data in the following format: number of coordinates as uint32, then coordinates, and actual values in the end
-        final_buf = (
-            bytes(ctypes.c_uint32(coordinates.size))
-            + bytes(
-                ctypes.c_uint32(coordinates.shape[-1] if coordinates.ndim > 1 else 1)
-            )
-            + bytes(coordinates.data)
-            + values_buf
-        )
-        container[int(k)] = final_buf
-
-
-def __add_dense(node, feature, tp, container):
-    if feature not in node or node[feature] is None:
-        return
-    for k in node[feature]:
-        values = node[feature][k]
-        assert int(k) not in container, "Duplicate feature ids found for a node"
-        container[int(k)] = values.tobytes()
-
-
-def __add(node, feature, tp, container):
-    __add_dense(node, feature, tp, container)
-    __add_sparse(node, f"sparse_{feature}", tp, container)
-
+feature_items = [
+    ("float_feature", ctypes.c_float),
+    ("double_feature", ctypes.c_double),
+    ("uint64_feature", ctypes.c_uint64),
+    ("int64_feature", ctypes.c_int64),
+    ("uint32_feature", ctypes.c_uint32),
+    ("int32_feature", ctypes.c_int32),
+    ("uint16_feature", ctypes.c_uint16),
+    ("int16_feature", ctypes.c_int16),
+    ("uint8_feature", ctypes.c_uint8),
+    ("int8_feature", ctypes.c_int8),
+]
 
 def convert_features(node: typing.Any):
     """Convert the node's feature into bytes sorted by index."""
     # Use a single container for all node features to make sure there are unique feature_ids
     # and gaps between feature ids are processed correctly.
     container: typing.Dict[int, typing.Any] = {}
-    __add(node, "float_feature", ctypes.c_float, container)
-    __add(node, "double_feature", ctypes.c_double, container)
-    __add(node, "uint64_feature", ctypes.c_uint64, container)
-    __add(node, "int64_feature", ctypes.c_int64, container)
-    __add(node, "uint32_feature", ctypes.c_uint32, container)
-    __add(node, "int32_feature", ctypes.c_int32, container)
-    __add(node, "uint16_feature", ctypes.c_uint16, container)
-    __add(node, "int16_feature", ctypes.c_int16, container)
-    __add(node, "uint8_feature", ctypes.c_uint8, container)
-    __add(node, "int8_feature", ctypes.c_int8, container)
+    for feature, tp in feature_items:
+        if feature in node and node[feature] is not None:
+            for k in node[feature]:
+                values = node[feature][k]
+                assert int(k) not in container, "Duplicate feature ids found for a node"
+                container[int(k)] = values.tobytes()
+
+        feature = f"sparse_{feature}"
+        if feature in node and node[feature] is not None:
+            for k in node[feature]:
+                values = node[feature][k]["values"]
+                values_buf = (tp * len(values))()
+                values_buf[:] = values
+
+                coordinates = np.array(node[feature][k]["coordinates"], dtype=np.int64)
+                assert int(k) not in container, "Duplicate feature ids found for a node"
+                assert (
+                    coordinates.shape[0] == len(values)
+                    if len(values) > 1
+                    else len(coordinates.shape) == 1
+                    or coordinates.shape[0]
+                    == 1  # relax input requirements for single values, both [[a,b]] and [a,b] are ok.
+                ), f"Coordinates {coordinates} and values {values} dimensions don't match"
+
+                # For matrices the number of values might be different than number of coordinates
+                # Pack data in the following format: number of coordinates as uint32, then coordinates, and actual values in the end
+                final_buf = (
+                    bytes(ctypes.c_uint32(coordinates.size))
+                    + bytes(
+                        ctypes.c_uint32(coordinates.shape[-1] if coordinates.ndim > 1 else 1)
+                    )
+                    + bytes(coordinates.data)
+                    + values_buf
+                )
+                container[int(k)] = final_buf
 
     if "sparse_float16_feature" in node and node["sparse_float16_feature"] is not None:
         for k in node["sparse_float16_feature"]:

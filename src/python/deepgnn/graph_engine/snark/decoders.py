@@ -221,13 +221,14 @@ class LinearDecoder(Decoder):
         while idx < feature_len:
             key, feature_idx, length = feature_data[idx:idx+3]
             feature_idx, length = int(feature_idx), int(length)
-            if key not in features:
-                features[key] = {}
-            if key == "binary_feature":
-                value = feature_data[idx+3]
-            else:
-                value = np.fromiter(map(self.convert_map[key], feature_data[idx+3:idx+3+length]), dtype=self.convert_map[key])
-            features[key][feature_idx] = value
+            if length:
+                if key not in features:
+                    features[key] = {}
+                if key == "binary_feature":
+                    value = feature_data[idx+3]
+                else:
+                    value = np.fromiter(map(self.convert_map[key], feature_data[idx+3:idx+3+length]), dtype=self.convert_map[key])
+                features[key][feature_idx] = value
             idx += length + 3
         return int(src), int(dst), int(typ), float(weight), features
 
