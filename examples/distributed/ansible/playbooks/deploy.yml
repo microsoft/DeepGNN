@@ -14,8 +14,7 @@
   # by python -m pip install deepgnn-tf
   - name: Install artifacts-keyring python package
     ansible.builtin.shell: |
-      python -m pip install artifacts-keyring keyring
-      python -m pip install deepgnn-torch=={{ VERSION }} --index-url https://{{ TOKEN }}@msasg.pkgs.visualstudio.com/Bing_Ads/_packaging/DeepGraph/pypi/simple
+      python -m pip install deepgnn_ge*.whl deepgnn_torch*.whl
 
 - hosts: windows
   tasks:
@@ -42,4 +41,5 @@
     with_items:
       - artifacts-keyring
       - keyring
-      - deepgnn-torch=={{ VERSION }} --index-url https://{{ TOKEN }}@msasg.pkgs.visualstudio.com/Bing_Ads/_packaging/DeepGraph/pypi/simple
+      - deepgnn_ge*.whl
+      - deepgnn_torch*.whl

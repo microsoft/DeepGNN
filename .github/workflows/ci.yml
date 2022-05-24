@@ -165,3 +165,21 @@ jobs:
         run: cd ./pytorch/graphsage/ && sudo chmod +x *.sh && bash ./run.sh unsupervised no CPU
       - name: Run hetgnn examples
         run: cd ./pytorch/hetgnn/ && sudo chmod +x *.sh && bash ./run.sh CPU
+  ansible_examples:
+    needs: wheel
+    strategy:
+      matrix:
+        python-version: ["3.7", "3.8"]
+        os: ["ubuntu-latest", "ubuntu-18.04"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Download wheels
+        uses: actions/download-artifact@v3
+        with:
+          name: deepgnn
+      - name: Download examples
+        uses: actions/download-artifact@v3
+        with:
+          name: examples
+      - name: Run ansible examples
+        run: cd ./examples/distributed/ansible/ && sudo chmod +x *.sh && bash ./run.sh

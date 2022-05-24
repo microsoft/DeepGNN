@@ -4,14 +4,9 @@
 set -ex
 
 DIR_NAME=$(dirname "$0")
-DeepgnnFEEDToken=$1
-Version=$2
 
 pip install --upgrade pip
 pip install -r $DIR_NAME/requirements.txt
-
-sed -i "s/{{ TOKEN }}/$DeepgnnFEEDToken/g" $DIR_NAME/playbooks/deploy.yml
-sed -i "s/{{ VERSION }}/$Version/g" $DIR_NAME/playbooks/deploy.yml
 
 cat <<EOT > $DIR_NAME/inventory/hosts
 all:
