@@ -47,9 +47,14 @@ class NodeWriter:
         Args:
             node (typing.Any): dictionary with information about
         """
-        self.nm.write(ctypes.c_uint64(node_id))  # type: ignore
-        self.nm.write(ctypes.c_uint64(self.count))  # type: ignore
-        self.nm.write(ctypes.c_int32(node_type))  # type: ignore
+        self.nm.write(
+            struct.pack(
+                "=QQi",
+                node_id,
+                self.count,
+                node_type,
+            )
+        )
         self.feature_writer.add(features)
         self.count += 1
 
@@ -150,10 +155,15 @@ class EdgeWriter:
             node (typing.Any): node with edges data
         """
         # Record order is important for C++ reader: order fields by size for faster load.
-        self.ei.write(ctypes.c_uint64(dst))  # type: ignore
-        self.ei.write(ctypes.c_uint64(self.efi.tell() // 8))  # type: ignore
-        self.ei.write(ctypes.c_int32(tp))  # type: ignore
-        self.ei.write(ctypes.c_float(weight))  # type: ignore
+        self.ei.write(
+            struct.pack(
+                "=QQif",
+                dst,
+                self.efi.tell() // 8,
+                tp,
+                weight,
+            )
+        )
         self.feature_writer.add(features)
 
     def close(self):
@@ -162,13 +172,15 @@ class EdgeWriter:
             ctypes.c_uint64(self.ei.tell() // (4 + 8 + 8 + 4))
         )  # type: ignore
         self.nbi.close()
-
-        self.ei.write(ctypes.c_uint64(0))  # type: ignore
-        self.ei.write(ctypes.c_uint64(self.efi.tell() // (8)))  # type: ignore
-
-        self.ei.write(ctypes.c_int32(0))  # type: ignore
-        self.ei.write(ctypes.c_float(-1))  # type: ignore
-
+        self.ei.write(
+            struct.pack(
+                "=QQif",
+                0,
+                self.efi.tell() // 8,
+                0,
+                -1,
+            )
+        )
         self.ei.close()
         self.efi.write(ctypes.c_uint64(self.feature_writer.tell()))  # type: ignore
         self.efi.close()
