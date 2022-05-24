@@ -216,10 +216,12 @@ class LinearDecoder(Decoder):
         """Use json package to convert the json text line into node object."""
         src, dst, typ, weight, *feature_data = line.split()
         features = {}
-        feature_len = len(feature_data)
         idx = 0
-        while idx < feature_len:
-            key, feature_idx, length = feature_data[idx:idx+3]
+        while True:
+            try:
+                key, feature_idx, length = feature_data[idx:idx+3]
+            except ValueError:
+                break
             feature_idx, length = int(feature_idx), int(length)
             if length:
                 if key not in features:

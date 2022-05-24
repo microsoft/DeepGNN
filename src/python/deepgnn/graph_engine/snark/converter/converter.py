@@ -146,6 +146,7 @@ class EdgeWriter:
             ),
             "wb",
         )
+        self.efi_pos = self.efi.tell()
 
         self.feature_writer = EdgeFeatureWriter(folder, partition, self.efi)
 
@@ -159,12 +160,12 @@ class EdgeWriter:
             struct.pack(
                 "=QQif",
                 dst,
-                self.efi.tell() // 8,
+                self.efi_pos // 8,
                 tp,
                 weight,
             )
         )
-        self.feature_writer.add(features)
+        self.efi_pos += self.feature_writer.add(features)
 
     def close(self):
         """Close output binary files."""
@@ -214,10 +215,13 @@ class EdgeFeatureWriter:
         Args:
             head (typing.Dict): collection of float/uint64/binary features.
         """
+        count = 0
         for k in convert_features(head):
-            self.efi.write(ctypes.c_uint64(self.efd.tell()))  # type: ignore
+            count += self.efi.write(ctypes.c_uint64(self.efd.tell()))  # type: ignore
             if k is not None:
                 self.efd.write(k)
+
+        return count
 
     def tell(self) -> int:
         """Tell start position for the next feature data.
