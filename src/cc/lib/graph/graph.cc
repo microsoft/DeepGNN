@@ -156,6 +156,28 @@ void Graph::GetNodeSparseFeature(std::span<const NodeId> node_ids, std::span<con
     }
 }
 
+void Graph::GetNodeStringFeature(std::span<const NodeId> node_ids, std::span<const snark::FeatureId> features,
+                                 std::span<int64_t> out_dimensions, std::vector<uint8_t> &out_data) const
+{
+    const auto features_size = features.size();
+    assert(out_dimensions.size() == features_size * node_ids.size());
+
+    const int64_t len = node_ids.size();
+    for (int64_t node_index = 0; node_index < len; ++node_index)
+    {
+        auto internal_id = m_node_map.find(node_ids[node_index]);
+        if (internal_id == std::end(m_node_map))
+        {
+            continue;
+        }
+
+        const auto partition_index = internal_id->second;
+        m_partitions[m_partitions_indices[partition_index]].GetNodeStringFeature(
+            m_internal_indices[partition_index], features,
+            out_dimensions.subspan(features_size * node_index, features_size), out_data);
+    }
+}
+
 void Graph::GetEdgeFeature(std::span<const NodeId> input_edge_src, std::span<const NodeId> input_edge_dst,
                            std::span<const Type> input_edge_type, std::span<snark::FeatureMeta> features,
                            std::span<uint8_t> output) const
@@ -218,6 +240,37 @@ void Graph::GetEdgeSparseFeature(std::span<const NodeId> input_edge_src, std::sp
                 auto found = m_partitions[m_partitions_indices[index]].GetEdgeSparseFeature(
                     m_internal_indices[index], input_edge_dst[edge_offset], input_edge_type[edge_offset], features,
                     edge_offset, out_dimensions, out_indices, out_values);
+                if (found)
+                {
+                    break;
+                }
+            }
+        }
+
+        ++edge_offset;
+    }
+}
+
+void Graph::GetEdgeStringFeature(std::span<const NodeId> input_edge_src, std::span<const NodeId> input_edge_dst,
+                                 std::span<const Type> input_edge_type, std::span<const snark::FeatureId> features,
+                                 std::span<int64_t> out_dimensions, std::vector<uint8_t> &out_values) const
+{
+    const auto features_size = features.size();
+    assert(features_size * input_edge_src.size() == out_dimensions.size());
+
+    int64_t edge_offset = 0;
+    for (auto src_node : input_edge_src)
+    {
+        auto internal_id = m_node_map.find(src_node);
+        if (internal_id != std::end(m_node_map))
+        {
+            auto index = internal_id->second;
+            size_t partition_count = m_counts[index];
+            for (size_t partition = 0; partition < partition_count; ++partition, ++index)
+            {
+                auto found = m_partitions[m_partitions_indices[index]].GetEdgeStringFeature(
+                    m_internal_indices[index], input_edge_dst[edge_offset], input_edge_type[edge_offset], features,
+                    out_dimensions.subspan(edge_offset * features_size, features_size), out_values);
                 if (found)
                 {
                     break;

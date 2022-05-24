@@ -17,7 +17,7 @@ from model import GAT, GATQueryParameter
 
 # fmt: off
 def init_args(parser):
-    ## GAT Model Parameters.
+    # GAT Model Parameters.
     parser.add_argument("--head_num", type=str2list_int, default="8,1", help="the number of attention headers.")
     parser.add_argument("--hidden_dim", type=int, default=8, help="hidden layer dimension.")
     parser.add_argument("--num_classes", type=int, default=-1, help="number of classes for category")
@@ -25,10 +25,10 @@ def init_args(parser):
     parser.add_argument("--attn_drop", type=float, default=0.0, help="attention layer dropout rate.")
     parser.add_argument("--l2_coef", type=float, default=0.0005, help="l2 loss")
 
-    ## GAT Query part
+    # GAT Query part
     parser.add_argument("--neighbor_edge_types", type=str2list_int, default="0", help="Graph Edge for attention encoder.",)
 
-    ## evaluate node file.
+    # evaluate node file.
     parser.add_argument("--eval_file", default="", type=str, help="")
 # fmt: on
 

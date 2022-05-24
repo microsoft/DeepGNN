@@ -66,6 +66,20 @@ void ExtractFeatures(const std::vector<std::vector<SparseFeatureIndex>> &respons
         }
     }
 }
+
+void ExtractStringFeatures(const std::vector<std::pair<size_t, size_t>> &response_index,
+                           const std::vector<snark::StringFeaturesReply> &replies, std::span<int64_t> dimensions,
+                           std::vector<uint8_t> &out_values)
+{
+    const auto total_size = std::accumulate(std::begin(dimensions), std::end(dimensions), int64_t(0));
+    out_values.reserve(total_size);
+    for (size_t feature_index = 0; feature_index < dimensions.size(); ++feature_index)
+    {
+        const auto &index = response_index[feature_index];
+        std::copy_n(std::begin(replies[index.first].values()) + index.second, dimensions[feature_index],
+                    std::back_inserter(out_values));
+    }
+}
 } // namespace
 
 namespace snark
@@ -490,6 +504,119 @@ void GRPCClient::GetEdgeSparseFeature(std::span<const NodeId> edge_src_ids, std:
 
     WaitForFutures(futures);
     ExtractFeatures(response_index, replies, out_dimensions, out_indices, out_values, len);
+}
+
+void GRPCClient::GetNodeStringFeature(std::span<const NodeId> node_ids, std::span<const FeatureId> features,
+                                      std::span<int64_t> out_dimensions, std::vector<uint8_t> &out_values)
+{
+    NodeSparseFeaturesRequest request;
+    *request.mutable_node_ids() = {std::begin(node_ids), std::end(node_ids)};
+    *request.mutable_feature_ids() = {std::begin(features), std::end(features)};
+    std::vector<std::future<void>> futures;
+    futures.reserve(m_engine_stubs.size());
+    std::vector<StringFeaturesReply> replies(m_engine_stubs.size());
+
+    const auto feature_count = features.size();
+    std::vector<std::pair<size_t, size_t>> response_index(node_ids.size() * feature_count);
+
+    for (size_t shard = 0; shard < m_engine_stubs.size(); ++shard)
+    {
+        auto *call = new AsyncClientCall();
+
+        auto response_reader =
+            m_engine_stubs[shard]->PrepareAsyncGetNodeStringFeatures(&call->context, request, NextCompletionQueue());
+
+        call->callback = [&reply = replies[shard], &response_index, shard, out_dimensions]() {
+            if (reply.values().empty())
+            {
+                return;
+            }
+            int64_t value_offset = 0;
+            for (int64_t feature_index = 0; feature_index < reply.dimensions().size(); ++feature_index)
+            {
+                const auto dim = reply.dimensions(feature_index);
+                if (dim == 0)
+                {
+                    continue;
+                }
+
+                // it is ok to not to synchronize here, because feature data is the same across shards.
+                response_index[feature_index] = {shard, value_offset};
+                out_dimensions[feature_index] = dim;
+                value_offset += dim;
+            }
+        };
+
+        // Order is important: call variable can be deleted before futures can be
+        // obtained.
+        futures.emplace_back(call->promise.get_future());
+        response_reader->StartCall();
+        response_reader->Finish(&replies[shard], &call->status, static_cast<void *>(call));
+    }
+
+    WaitForFutures(futures);
+    ExtractStringFeatures(response_index, replies, out_dimensions, out_values);
+}
+
+void GRPCClient::GetEdgeStringFeature(std::span<const NodeId> edge_src_ids, std::span<const NodeId> edge_dst_ids,
+                                      std::span<const Type> edge_types, std::span<const FeatureId> features,
+                                      std::span<int64_t> out_dimensions, std::vector<uint8_t> &out_values)
+{
+    const auto len = edge_types.size();
+    assert(len == edge_src_ids.size());
+    assert(len == edge_dst_ids.size());
+
+    EdgeSparseFeaturesRequest request;
+    *request.mutable_node_ids() = {std::begin(edge_src_ids), std::end(edge_src_ids)};
+    request.mutable_node_ids()->Add(std::begin(edge_dst_ids), std::end(edge_dst_ids));
+    request.mutable_types()->Add(std::begin(edge_types), std::end(edge_types));
+    *request.mutable_feature_ids() = {std::begin(features), std::end(features)};
+
+    std::vector<std::future<void>> futures;
+    futures.reserve(m_engine_stubs.size());
+    std::vector<StringFeaturesReply> replies(m_engine_stubs.size());
+
+    // Index to look up feature coordinates to return them in sorted order.
+    const auto feature_count = features.size();
+    std::vector<std::pair<size_t, size_t>> response_index(len * feature_count);
+
+    for (size_t shard = 0; shard < m_engine_stubs.size(); ++shard)
+    {
+        auto *call = new AsyncClientCall();
+
+        auto response_reader =
+            m_engine_stubs[shard]->PrepareAsyncGetEdgeStringFeatures(&call->context, request, NextCompletionQueue());
+
+        call->callback = [&reply = replies[shard], &response_index, shard, out_dimensions]() {
+            if (reply.values().empty())
+            {
+                return;
+            }
+            int64_t value_offset = 0;
+            for (int64_t feature_index = 0; feature_index < reply.dimensions().size(); ++feature_index)
+            {
+                const auto dim = reply.dimensions(feature_index);
+                if (dim == 0)
+                {
+                    continue;
+                }
+
+                // it is ok to not to synchronize here, because feature data is the same across shards.
+                response_index[feature_index] = {shard, value_offset};
+                out_dimensions[feature_index] = dim;
+                value_offset += dim;
+            }
+        };
+
+        // Order is important: call variable can be deleted before futures can be
+        // obtained.
+        futures.emplace_back(call->promise.get_future());
+        response_reader->StartCall();
+        response_reader->Finish(&replies[shard], &call->status, static_cast<void *>(call));
+    }
+
+    WaitForFutures(futures);
+    ExtractStringFeatures(response_index, replies, out_dimensions, out_values);
 }
 
 void GRPCClient::FullNeighbor(std::span<const NodeId> node_ids, std::span<const Type> edge_types,

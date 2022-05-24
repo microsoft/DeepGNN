@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Output layer implementation."""
 import torch.nn as nn
 
 from deepgnn.pytorch.encoding.twinbert.pooler import WeightPooler
@@ -32,18 +32,17 @@ from poolers import (
 
 
 class OutputLayer(nn.Module):
+    """
+    OutputLayer is a crossing layer.
 
-    """OutputLayer is the crossing layer which used to calculate the similarity
-    of the source node and destination node based on different poolers.
-
-    Poolers supported:
+    It is used to calculate the similarity of the source node and destination node based on different poolers::
         cosine,
         cosine_with_rns,
         feedforward,
         maxfeedforward,
         reslayer,
         maxreslayer,
-        selfattention,
+        selfattentionю
     """
 
     def __init__(
@@ -56,6 +55,7 @@ class OutputLayer(nn.Module):
         random_negative: int = 0,
         nsp_gamma: int = 1,
     ):
+        """Initialize output layer."""
         super(OutputLayer, self).__init__()
         self.crossing_layers = []  # type: ignore
         self.sim_type = sim_type
@@ -109,6 +109,7 @@ class OutputLayer(nn.Module):
         with_rng=False,
         prefix="",
     ):
+        """Calculate similarity between src and dst vectors."""
         results = None
         if self.sim_type == SIM_TYPE_COSINE:
             results = cosinepooler(

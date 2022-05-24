@@ -407,6 +407,40 @@ void Partition::GetNodeSparseFeature(uint64_t internal_node_id, std::span<const 
     }
 }
 
+void Partition::GetNodeStringFeature(uint64_t internal_node_id, std::span<const snark::FeatureId> features,
+                                     std::span<int64_t> out_dimensions, std::vector<uint8_t> &out_values) const
+{
+    assert(features.size() == out_dimensions.size());
+    auto file_ptr = m_node_features->start();
+
+    auto feature_index_offset = m_node_index[internal_node_id];
+    auto next_offset = m_node_index[internal_node_id + 1];
+
+    for (size_t feature_index = 0; feature_index < features.size(); ++feature_index)
+    {
+        const auto feature = features[feature_index];
+        // Requested feature_id is larger than known features, skip.
+        if (next_offset - feature_index_offset <= uint64_t(feature) || m_node_feature_index.empty())
+        {
+            continue;
+        }
+
+        const auto data_offset = m_node_feature_index[feature_index_offset + feature];
+        const auto stored_size = m_node_feature_index[feature_index_offset + feature + 1] - data_offset;
+        // Check if the feature is empty
+        if (stored_size == 0)
+        {
+            continue;
+        }
+
+        out_dimensions[feature_index] = stored_size;
+        const auto old_values_length = out_values.size();
+        out_values.resize(old_values_length + stored_size);
+        auto out_values_span = std::span(out_values).subspan(old_values_length);
+        m_node_features->read(data_offset, stored_size, std::begin(out_values_span), file_ptr);
+    }
+}
+
 size_t Partition::FullNeighbor(uint64_t internal_id, std::span<const Type> edge_types,
                                std::vector<NodeId> &out_neighbors_ids, std::vector<Type> &out_edge_types,
                                std::vector<float> &out_edge_weights) const
@@ -648,6 +682,81 @@ bool Partition::GetEdgeSparseFeature(uint64_t internal_src_node_id, NodeId input
         out_values[feature_index].resize(old_values_length + values_length);
         auto out_values_span = std::span(out_values[feature_index]).subspan(old_values_length);
         m_edge_features->read(indices_offset, values_length, std::begin(out_values_span), file_ptr);
+    }
+
+    return true;
+}
+
+bool Partition::GetEdgeStringFeature(uint64_t internal_src_node_id, NodeId input_edge_dst, Type input_edge_type,
+                                     std::span<const snark::FeatureId> features, std::span<int64_t> out_dimensions,
+                                     std::vector<uint8_t> &out_values) const
+{
+    assert(features.size() == out_dimensions.size());
+
+    auto file_ptr = m_edge_features->start();
+    const auto offset = m_neighbors_index[internal_src_node_id];
+    const auto nb_count = m_neighbors_index[internal_src_node_id + 1] - offset;
+
+    // Check if node doesn't have any neighbors
+    if (nb_count == 0)
+    {
+        return false;
+    }
+
+    auto type_offset = std::numeric_limits<size_t>::max();
+    for (size_t i = offset; i < offset + nb_count; ++i)
+    {
+        if (m_edge_types[i] == input_edge_type)
+        {
+            type_offset = i;
+            break;
+        }
+    }
+    if (type_offset == std::numeric_limits<size_t>::max())
+    {
+        return false;
+    }
+    const auto tp_count = m_edge_type_offset[type_offset + 1] - m_edge_type_offset[type_offset];
+    auto fst = std::begin(m_edge_destination) + m_edge_type_offset[type_offset];
+    auto lst = fst + tp_count;
+    auto it = std::lower_bound(fst, lst, input_edge_dst);
+    if (it == lst)
+    {
+        // Edge was not found in this partition.
+        return false;
+    }
+    if (m_edge_feature_offset.empty() || m_edge_feature_index.empty())
+    {
+        return true;
+    }
+
+    auto edge_offset = it - std::begin(m_edge_destination);
+    auto feature_index_offset = m_edge_feature_offset[edge_offset];
+    auto next_offset = m_edge_feature_offset[edge_offset + 1];
+
+    for (size_t feature_index = 0; feature_index < features.size(); ++feature_index)
+    {
+        const auto feature = features[feature_index];
+        // Requested feature_id is larger than known features, fill with 0s.
+        if (next_offset - feature_index_offset <= uint64_t(feature))
+        {
+            continue;
+        }
+
+        const auto data_offset = m_edge_feature_index[feature_index_offset + feature];
+        const auto stored_size = m_edge_feature_index[feature_index_offset + feature + 1] - data_offset;
+
+        // Check if the feature is empty
+        if (stored_size == 0)
+        {
+            continue;
+        }
+
+        out_dimensions[feature_index] = stored_size;
+        const auto old_values_length = out_values.size();
+        out_values.resize(old_values_length + stored_size);
+        auto out_values_span = std::span(out_values).subspan(old_values_length);
+        m_edge_features->read(data_offset, stored_size, std::begin(out_values_span), file_ptr);
     }
 
     return true;

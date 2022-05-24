@@ -1,5 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+"""Miscellaneous similarity poolers."""
 
 import torch
 import torch.nn as nn
@@ -7,6 +8,7 @@ import torch.nn as nn
 
 def feedforwardpooler(src_vec, dst_vec, with_rng, ff_denses, random_negative):
     """Compute the similarity score by the dense layers.
+
     src_vec and dst_vec will be concat and passed to layers.
     If with_rng is true, negative samples will be calculated using random_negative.
     """
@@ -31,6 +33,7 @@ def feedforwardpooler(src_vec, dst_vec, with_rng, ff_denses, random_negative):
 
 def maxfeedforwardpooler(src_vec, dst_vec, with_rng, ff_denses, random_negative):
     """Compute the similarity score by the dense layers.
+
     Max value in src_vec and dst_vec will be retrieved and passed to layers.
     If with_rng is true, negative samples will be calculated using random_negative.
     """
@@ -54,8 +57,9 @@ def maxfeedforwardpooler(src_vec, dst_vec, with_rng, ff_denses, random_negative)
 
 
 def cosinepooler(src_vec, dst_vec, with_rng, ff_denses, random_negative):
-    """Compute the similarity score using cosine similarity. This is usually used when
-    doing recall action.
+    """Compute the similarity score using cosine similarity.
+
+    This is usually used when doing recall action.
     If with_rng is true, negative samples will be calculated using random_negative.
     """
     assert isinstance(ff_denses, list) and len(ff_denses) == 1
@@ -88,7 +92,8 @@ def cosinepooler(src_vec, dst_vec, with_rng, ff_denses, random_negative):
 
 def cosinepooler_with_rns(src_vec, dst_vec, with_rng, nsp_gamma, random_negative):
     """Compute the similarity score using cosine similarity with random negative sampling.
-    https://dl.acm.org/doi/pdf/10.1145/2661829.2661935
+
+    Reference: https://dl.acm.org/doi/pdf/10.1145/2661829.2661935
     """
     if not with_rng:
         simscore = nn.CosineSimilarity(dim=1, eps=1e-6)(src_vec, dst_vec).view(-1, 1)
@@ -116,6 +121,7 @@ def cosinepooler_with_rns(src_vec, dst_vec, with_rng, nsp_gamma, random_negative
 
 
 def res_layer(input, ff_denses):
+    """Process residual layer."""
     output = ff_denses[0](input)
     if len(ff_denses) == 4 and ff_denses[3] is not None:
         output = ff_denses[3](output)
@@ -125,7 +131,8 @@ def res_layer(input, ff_denses):
 
 def reslayerpooler(src_vec, dst_vec, with_rng, ff_denses, random_negative):
     """Compute similarity score using residual layers.
-    src_vec and dst_vec will be concat and passed to res layer.
+
+    src_vec and dst_vec will be concatenated and passed to res layer.
     """
     assert isinstance(ff_denses, list) and len(ff_denses) >= 3
     concat_vec = torch.cat([src_vec, dst_vec], dim=1)
@@ -146,6 +153,7 @@ def reslayerpooler(src_vec, dst_vec, with_rng, ff_denses, random_negative):
 
 def maxreslayerpooler(src_vec, dst_vec, with_rng, ff_denses, random_negative):
     """Compute similarity score using residual layers.
+
     Max value of src_vec and dst_vec will be retrieved and passed to res layer.
     """
     assert isinstance(ff_denses, list) and len(ff_denses) >= 3

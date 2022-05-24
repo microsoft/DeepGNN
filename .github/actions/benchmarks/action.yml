@@ -1,0 +1,24 @@
+name: "Benchmarks"
+description: "Run benchmarks"
+inputs:
+  disk_cache:
+    description: 'Build system cache key'
+    required: false
+    default: benchmark-${{ runner.os }}-${{ github.ref }}
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/cache@v3
+      id: cache
+      with:
+        path: ~/bazel-cache
+        key: ${{ runner.os }}-benchmark-${{ github.ref }}
+        restore-keys: |
+          benchmark-${{ runner.os }}-${{ github.ref }}
+          benchmark-${{ runner.os }}
+    - run: |
+        bazel run -c opt src/cc/lib/benchmark:grpc_benchmark --config=linux --disk_cache=~/bazel-cache
+        bazel run -c opt src/cc/lib/benchmark:sampler_benchmark --config=linux --disk_cache=~/bazel-cache
+        bazel run -c opt src/cc/lib/benchmark:neighbor_sampler_benchmark --config=linux --disk_cache=~/bazel-cache
+      shell: bash
+      if: runner.os == 'Linux'

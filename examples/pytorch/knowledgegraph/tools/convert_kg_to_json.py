@@ -1,11 +1,12 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Simple converter from kg to json format for deepgnn."""
 import json
 import sys
 
 
 def main(root_path: str):
+    """Script entry point."""
     entities_path = root_path + "/entities.dict"
     relations_path = root_path + "/relations.dict"
     train_path = root_path + "/train.txt"

@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Classes to upload data to ADL."""
 import threading
 import queue
 import multiprocessing
@@ -10,8 +10,14 @@ from azure.datalake.store import core, lib
 from deepgnn import get_logger
 from deepgnn.graph_engine._adl_reader import AdlCredentialParser
 
-# Uploading processor which is created by AdlUploader. it has its own adl file system and create multiple threads to upload data.
+
 class MultiThreadsAdlDataWriter:
+    """
+    Uploading processor which is created by AdlUploader.
+
+    It has its own ADL file system and create multiple threads to upload data.
+    """
+
     def __init__(
         self,
         adl_config,
@@ -21,6 +27,7 @@ class MultiThreadsAdlDataWriter:
         max_chunks_per_file: int = 0,  # 0 : no limitation for file size.
         threads_per_process: int = 5,
     ):
+        """Initialize writer."""
         self.logger = get_logger()
         self.process_idx = process_idx
         self.data_queue: queue.Queue = queue.Queue()
@@ -93,9 +100,11 @@ class MultiThreadsAdlDataWriter:
             chunk_count += 1
 
     def enqueue(self, chunk):
+        """Put data in processing queue."""
         self.data_queue.put(chunk)
 
     def start(self):
+        """Start upload."""
         if not self.started:
             self.logger.info(f"[uploader processor-{self.process_idx}] start...")
 
@@ -111,6 +120,7 @@ class MultiThreadsAdlDataWriter:
             )
 
     def stop(self):
+        """Stop uploading data."""
         if self.started:
             self.logger.info(f"[uploader processor-{self.process_idx}] stop...")
             self.started = False
@@ -127,12 +137,17 @@ class MultiThreadsAdlDataWriter:
             )
 
     def is_alive(self):
+        """Check writer status."""
         return self.started
 
 
-# Uploader leverage azure datalake SDK and upload data to adl. To achieve high throughput, multi-process mode is needed,
-# and each process creates multiple threads to upload data.
 class AdlDataWriter:
+    """
+    Leverage azure datalake SDK and upload data to adl.
+
+    To achieve high throughput, multi-process mode is needed, and each process creates multiple threads to upload data.
+    """
+
     def __init__(
         self,
         store_name: str,
@@ -143,6 +158,7 @@ class AdlDataWriter:
         queue_size: int = 100,
         max_lines_per_chunk: int = 1024,
     ):
+        """Initialize writer."""
         self.logger = get_logger()
         self.max_lines_per_chunk = max_lines_per_chunk
         self.max_chunks_per_file = max_chunks_per_file
@@ -179,7 +195,7 @@ class AdlDataWriter:
                     break
             if not all_alive:
                 self.logger.warn(
-                    f"All processes will exit due to some of them stop early."
+                    "All processes will exit due to some of them stop early."
                 )
                 self.close()
                 break
@@ -205,11 +221,13 @@ class AdlDataWriter:
         uploader.stop()
 
     def write(self, embed):
+        """Write data to processing queue."""
         chunk = bytes(embed, "utf-8")
         self.data_queues[self.total_chunk % len(self.processes)].put(chunk)
         self.total_chunk += 1
 
     def writelines(self, embeds):
+        """Write data line by line."""
         offset = 0
         embed_size = len(embeds)
         embeds = [str(x) for x in embeds]
@@ -227,7 +245,7 @@ class AdlDataWriter:
                 self.data_queues[self.total_chunk % len(self.processes)].put(
                     chunk, timeout=1
                 )
-            except:
+            except ValueError:
                 self.total_chunk += 1
 
             offset = end_offset
@@ -241,11 +259,12 @@ class AdlDataWriter:
         self.daemon_thread.start()
 
         self.is_running = True
-        self.logger.info(f"[AdlUploader] started successfully.")
+        self.logger.info("[AdlUploader] started successfully.")
 
     def close(self):
+        """Stop uploading and put close flags to data queues."""
         if self.is_running:
-            self.logger.info(f"[AdlUploader] stop...")
+            self.logger.info("[AdlUploader] stop...")
             self.is_running = False
 
             for i in range(len(self.processes)):
@@ -255,10 +274,12 @@ class AdlDataWriter:
             for process in self.processes:
                 process.join()
 
-            self.logger.info(f"[AdlUploader] stopped successfully.")
+            self.logger.info("[AdlUploader] stopped successfully.")
 
     def __enter__(self):
+        """Return writer."""
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        """Finalize uploading."""
         self.close()

@@ -1,12 +1,13 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Functions to evaluate HetGnn for different tasks."""
 import numpy
 import csv
 from sklearn import linear_model, metrics
 
 
 def load_data(data_file_name, n_features, n_samples):
+    """Load data from a CSV file."""
     with open(data_file_name) as f:
         data_file = csv.reader(f)
         data = numpy.empty((n_samples, n_features))
@@ -18,6 +19,7 @@ def load_data(data_file_name, n_features, n_samples):
 
 
 def evaluate_node_classification(args, train_num, test_num, datafile_dir):
+    """Evaluate HetGnn model on a node classification task."""
     train_data_f = str(datafile_dir.join("train_class_feature.txt"))
     train_data = load_data(train_data_f, args.embed_d + 2, train_num)
     train_features = train_data.astype(numpy.float32)[:, 2:-1]
@@ -48,6 +50,7 @@ def evaluate_node_classification(args, train_num, test_num, datafile_dir):
 
 
 def evaluate_link_prediction(args, train_num, test_num, datafile_dir):
+    """Evaluate HetGnn model for a link prediction task."""
     # prepare training data and train.
     train_data_f = str(datafile_dir.join("train_feature.txt"))
     train_data = load_data(train_data_f, args.embed_d + 3, train_num)

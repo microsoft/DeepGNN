@@ -74,6 +74,7 @@ extern "C"
 
     typedef void (*GetNeighborsCallback)(const NodeID *, const float *, const Type *, size_t);
     typedef void (*GetSparseFeaturesCallback)(const int64_t **, size_t *, const uint8_t **, size_t *, int64_t *);
+    typedef void (*GetStringFeaturesCallback)(size_t, const uint8_t *);
 
     DEEPGNN_DLL extern int32_t CreateLocalGraph(PyGraph *graph, size_t count, uint32_t *partitions,
                                                 const char *filename, PyPartitionStorageType storage_type,
@@ -95,12 +96,19 @@ extern "C"
     DEEPGNN_DLL extern int32_t GetNodeSparseFeature(PyGraph *graph, NodeID *node_ids, size_t node_ids_size,
                                                     Feature *features, size_t features_size,
                                                     GetSparseFeaturesCallback callback);
+    DEEPGNN_DLL extern int32_t GetNodeStringFeature(PyGraph *graph, NodeID *node_ids, size_t node_ids_size,
+                                                    Feature *features, size_t features_size, int64_t *dimensions,
+                                                    GetStringFeaturesCallback callback);
     DEEPGNN_DLL extern int32_t GetEdgeFeature(PyGraph *graph, NodeID *edge_src_ids, NodeID *edge_dst_ids,
                                               Type *edge_types, size_t edge_size, Feature *features,
                                               size_t features_size, uint8_t *output, size_t output_size);
     DEEPGNN_DLL extern int32_t GetEdgeSparseFeature(PyGraph *graph, NodeID *edge_src_ids, NodeID *edge_dst_ids,
                                                     Type *edge_types, size_t edge_size, Feature *features,
                                                     size_t features_size, GetSparseFeaturesCallback callback);
+    DEEPGNN_DLL extern int32_t GetEdgeStringFeature(PyGraph *graph, NodeID *edge_src_ids, NodeID *edge_dst_ids,
+                                                    Type *edge_types, size_t edge_size, Feature *features,
+                                                    size_t features_size, int64_t *dimensions,
+                                                    GetStringFeaturesCallback callback);
     DEEPGNN_DLL extern int32_t GetNeighbors(PyGraph *graph, NodeID *in_node_ids, size_t in_node_ids_size,
                                             Type *in_edge_types, size_t in_edge_types_size,
                                             uint64_t *out_neighbor_counts, GetNeighborsCallback callback);

@@ -1,7 +1,9 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import tempfile, os, glob
+import tempfile
+import os
+import glob
 import numpy as np
 from unittest.mock import Mock
 from deepgnn.tf.common.trainer import BaseTFTrainer
@@ -19,7 +21,7 @@ def test_trainer_query_fn():
     trainer._train_impl = Mock()
 
     def test_case_default_model_query():
-        ## test case: default model.query
+        # test case: default model.query
         model = Mock()
         v = np.array([-1], np.int64)
         model.query.return_value = list([v]), list([v.shape])
@@ -74,7 +76,7 @@ def test_trainer_query_fn_eval():
     trainer._eval_impl = Mock()
 
     def test_case_default_model_query():
-        ## test case: default model.query
+        # test case: default model.query
         model = Mock()
         v = np.array([-1], np.int64)
         model.query.return_value = list([v]), list([v.shape])
@@ -149,7 +151,7 @@ class MockModel(tf.keras.Model):
         return None, self.loss, {}
 
     def predict_step(self, data: dict):
-        """override base predict_step."""
+        """Override base predict_step."""
         self(data, training=False)
         return [self.node_id, self.feature]
 

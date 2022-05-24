@@ -1,7 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import tempfile, os
+import tempfile
+import os
 import numpy as np
 from unittest.mock import Mock
 from deepgnn.tf.common import trainer_factory
@@ -48,7 +49,7 @@ class TestModel(tf.keras.Model):
         return self.dump_value
 
     def train_step(self, data: dict):
-        """override base train_step."""
+        """Override base train_step."""
         with tf.GradientTape() as tape:
             loss, metrics = self(data, training=True)
 
@@ -59,14 +60,14 @@ class TestModel(tf.keras.Model):
         return result
 
     def test_step(self, data: dict):
-        """override base test_step."""
+        """Override base test_step."""
         loss, metrics = self(data, training=False)
         result = {"loss": loss}
         result.update(metrics)
         return result
 
     def predict_step(self, data: dict):
-        """override base predict_step."""
+        """Override base predict_step."""
         self(data, training=False)
         return [self.node_id, self.feature]
 

@@ -1,7 +1,9 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import os, sys, pytest
+import os
+import sys
+import pytest
 import tempfile
 import argparse
 import numpy as np

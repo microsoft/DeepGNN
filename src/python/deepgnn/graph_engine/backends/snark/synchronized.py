@@ -3,6 +3,7 @@
 
 """
 Synchronized wrappers for client and server to use as a backend for GE.
+
 The idea is to use sync files to wait until all servers are created or every client is closed.
 Every backend knows how many servers are going to be started through command line arguments,
 so clients wait until that number of server sync files appear in a sync folder(usually a model path).
@@ -45,13 +46,17 @@ def _delete_lock_file(folder: str, index: int, extension: str):
 
 
 class SupportsReset:
+    """Simple interface for client/server."""
+
     def reset(self) -> None:
+        """Unload client/server from memory."""
         pass
 
 
 class SynchronizedClient:
     """SynchronizedClient uses file system to synchronize create graph client only after every GE instance started.
-    servers appear in the `path` folder as files snark_#[0-n].server and client creation is delayed until these sync files appear.
+
+    Servers appear in the `path` folder as files snark_#[0-n].server and client creation is delayed until these sync files appear.
     """
 
     def __init__(
@@ -64,6 +69,7 @@ class SynchronizedClient:
         *args,
         **kwargs,
     ):
+        """Initialize client."""
         self.rank = rank
         self.path = path
         self.original_pid = os.getpid()
@@ -76,6 +82,7 @@ class SynchronizedClient:
 
     @property
     def client(self):
+        """Connect client to all servers and save it for future use."""
         # Use optimistic lock
         if self._client is not None:
             return self._client
@@ -93,6 +100,7 @@ class SynchronizedClient:
         return self._client
 
     def reset(self):
+        """Disconnect client from servers and unload it from memory."""
         with self._lock:
             if self._client is not None:
                 self._client.reset()
@@ -169,7 +177,7 @@ class _ServerProcess(mp.Process):
                     f"Server #{self.id} done waiting for clients to disconnect"
                 )
             except concurrent.futures.TimeoutError:
-                get_logger().info(f"Server timed out waiting for clients to disconnect")
+                get_logger().info("Server timed out waiting for clients to disconnect")
                 task.keep_going = False
 
     def run(self):
@@ -180,7 +188,7 @@ class _ServerProcess(mp.Process):
         get_logger().info(f"Shutting down server #{self.id}")
 
     def join(self, timeout: float = None):
-        """Stop the GE server"""
+        """Stop the GE server."""
         self._wait_for_clients(timeout)
         self._stop_event.set()
         if self._server is not None:
@@ -188,14 +196,19 @@ class _ServerProcess(mp.Process):
 
 
 class SynchronizedServer:
-    """SynchronizedServer uses file system to delay server deletion on shutdown. Until all client sync files are deleted from
-    the `sync_path` folder, the servers will keep running."""
+    """SynchronizedServer uses file system to delay server deletion on shutdown.
+
+    Until all client sync files are deleted from the `sync_path` folder, the servers will keep running.
+    """
 
     def __init__(
         self, sync_path: str, index: int, timeout: float, klass: Any, *args, **kwargs
     ):
-        # A backend might be forked(e.g. by pytorch DDP),
-        # so we need to start a separate process to protect mutexes
+        """
+        Initialize server.
+
+        A backend might be forked(e.g. by pytorch DDP), so we need to start a separate process to protect mutexes.
+        """
         self.sync_path = sync_path
         self.id = index
         self.timeout = timeout
@@ -204,6 +217,7 @@ class SynchronizedServer:
         self._server_process.start()
 
     def reset(self):
+        """Unload server from memory."""
         self._server_process.join(timeout=self.timeout)
         if os.getpid() == self.original_pid:
             _delete_lock_file(self.sync_path, self.id, "server")

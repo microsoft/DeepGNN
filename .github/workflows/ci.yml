@@ -1,0 +1,167 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, reopened, synchronize]
+  workflow_dispatch:
+
+jobs:
+  pre-commit:
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9"]
+        os: ["ubuntu-latest", "macos-11", "windows-2019"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+      - name: Run lint
+        uses: ./.github/actions/lint
+  tests:
+    needs: pre-commit
+    strategy:
+      matrix:
+        python-version: ["3.7", "3.8"]
+        os: ["ubuntu-latest", "macos-11", "windows-2019"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run tests
+        uses: ./.github/actions/test
+        with:
+          disk_cache: test-${{ matrix.os }}-${{ matrix.python-version }}
+  benchmarks:
+    needs: tests
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run benchmarks
+        uses: ./.github/actions/benchmarks
+        with:
+          disk_cache: benchmark-${{ matrix.os }}
+  wheel:
+    runs-on: ubuntu-20.04
+    needs: tests
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.8"
+      - name: Upload examples
+        uses: actions/upload-artifact@v3
+        with:
+          name: examples
+          path: examples/*
+      - name: build wheel
+        uses: ./.github/actions/wheel
+        with:
+          package_version: "0.1.1"
+      - name: Upload wheel file
+        uses: actions/upload-artifact@v3
+        with:
+          name: deepgnn
+          path: src/python/dist/*.whl
+  tf_examples:
+    needs: wheel
+    strategy:
+      matrix:
+        python-version: ["3.7", "3.8"]
+        os: ["ubuntu-latest", "ubuntu-18.04"]
+    runs-on: ${{ matrix.os }}
+    env:
+      HOROVOD_WITH_GLOO: 1
+      HOROVOD_WITHOUT_MPI: 1
+      HOROVOD_WITH_TENSORFLOW: 1
+      HOROVOD_WITHOUT_PYTORCH: 1
+      HOROVOD_WITHOUT_MXNET: 1
+    steps:
+      - name: Download wheels
+        uses: actions/download-artifact@v3
+        with:
+          name: deepgnn
+      - name: Download examples
+        uses: actions/download-artifact@v3
+        with:
+          name: examples
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+          cache-dependency-path: "tensorflow/requirements.txt"
+      - name: Install tensorflow
+        run: pip install --timeout 300 tensorflow
+      - name: Install dependencies
+        run: pip install --timeout 300 -r tensorflow/requirements.txt
+      - name: Check horovod features
+        run: horovodrun --check-build
+      - name: Uninstall cached deepgnn packages
+        run: pip uninstall deepgnn-ge deepgnn-tf
+      - name: Install wheels
+        run: pip install deepgnn_ge*.whl deepgnn_tf*.whl
+      - name: Run graphsage examples
+        run: cd ./tensorflow/sage/ && sudo chmod +x *.sh && bash ./run.sh CPU && bash ./run.sh CPU disk yes
+      - name: Run gcn examples
+        run: cd ./tensorflow/gcn/ && sudo chmod +x *.sh && bash ./run.sh CPU cleanup
+      - name: Run han examples
+        run: cd ./tensorflow/han/ && sudo chmod +x *.sh && bash ./run.sh CPU cleanup
+      - name: Run gat examples
+        run: cd ./tensorflow/gat/ && sudo chmod +x *.sh && bash ./run.sh CPU cleanup
+  torch_examples:
+    needs: wheel
+    strategy:
+      matrix:
+        python-version: ["3.7", "3.8"]
+        os: ["ubuntu-latest", "ubuntu-18.04"]
+    runs-on: ${{ matrix.os }}
+    env:
+      HOROVOD_WITH_GLOO: 1
+      HOROVOD_WITHOUT_MPI: 1
+      HOROVOD_WITHOUT_TENSORFLOW: 1
+      HOROVOD_WITH_PYTORCH: 1
+      HOROVOD_WITHOUT_MXNET: 1
+    steps:
+      - name: Download wheels
+        uses: actions/download-artifact@v3
+        with:
+          name: deepgnn
+      - name: Download examples
+        uses: actions/download-artifact@v3
+        with:
+          name: examples
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+          cache-dependency-path: "pytorch/requirements.txt"
+      - name: Install torch
+        run: pip install --timeout 300 torch
+      - name: Install dependencies
+        run: pip install --timeout 300 -r pytorch/requirements.txt
+      - name: Uninstall cached deepgnn packages
+        run: pip uninstall deepgnn-ge deepgnn-torch
+      - name: Install wheels
+        run: pip install deepgnn_ge*.whl deepgnn_torch*.whl
+      - name: Run graphsage examples
+        run: cd ./pytorch/gat/ && sudo chmod +x *.sh && bash ./run.sh CPU
+      - name: Run pytorch geometric examples
+        run: cd ./pytorch/geometric/gat/ && sudo chmod +x *.sh && bash ./run.sh CPU
+      - name: Run graphsage supervised examples
+        run: cd ./pytorch/graphsage/ && sudo chmod +x *.sh && bash ./run.sh supervised no CPU && bash ./run.sh supervised no CPU disk yes
+      - name: Run graphsage unsupervised examples
+        run: cd ./pytorch/graphsage/ && sudo chmod +x *.sh && bash ./run.sh unsupervised no CPU
+      - name: Run hetgnn examples
+        run: cd ./pytorch/hetgnn/ && sudo chmod +x *.sh && bash ./run.sh CPU

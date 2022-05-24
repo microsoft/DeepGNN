@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Hooks for distributed training."""
 import tensorflow as tf
 import os
 import sys
@@ -10,6 +10,7 @@ from deepgnn.tf.common.dist_sync import DistributedSync
 class ChiefCheckpointSaverHook(tf.estimator.CheckpointSaverHook):
     """
     Chief only hooks, chief session will call `dist_sync.sync()` to wait all workers session.
+
     Once all workers finished, chief session run `end(session)` to save the final checkpoint.
     """
 
@@ -24,6 +25,7 @@ class ChiefCheckpointSaverHook(tf.estimator.CheckpointSaverHook):
         scaffold=None,
         listeners=None,
     ):
+        """Initialize hook."""
         super().__init__(
             checkpoint_dir,
             save_secs,
@@ -37,6 +39,7 @@ class ChiefCheckpointSaverHook(tf.estimator.CheckpointSaverHook):
         self.dist_sync = dist_sync
 
     def end(self, session):
+        """End session."""
         self.dist_sync.sync("session")
         super().end(session)
 
@@ -47,3 +50,15 @@ class ChiefCheckpointSaverHook(tf.estimator.CheckpointSaverHook):
             path = f"{self._save_path}-{step}_temp"
             os.makedirs(path, exist_ok=True)
         super()._save(session, step)
+
+
+class SessionExitHook(tf.estimator.SessionRunHook):
+    """Synchronize training at exit."""
+
+    def __init__(self, dist_sync: DistributedSync):
+        """Create lock."""
+        self.dist_sync = dist_sync
+
+    def end(self, session):
+        """Wait for all workers to finish."""
+        self.dist_sync.sync("session")

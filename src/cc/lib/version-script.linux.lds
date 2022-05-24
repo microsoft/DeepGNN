@@ -7,8 +7,10 @@
         CreateRemoteClient;
         GetNodeFeature;
         GetNodeSparseFeature;
+        GetNodeStringFeature;
         GetEdgeFeature;
         GetEdgeSparseFeature;
+        GetEdgeStringFeature;
         StartServer;
         GetNeighbors;
         WeightedSampleNeighbor;

@@ -1,7 +1,9 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import os, sys, pytest
+import os
+import sys
+import pytest
 import tempfile
 import numpy as np
 import torch
@@ -83,7 +85,7 @@ def test_pytorch_gat_cora():
         weight_decay=0.0005,
     )
 
-    ## train
+    # train
     num_epochs = 200
     ds = create_dataset()
     model.train()
@@ -98,7 +100,7 @@ def test_pytorch_gat_cora():
                 f"epoch {ei} - {si}, loss {loss.data.item() :.6f}, accuracy {acc.data.item():.6f}"
             )
 
-    ## evaluate
+    # evaluate
     def create_eval_dataset():
         ds = TorchDeepGNNDataset(
             sampler_class=FileNodeSampler,

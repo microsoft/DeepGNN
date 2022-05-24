@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Command line arguments for training TF models."""
 import uuid
 from deepgnn.arg_types import str2list_str, str2list_int
 from deepgnn.graph_engine import define_param_graph_engine
@@ -10,6 +10,7 @@ from deepgnn.graph_engine.snark.client import PartitionStorageType
 
 
 def log_all_parameters(args):
+    """Log values of every argument."""
     logger = get_logger()
 
     for arg in vars(args):
@@ -18,6 +19,7 @@ def log_all_parameters(args):
 
 # fmt:off
 def define_param_common(parser):
+    """Add common arguments for every training type."""
     group = parser.add_argument_group("Common Parameters")
     group.add_argument("--mode", type=TrainMode, default=TrainMode.TRAIN, choices=list(TrainMode))
     group.add_argument("--user_name", type=str, default=get_current_user(), help="User name when running jobs.")
@@ -35,6 +37,7 @@ def define_param_common(parser):
 
 
 def define_param_ps_dist_training(parser):
+    """Add arguments for training with parameter server."""
     group = parser.add_argument_group("PSTrainer Parameters")
     group.add_argument("--job_name", type=str, default=None, choices=["worker", "ps"], help="(PSTrainer Only) Job role.",)
     group.add_argument("--task_index", type=int, default=0, help="(PSTainer Only) job index.")
@@ -43,6 +46,7 @@ def define_param_ps_dist_training(parser):
 
 
 def define_param_tf_hooks(parser):
+    """Arguments for hooks."""
     group = parser.add_argument_group("TF Hooks Parameters")
     group.add_argument("--checkpoint_save_secs", type=int, default=3600, help="save model checkpoint every N secs.",)
     group.add_argument("--profiler_save_secs", type=int, default=180, help="(TF1Trainer) save profiler every N secs.",)
@@ -52,17 +56,20 @@ def define_param_tf_hooks(parser):
 
 
 def define_param_prefetch(parser):
+    """Prefetch configuration."""
     group = parser.add_argument_group("Query Prefetch Parameters")
     group.add_argument("--prefetch_queue_size", type=int, default=16, help="Number of queries to prefetch",)
     group.add_argument("--prefetch_worker_size", type=int, default=2, help="Num of parallel workers to run graph queries.",)
 
 
 def define_param_horovod(parser):
+    """Horovod configuration."""
     parser.add_argument_group("Horovod TF Parameters")
 # fmt:on
 
 
 def import_default_parameters(parser):
+    """Configure all components."""
     define_param_common(parser)
     define_param_horovod(parser)
     define_param_ps_dist_training(parser)

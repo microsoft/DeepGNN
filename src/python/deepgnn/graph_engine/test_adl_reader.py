@@ -25,7 +25,7 @@ try:
     # if no, skip all the test cases.
     adl.ls()
     IS_ADL_CONFIG_VALID = True
-except:
+except:  # noqa: E722
     pytestmark = pytest.mark.skip(reason="No valid adl config found.")
 
 

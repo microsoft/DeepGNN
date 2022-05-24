@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Encoders for link prediction models."""
 import torch
 import torch.nn as nn
 import numpy as np
@@ -36,6 +36,8 @@ from consts import (
 
 
 class GnnEncoder(nn.Module):
+    """Generic encoder implementations for GNNs."""
+
     def __init__(
         self,
         input_dim,
@@ -47,6 +49,7 @@ class GnnEncoder(nn.Module):
         lgcl_largest_k=0,
         residual="",
     ):
+        """Initialize encoder."""
         super(GnnEncoder, self).__init__()
 
         self.head_nums = head_nums
@@ -103,6 +106,7 @@ class GnnEncoder(nn.Module):
                     self.add_module(enc_key, encoder_map[enc_key])
 
     def gat_init(self, gnn_input_dim, fanouts, prefix=""):
+        """Initialize GAT encoder."""
         encoder_map = {}
         for layer, head_num in enumerate(self.head_nums):
             gnn_outout_dim = self.hidden_dims[layer]
@@ -120,6 +124,7 @@ class GnnEncoder(nn.Module):
         return encoder_map
 
     def gat_encoder(self, samples, fanouts, prefix=""):
+        """Evaluate GAT encoder."""
         if len(fanouts) == 0:
             return samples[0]
 
@@ -139,13 +144,16 @@ class GnnEncoder(nn.Module):
         return att_output
 
     def light_gcn_init(self, gnn_input_dim, fanouts, prefix=""):
+        """Initialize light GCN encoder."""
         return {f"{prefix}_lightgcn_encoder": LightGCNEncoder()}
 
     def light_gcn_encoder(self, samples, fanouts, prefix=""):
+        """Evaluate light GCN encoder."""
         context = {INPUTS: samples, FANOUTS: fanouts}
         return getattr(self, f"{prefix}_lightgcn_encoder")(context)
 
     def hetGNN_init(self, gnn_input_dim, fanouts, prefix=""):
+        """Initialize light hetGNN encoder."""
         encoders = []
 
         # if het gnn needs other encoder such as lgcl. e.g. hetgnn_lgcl/hetgnn_gat
@@ -168,11 +176,13 @@ class GnnEncoder(nn.Module):
         }
 
     def hetGNN_encoder(self, samples, fanouts, prefix=""):
+        """Evaluate light GCN encoder."""
         context = {INPUTS: samples}
 
         return getattr(self, f"{prefix}_hetgnn_encoder")(context)
 
     def lgcl_init(self, gnn_input_dim, fanouts, prefix=""):
+        """Initialize LGCL encoder."""
         return {
             f"{prefix}_lgcl_encoder": LgclEncoder(
                 in_features=gnn_input_dim,
@@ -188,13 +198,16 @@ class GnnEncoder(nn.Module):
 
     def lgcl_encoder(self, samples, fanouts, prefix=""):
         """
-        ref: https://dl.acm.org/doi/pdf/10.1145/3219819.3219947
+        Learnable graph convolution encoder.
+
+        Reference: https://dl.acm.org/doi/pdf/10.1145/3219819.3219947.
         """
         context = {INPUTS: samples, FANOUTS: fanouts}
 
         return getattr(self, f"{prefix}_lgcl_encoder")(context)
 
     def forward(self, context: dict):
+        """Evaluate saved encoder and return term tensor with mask and label."""
         embs_list = context[EMBS_LIST]
         term_tensors = context[TERM_TENSOR]
         mask = context[ENCODER_MASK]
@@ -220,7 +233,8 @@ class GnnEncoder(nn.Module):
 
         return vec_gnn, term_tensors, mask, label
 
-    def merge_neighbors(self, embeds, fanouts):  # merge multi-type one-hop neighbors
+    def merge_neighbors(self, embeds, fanouts):
+        """Merge multi-type one-hop neighbors."""
         merges = []
         dim = embeds[0][0].shape[-1]
         for i, fanout in enumerate(fanouts):

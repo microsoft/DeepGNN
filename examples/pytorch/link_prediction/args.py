@@ -1,11 +1,14 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+"""Command line arguments for link prediction model."""
 
 import argparse
 from deepgnn.arg_types import str2list_int, str2list2, str2list2_int
 
+
 # fmt: off
 def init_args(parser: argparse.ArgumentParser):
+    """Initialize all arguments."""
     group = parser.add_argument_group("LinkPrediction Parameters")
     group.add_argument("--share_encoder", action="store_true", help="Whether or not to share the feature encoder for different node types.")
 

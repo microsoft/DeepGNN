@@ -1,0 +1,32 @@
+name: Wheel
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_version:
+        required: true
+        type: string
+        description: DeepGNN version to put in wheel
+
+jobs:
+  wheels:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ["ubuntu-latest", "macos-11", "windows-2019"]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.8"
+      - name: build wheel
+        uses: ./.github/actions/wheel
+        with:
+          package_version: ${{ github.event.inputs.package_version }}
+          disk_cache: wheel-${{ github.ref }}-${{ runner.os }}-${{ matrix.os }}-${{ matrix.python-version }}
+      - name: Upload wheel file
+        uses: actions/upload-artifact@v3
+        with:
+          name: deepgnn
+          path: src/python/dist/*.whl

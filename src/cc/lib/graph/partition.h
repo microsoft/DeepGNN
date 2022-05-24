@@ -32,6 +32,9 @@ struct Partition
                               std::span<int64_t> out_dimensions, std::vector<std::vector<int64_t>> &out_indices,
                               std::vector<std::vector<uint8_t>> &out_values) const;
 
+    void GetNodeStringFeature(uint64_t internal_node_id, std::span<const snark::FeatureId> features,
+                              std::span<int64_t> out_dimensions, std::vector<uint8_t> &out_values) const;
+
     // Return true if an edge was found in the partition
     bool GetEdgeFeature(uint64_t internal_src_node_id, NodeId input_edge_dst, Type input_edge_type,
                         std::span<snark::FeatureMeta> features, std::span<uint8_t> output) const;
@@ -40,6 +43,10 @@ struct Partition
                               std::span<const snark::FeatureId> features, int64_t prefix,
                               std::span<int64_t> out_dimensions, std::vector<std::vector<int64_t>> &out_indices,
                               std::vector<std::vector<uint8_t>> &out_values) const;
+
+    bool GetEdgeStringFeature(uint64_t internal_src_node_id, NodeId input_edge_dst, Type input_edge_type,
+                              std::span<const snark::FeatureId> features, std::span<int64_t> out_dimensions,
+                              std::vector<uint8_t> &out_values) const;
 
     // Backfill out_* vectors with information about neighbors of the node
     // with id equal to node_id and returns total number of such neighbors.
