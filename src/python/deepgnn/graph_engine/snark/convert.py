@@ -102,8 +102,7 @@ def output(
         if lines == FLAG_ALL_DONE:
             break
 
-        for line in lines:
-            src, dst, typ, weight, features = decoder.decode(line)
+        for src, dst, typ, weight, features in decoder.decode(lines):
             if src == -1:
                 node_writer.add(dst, typ, features)
                 edge_writer.nbi.write(  # type: ignore

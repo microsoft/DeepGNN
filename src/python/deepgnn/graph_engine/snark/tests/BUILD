@@ -271,3 +271,25 @@ py_binary(
         requirement("azure-datalake-store"),
     ],
 )
+
+py_binary(
+    name = "convert_benchmark2",
+    srcs = ["convert_benchmark2.py"],
+    imports = ["../../../../"],
+    main = "convert_benchmark2.py",
+    python_version = "PY3",
+    srcs_version = "PY3",
+    deps = [
+        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
+        "//src/python/deepgnn/graph_engine:graph_engine",
+        requirement("importlib_metadata"),
+        requirement("numpy"),
+        requirement("pytest"),
+        requirement("fsspec"),
+        requirement("networkx"),
+        requirement("opencensus"),
+        requirement("opencensus-context"),
+        requirement("opencensus-ext-azure"),
+        requirement("azure-datalake-store"),
+    ],
+)

@@ -64,7 +64,11 @@ class JsonDecoder(Decoder):
 
     def decode(self, line: str):
         """Use json package to convert the json text line into node object."""
-        return json.loads(line)
+        data = json.loads(line)
+        yield -1, data["node_id"], data["node_type"], data["node_weight"], {}
+        # TODO features for both
+        for edge in data["edge"]:
+            yield edge["src_id"], edge["dst_id"], edge["edge_type"], edge["weight"], {}
 
 
 class TsvDecoder(Decoder):
@@ -190,6 +194,8 @@ class TsvDecoder(Decoder):
                 node["edge"].append(edge_info)
 
         return node
+
+
 import numpy as np
 
 class LinearDecoder(Decoder):
@@ -212,27 +218,28 @@ class LinearDecoder(Decoder):
             "uint64_feature": int,
         }
 
-    def decode(self, line: str):
+    def decode(self, lines: str):
         """Use json package to convert the json text line into node object."""
-        src, dst, typ, weight, *feature_data = line.split()
-        features = {}
-        idx = 0
-        while True:
-            try:
-                key, feature_idx, length = feature_data[idx:idx+3]
-            except ValueError:
-                break
-            feature_idx, length = int(feature_idx), int(length)
-            if length:
-                if key not in features:
-                    features[key] = {}
-                if key == "binary_feature":
-                    value = feature_data[idx+3]
-                else:
-                    value = np.fromiter(map(self.convert_map[key], feature_data[idx+3:idx+3+length]), dtype=self.convert_map[key])
-                features[key][feature_idx] = value
-            idx += length + 3
-        return int(src), int(dst), int(typ), float(weight), features
+        for line in lines:
+            src, dst, typ, weight, *feature_data = line.split()
+            features = {}
+            idx = 0
+            while True:
+                try:
+                    key, feature_idx, length = feature_data[idx:idx+3]
+                except ValueError:
+                    break
+                feature_idx, length = int(feature_idx), int(length)
+                if length:
+                    if key not in features:
+                        features[key] = {}
+                    if key == "binary_feature":
+                        value = feature_data[idx+3]
+                    else:
+                        value = np.fromiter(map(self.convert_map[key], feature_data[idx+3:idx+3+length]), dtype=self.convert_map[key])
+                    features[key][feature_idx] = value
+                idx += length + 3
+            yield int(src), int(dst), int(typ), float(weight), features
 
 
 def _dump_features(features: dict) -> str:
