@@ -226,17 +226,18 @@ class LinearDecoder(Decoder):
             idx = 0
             while True:
                 try:
-                    key, feature_idx, length = feature_data[idx:idx+3]
-                except ValueError:
+                    key = feature_data[idx]
+                    length = int(feature_data[idx+1])
+                except IndexError:
                     break
-                feature_idx, length = int(feature_idx), int(length)
+                idx += 2
                 if length:
                     if length == 1 and key == "binary_feature":
-                        value = feature_data[idx+3]
+                        value = feature_data[idx]
                     else:
-                        value = np.array(feature_data[idx+3:idx+3+length], dtype=self.convert_map[key])
+                        value = np.array(feature_data[idx:idx+length], dtype=self.convert_map[key])
                     features.append((key, value))
-                idx += length + 3
+                    idx += length
             yield int(src), int(dst), int(typ), float(weight), features
 
 
@@ -254,7 +255,7 @@ def _dump_features(features: dict) -> str:
             else:
                 v = " ".join(map(str, value))
                 length = len(value)
-            output.append(f"{key} {idx} {length} {v}")
+            output.append(f"{key} {length} {v}")
     
     return " ".join(output)
 
