@@ -95,6 +95,7 @@ class NodeFeatureWriter:
             ),
             "wb",
         )
+        self.nfd_pos = self.nfd.tell()
 
     def add(self, node: typing.Any):
         """Add node to binary output.
@@ -104,15 +105,15 @@ class NodeFeatureWriter:
         self.ni.write(ctypes.c_uint64(self.nfi.tell() // 8))  # type: ignore
         for k in convert_features(node):
             # Fill the gaps between features
-            self.nfi.write(ctypes.c_uint64(self.nfd.tell()))  # type: ignore
+            self.nfi.write(ctypes.c_uint64(self.nfd_pos))  # type: ignore
             if k is not None:
-                self.nfd.write(k)
+                self.nfd_pos += self.nfd.write(k)
 
     def close(self):
         """Close output binary files."""
         self.ni.write(ctypes.c_uint64(self.nfi.tell() // 8))
         self.ni.close()
-        self.nfi.write(ctypes.c_uint64(self.nfd.tell()))
+        self.nfi.write(ctypes.c_uint64(self.nfd_pos))
         self.nfi.close()
         self.nfd.close()
 
@@ -201,6 +202,7 @@ class EdgeFeatureWriter:
         self.fs, _ = get_fs(folder)
         self.folder = folder
         self.partition = partition
+        self.efi = efi
         self.iteration = 0
         self.efd = self.fs.open(
             meta._get_element_features_data_path(
@@ -208,7 +210,7 @@ class EdgeFeatureWriter:
             ),
             "wb",
         )
-        self.efi = efi
+        self.efd_pos = self.efd.tell()
 
     def add(self, head: typing.Any):
         """Add edge features the binary output.
@@ -217,9 +219,9 @@ class EdgeFeatureWriter:
         """
         count = 0
         for k in convert_features(head):
-            count += self.efi.write(ctypes.c_uint64(self.efd.tell()))  # type: ignore
+            count += self.efi.write(ctypes.c_uint64(self.efd_pos))  # type: ignore
             if k is not None:
-                self.efd.write(k)
+                self.efd_pos += self.efd.write(k)
 
         return count
 
@@ -228,7 +230,7 @@ class EdgeFeatureWriter:
         Returns:
             [int]: Last position in data file.
         """
-        return self.efd.tell()
+        return self.efd_pos
 
     def close(self):
         """Close output files."""
@@ -428,27 +430,45 @@ feature_items = [
     ("int8_feature", ctypes.c_int8),
 ]
 
-def convert_features(node: typing.Any):
+def convert_features(features: list):
     """Convert the node's feature into bytes sorted by index."""
     # Use a single container for all node features to make sure there are unique feature_ids
     # and gaps between feature ids are processed correctly.
-    container: typing.Dict[int, typing.Any] = {}
-    for feature, tp in feature_items:
-        if feature in node and node[feature] is not None:
-            for k in node[feature]:
-                values = node[feature][k]
-                assert int(k) not in container, "Duplicate feature ids found for a node"
-                container[int(k)] = values.tobytes()
-
-        feature = f"sparse_{feature}"
-        if feature in node and node[feature] is not None:
-            for k in node[feature]:
-                values = node[feature][k]["values"]
+    output = []  # type: ignore
+    for key, feature in features:
+        if feature is None:
+            output.append(feature)
+        elif key.startswith("sparse_"):
+            if key == "sparse_float16_feature":
+                coordinates = np.array(feature["coordinates"], dtype=np.int64)
+                values = feature["values"]
+                assert (
+                    coordinates.shape[0] == len(values)
+                    if len(values) > 1
+                    else len(coordinates.shape) == 1
+                    or coordinates.shape[0]
+                    == 1  # relax input requirements for single values, both [[a,b]] and [a,b] are ok.
+                ), f"Coordinates {coordinates} and values {values} dimensions don't match"
+                output.append(
+                    int.to_bytes(
+                        len(coordinates), length=4, signed=True, byteorder=sys.byteorder
+                    )
+                    + bytes(
+                        struct.pack(
+                            "=I",
+                            ctypes.c_uint32(
+                                coordinates.shape[-1] if coordinates.ndim > 1 else 1
+                            ).value,
+                        )
+                    )
+                    + bytes(coordinates.data)
+                    + np.array(values, dtype=np.float16).tobytes()
+                )
+            else:
+                values = feature["values"]
                 values_buf = (tp * len(values))()
                 values_buf[:] = values
-
-                coordinates = np.array(node[feature][k]["coordinates"], dtype=np.int64)
-                assert int(k) not in container, "Duplicate feature ids found for a node"
+                coordinates = np.array(feature["coordinates"], dtype=np.int64)
                 assert (
                     coordinates.shape[0] == len(values)
                     if len(values) > 1
@@ -467,49 +487,12 @@ def convert_features(node: typing.Any):
                     + bytes(coordinates.data)
                     + values_buf
                 )
-                container[int(k)] = final_buf
+                output.append(final_buf)
+        else:
+            if key == "binary_feature":
+                output.append(bytes(feature, "utf-8"))
+            else:
+                # TODO assert correct dtype // correct length
+                output.append(feature.tobytes())
 
-    if "sparse_float16_feature" in node and node["sparse_float16_feature"] is not None:
-        for k in node["sparse_float16_feature"]:
-            coordinates = np.array(
-                node["sparse_float16_feature"][k]["coordinates"], dtype=np.int64
-            )
-            values = node["sparse_float16_feature"][k]["values"]
-            assert (
-                coordinates.shape[0] == len(values)
-                if len(values) > 1
-                else len(coordinates.shape) == 1
-                or coordinates.shape[0]
-                == 1  # relax input requirements for single values, both [[a,b]] and [a,b] are ok.
-            ), f"Coordinates {coordinates} and values {values} dimensions don't match"
-
-            container[int(k)] = (
-                int.to_bytes(
-                    len(coordinates), length=4, signed=True, byteorder=sys.byteorder
-                )
-                + bytes(
-                    struct.pack(
-                        "=I",
-                        ctypes.c_uint32(
-                            coordinates.shape[-1] if coordinates.ndim > 1 else 1
-                        ).value,
-                    )
-                )
-                + bytes(coordinates.data)
-                + np.array(values, dtype=np.float16).tobytes()
-            )
-
-    if "binary_feature" in node and node["binary_feature"] is not None:
-        for k in node["binary_feature"]:
-            container[int(k)] = bytes(node["binary_feature"][k], "utf-8")
-
-    ret_list = []  # type: ignore
-    curr = 0
-    for k in sorted(container.keys()):
-        while curr < k:
-            ret_list.append(None)
-            curr += 1
-        ret_list.append(container[k])
-        curr += 1
-
-    return ret_list
+    return output

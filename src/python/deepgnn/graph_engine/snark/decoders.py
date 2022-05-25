@@ -222,7 +222,7 @@ class LinearDecoder(Decoder):
         """Use json package to convert the json text line into node object."""
         for line in lines:
             src, dst, typ, weight, *feature_data = line.split()
-            features = {}
+            features = []
             idx = 0
             while True:
                 try:
@@ -231,13 +231,11 @@ class LinearDecoder(Decoder):
                     break
                 feature_idx, length = int(feature_idx), int(length)
                 if length:
-                    if key not in features:
-                        features[key] = {}
-                    if key == "binary_feature":
+                    if length == 1 and key == "binary_feature":
                         value = feature_data[idx+3]
                     else:
-                        value = np.fromiter(map(self.convert_map[key], feature_data[idx+3:idx+3+length]), dtype=self.convert_map[key])
-                    features[key][feature_idx] = value
+                        value = np.array(feature_data[idx+3:idx+3+length], dtype=self.convert_map[key])
+                    features.append((key, value))
                 idx += length + 3
             yield int(src), int(dst), int(typ), float(weight), features
 
