@@ -589,7 +589,15 @@ def convert_features(node: typing.Any):
             )
 
     if "binary_feature" in node and node["binary_feature"] is not None:
+        __convert_list_feature_to_dict(node, "binary_feature")
         for k in node["binary_feature"]:
+            if int(k) in container:
+                newId = __get_unassigned_index(node)
+                get_logger().warning(
+                    f"Duplicate feature ids found for a node, original: {k}, replaced with: {newId}"
+                )
+                k = newId
+
             container[int(k)] = bytes(node["binary_feature"][k], "utf-8")
 
     ret_list = []  # type: ignore
