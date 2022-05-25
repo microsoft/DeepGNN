@@ -6,6 +6,7 @@ import os
 import struct
 import sys
 import tempfile
+import enum
 from pathlib import Path
 
 import pytest
@@ -17,7 +18,15 @@ from deepgnn.graph_engine.snark.decoders import DecoderType
 from deepgnn.graph_engine.snark.dispatcher import QueueDispatcher
 
 
-def triangle_graph_json(folder):
+class FeatureFormat(enum.Enum):
+    """Mode to control training accross batches."""
+
+    Map = 0
+    Array = 1
+    Tollerant = 2
+
+
+def triangle_graph_json(folder, formatType: FeatureFormat = FeatureFormat.Map):
     data = open(os.path.join(folder, "graph.json"), "w+")
     graph = [
         {
@@ -26,7 +35,12 @@ def triangle_graph_json(folder):
             "node_weight": 1,
             "neighbor": {"0": {"0": 0.5}, "1": {}},
             "uint64_feature": {},
-            "float_feature": {"0": [0, 1], "1": [-0.01, -0.02]},
+            "float_feature": [[0, 1], [-0.01, -0.02]]
+            if formatType == FeatureFormat.Array
+            else {"0": [0, 1], "1": [-0.01, -0.02]},
+            "double_feature": {"0": [0, 1], "1": [-0.01, -0.02]}
+            if formatType == FeatureFormat.Tollerant
+            else {"2": [0, 1], "3": [-0.01, -0.02]},
             "binary_feature": {},
             "edge": [
                 {
@@ -46,7 +60,12 @@ def triangle_graph_json(folder):
             "node_weight": 1,
             "neighbor": {"0": {}, "1": {"5": 1}},
             "uint64_feature": {},
-            "float_feature": {"0": [1], "1": [-0.03, -0.04]},
+            "float_feature": [[1], [-0.03, -0.04]]
+            if formatType == FeatureFormat.Array
+            else {"0": [1], "1": [-0.03, -0.04]},
+            "double_feature": {"0": [1], "1": [-0.03, -0.04]}
+            if formatType == FeatureFormat.Tollerant
+            else {"2": [1], "3": [-0.01, -0.02]},
             "binary_feature": {},
             "edge": [
                 {
@@ -66,7 +85,12 @@ def triangle_graph_json(folder):
             "node_weight": 1,
             "neighbor": {"0": {}, "1": {"9": 0.7}},
             "uint64_feature": {},
-            "float_feature": {"0": [1, 1], "1": [-0.05, -0.06]},
+            "float_feature": [[1, 1], [-0.05, -0.06]]
+            if formatType == FeatureFormat.Array
+            else {"0": [1, 1], "1": [-0.05, -0.06]},
+            "double_feature": {"0": [1, 1], "1": [-0.05, -0.06]}
+            if formatType == FeatureFormat.Tollerant
+            else {"2": [1, 1], "3": [-0.05, -0.06]},
             "binary_feature": {},
             "edge": [
                 {
@@ -102,9 +126,9 @@ def triangle_graph_json(folder):
 
 def triangle_graph_tsv(folder):
     data = open(os.path.join(folder, "graph.tsv"), "w+")
-    data.write("9\t0\t1\tf:0 1;f:-0.01 -0.02\t0,0,0.5,u64:1 2 3\n")
-    data.write("0\t1\t1\tf:1;f:-0.03 -0.04\t5,1,1,;f:3 4\n")
-    data.write("5\t2\t1\tf:1 1;f:-0.05 -0.06\t9,1,0.7,b:hello\n")
+    data.write("9\t0\t1\tf:0 1;f:-0.01 -0.02;d:0 1;d:-0.01 -0.02\t0,0,0.5,u64:1 2 3\n")
+    data.write("0\t1\t1\tf:1;f:-0.03 -0.04;d:1;d:-0.03 -0.04\t5,1,1,;f:3 4\n")
+    data.write("5\t2\t1\tf:1 1;f:-0.05 -0.06;d:1 1;d:-0.05 -0.06\t9,1,0.7,b:hello\n")
     data.flush()
 
     meta = open(os.path.join(folder, "meta.txt"), "w+")
@@ -125,18 +149,24 @@ def triangle_graph_tsv(folder):
 @pytest.fixture(scope="module")
 def triangle_graph(request):
     workdir = tempfile.TemporaryDirectory()
-    if request.param == DecoderType.JSON:
-        data_name, meta_name = triangle_graph_json(workdir.name)
-    elif request.param == DecoderType.TSV:
+    decoderType, formatType = request.param
+    if decoderType == DecoderType.JSON:
+        data_name, meta_name = triangle_graph_json(workdir.name, formatType)
+    elif decoderType == DecoderType.TSV:
         data_name, meta_name = triangle_graph_tsv(workdir.name)
     else:
         raise ValueError("Unsupported format.")
 
-    yield data_name, meta_name, request.param
+    yield data_name, meta_name, decoderType
     workdir.cleanup()
 
 
-param = [DecoderType.JSON, DecoderType.TSV]
+param = [
+    (DecoderType.JSON, FeatureFormat.Map),
+    (DecoderType.JSON, FeatureFormat.Array),
+    (DecoderType.JSON, FeatureFormat.Tollerant),
+    (DecoderType.TSV, FeatureFormat.Map),
+]
 
 
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
@@ -182,9 +212,9 @@ def test_sanity_node_index(triangle_graph):
         result = ni.read(expected_size + 8)
         assert len(result) == expected_size
         assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
-        assert result[8:16] == (2).to_bytes(8, byteorder=sys.byteorder)
-        assert result[16:24] == (4).to_bytes(8, byteorder=sys.byteorder)
-        assert result[24:32] == (6).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (4).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:24] == (8).to_bytes(8, byteorder=sys.byteorder)
+        assert result[24:32] == (12).to_bytes(8, byteorder=sys.byteorder)
 
 
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
@@ -200,17 +230,19 @@ def test_sanity_node_feature_index(triangle_graph):
     ).convert()
     with open("{}/node_features_{}_{}.index".format(output.name, 0, 0), "rb") as ni:
         expected_size = (
-            3 * 8 * 2 + 8
-        )  # 3 nodes, 2 features each with 2 float + 8 as final close
+            3 * (8 * 2 + 8 * 2) + 8
+        )  # 3 nodes, 2 features each with 2 float + 2 features each with 2 double + 8 as final close
         result = ni.read(expected_size + 1)
         assert len(result) == expected_size
         assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
         assert result[8:16] == (8).to_bytes(8, byteorder=sys.byteorder)
         assert result[16:24] == (16).to_bytes(8, byteorder=sys.byteorder)
-        assert result[24:32] == (20).to_bytes(8, byteorder=sys.byteorder)
-        assert result[32:40] == (28).to_bytes(8, byteorder=sys.byteorder)
-        assert result[40:48] == (36).to_bytes(8, byteorder=sys.byteorder)
-        assert result[48:56] == (44).to_bytes(8, byteorder=sys.byteorder)
+        assert result[24:32] == (32).to_bytes(8, byteorder=sys.byteorder)
+        assert result[32:40] == (48).to_bytes(8, byteorder=sys.byteorder)
+        assert result[40:48] == (52).to_bytes(8, byteorder=sys.byteorder)
+        assert result[48:56] == (60).to_bytes(8, byteorder=sys.byteorder)
+        assert result[56:64] == (68).to_bytes(8, byteorder=sys.byteorder)
+        assert result[64:72] == (84).to_bytes(8, byteorder=sys.byteorder)
 
 
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)

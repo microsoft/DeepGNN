@@ -15,6 +15,7 @@ import deepgnn.graph_engine.snark.alias as alias
 import deepgnn.graph_engine.snark.meta as meta
 from deepgnn.graph_engine._base import get_fs
 from deepgnn.graph_engine.snark.meta import _Element
+from deepgnn.logging_utils import get_logger
 
 
 class NodeWriter:
@@ -436,7 +437,6 @@ def __add_sparse(node, feature, tp, container):
         values_buf[:] = values
 
         coordinates = np.array(node[feature][k]["coordinates"], dtype=np.int64)
-        assert int(k) not in container, "Duplicate feature ids found for a node"
         assert (
             coordinates.shape[0] == len(values)
             if len(values) > 1
@@ -455,7 +455,26 @@ def __add_sparse(node, feature, tp, container):
             + bytes(coordinates.data)
             + values_buf
         )
+
+        if int(k) in container:
+            newId = __get_unassigned_index(node)
+            get_logger().warning(
+                f"Duplicate feature ids found for a node, original: {k}, replaced with: {newId}"
+            )
+            k = newId
+
         container[int(k)] = final_buf
+
+
+def __get_unassigned_index(node):
+    cur_index = node["cur_index"]
+    feature_indexes = node["feature_indexes"]
+    while str(cur_index) in feature_indexes:
+        cur_index += 1
+
+    node["cur_index"] = cur_index + 1
+    node["feature_indexes"].append(cur_index)
+    return cur_index
 
 
 def __add_dense(node, feature, tp, container):
@@ -465,17 +484,44 @@ def __add_dense(node, feature, tp, container):
         values = node[feature][k]
         buf = (tp * len(values))()
         buf[:] = values
-        assert int(k) not in container, "Duplicate feature ids found for a node"
+
+        if int(k) in container:
+            newId = __get_unassigned_index(node)
+            get_logger().warning(
+                f"Duplicate feature ids found for a node, original: {k}, replaced with: {newId}"
+            )
+            k = newId
+
         container[int(k)] = buf
 
 
 def __add(node, feature, tp, container):
+    # if the feature is list, convert it to dict.
+    for feature_name in [feature, f"sparse_{feature}"]:
+        __convert_list_feature_to_dict(node, feature_name)
+
     __add_dense(node, feature, tp, container)
     __add_sparse(node, f"sparse_{feature}", tp, container)
 
 
+def __convert_list_feature_to_dict(node, feature_name):
+    if feature_name in node and isinstance(node[feature_name], typing.List):
+        index_str = [
+            __get_unassigned_index(node) for _ in range(len(node[feature_name]))
+        ]
+        node[feature_name] = dict(zip(index_str, node[feature_name]))
+
+
 def convert_features(node: typing.Any):
     """Convert the node's feature into bytes sorted by index."""
+    if "feature_indexes" not in node:
+        indexes = []
+        for key in node:
+            if key.endswith("_feature") and isinstance(node[key], typing.Dict):
+                indexes.extend(list(node[key].keys()))
+        node["feature_indexes"] = indexes
+        node["cur_index"] = 0
+
     # Use a single container for all node features to make sure there are unique feature_ids
     # and gaps between feature ids are processed correctly.
     container: typing.Dict[int, typing.Any] = {}
@@ -491,12 +537,21 @@ def convert_features(node: typing.Any):
     __add(node, "int8_feature", ctypes.c_int8, container)
 
     if "float16_feature" in node and node["float16_feature"] is not None:
+        __convert_list_feature_to_dict(node, "float16_feature")
         for k in node["float16_feature"]:
+            if int(k) in container:
+                newId = __get_unassigned_index(node)
+                get_logger().warning(
+                    f"Duplicate feature ids found for a node, original: {k}, replaced with: {newId}"
+                )
+                k = newId
+
             container[int(k)] = np.array(
                 node["float16_feature"][k], dtype=np.float16
             ).tobytes()
 
     if "sparse_float16_feature" in node and node["sparse_float16_feature"] is not None:
+        __convert_list_feature_to_dict(node, "float16_feature")
         for k in node["sparse_float16_feature"]:
             coordinates = np.array(
                 node["sparse_float16_feature"][k]["coordinates"], dtype=np.int64
@@ -509,6 +564,13 @@ def convert_features(node: typing.Any):
                 or coordinates.shape[0]
                 == 1  # relax input requirements for single values, both [[a,b]] and [a,b] are ok.
             ), f"Coordinates {coordinates} and values {values} dimensions don't match"
+
+            if int(k) in container:
+                newId = __get_unassigned_index(node)
+                get_logger().warning(
+                    f"Duplicate feature ids found for a node, original: {k}, replaced with: {newId}"
+                )
+                k = newId
 
             container[int(k)] = (
                 int.to_bytes(
