@@ -13,7 +13,7 @@ import numpy as np
 import numpy.testing as npt
 
 import deepgnn.graph_engine.snark.convert as convert
-from deepgnn.graph_engine.snark.decoders import DecoderType, json_to_linear
+from deepgnn.graph_engine.snark.decoders import LinearDecoder, JsonDecoder, TsvDecoder, json_to_linear
 from deepgnn.graph_engine.snark.dispatcher import QueueDispatcher
 
 
@@ -125,13 +125,13 @@ def triangle_graph_tsv(folder):
 @pytest.fixture(scope="module")
 def triangle_graph(request):
     workdir = tempfile.TemporaryDirectory()
-    if request.param == DecoderType.JSON:
+    if request.param == JsonDecoder:
         data_name, meta_name = graph_with_sparse_features_json(workdir.name)
-    elif request.param == DecoderType.LINEAR:
+    elif request.param == LinearDecoder:
         json_name, meta_name = graph_with_sparse_features_json(workdir.name)
         data_name = os.path.join(workdir.name, "graph.linear")
         json_to_linear(json_name, data_name)
-    elif request.param == DecoderType.TSV:
+    elif request.param == TsvDecoder:
         data_name, meta_name = triangle_graph_tsv(workdir.name)
     else:
         raise ValueError("Unsupported format.")
@@ -140,7 +140,7 @@ def triangle_graph(request):
     workdir.cleanup()
 
 
-param = [DecoderType.LINEAR]
+param = [LinearDecoder]
 
 
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
@@ -152,7 +152,7 @@ def test_sanity_node_map(triangle_graph):
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder_class=decoder,
     ).convert()
 
     with open("{}/node_{}_{}.map".format(output.name, 0, 0), "rb") as nm:
@@ -179,7 +179,7 @@ def test_sanity_node_index(triangle_graph):
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder_class=decoder,
     ).convert()
     with open("{}/node_{}_{}.index".format(output.name, 0, 0), "rb") as ni:
         expected_size = 3 * 8 + 8
@@ -200,7 +200,7 @@ def test_sanity_node_feature_index(triangle_graph):
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder_class=decoder,
     ).convert()
     with open("{}/node_features_{}_{}.index".format(output.name, 0, 0), "rb") as ni:
         expected_size = (
@@ -226,7 +226,7 @@ def test_sanity_neighbors_index(triangle_graph):
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder_class=decoder,
     ).convert()
     with open("{}/neighbors_{}_{}.index".format(output.name, 0, 0), "rb") as ni:
         expected_size = 3 * 8 + 8  # 3 nodes + 8 as final close
@@ -247,7 +247,7 @@ def test_sanity_edge_index(triangle_graph):
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder_class=decoder,
     ).convert()
     with open("{}/edge_{}_{}.index".format(output.name, 0, 0), "rb") as ei:
         expected_size = 4 * 24  # 3 nodes + last line as final close
@@ -283,7 +283,7 @@ def test_sanity_edge_features_index(triangle_graph):
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder_class=decoder,
     ).convert()
     with open("{}/edge_features_{}_{}.index".format(output.name, 0, 0), "rb") as ni:
         expected_values = [0, 24, 24, 32, 37]
@@ -306,7 +306,7 @@ def test_sanity_edge_features_data(triangle_graph):
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder_class=decoder,
     ).convert()
     with open("{}/edge_features_{}_{}.data".format(output.name, 0, 0), "rb") as ni:
         expected_size = 37  # last value in edge_features_index
@@ -331,7 +331,7 @@ def test_sanity_metadata(triangle_graph):
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder_class=decoder,
     ).convert()
     with open("{}/meta.txt".format(output.name), "r") as ni:
         result = ni.readlines()
@@ -382,7 +382,7 @@ def test_edge_alias_tables(triangle_graph):
         meta_path=meta_name,
         partition_count=2,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder_class=decoder,
         dispatcher=d,
     ).convert()
     with open("{}/edge_0_0.alias".format(output.name), "rb") as ea:
@@ -438,7 +438,7 @@ def test_node_alias_tables(triangle_graph):
         meta_path=meta_name,
         partition_count=2,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder_class=decoder,
         dispatcher=d,
     ).convert()
 
@@ -588,9 +588,9 @@ def graph_with_sparse_features_json(folder):
 @pytest.fixture(scope="module")
 def graph_with_sparse_features(request):
     workdir = tempfile.TemporaryDirectory()
-    if request.param == DecoderType.JSON:
+    if request.param == JsonDecoder:
         data_name, meta_name = graph_with_sparse_features_json(workdir.name)
-    elif request.param == DecoderType.LINEAR:
+    elif request.param == LinearDecoder:
         json_name, meta_name = graph_with_sparse_features_json(workdir.name)
         data_name = os.path.join(workdir.name, "graph.linear")
         json_to_linear(json_name, data_name)
@@ -602,7 +602,7 @@ def graph_with_sparse_features(request):
 
 
 @pytest.mark.parametrize(
-    "graph_with_sparse_features", [DecoderType.LINEAR], indirect=True
+    "graph_with_sparse_features", [LinearDecoder], indirect=True
 )
 def test_sanity_node_sparse_features_index(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
@@ -612,7 +612,7 @@ def test_sanity_node_sparse_features_index(graph_with_sparse_features):
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder_class=decoder,
     ).convert()
     with open("{}/node_features_{}_{}.index".format(output.name, 0, 0), "rb") as ni:
         expected_size = 88
@@ -626,7 +626,7 @@ def test_sanity_node_sparse_features_index(graph_with_sparse_features):
 
 
 @pytest.mark.parametrize(
-    "graph_with_sparse_features", [DecoderType.LINEAR], indirect=True
+    "graph_with_sparse_features", [LinearDecoder], indirect=True
 )
 def test_sanity_node_sparse_features_data(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
@@ -636,7 +636,7 @@ def test_sanity_node_sparse_features_data(graph_with_sparse_features):
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder_class=decoder,
     ).convert()
     with open("{}/node_features_{}_{}.data".format(output.name, 0, 0), "rb") as nfd:
         expected_size = 128  # last value in edge_features_index
@@ -673,7 +673,7 @@ def test_sanity_node_sparse_features_data(graph_with_sparse_features):
 
 
 @pytest.mark.parametrize(
-    "graph_with_sparse_features", [DecoderType.LINEAR], indirect=True
+    "graph_with_sparse_features", [LinearDecoder], indirect=True
 )
 def test_sanity_edge_sparse_features_index(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
@@ -683,7 +683,7 @@ def test_sanity_edge_sparse_features_index(graph_with_sparse_features):
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder_class=decoder,
     ).convert()
     with open("{}/edge_features_{}_{}.index".format(output.name, 0, 0), "rb") as ei:
         expected_size = 152
@@ -698,7 +698,7 @@ def test_sanity_edge_sparse_features_index(graph_with_sparse_features):
 
 
 @pytest.mark.parametrize(
-    "graph_with_sparse_features", [DecoderType.LINEAR], indirect=True
+    "graph_with_sparse_features", [LinearDecoder], indirect=True
 )
 def test_sanity_edge_sparse_features_data(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
@@ -708,7 +708,7 @@ def test_sanity_edge_sparse_features_data(graph_with_sparse_features):
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder_class=decoder,
     ).convert()
     with open("{}/edge_features_{}_{}.data".format(output.name, 0, 0), "rb") as efd:
         expected_size = 394  # last value in edge_features_index

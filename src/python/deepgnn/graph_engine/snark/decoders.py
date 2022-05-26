@@ -8,6 +8,7 @@ import logging
 import csv
 from enum import Enum
 from typing import Any, Dict
+import numpy as np
 
 logger = logging.getLogger()
 
@@ -26,6 +27,10 @@ class DecoderType(Enum):
 
 class Decoder(abc.ABC):
     """Interface to convert one line of text into node object."""
+    convert_map = {  # TODO all + sparse
+        "float_feature": np.float32,
+        "uint64_feature": int,
+    }
 
     @abc.abstractmethod
     def decode(self, line: str):
@@ -62,13 +67,34 @@ class JsonDecoder(Decoder):
         """Initialize the JsonDecoder."""
         super().__init__()
 
+    def _pull_features(self, item: dict) -> list:
+        """From item, pull all value dicts {idx: value} and order the values by idx"""
+        ret_list = []  # type: ignore
+        curr = 0
+        for key, values in item.items():
+            if values is None or "feature" not in key:
+                continue
+
+            for idx, value in values.items():
+                idx = int(idx)
+                while curr <= idx:
+                    ret_list.append(None)
+                    curr += 1
+                
+                if key != "binary_feature":
+                    value = np.array(value, dtype=self.convert_map[key])
+
+                ret_list[idx] = (key, value)
+
+        return ret_list
+
     def decode(self, line: str):
         """Use json package to convert the json text line into node object."""
         data = json.loads(line)
-        yield -1, data["node_id"], data["node_type"], data["node_weight"], {}
+        yield -1, data["node_id"], data["node_type"], data["node_weight"], self._pull_features(data)
         # TODO features for both
         for edge in data["edge"]:
-            yield edge["src_id"], edge["dst_id"], edge["edge_type"], edge["weight"], {}
+            yield edge["src_id"], edge["dst_id"], edge["edge_type"], edge["weight"], self._pull_features(edge)
 
 
 class TsvDecoder(Decoder):
@@ -213,10 +239,6 @@ class LinearDecoder(Decoder):
     def __init__(self):
         """Initialize the Decoder."""
         super().__init__()
-        self.convert_map = {  # TODO all + sparse
-            "float_feature": float,
-            "uint64_feature": int,
-        }
 
     def decode(self, lines: str):
         """Use json package to convert the json text line into node object."""
