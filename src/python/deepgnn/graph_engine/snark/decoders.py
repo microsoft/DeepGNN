@@ -29,7 +29,7 @@ class Decoder(abc.ABC):
     """Interface to convert one line of text into node object."""
     convert_map = {  # TODO all + sparse
         "float_feature": np.float32,
-        "uint64_feature": int,
+        "uint64_feature": np.uint64,
     }
 
     @abc.abstractmethod
@@ -258,7 +258,7 @@ class LinearDecoder(Decoder):
                         value = feature_data[idx]
                     else:
                         value = np.array(feature_data[idx:idx+length], dtype=self.convert_map[key])
-                    features.append((key, value))
+                    features.append(value)
                     idx += length
             yield int(src), int(dst), int(typ), float(weight), features
 

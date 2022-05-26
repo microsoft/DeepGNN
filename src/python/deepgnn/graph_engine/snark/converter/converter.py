@@ -435,10 +435,10 @@ def convert_features(features: list):
     # Use a single container for all node features to make sure there are unique feature_ids
     # and gaps between feature ids are processed correctly.
     output = []  # type: ignore
-    for key, feature in features:
+    for feature in features:
         if feature is None:
             output.append(feature)
-        elif key.startswith("sparse_"):
+        elif False:#key.startswith("sparse_"):
             if key == "sparse_float16_feature":
                 coordinates = np.array(feature["coordinates"], dtype=np.int64)
                 values = feature["values"]
@@ -489,10 +489,9 @@ def convert_features(features: list):
                 )
                 output.append(final_buf)
         else:
-            if key == "binary_feature":
-                output.append(bytes(feature, "utf-8"))
-            else:
-                # TODO assert correct dtype // correct length
+            if isinstance(feature, np.array):
                 output.append(feature.tobytes())
+            else:
+                output.append(bytes(feature, "utf-8"))
 
     return output
