@@ -3,6 +3,7 @@
 
 """Decoders wihch is used to decode a line of text into node object."""
 import abc
+import dataclasses
 import json
 import logging
 import csv
@@ -240,24 +241,36 @@ class LinearDecoder(Decoder):
         """Initialize the Decoder."""
         super().__init__()
 
-    def decode(self, lines: str):
+    def decode(self, line: str):
         """Use json package to convert the json text line into node object."""
-        for line in lines:
-            src, dst, typ, weight, *feature_data = line.split()
+        #for line in lines:
+        data = line.split()
+
+        idx = 0
+        while True:
+            try:
+                src, dst, typ, weight = data[idx:idx+4]
+            except ValueError:
+                break
+            idx += 4
             features = []
-            idx = 0
             while True:
                 try:
-                    key = feature_data[idx]
-                    length = int(feature_data[idx+1])
+                    key = data[idx]
+                    try:
+                        int(key)
+                        break
+                    except Exception as e:
+                        pass
+                    length = int(data[idx+1])
                 except IndexError:
                     break
                 idx += 2
                 if length:
                     if length == 1 and key == "binary_feature":
-                        value = feature_data[idx]
+                        value = data[idx]
                     else:
-                        value = np.array(feature_data[idx:idx+length], dtype=self.convert_map[key])
+                        value = np.array(data[idx:idx+length], dtype=self.convert_map[key])
                     features.append(value)
                     idx += length
             yield int(src), int(dst), int(typ), float(weight), features
@@ -291,7 +304,7 @@ def json_to_linear(filename_in, filename_out):
         node = json.loads(line)
 
         file_out.write(
-            f'-1 {node["node_id"]} {node["node_type"]} {node["node_weight"]} {_dump_features(node)}\n'
+            f'-1 {node["node_id"]} {node["node_type"]} {node["node_weight"]} {_dump_features(node)}'
         )
 
         edge_list = sorted(
@@ -299,8 +312,9 @@ def json_to_linear(filename_in, filename_out):
         )
         for edge in edge_list:
             file_out.write(
-                f'{edge["src_id"]} {edge["dst_id"]} {edge["edge_type"]} {edge["weight"]} {_dump_features(edge)}\n'
+                f' {edge["src_id"]} {edge["dst_id"]} {edge["edge_type"]} {edge["weight"]} {_dump_features(edge)}'
             )
+        file_out.write('\n')
 
     file_in.close()
     file_out.close()
