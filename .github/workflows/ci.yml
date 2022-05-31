@@ -99,8 +99,6 @@ jobs:
         uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "pip"
-          cache-dependency-path: "tensorflow/requirements.txt"
       - name: Install tensorflow
         run: pip install --timeout 300 tensorflow
       - name: Install dependencies
@@ -145,8 +143,6 @@ jobs:
         uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "pip"
-          cache-dependency-path: "pytorch/requirements.txt"
       - name: Install torch
         run: pip install --timeout 300 torch
       - name: Install dependencies
@@ -155,7 +151,7 @@ jobs:
         run: pip uninstall deepgnn-ge deepgnn-torch
       - name: Install wheels
         run: pip install deepgnn_ge*.whl deepgnn_torch*.whl
-      - name: Run graphsage examples
+      - name: Run gat examples
         run: cd ./pytorch/gat/ && sudo chmod +x *.sh && bash ./run.sh CPU
       - name: Run pytorch geometric examples
         run: cd ./pytorch/geometric/gat/ && sudo chmod +x *.sh && bash ./run.sh CPU
