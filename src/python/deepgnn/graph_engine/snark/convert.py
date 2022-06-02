@@ -71,7 +71,7 @@ def output(
         skip_edge_sampler(bool): skip generation of edge alias tables
     """
     assert decoder_class is not None
-    decoder = decoder_class()
+    decoder = decoder_class() if isinstance(decoder_class, type) else decoder_class
 
     node_count = 0
     edge_count = 0

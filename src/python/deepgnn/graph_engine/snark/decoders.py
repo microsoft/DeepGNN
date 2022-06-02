@@ -81,11 +81,9 @@ class JsonDecoder(Decoder):
                 while curr <= idx:
                     ret_list.append(None)
                     curr += 1
-                
                 if key != "binary_feature":
                     value = np.array(value, dtype=self.convert_map[key])
-
-                ret_list[idx] = (key, value)
+                ret_list[idx] = value
 
         return ret_list
 
@@ -93,7 +91,6 @@ class JsonDecoder(Decoder):
         """Use json package to convert the json text line into node object."""
         data = json.loads(line)
         yield -1, data["node_id"], data["node_type"], data["node_weight"], self._pull_features(data)
-        # TODO features for both
         for edge in data["edge"]:
             yield edge["src_id"], edge["dst_id"], edge["edge_type"], edge["weight"], self._pull_features(edge)
 
@@ -129,101 +126,68 @@ class TsvDecoder(Decoder):
         super().__init__()
 
     def _parse_feature_string(self, raw_feature):
-        index = 0
-        feature_map: Dict[str, Any] = dict()
+        feature_map = []
         node_features = raw_feature.split(";") if raw_feature else []
         for feature in node_features:
             val = feature.split(":")
-            if len(val) == 2 and val[0] and val[1]:
-                if val[0][0] == "i":
-                    key = f"int{val[0][1:]}_feature"
-                    if key not in feature_map:
-                        feature_map[key] = dict()
-                    feature_map[key][str(index)] = [int(i) for i in val[1].split(" ")]
-                elif val[0][0] == "u":
-                    key = f"uint{val[0][1:]}_feature"
-                    if key not in feature_map:
-                        feature_map[key] = dict()
-                    feature_map[key][str(index)] = [int(i) for i in val[1].split(" ")]
-                elif val[0][0] == "f":
-                    key = f"float{val[0][1:]}_feature"
-                    if key not in feature_map:
-                        feature_map[key] = dict()
-                    feature_map[key][str(index)] = [float(i) for i in val[1].split(" ")]
-                elif val[0][0] == "d":
-                    key = "double_feature"
-                    if key not in feature_map:
-                        feature_map[key] = dict()
-                    feature_map[key][str(index)] = [float(i) for i in val[1].split(" ")]
-                elif val[0][0] == "b":
-                    key = "binary_feature"
-                    feature_map[key] = dict()
-                    feature_map[key][str(index)] = val[1]
+            if len(val) != 2 or not val[0] or not val[1]:
+                continue
 
-            index = index + 1
+            if val[0][0] == "i":
+                key = f"int{val[0][1:]}_feature"
+            elif val[0][0] == "u":
+                key = f"uint{val[0][1:]}_feature"
+            elif val[0][0] == "f":
+                key = f"float{val[0][1:]}_feature"
+            elif val[0][0] == "d":
+                key = "double_feature"
+            elif val[0][0] == "b":
+                key = "binary_feature"
+
+            if key != "binary_feature":
+                value = np.array(val[1].split(" "), dtype=self.convert_map[key])
+            else:
+                value = val[1]
+
+            feature_map.append(value)
 
         return feature_map
 
     def decode(self, line: str):
         """Decode tsv based text line into node object."""
         assert line is not None and len(line) > 0
-
         columns = next(csv.reader([line], delimiter="\t"))
         # fill the missing columns with default empty string, so we
         # don't need to check if the column exists.
         for i in range(TsvDecoder.COLUMN_COUNT - len(columns)):
             columns.append("")
 
-        node: Dict[str, Any] = dict()
-
         # make sure the node id is valid
         assert columns[0] is not None and len(columns[0]) > 0
-        node["node_id"] = int(columns[0])
-        node["node_type"] = int(columns[1]) if columns[1] else 0
-        node["node_weight"] = float(columns[2]) if columns[2] else 0.0
+        node_id = int(columns[0])
+        node_type = int(columns[1]) if columns[1] else 0
+        node_weight = float(columns[2]) if columns[2] else 0.0
+        yield -1, node_id, node_type, node_weight, self._parse_feature_string(columns[3])
 
-        # index 1 of the float feature is node float feature.
-        feature_map = self._parse_feature_string(columns[3])
-        node.update(feature_map)
+        if not columns[4]:
+            return
 
-        node["neighbor"] = dict()
-        node["edge"] = []
-        if columns[4]:
-            neighbors = columns[4].split("|")
-            for n in neighbors:
-                neighbor_columns = n.split(",")
-                # make sure the destination id is valid
-                assert len(neighbor_columns) > 0 and len(neighbor_columns[0]) > 0
-                dst_id = int(neighbor_columns[0])
+        neighbors = columns[4].split("|")
+        for n in neighbors:
+            neighbor_columns = n.split(",")
+            # make sure the destination id is valid
+            assert len(neighbor_columns) > 0 and len(neighbor_columns[0]) > 0
+            dst_id = int(neighbor_columns[0])
 
-                for i in range(
-                    TsvDecoder.NEIGHBOR_COLUMN_COUNT - len(neighbor_columns)
-                ):
-                    neighbor_columns.append("")
+            for i in range(
+                TsvDecoder.NEIGHBOR_COLUMN_COUNT - len(neighbor_columns)
+            ):
+                neighbor_columns.append("")
 
-                dst_type = int(neighbor_columns[1]) if neighbor_columns[1] else 0
-                dst_weight = float(neighbor_columns[2]) if neighbor_columns[2] else 0.0
+            dst_type = int(neighbor_columns[1]) if neighbor_columns[1] else 0
+            dst_weight = float(neighbor_columns[2]) if neighbor_columns[2] else 0.0
+            yield node_id, dst_id, dst_type, dst_weight, self._pull_features(self._parse_feature_string(neighbor_columns[3]))
 
-                if dst_type not in node["neighbor"]:
-                    node["neighbor"][str(dst_type)] = dict()
-
-                node["neighbor"][str(dst_type)][str(dst_id)] = dst_weight
-
-                edge_info = dict()
-                edge_info["src_id"] = node["node_id"]
-                edge_info["dst_id"] = dst_id
-                edge_info["edge_type"] = dst_type
-                edge_info["weight"] = dst_weight
-
-                feature_map = self._parse_feature_string(neighbor_columns[3])
-                edge_info.update(feature_map)
-
-                node["edge"].append(edge_info)
-
-        return node
-
-
-import numpy as np
 
 class LinearDecoder(Decoder):
     """Convert the text line into node object.
@@ -266,13 +230,14 @@ class LinearDecoder(Decoder):
                 except IndexError:
                     break
                 idx += 2
-                if length:
-                    if length == 1 and key == "binary_feature":
-                        value = data[idx]
-                    else:
-                        value = np.array(data[idx:idx+length], dtype=self.convert_map[key])
-                    features.append(value)
-                    idx += length
+                if not length:
+                    value = None
+                elif length == 1 and key == "binary_feature":
+                    value = data[idx]
+                else:
+                    value = np.array(data[idx:idx+length], dtype=self.convert_map[key])
+                features.append(value)
+                idx += length
             yield int(src), int(dst), int(typ), float(weight), features
 
 
@@ -288,8 +253,8 @@ def _dump_features(features: dict) -> str:
                 v = str(value)
                 length = 1
             else:
-                v = " ".join(map(str, value))
-                length = len(value)
+                v = np.array(value).dumps()  #" ".join(map(str, value))
+                length = v.size()
             output.append(f"{key} {length} {v}")
     
     return " ".join(output)
@@ -307,10 +272,10 @@ def json_to_linear(filename_in, filename_out):
             f'-1 {node["node_id"]} {node["node_type"]} {node["node_weight"]} {_dump_features(node)}'
         )
 
-        edge_list = sorted(
-            node["edge"], key=lambda x: (int(x["edge_type"]), int(x["dst_id"]))
-        )
-        for edge in edge_list:
+        #edge_list = sorted(
+        #    node["edge"], key=lambda x: (int(x["edge_type"]), int(x["dst_id"]))
+        #)
+        for edge in node["edge"]:
             file_out.write(
                 f' {edge["src_id"]} {edge["dst_id"]} {edge["edge_type"]} {edge["weight"]} {_dump_features(edge)}'
             )

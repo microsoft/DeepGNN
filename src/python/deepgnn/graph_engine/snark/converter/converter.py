@@ -438,7 +438,7 @@ def convert_features(features: list):
     for feature in features:
         if feature is None:
             output.append(feature)
-        elif False:#key.startswith("sparse_"):
+        elif isinstance(feature, tuple):
             if key == "sparse_float16_feature":
                 coordinates = np.array(feature["coordinates"], dtype=np.int64)
                 values = feature["values"]
@@ -488,10 +488,9 @@ def convert_features(features: list):
                     + values_buf
                 )
                 output.append(final_buf)
+        elif isinstance(feature, np.array):
+            output.append(feature.tobytes())
         else:
-            if isinstance(feature, np.array):
-                output.append(feature.tobytes())
-            else:
-                output.append(bytes(feature, "utf-8"))
+            output.append(bytes(feature, "utf-8"))
 
     return output
