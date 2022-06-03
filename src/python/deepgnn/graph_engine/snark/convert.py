@@ -90,7 +90,7 @@ def output(lines):
     global edge_alias
 
     assert decoder_class is not None
-    decoder = decoder_class()
+    decoder = decoder_class() if isinstance(decoder_class, type) else decoder_class
 
     assert decoder is not None
     if True:
