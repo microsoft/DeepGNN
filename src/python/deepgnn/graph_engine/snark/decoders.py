@@ -29,8 +29,17 @@ class DecoderType(Enum):
 class Decoder(abc.ABC):
     """Interface to convert one line of text into node object."""
     convert_map = {  # TODO all + sparse
+        "double_feature": np.float64,
         "float_feature": np.float32,
+        "float16_feature": np.float16,
         "uint64_feature": np.uint64,
+        "int64_feature": np.int64,
+        "uint32_feature": np.uint32,
+        "int32_feature": np.int32,
+        "uint16_feature": np.uint16,
+        "int16_feature": np.int16,
+        "uint8_feature": np.uint8,
+        "int8_feature": np.int8,
     }
 
     @abc.abstractmethod
@@ -226,26 +235,29 @@ class LinearDecoder(Decoder):
                         break
                     except Exception as e:
                         pass
-                    length = int(data[idx+1])
+                    length = list(map(int, data[idx+1].split(",")))
                 except IndexError:
                     break
                 idx += 2
-                if key.startswith("sparse"):
-                    coordinates_len = length
-                    values_len = int(data[idx])
-                    idx += 1
-                    coordinates_offset = idx + coordinates_len
+                if len(length) > 1:
+                    coordinates_len = length[:-1]
+                    coordinates_len_total = 1
+                    for v in coordinates_len:
+                        coordinates_len_total *= v
+                    values_len = length[-1]
+                    coordinates_offset = idx + coordinates_len_total
 
                     # TODO no sparse_binary_feature?
                     if not coordinates_len:
                         value = None
                     else:
                         value = (
-                            np.array(data[idx:coordinates_offset], dtype=np.int64),
+                            np.array(data[idx:coordinates_offset], dtype=np.int64).reshape(coordinates_len),
                             np.array(data[coordinates_offset:coordinates_offset+values_len], dtype=self.convert_map[key.replace("sparse_", "")]),
                         )
-                    idx += coordinates_len + values_len
+                    idx += coordinates_len_total + values_len
                 else:
+                    length = length[0]
                     if not length:
                         value = None
                     elif length == 1 and key == "binary_feature":
@@ -268,17 +280,23 @@ def _dump_features(features: dict) -> str:
         for idx, value in values.items():
             if key.startswith("sparse"):
                 # TODO no sparse_binary_feature?
-                coordinates = np.array(value["coordinates"])
-                values = np.array(value["values"])
-                output.append(f"{key} {coordinates.size} {values.size} {coordinates.dumps()} {values.dumps()}")
+                coordinates = value["coordinates"]
+                values = value["values"]
+                coordinates_len = f"{len(coordinates)},{len(coordinates[0])}" if len(coordinates) and isinstance(coordinates[0], list) else f"{len(coordinates)}"
+                if len(coordinates) and isinstance(coordinates[0], list):
+                    coordinates_str = " ".join((" ".join(map(str, c)) for c in coordinates))
+                else:
+                    coordinates_str = " ".join(map(str, coordinates))
+                values_str = " ".join(map(str, values))
+                output.append(f"{key} {coordinates_len},{len(values)} {coordinates_str} {values_str}")
             else:
                 if key == "binary_feature":
                     v = str(value)
                     length = 1
                 else:
-                    v = np.array(value)  #" ".join(map(str, value))
-                    length = v.size
-                output.append(f"{key} {length} {v.dumps()}")
+                    v = " ".join(map(str, value))
+                    length = len(value)
+                output.append(f"{key} {length} {v}")
     
     return " ".join(output)
 
