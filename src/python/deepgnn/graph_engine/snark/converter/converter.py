@@ -439,55 +439,33 @@ def convert_features(features: list):
         if feature is None:
             output.append(feature)
         elif isinstance(feature, tuple):
-            if key == "sparse_float16_feature":
-                coordinates = np.array(feature["coordinates"], dtype=np.int64)
-                values = feature["values"]
-                assert (
-                    coordinates.shape[0] == len(values)
-                    if len(values) > 1
-                    else len(coordinates.shape) == 1
-                    or coordinates.shape[0]
-                    == 1  # relax input requirements for single values, both [[a,b]] and [a,b] are ok.
-                ), f"Coordinates {coordinates} and values {values} dimensions don't match"
-                output.append(
-                    int.to_bytes(
-                        len(coordinates), length=4, signed=True, byteorder=sys.byteorder
-                    )
-                    + bytes(
-                        struct.pack(
-                            "=I",
-                            ctypes.c_uint32(
-                                coordinates.shape[-1] if coordinates.ndim > 1 else 1
-                            ).value,
-                        )
-                    )
-                    + bytes(coordinates.data)
-                    + np.array(values, dtype=np.float16).tobytes()
-                )
+            coordinates, values = feature
+            assert (
+                coordinates.shape[0] == len(values)
+                if len(values) > 1
+                else len(coordinates.shape) == 1
+                or coordinates.shape[0]
+                == 1  # relax input requirements for single values, both [[a,b]] and [a,b] are ok.
+            ), f"Coordinates {coordinates} and values {values} dimensions don't match"
+
+            coordinates_meta = bytes(
+                ctypes.c_uint32(coordinates.shape[-1] if coordinates.ndim > 1 else 1)
+            )
+
+            if values.dtype == np.float16:
+                values_buf = np.array(values, dtype=np.float16).tobytes()
             else:
-                values = feature["values"]
                 values_buf = (tp * len(values))()
                 values_buf[:] = values
-                coordinates = np.array(feature["coordinates"], dtype=np.int64)
-                assert (
-                    coordinates.shape[0] == len(values)
-                    if len(values) > 1
-                    else len(coordinates.shape) == 1
-                    or coordinates.shape[0]
-                    == 1  # relax input requirements for single values, both [[a,b]] and [a,b] are ok.
-                ), f"Coordinates {coordinates} and values {values} dimensions don't match"
 
-                # For matrices the number of values might be different than number of coordinates
-                # Pack data in the following format: number of coordinates as uint32, then coordinates, and actual values in the end
-                final_buf = (
-                    bytes(ctypes.c_uint32(coordinates.size))
-                    + bytes(
-                        ctypes.c_uint32(coordinates.shape[-1] if coordinates.ndim > 1 else 1)
-                    )
-                    + bytes(coordinates.data)
-                    + values_buf
-                )
-                output.append(final_buf)
+            # For matrices the number of values might be different than number of coordinates
+            # Pack data in the following format: number of coordinates as uint32, then coordinates, and actual values in the end
+            output.append(
+                bytes(ctypes.c_uint32(coordinates.size))
+                + coordinates_meta
+                + bytes(coordinates.data)
+                + values_buf
+            )
         elif isinstance(feature, np.array):
             output.append(feature.tobytes())
         else:

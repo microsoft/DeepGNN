@@ -230,14 +230,31 @@ class LinearDecoder(Decoder):
                 except IndexError:
                     break
                 idx += 2
-                if not length:
-                    value = None
-                elif length == 1 and key == "binary_feature":
-                    value = data[idx]
+                if key.startswith("sparse"):
+                    coordinates_len = length
+                    values_len = int(data[idx])
+                    idx += 1
+                    coordinates_offset = idx + coordinates_len
+
+                    # TODO no sparse_binary_feature?
+                    if not coordinates_len:
+                        value = None
+                    else:
+                        value = (
+                            np.array(data[idx:coordinates_offset], dtype=np.int64),
+                            np.array(data[coordinates_offset:coordinates_offset+values_len], dtype=self.convert_map[key.replace("sparse_", "")]),
+                        )
+                    idx += coordinates_len + values_len
                 else:
-                    value = np.array(data[idx:idx+length], dtype=self.convert_map[key])
+                    if not length:
+                        value = None
+                    elif length == 1 and key == "binary_feature":
+                        value = data[idx]
+                    else:
+                        value = np.array(data[idx:idx+length], dtype=self.convert_map[key])
+                    idx += length
+
                 features.append(value)
-                idx += length
             yield int(src), int(dst), int(typ), float(weight), features
 
 
@@ -249,13 +266,19 @@ def _dump_features(features: dict) -> str:
             continue
 
         for idx, value in values.items():
-            if key == "binary_feature":
-                v = str(value)
-                length = 1
+            if key.startswith("sparse"):
+                # TODO no sparse_binary_feature?
+                coordinates = np.array(value["coordinates"])
+                values = np.array(value["values"])
+                output.append(f"{key} {coordinates.size} {values.size} {coordinates.dumps()} {values.dumps()}")
             else:
-                v = np.array(value).dumps()  #" ".join(map(str, value))
-                length = v.size()
-            output.append(f"{key} {length} {v}")
+                if key == "binary_feature":
+                    v = str(value)
+                    length = 1
+                else:
+                    v = np.array(value)  #" ".join(map(str, value))
+                    length = v.size
+                output.append(f"{key} {length} {v.dumps()}")
     
     return " ".join(output)
 
