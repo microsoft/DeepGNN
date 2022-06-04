@@ -149,7 +149,7 @@ class MultiWorkersConverter:
         graph_path: str,
         meta_path: str,
         output_dir: str,
-        decoder_class: Decoder = JsonDecoder,
+        decoder_class: Decoder = LinearDecoder,
         partition_count: int = 1,
         worker_index: int = 0,
         worker_count: int = 1,

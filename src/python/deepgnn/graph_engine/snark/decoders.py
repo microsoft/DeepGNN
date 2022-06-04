@@ -28,7 +28,7 @@ class DecoderType(Enum):
 
 class Decoder(abc.ABC):
     """Interface to convert one line of text into node object."""
-    convert_map = {  # TODO all + sparse
+    convert_map = {
         "double_feature": np.float64,
         "float_feature": np.float32,
         "float16_feature": np.float16,
@@ -201,13 +201,16 @@ class TsvDecoder(Decoder):
 class LinearDecoder(Decoder):
     """Convert the text line into node object.
     Linear format:
-        node_id -1 node_type node_weight feature_dict(no spaces)
-        src_id dst_id edge_type edge_weight feature_dict(no spaces)
-        ...
-        sorted by src with node before edges.
-    Linear format example:
-        0 -1 1 1 {"float_feature":{"0":[1],"1":[-0.03,-0.04]}}
-        0 5 1 1 {"1":[3,4]}
+        {node info} {edge_1_info} {edge_2_info} ...
+        node_info: -1 node_id node_type node_weight {features}
+        edge_info: src dst edge_type edge_weight {features}
+        features[dense]: dtype_name length v1 v2 ... dtype_name2 length2 v1 v2 ...
+        features[sparse]: dtype_name coords.size,values.size c1 c2 ... v1 v2 ...
+        features[sparse]: dtype_name coords.shape[0],coords.shape[1],values.size c1 c2 ... v1 v2
+
+    Linear Format Example
+        -1 0 1 .5 int32 3 1 1 1 float32 2 1.1 1.1 0 1 0 .5 uint8 2,3 0 4 1 1 1
+        -1 1 1 .5 int32 3 1 1 1 float32 2 1.1 1.1 1 0 0 .5 uint8 2,3 0 4 1 1 1
     """
 
     def __init__(self):
@@ -253,7 +256,7 @@ class LinearDecoder(Decoder):
                     else:
                         value = (
                             np.array(data[idx:coordinates_offset], dtype=np.int64).reshape(coordinates_len),
-                            np.array(data[coordinates_offset:coordinates_offset+values_len], dtype=self.convert_map[key.replace("sparse_", "")]),
+                            np.array(data[coordinates_offset:coordinates_offset+values_len], dtype=key),
                         )
                     idx += coordinates_len_total + values_len
                 else:
@@ -263,7 +266,7 @@ class LinearDecoder(Decoder):
                     elif length == 1 and key == "binary_feature":
                         value = data[idx]
                     else:
-                        value = np.array(data[idx:idx+length], dtype=self.convert_map[key])
+                        value = np.array(data[idx:idx+length], dtype=key)
                     idx += length
 
                 features.append(value)
@@ -288,7 +291,7 @@ def _dump_features(features: dict) -> str:
                 else:
                     coordinates_str = " ".join(map(str, coordinates))
                 values_str = " ".join(map(str, values))
-                output.append(f"{key} {coordinates_len},{len(values)} {coordinates_str} {values_str}")
+                output.append(f"{key.replace('sparse_', '')} {coordinates_len},{len(values)} {coordinates_str} {values_str}")
             else:
                 if key == "binary_feature":
                     v = str(value)
@@ -296,7 +299,8 @@ def _dump_features(features: dict) -> str:
                 else:
                     v = " ".join(map(str, value))
                     length = len(value)
-                output.append(f"{key} {length} {v}")
+                key_np = np.dtype(Decoder.convert_map[key]).name
+                output.append(f"{key_np} {length} {v}")
     
     return " ".join(output)
 
