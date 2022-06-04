@@ -96,18 +96,23 @@ class NodeFeatureWriter:
             "wb",
         )
         self.nfd_pos = self.nfd.tell()
+        print("init", self.ndf_pos)
 
     def add(self, node: typing.Any):
         """Add node to binary output.
         Args:
             node (typing.Any): graph node with all node features and edges from it.
         """
+        print(node)
         self.ni.write(ctypes.c_uint64(self.nfi.tell() // 8))  # type: ignore
         for k in convert_features(node):
+            print(k, self.nfd_pos, ctypes.c_uint64(self.nfd_pos))
             # Fill the gaps between features
             self.nfi.write(ctypes.c_uint64(self.nfd_pos))  # type: ignore
             if k is not None:
                 self.nfd_pos += self.nfd.write(k)
+
+        print(self.nfd_pos, ctypes.c_uint64(self.nfd_pos))
 
     def close(self):
         """Close output binary files."""
@@ -455,7 +460,7 @@ def convert_features(features: list):
             if values.dtype == np.float16:
                 values_buf = np.array(values, dtype=np.float16).tobytes()
             else:
-                values_buf = (tp * len(values))()
+                values_buf = (np.ctypeslib.as_ctypes_type(values.dtype) * len(values))()
                 values_buf[:] = values
 
             # For matrices the number of values might be different than number of coordinates
@@ -466,7 +471,7 @@ def convert_features(features: list):
                 + bytes(coordinates.data)
                 + values_buf
             )
-        elif isinstance(feature, np.array):
+        elif isinstance(feature, np.ndarray):
             output.append(feature.tobytes())
         else:
             output.append(bytes(feature, "utf-8"))
