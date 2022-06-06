@@ -21,11 +21,10 @@ from deepgnn import get_logger
 from deepgnn.graph_engine._adl_reader import TextFileIterator
 from deepgnn.graph_engine._base import get_fs
 import deepgnn.graph_engine.snark.converter.converter as converter
+import deepgnn.graph_engine.snark.decoders as decoders
 from deepgnn.graph_engine.snark.decoders import (
     Decoder,
     DecoderType,
-    JsonDecoder,
-    TsvDecoder,
     LinearDecoder,
 )
 import ctypes
@@ -241,23 +240,9 @@ class MultiWorkersConverter:
             num_workers=self.worker_count,
         )
 
-        lines = []
-        not_first = False
         for data in dataset:
             for line in data:
                 d.dispatch(line)
-                #if self.decoder_class == LinearDecoder:
-                #    if line[0] == "-":  # if line is node
-                #        if not_first:
-                #            d.dispatch(lines)
-                #        lines = []
-                #        not_first = True
-                #    lines.append(line)
-                #else:
-                #    d.dispatch(line)
-
-        #if self.decoder_class == LinearDecoder and len(lines):
-        #    d.dispatch(lines)
 
         d.join()
 
@@ -344,9 +329,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-t",
         "--type",
-        type=DecoderType,
-        default=DecoderType.JSON,
-        help="Type of the graph data file. Supported: json, tsv",
+        type=str,
+        default="linear",
+        help="Type of the graph data file. Supported: linear, json, tsv",
     )
     parser.add_argument(
         "--skip_node_sampler",
@@ -362,16 +347,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # TODO str -> class
-    if args.type == DecoderType.JSON:
-        decoder_class = JsonDecoder
-    elif args.type == DecoderType.TSV:
-        decoder_class = TsvDecoder
-    elif args.type == DecoderType.LINEAR:
-        decoder_class = LinearDecoder
-    else:
+    decoder_class = getattr(decoders, f"{args.type.capitalize()}Decoder")
+    if decoder_class is None:
         raise ValueError("Unsupported decoder type.")
-        
+
     c = MultiWorkersConverter(
         graph_path=args.data,
         meta_path=args.meta,
