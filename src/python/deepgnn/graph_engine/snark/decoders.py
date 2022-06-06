@@ -31,6 +31,8 @@ class Decoder(abc.ABC):
     convert_map = {
         "double_feature": np.float64,
         "float_feature": np.float32,
+        "float64_feature": np.float64,
+        "float32_feature": np.float32,
         "float16_feature": np.float16,
         "uint64_feature": np.uint64,
         "int64_feature": np.int64,
@@ -90,7 +92,13 @@ class JsonDecoder(Decoder):
                 while curr <= idx:
                     ret_list.append(None)
                     curr += 1
-                if key != "binary_feature":
+                if key.startswith("sparse"):
+                    value = (
+                        np.array(value["coordinates"], dtype=np.int64),
+                        np.array(value["values"], dtype=self.convert_map[key.replace("sparse_", "")]),
+                    )
+                elif key != "binary_feature":
+                    print(key, value)
                     value = np.array(value, dtype=self.convert_map[key])
                 ret_list[idx] = value
 
@@ -140,6 +148,7 @@ class TsvDecoder(Decoder):
         for feature in node_features:
             val = feature.split(":")
             if len(val) != 2 or not val[0] or not val[1]:
+                feature_map.append(None)
                 continue
 
             if val[0][0] == "i":
@@ -153,7 +162,9 @@ class TsvDecoder(Decoder):
             elif val[0][0] == "b":
                 key = "binary_feature"
 
-            if key != "binary_feature":
+            if len(val) != 2 or not val[0] or not val[1]:
+                value = None
+            elif key != "binary_feature":
                 value = np.array(val[1].split(" "), dtype=self.convert_map[key])
             else:
                 value = val[1]
@@ -195,7 +206,7 @@ class TsvDecoder(Decoder):
 
             dst_type = int(neighbor_columns[1]) if neighbor_columns[1] else 0
             dst_weight = float(neighbor_columns[2]) if neighbor_columns[2] else 0.0
-            yield node_id, dst_id, dst_type, dst_weight, self._pull_features(self._parse_feature_string(neighbor_columns[3]))
+            yield node_id, dst_id, dst_type, dst_weight, self._parse_feature_string(neighbor_columns[3])
 
 
 class LinearDecoder(Decoder):
