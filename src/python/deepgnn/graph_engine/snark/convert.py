@@ -109,7 +109,7 @@ def output(
                     ctypes.c_uint64(edge_writer.ei.tell() // (4 + 8 + 8 + 4))
                 )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
                 node_alias.add(dst, typ, weight)
-                node_weight[typ] += float(typ)
+                node_weight[typ] += float(weight)
                 node_type_count[typ] += 1
                 node_count += 1
             else:

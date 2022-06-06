@@ -96,23 +96,18 @@ class NodeFeatureWriter:
             "wb",
         )
         self.nfd_pos = self.nfd.tell()
-        print("init", self.ndf_pos)
 
     def add(self, node: typing.Any):
         """Add node to binary output.
         Args:
             node (typing.Any): graph node with all node features and edges from it.
         """
-        print(node)
         self.ni.write(ctypes.c_uint64(self.nfi.tell() // 8))  # type: ignore
         for k in convert_features(node):
-            print(k, self.nfd_pos, ctypes.c_uint64(self.nfd_pos))
             # Fill the gaps between features
             self.nfi.write(ctypes.c_uint64(self.nfd_pos))  # type: ignore
             if k is not None:
                 self.nfd_pos += self.nfd.write(k)
-
-        print(self.nfd_pos, ctypes.c_uint64(self.nfd_pos))
 
     def close(self):
         """Close output binary files."""

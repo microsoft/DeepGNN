@@ -270,17 +270,23 @@ class LinearDecoder(Decoder):
                     idx += length
 
                 features.append(value)
+            
             yield int(src), int(dst), int(typ), float(weight), features
 
 
 def _dump_features(features: dict) -> str:
     """Serialize features for linear format."""
     output = []
+    counter = -1
     for key, values in features.items():
         if not isinstance(values, dict) or key == "neighbor":
             continue
-
+        
         for idx, value in values.items():
+            idx = int(idx)
+            while idx > counter:
+                output.append("int 0")
+                counter += 1
             if key.startswith("sparse"):
                 # TODO no sparse_binary_feature?
                 coordinates = value["coordinates"]
@@ -291,17 +297,19 @@ def _dump_features(features: dict) -> str:
                 else:
                     coordinates_str = " ".join(map(str, coordinates))
                 values_str = " ".join(map(str, values))
-                output.append(f"{key.replace('sparse_', '')} {coordinates_len},{len(values)} {coordinates_str} {values_str}")
+                key_np = np.dtype(Decoder.convert_map[key.replace('sparse_', '')]).name
+                output[idx] = f"{key_np} {coordinates_len},{len(values)} {coordinates_str} {values_str}"
             else:
                 if key == "binary_feature":
                     v = str(value)
                     length = 1
+                    key_np = key
                 else:
                     v = " ".join(map(str, value))
                     length = len(value)
-                key_np = np.dtype(Decoder.convert_map[key]).name
-                output.append(f"{key_np} {length} {v}")
-    
+                    key_np = np.dtype(Decoder.convert_map[key]).name
+                output[idx] = f"{key_np} {length} {v}"
+
     return " ".join(output)
 
 
