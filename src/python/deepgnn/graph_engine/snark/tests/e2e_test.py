@@ -1,7 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import json
 import multiprocessing as mp
 import os
 import sys
@@ -19,97 +18,54 @@ import grpc
 from grpc_health.v1 import health_pb2, health_pb2_grpc
 
 import deepgnn.graph_engine.snark.client as client
-from deepgnn.graph_engine.snark.decoders import DecoderType
+from deepgnn.graph_engine.snark.decoders import LinearDecoder
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.dispatcher as dispatcher
 import deepgnn.graph_engine.snark._lib as lib
 
 
-def triangle_graph_json(folder):
-    data = open(os.path.join(folder, "graph.json"), "w+")
+def triangle_graph_linear(folder):
+    data = open(os.path.join(folder, "graph.linear"), "w+")
     graph = [
-        {
-            "node_id": 9,
-            "node_type": 0,
-            "node_weight": 1,
-            "neighbor": {"0": {"0": 0.5}, "1": {}},
-            "uint64_feature": {"2": [13, 17]},
-            "float_feature": {"0": [0, 1], "1": [-0.01, -0.02]},
-            "binary_feature": {},
-            "edge": [
-                {
-                    "src_id": 9,
-                    "dst_id": 0,
-                    "edge_type": 0,
-                    "weight": 0.5,
-                    "uint64_feature": {"0": [1, 2, 3]},
-                    "float_feature": {},
-                    "binary_feature": {},
-                }
-            ],
-        },
-        {
-            "node_id": 0,
-            "node_type": 1,
-            "node_weight": 1,
-            "neighbor": {"0": {}, "1": {"5": 1}},
-            "uint64_feature": {},
-            "float_feature": {"0": [1], "1": [-0.03, -0.04]},
-            "binary_feature": {"3": "abcd"},
-            "edge": [
-                {
-                    "src_id": 0,
-                    "dst_id": 5,
-                    "edge_type": 1,
-                    "weight": 1,
-                    "uint64_feature": {},
-                    "float_feature": {"1": [3, 4]},
-                    "binary_feature": {},
-                }
-            ],
-        },
-        {
-            "node_id": 5,
-            "node_type": 2,
-            "node_weight": 1,
-            "neighbor": {"0": {}, "1": {"9": 0.7}},
-            "float_feature": {"0": [1, 1], "1": [-0.05, -0.06]},
-            "binary_feature": {},
-            "uint8_feature": {"4": [5, 6, 7]},
-            "int8_feature": {"5": [15, 16, 17]},
-            "uint16_feature": {"6": [25, 26, 27]},
-            "int16_feature": {"7": [35, 36, 37]},
-            "uint32_feature": {"8": [45, 46, 47]},
-            "int32_feature": {"9": [55, 56, 57]},
-            "uint64_feature": {"10": [65, 66, 67]},
-            "int64_feature": {"11": [75, 76, 77]},
-            "double_feature": {"12": [85, 86, 87]},
-            "float16_feature": {"13": [95, 96, 97]},
-            "edge": [
-                {
-                    "src_id": 5,
-                    "dst_id": 9,
-                    "edge_type": 1,
-                    "weight": 0.7,
-                    "float_feature": {},
-                    "binary_feature": {"2": "hello"},
-                    "uint8_feature": {"4": [5, 6, 7]},
-                    "int8_feature": {"5": [15, 16, 17]},
-                    "uint16_feature": {"6": [25, 26, 27]},
-                    "int16_feature": {"7": [35, 36, 37]},
-                    "uint32_feature": {"8": [45, 46, 47]},
-                    "int32_feature": {"9": [55, 56, 57]},
-                    "uint64_feature": {"10": [65, 66, 67]},
-                    "int64_feature": {"11": [75, 76, 77]},
-                    "double_feature": {"12": [85, 86, 87]},
-                    "float16_feature": {"13": [95, 96, 97]},
-                }
-            ],
-        },
+        (9, 0, 1, [np.array([0, 1], dtype=np.float32), np.array([-.01, -.02], dtype=np.float32), np.array([13, 17], dtype=np.uint64)], [(9, 0, 0, .5, [np.array([1, 2, 3], np.uint64)])]),
+        (0, 1, 1, [np.array([1], dtype=np.float32), np.array([-.03, -.04], dtype=np.float32), "abcd"], [(0, 5, 1, 1, [None, np.array([3, 4], np.float32)])]),
+        (5, 2, 1, [
+            np.array([1, 1], dtype=np.float32),
+            np.array([-.05, -.06], dtype=np.float32),
+            None,
+            None,
+            np.array([5, 6, 7], dtype=np.uint8),
+            np.array([15, 16, 17], dtype=np.int8),
+            np.array([25, 26, 27], dtype=np.uint16),
+            np.array([35, 36, 37], dtype=np.int16),
+            np.array([45, 46, 47], dtype=np.uint32),
+            np.array([55, 56, 57], dtype=np.int32),
+            np.array([65, 66, 67], dtype=np.uint64),
+            np.array([75, 76, 77], dtype=np.int64),
+            np.array([85, 86, 87], dtype=np.float64),
+            np.array([95, 96, 97], dtype=np.float16),
+        ],
+        [(5, 9, 1, .7, [
+            None,
+            None,
+            "hello",
+            None,
+            np.array([5, 6, 7], dtype=np.uint8),
+            np.array([15, 16, 17], dtype=np.int8),
+            np.array([25, 26, 27], dtype=np.uint16),
+            np.array([35, 36, 37], dtype=np.int16),
+            np.array([45, 46, 47], dtype=np.uint32),
+            np.array([55, 56, 57], dtype=np.int32),
+            np.array([65, 66, 67], dtype=np.uint64),
+            np.array([75, 76, 77], dtype=np.int64),
+            np.array([85, 86, 87], dtype=np.float64),
+            np.array([95, 96, 97], dtype=np.float16),
+        ])])
     ]
+    decoder = LinearDecoder()
     for el in graph:
-        json.dump(el, data)
+        data.write(decoder.encode(*el))
         data.write("\n")
     data.flush()
 
@@ -153,7 +109,7 @@ def triangle_graph_tsv(folder):
 @pytest.fixture(scope="module")
 def triangle_graph_data():
     workdir = tempfile.TemporaryDirectory()
-    data_name, meta_name = triangle_graph_json(workdir.name)
+    data_name, meta_name = triangle_graph_linear(workdir.name)
     yield data_name, meta_name
     workdir.cleanup()
 
@@ -177,13 +133,12 @@ def setup_module(module):
 @pytest.fixture(scope="module")
 def default_triangle_graph():
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name = triangle_graph_json(output.name)
+    data_name, meta_name = triangle_graph_linear(output.name)
     convert.MultiWorkersConverter(
         graph_path=data_name,
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=DecoderType.JSON,
     ).convert()
     yield output.name
 
@@ -260,16 +215,15 @@ class Counter:
 @pytest.fixture(scope="module")
 def multi_partition_graph_data():
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name = triangle_graph_json(output.name)
+    data_name, meta_name = triangle_graph_linear(output.name)
     d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, meta_name, convert.output, Counter(), DecoderType.JSON
+        Path(output.name), 2, meta_name, convert.output, Counter()
     )
     convert.MultiWorkersConverter(
         graph_path=data_name,
         meta_path=meta_name,
         partition_count=2,
         output_dir=output.name,
-        decoder_type=DecoderType.JSON,
         dispatcher=d,
     ).convert()
     yield output.name
@@ -579,7 +533,6 @@ def test_edge_sampling_graph_single_partition(triangle_graph_data):
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=DecoderType.JSON,
     ).convert()
 
     g = client.MemoryGraph(output.name, [0])
@@ -598,7 +551,6 @@ def test_edge_sampling_graph_single_partition_raises_empty_types(triangle_graph_
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=DecoderType.JSON,
     ).convert()
 
     g = client.MemoryGraph(output.name, [0, 1])
@@ -1239,26 +1191,16 @@ def test_servers_stay_alive_on_client_disconnects(
 @pytest.fixture(scope="module")
 def sampling_graph_data():
     workdir = tempfile.TemporaryDirectory()
-    data = open(os.path.join(workdir.name, "graph.json"), "w+")
+    data = open(os.path.join(workdir.name, "graph.linear"), "w+")
     graph = []
     num_nodes = 10
     num_types = 3
     for node_id in range(num_nodes):
-        graph.append(
-            {
-                "node_id": node_id,
-                "node_type": (node_id % num_types),
-                "node_weight": 1,
-                "neighbor": {},
-                "uint64_feature": None,
-                "float_feature": None,
-                "binary_feature": None,
-                "edge": [],
-            }
-        )
+        graph.append((node_id, node_id % num_types, 1, [], []))
 
+    decoder = LinearDecoder()
     for el in graph:
-        json.dump(el, data)
+        data.write(decoder.encode(*el))
         data.write("\n")
     data.flush()
 
@@ -1288,7 +1230,6 @@ def default_node_sampling_graph(sampling_graph_data):
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=DecoderType.JSON,
     ).convert()
 
     yield output.name
@@ -1314,8 +1255,8 @@ def test_node_sampling_graph_single_partition_all_nodes_withoutreplacement(
     npt.assert_array_equal(t, expected_types)
 
 
-def no_features_graph_json(folder):
-    data = open(os.path.join(folder, "graph.json"), "w+")
+def no_features_graph_linear(folder):
+    data = open(os.path.join(folder, "graph.linear"), "w+")
     graph = [
         {
             "node_id": 9,
@@ -1379,9 +1320,9 @@ def no_features_graph_json(folder):
 @pytest.fixture(scope="module")
 def no_features_graph():
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name = no_features_graph_json(output.name)
+    data_name, meta_name = no_features_graph_linear(output.name)
     d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, meta_name, convert.output, Counter(), DecoderType.JSON
+        Path(output.name), 2, meta_name, convert.output, Counter()
     )
 
     convert.MultiWorkersConverter(
@@ -1389,7 +1330,6 @@ def no_features_graph():
         meta_path=meta_name,
         partition_count=2,
         output_dir=output.name,
-        decoder_type=DecoderType.JSON,
         dispatcher=d,
         skip_edge_sampler=True,
         skip_node_sampler=True,

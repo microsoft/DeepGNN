@@ -126,9 +126,9 @@ def triangle_graph_tsv(folder):
 def triangle_graph(request):
     workdir = tempfile.TemporaryDirectory()
     if request.param == JsonDecoder:
-        data_name, meta_name = graph_with_sparse_features_json(workdir.name)
+        data_name, meta_name = triangle_graph_json(workdir.name)
     elif request.param == LinearDecoder:
-        json_name, meta_name = graph_with_sparse_features_json(workdir.name)
+        json_name, meta_name = triangle_graph_json(workdir.name)
         data_name = os.path.join(workdir.name, "graph.linear")
         json_to_linear(json_name, data_name)
     elif request.param == TsvDecoder:
@@ -140,7 +140,7 @@ def triangle_graph(request):
     workdir.cleanup()
 
 
-param = [LinearDecoder]
+param = [LinearDecoder, JsonDecoder, TsvDecoder]
 
 
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
@@ -601,8 +601,11 @@ def graph_with_sparse_features(request):
     workdir.cleanup()
 
 
+param_sparse = [LinearDecoder, JsonDecoder]
+
+
 @pytest.mark.parametrize(
-    "graph_with_sparse_features", [LinearDecoder], indirect=True
+    "graph_with_sparse_features", param_sparse, indirect=True
 )
 def test_sanity_node_sparse_features_index(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
@@ -626,7 +629,7 @@ def test_sanity_node_sparse_features_index(graph_with_sparse_features):
 
 
 @pytest.mark.parametrize(
-    "graph_with_sparse_features", [LinearDecoder], indirect=True
+    "graph_with_sparse_features", param_sparse, indirect=True
 )
 def test_sanity_node_sparse_features_data(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
@@ -673,7 +676,7 @@ def test_sanity_node_sparse_features_data(graph_with_sparse_features):
 
 
 @pytest.mark.parametrize(
-    "graph_with_sparse_features", [LinearDecoder], indirect=True
+    "graph_with_sparse_features", param_sparse, indirect=True
 )
 def test_sanity_edge_sparse_features_index(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
@@ -698,7 +701,7 @@ def test_sanity_edge_sparse_features_index(graph_with_sparse_features):
 
 
 @pytest.mark.parametrize(
-    "graph_with_sparse_features", [LinearDecoder], indirect=True
+    "graph_with_sparse_features", param_sparse, indirect=True
 )
 def test_sanity_edge_sparse_features_data(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
