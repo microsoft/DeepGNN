@@ -14,7 +14,7 @@ import numpy as np
 import numpy.testing as npt
 
 import deepgnn.graph_engine.snark.convert as convert
-from deepgnn.graph_engine.snark.decoders import DecoderType, json_to_linear
+from deepgnn.graph_engine.snark.decoders import LinearDecoder, JsonDecoder, json_to_linear
 from deepgnn.graph_engine.snark.dispatcher import QueueDispatcher
 
 
@@ -88,19 +88,19 @@ def benchmark_to_binary(data_name, meta_name, output_dir, decoder_type, **kw):
         meta_path=meta_name,
         partition_count=1,
         output_dir=output_dir,
-        decoder_type=decoder_type,
+        decoder_class=decoder_type,
         **kw,
     ).convert()
     return time() - time_start
 
 
 def benchmark_json_to_binary(data_name, meta_name, output_dir):
-    return benchmark_to_binary(data_name, meta_name, output_dir, DecoderType.JSON)
+    return benchmark_to_binary(data_name, meta_name, output_dir, JsonDecoder)
 
 
 def benchmark_linear_to_binary(data_name, meta_name, output_dir):
     # buffer_size reduces number of TextFileIterator q.get calls == json, record_per_step reduces number TextFileIterator.__next__ == json
-    return benchmark_to_binary(data_name, meta_name, output_dir, DecoderType.LINEAR, buffer_size=50 // 4, record_per_step=512 * (EDGES + 1))
+    return benchmark_to_binary(data_name, meta_name, output_dir, LinearDecoder, buffer_size=50 // 4, record_per_step=512 * (EDGES + 1))
 
 
 NODES = 10**5

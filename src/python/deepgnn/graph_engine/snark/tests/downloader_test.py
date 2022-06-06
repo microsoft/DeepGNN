@@ -1,7 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import json
 import multiprocessing
 import os
 import tempfile
@@ -15,7 +14,7 @@ import numpy.testing as npt
 import pytest
 
 import deepgnn.graph_engine.snark.client as client
-from deepgnn.graph_engine.snark.decoders import DecoderType
+from deepgnn.graph_engine.snark.decoders import LinearDecoder
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.dispatcher as dispatcher
@@ -33,50 +32,15 @@ def setup_module(_):
     lib._LIB_PATH = get_lib_name()
 
 
-def small_graph_json(folder):
-    data = open(os.path.join(folder, "graph.json"), "w+")
-    graph = [
-        {
-            "node_id": 0,
-            "node_type": 0,
-            "node_weight": 1,
-            "neighbor": {"0": {"1": 0.5}},
-            "uint64_feature": {"0": [1, 2]},
-            "edge": [
-                {
-                    "src_id": 0,
-                    "dst_id": 1,
-                    "edge_type": 0,
-                    "weight": 1.0,
-                    "uint64_feature": {},
-                    "float_feature": {},
-                    "binary_feature": {},
-                }
-            ],
-        },
-        {
-            "node_id": 1,
-            "node_type": 1,
-            "node_weight": 1,
-            "neighbor": {"0": {"1": 1}},
-            "uint64_feature": {"0": [3, 4]},
-            "float_feature": {},
-            "binary_feature": {},
-            "edge": [
-                {
-                    "src_id": 1,
-                    "dst_id": 0,
-                    "edge_type": 1,
-                    "weight": 1,
-                    "uint64_feature": {},
-                    "float_feature": {},
-                    "binary_feature": {},
-                }
-            ],
-        },
+def small_graph_linear(folder):
+    data = open(os.path.join(folder, "graph.linear"), "w+")
+    graph = [  # node_id, node_type, node_weight, features, edges
+        (0, 0, 1, [np.array([1, 2], dtype=np.uint64)], [(0, 1, 0, 1.0, [])]),
+        (1, 1, 1, [np.array([3, 4], dtype=np.uint64)], [(1, 0, 1, 1.0, [])]),
     ]
+    decoder = LinearDecoder()
     for el in graph:
-        json.dump(el, data)
+        data.write(decoder.encode(*el))
         data.write("\n")
     data.flush()
 
@@ -108,16 +72,16 @@ class Counter:
 )
 def multi_partition_graph_data(request):
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name = small_graph_json(output.name)
+    data_name, meta_name = small_graph_linear(output.name)
     d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, meta_name, convert.output, Counter(), DecoderType.JSON
+        Path(output.name), 2, meta_name, convert.output, Counter(), LinearDecoder
     )
     convert.MultiWorkersConverter(
         graph_path=data_name,
         meta_path=meta_name,
         partition_count=2,
         output_dir=output.name,
-        decoder_type=DecoderType.JSON,
+        decoder_class=LinearDecoder,
         dispatcher=d,
         skip_node_sampler=request.param[0],
         skip_edge_sampler=request.param[1],

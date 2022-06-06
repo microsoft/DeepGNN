@@ -6,10 +6,10 @@ import json
 import logging
 import random
 from typing import List, Tuple, Dict, Set, DefaultDict
-
+import numpy as np
 import urllib.request, tarfile
 import deepgnn.graph_engine.snark.convert as convert
-import deepgnn.graph_engine.snark.decoders as decoders
+from deepgnn.graph_engine.snark.decoders import LinearDecoder
 
 from deepgnn.graph_engine.snark.local import Client
 
@@ -70,12 +70,10 @@ def get_linear_node(
     assert isinstance(flt_feat, list) and isinstance(flt_feat[0], float)
     assert isinstance(label, int)
     ntype = 0 if node_type == "train" else 1
-    node_str = f"-1 {node_id} {ntype} 1.0 float32 {len(flt_feat)} {' '.join(map(str, flt_feat))} float32 1 {label}"
-    if train_neighbors:
-        node_str += " " + " ".join((f"{node_id} {dst} {0} {1.0}" for dst in train_neighbors))
-    if test_neighbors:
-        node_str += " " + " ".join((f"{node_id} {dst} {1} {1.0}" for dst in test_neighbors))
-    return node_str
+    node_features = [np.array(flt_feat, dtype=np.float32), np.array([label], dtype=np.float32)]
+    edges = [(node_id, dst, 0, 1.0, []) for dst in train_neighbors]
+    edges += [(node_id, dst, 1, 1.0, []) for dst in test_neighbors]
+    return LinearDecoder().encode(node_id, ntype, 1.0, node_features, edges)
 
 
 def write_node_files(node_types: Dict[int, str], train_file: str, test_file: str):
