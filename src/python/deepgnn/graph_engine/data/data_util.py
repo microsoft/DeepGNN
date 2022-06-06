@@ -55,6 +55,29 @@ def get_json_node(
     return json.dumps(node)
 
 
+def get_linear_node(
+    node_id: int,
+    node_type: str,
+    flt_feat: List[float],
+    label: int,
+    train_neighbors: Set[int],
+    test_neighbors: Set[int],
+) -> str:
+    """return node with JSON format.
+    node type: 0(train), 1(test)
+    use default value for node_weight(1.0), neighbor weight(1.0)
+    """
+    assert isinstance(flt_feat, list) and isinstance(flt_feat[0], float)
+    assert isinstance(label, int)
+    ntype = 0 if node_type == "train" else 1
+    node_str = f"-1 {node_id} {ntype} 1.0 float32 {len(flt_feat)} {' '.join(map(str, flt_feat))} float32 1 {label}"
+    if train_neighbors:
+        node_str += " " + " ".join((f"{node_id} {dst} {0} {1.0}" for dst in train_neighbors))
+    if test_neighbors:
+        node_str += " " + " ".join((f"{node_id} {dst} {1} {1.0}" for dst in test_neighbors))
+    return node_str
+
+
 def write_node_files(node_types: Dict[int, str], train_file: str, test_file: str):
     with open(train_file, "w") as fout_train, open(test_file, "w") as fout_test:
         for nid, ntype in node_types.items():
@@ -121,18 +144,17 @@ class Dataset(Client):
         )
 
         ## build graph - JSON
-        graph_file = os.path.join(data_dir, "graph.json")
-        self._write_json_graph(nodes, node_types, train_adjs, test_adjs, graph_file)
+        graph_file = os.path.join(data_dir, "graph.linear")
+        self._write_linear_graph(nodes, node_types, train_adjs, test_adjs, graph_file)
         meta_file = os.path.join(data_dir, "meta.json")
         self._write_meta_file(meta_file)
 
-        ## convert graph: JSON -> Binary
+        ## convert graph: Linear -> Binary
         convert.MultiWorkersConverter(
             graph_path=graph_file,
             meta_path=meta_file,
             partition_count=1,
             output_dir=data_dir,
-            decoder_class=decoders.JsonDecoder,
         ).convert()
 
         ## write training/testing nodes.
@@ -174,7 +196,7 @@ class Dataset(Client):
         logging.info("* classes {}".format(set([node[1] for _, node in nodes.items()])))
         logging.info("*******************************************")
 
-    def _write_json_graph(
+    def _write_linear_graph(
         self,
         nodes: Dict[int, Tuple[List[float], int]],
         node_types: Dict[int, str],
@@ -184,7 +206,7 @@ class Dataset(Client):
     ):
         with open(graph_file, "w") as fout:
             for nid, info in nodes.items():
-                tmp = get_json_node(
+                tmp = get_linear_node(
                     nid,
                     node_types[nid],
                     info[0],

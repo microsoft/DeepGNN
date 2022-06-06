@@ -98,7 +98,6 @@ class JsonDecoder(Decoder):
                         np.array(value["values"], dtype=self.convert_map[key.replace("sparse_", "")]),
                     )
                 elif key != "binary_feature":
-                    print(key, value)
                     value = np.array(value, dtype=self.convert_map[key])
                 ret_list[idx] = value
 
