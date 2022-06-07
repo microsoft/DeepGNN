@@ -1,23 +1,17 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import json
-import multiprocessing as mp
 import os
 import sys
 import tempfile
-import threading
-import time
-from pathlib import Path
-import platform
-from typing import List, Tuple
+from typing import List
 
 import numpy as np
 import numpy.testing as npt
 import pytest
 
 import deepgnn.graph_engine.snark.client as client
-from deepgnn.graph_engine.snark.decoders import DecoderType
+from deepgnn.graph_engine.snark.decoders import json_node_to_linear
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.dispatcher as dispatcher
@@ -128,8 +122,7 @@ def graph_with_sparse_features_json(folder):
         },
     ]
     for el in graph:
-        json.dump(el, data)
-        data.write("\n")
+        data.write(json_node_to_linear(el))
     data.flush()
 
     meta = open(os.path.join(folder, "meta.json"), "w+")
@@ -154,7 +147,6 @@ def graph_with_sparse_features(request):
         meta_path=meta_name,
         partition_count=request.param,
         output_dir=workdir.name,
-        decoder_type=DecoderType.JSON,
         skip_edge_sampler=True,
         skip_node_sampler=True,
     ).convert()
@@ -214,7 +206,6 @@ def multi_server_sparse_features_graph():
         meta_path=meta_name,
         partition_count=2,
         output_dir=workdir.name,
-        decoder_type=DecoderType.JSON,
         skip_edge_sampler=True,
         skip_node_sampler=True,
     ).convert()

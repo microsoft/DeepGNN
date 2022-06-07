@@ -89,7 +89,7 @@ class LinearDecoder(Decoder):
                 if f is None:
                     return "uint8 0"
                 elif isinstance(f, str):
-                    return f"binary_feature {len(f)} {f}"
+                    return f"binary_feature 1 {f}"
                 return f"{f.dtype.name} {f.size} {' '.join(map(str, f))}"
 
             # TODO None and string case
@@ -316,7 +316,7 @@ class TsvDecoder(Decoder):
             yield node_id, dst_id, dst_type, dst_weight, self._parse_feature_string(neighbor_columns[3])
 
 
-def json_to_linear(filename_in, filename_out):
+def json_node_to_linear(node):
     """Convert graph.json to graph.linear."""
     def _dump_features(features: dict) -> str:
         """Serialize features for linear format."""
@@ -356,17 +356,18 @@ def json_to_linear(filename_in, filename_out):
 
         return " ".join(output)
 
+    output = f'-1 {node["node_id"]} {node["node_type"]} {node["node_weight"]} {_dump_features(node)}'
+    for edge in node["edge"]:
+        output += f' {edge["src_id"]} {edge["dst_id"]} {edge["edge_type"]} {edge["weight"]} {_dump_features(edge)}'
+    output += '\n'
+    return output
+
+def json_to_linear(filename_in, filename_out):
+    """Convert graph.json to graph.linear."""
     file_in = open(filename_in, "r")
     file_out = open(filename_out, "w")
     for line in file_in.readlines():
         node = json.loads(line)
-        file_out.write(
-            f'-1 {node["node_id"]} {node["node_type"]} {node["node_weight"]} {_dump_features(node)}'
-        )
-        for edge in node["edge"]:
-            file_out.write(
-                f' {edge["src_id"]} {edge["dst_id"]} {edge["edge_type"]} {edge["weight"]} {_dump_features(edge)}'
-            )
-        file_out.write('\n')
+        file_out.write(json_node_to_linear(node))
     file_in.close()
     file_out.close()

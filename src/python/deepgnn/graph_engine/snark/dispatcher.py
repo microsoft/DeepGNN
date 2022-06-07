@@ -14,7 +14,7 @@ if platform.system() == "Windows":
 else:
     from multiprocessing.connection import Connection  # type: ignore
 
-from deepgnn.graph_engine.snark.decoders import Decoder
+from deepgnn.graph_engine.snark.decoders import Decoder, LinearDecoder
 from deepgnn import get_logger
 
 FLAG_ALL_DONE = b"WORK_FINISHED"
@@ -188,7 +188,7 @@ class QueueDispatcher(Dispatcher):
         meta: str,
         process: typing.Callable[[mp.Queue, mp.Queue, str, int, int], None],
         partion_func: typing.Callable[[str], int],
-        decoder_class: Decoder,
+        decoder_class: Decoder = LinearDecoder,
         partition_offset: int = 0,
         use_threads: bool = False,
         skip_node_sampler: bool = False,

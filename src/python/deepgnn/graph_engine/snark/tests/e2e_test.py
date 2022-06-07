@@ -18,7 +18,7 @@ import grpc
 from grpc_health.v1 import health_pb2, health_pb2_grpc
 
 import deepgnn.graph_engine.snark.client as client
-from deepgnn.graph_engine.snark.decoders import LinearDecoder
+from deepgnn.graph_engine.snark.decoders import LinearDecoder, json_node_to_linear
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.dispatcher as dispatcher
@@ -28,45 +28,87 @@ import deepgnn.graph_engine.snark._lib as lib
 def triangle_graph_linear(folder):
     data = open(os.path.join(folder, "graph.linear"), "w+")
     graph = [
-        (9, 0, 1, [np.array([0, 1], dtype=np.float32), np.array([-.01, -.02], dtype=np.float32), np.array([13, 17], dtype=np.uint64)], [(9, 0, 0, .5, [np.array([1, 2, 3], np.uint64)])]),
-        (0, 1, 1, [np.array([1], dtype=np.float32), np.array([-.03, -.04], dtype=np.float32), "abcd"], [(0, 5, 1, 1, [None, np.array([3, 4], np.float32)])]),
-        (5, 2, 1, [
-            np.array([1, 1], dtype=np.float32),
-            np.array([-.05, -.06], dtype=np.float32),
-            None,
-            None,
-            np.array([5, 6, 7], dtype=np.uint8),
-            np.array([15, 16, 17], dtype=np.int8),
-            np.array([25, 26, 27], dtype=np.uint16),
-            np.array([35, 36, 37], dtype=np.int16),
-            np.array([45, 46, 47], dtype=np.uint32),
-            np.array([55, 56, 57], dtype=np.int32),
-            np.array([65, 66, 67], dtype=np.uint64),
-            np.array([75, 76, 77], dtype=np.int64),
-            np.array([85, 86, 87], dtype=np.float64),
-            np.array([95, 96, 97], dtype=np.float16),
-        ],
-        [(5, 9, 1, .7, [
-            None,
-            None,
-            "hello",
-            None,
-            np.array([5, 6, 7], dtype=np.uint8),
-            np.array([15, 16, 17], dtype=np.int8),
-            np.array([25, 26, 27], dtype=np.uint16),
-            np.array([35, 36, 37], dtype=np.int16),
-            np.array([45, 46, 47], dtype=np.uint32),
-            np.array([55, 56, 57], dtype=np.int32),
-            np.array([65, 66, 67], dtype=np.uint64),
-            np.array([75, 76, 77], dtype=np.int64),
-            np.array([85, 86, 87], dtype=np.float64),
-            np.array([95, 96, 97], dtype=np.float16),
-        ])])
+        {
+            "node_id": 9,
+            "node_type": 0,
+            "node_weight": 1,
+            "neighbor": {"0": {"0": 0.5}, "1": {}},
+            "uint64_feature": {"2": [13, 17]},
+            "float_feature": {"0": [0, 1], "1": [-0.01, -0.02]},
+            "binary_feature": {},
+            "edge": [
+                {
+                    "src_id": 9,
+                    "dst_id": 0,
+                    "edge_type": 0,
+                    "weight": 0.5,
+                    "uint64_feature": {"0": [1, 2, 3]},
+                    "float_feature": {},
+                    "binary_feature": {},
+                }
+            ],
+        },
+        {
+            "node_id": 0,
+            "node_type": 1,
+            "node_weight": 1,
+            "neighbor": {"0": {}, "1": {"5": 1}},
+            "uint64_feature": {},
+            "float_feature": {"0": [1], "1": [-0.03, -0.04]},
+            "binary_feature": {"3": "abcd"},
+            "edge": [
+                {
+                    "src_id": 0,
+                    "dst_id": 5,
+                    "edge_type": 1,
+                    "weight": 1,
+                    "uint64_feature": {},
+                    "float_feature": {"1": [3, 4]},
+                    "binary_feature": {},
+                }
+            ],
+        },
+        {
+            "node_id": 5,
+            "node_type": 2,
+            "node_weight": 1,
+            "neighbor": {"0": {}, "1": {"9": 0.7}},
+            "float_feature": {"0": [1, 1], "1": [-0.05, -0.06]},
+            "binary_feature": {},
+            "uint8_feature": {"4": [5, 6, 7]},
+            "int8_feature": {"5": [15, 16, 17]},
+            "uint16_feature": {"6": [25, 26, 27]},
+            "int16_feature": {"7": [35, 36, 37]},
+            "uint32_feature": {"8": [45, 46, 47]},
+            "int32_feature": {"9": [55, 56, 57]},
+            "uint64_feature": {"10": [65, 66, 67]},
+            "int64_feature": {"11": [75, 76, 77]},
+            "double_feature": {"12": [85, 86, 87]},
+            "float16_feature": {"13": [95, 96, 97]},
+            "edge": [
+                {
+                    "src_id": 5,
+                    "dst_id": 9,
+                    "edge_type": 1,
+                    "weight": 0.7,
+                    "float_feature": {},
+                    "binary_feature": {"2": "hello"},
+                    "uint8_feature": {"4": [5, 6, 7]},
+                    "int8_feature": {"5": [15, 16, 17]},
+                    "uint16_feature": {"6": [25, 26, 27]},
+                    "int16_feature": {"7": [35, 36, 37]},
+                    "uint32_feature": {"8": [45, 46, 47]},
+                    "int32_feature": {"9": [55, 56, 57]},
+                    "uint64_feature": {"10": [65, 66, 67]},
+                    "int64_feature": {"11": [75, 76, 77]},
+                    "double_feature": {"12": [85, 86, 87]},
+                    "float16_feature": {"13": [95, 96, 97]},
+                }
+            ],
+        },
     ]
-    decoder = LinearDecoder()
     for el in graph:
-        data.write(decoder.encode(*el))
-        data.write("\n")
+        data.write(json_node_to_linear(el))
     data.flush()
 
     meta = open(os.path.join(folder, "meta.txt"), "w+")
@@ -1196,12 +1238,21 @@ def sampling_graph_data():
     num_nodes = 10
     num_types = 3
     for node_id in range(num_nodes):
-        graph.append((node_id, node_id % num_types, 1, [], []))
+        graph.append(
+            {
+                "node_id": node_id,
+                "node_type": (node_id % num_types),
+                "node_weight": 1,
+                "neighbor": {},
+                "uint64_feature": None,
+                "float_feature": None,
+                "binary_feature": None,
+                "edge": [],
+            }
+        )
 
-    decoder = LinearDecoder()
     for el in graph:
-        data.write(decoder.encode(*el))
-        data.write("\n")
+        data.write(json_node_to_linear(el))
     data.flush()
 
     meta = open(os.path.join(workdir.name, "meta.txt"), "w+")
@@ -1300,8 +1351,7 @@ def no_features_graph_linear(folder):
         },
     ]
     for el in graph:
-        json.dump(el, data)
-        data.write("\n")
+        data.write(json_node_to_linear(el))
     data.flush()
 
     meta = open(os.path.join(folder, "meta.txt"), "w+")
