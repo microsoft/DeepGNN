@@ -12,7 +12,7 @@ import networkx as nx
 import numpy as np
 import numpy.testing as npt
 import deepgnn.graph_engine.snark.convert as convert
-import deepgnn.graph_engine.snark.decoders as decoders
+from deepgnn.graph_engine.snark.decoders import json_node_to_linear
 import deepgnn.graph_engine.snark.server as server
 import pytest
 
@@ -54,7 +54,7 @@ def caveman_data(partitions: int = 1, worker_count: int = 1, output_dir: str = "
             ],
             "neighbor": {"0": nbs},
         }
-        data[node_id % worker_count] += json.dumps(node) + "\n"
+        data[node_id % worker_count] += json_node_to_linear(node) + "\n"
         nodes.append(node)
 
     meta = '{"node_float_feature_num": 1, \
@@ -85,7 +85,6 @@ def caveman_data(partitions: int = 1, worker_count: int = 1, output_dir: str = "
             output_dir=output_dir,
             worker_index=n,
             worker_count=worker_count,
-            decoder_type=decoders.DecoderType.JSON,
         ).convert()
         for n in range(worker_count)
     ]

@@ -15,7 +15,7 @@ import pytest
 import networkx as nx
 
 import deepgnn.graph_engine.snark.client as client
-from deepgnn.graph_engine.snark.decoders import DecoderType
+from deepgnn.graph_engine.snark.decoders import json_node_to_linear
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.dispatcher as dispatcher
@@ -105,8 +105,7 @@ def triangle_graph_json(folder):
         },
     ]
     for el in graph:
-        json.dump(el, data)
-        data.write("\n")
+        data.write(json_node_to_linear(el))
     data.flush()
 
     meta = open(os.path.join(folder, "meta.txt"), "w+")
@@ -169,15 +168,14 @@ def multi_partition_graph_data():
     output = tempfile.TemporaryDirectory()
     data_name, meta_name = triangle_graph_json(output.name)
     d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, meta_name, convert.output, Counter(), DecoderType.JSON
+        Path(output.name), 2, meta_name, convert.output, Counter()
     )
     convert.MultiWorkersConverter(
         graph_path=data_name,
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=DecoderType.JSON,
-        dispatcher=d,
+        #dispatcher=d,
     ).convert()
 
     yield output.name
@@ -376,8 +374,7 @@ def karate_club_json(folder):
         graph.append(node)
 
     for el in graph:
-        json.dump(el, data)
-        data.write("\n")
+        data.write(json_node_to_linear(el))
     data.flush()
 
     meta = open(os.path.join(folder, "meta.txt"), "w+")
@@ -399,14 +396,13 @@ def karate_club_graph():
     with tempfile.TemporaryDirectory() as workdir:
         data_name, meta_name = karate_club_json(workdir)
         d = dispatcher.QueueDispatcher(
-            Path(workdir), 2, meta_name, convert.output, Counter(), DecoderType.JSON
+            Path(workdir), 2, meta_name, convert.output, Counter()
         )
         convert.MultiWorkersConverter(
             graph_path=data_name,
             meta_path=meta_name,
             partition_count=2,
             output_dir=workdir,
-            decoder_type=DecoderType.JSON,
             dispatcher=d,
             skip_edge_sampler=True,
             skip_node_sampler=True,
