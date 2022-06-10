@@ -90,14 +90,25 @@ class LinearDecoder(Decoder):
                     return "uint8 0"
                 elif isinstance(f, str):
                     return f"binary_feature 1 {f}"
+                elif isinstance(f, tuple):
+                    coords, values = f
+                    if len(coords.shape) == 1:
+                        coordinates_str = " ".join(map(str, coords))
+                        length = f"{coords.shape[0]}"
+                    else:
+                        coordinates_str = " ".join((" ".join(map(str, c)) for c in coords))
+                        length = f"{coords.shape[0]},{coords.shape[1]}"
+                    print(coords, coordinates_str)
+                    return f"{values.dtype.name} {length},{values.size} {coordinates_str} {' '.join(map(str, values))}"
                 return f"{f.dtype.name} {f.size} {' '.join(map(str, f))}"
 
             # TODO None and string case
             return " ".join(get_f(f) for f in features)
-
         output = f"-1 {node_id} {node_type} {node_weight} {_feature_str(node_features)}"
         for edge_src, edge_dst, edge_type, edge_weight, edge_features in edges:
-            output += f" {edge_src} {edge_dst} {edge_type} {edge_weight} {_feature_str(edge_features)}"
+            if output[-1] != " ":
+                output += " "
+            output += f"{edge_src} {edge_dst} {edge_type} {edge_weight} {_feature_str(edge_features)}"
         return output
 
     def decode(self, line: str):
@@ -329,38 +340,28 @@ def json_node_to_linear(node):
             for idx, value in values.items():
                 idx = int(idx)
                 while idx > counter:
-                    output.append("int 0")
+                    output.append(np.array([0]))
                     counter += 1
                 if key.startswith("sparse"):
                     # TODO no sparse_binary_feature?
-                    coordinates = value["coordinates"]
-                    values = value["values"]
-                    coordinates_len = f"{len(coordinates)},{len(coordinates[0])}" if len(coordinates) and isinstance(coordinates[0], list) else f"{len(coordinates)}"
-                    if len(coordinates) and isinstance(coordinates[0], list):
-                        coordinates_str = " ".join((" ".join(map(str, c)) for c in coordinates))
-                    else:
-                        coordinates_str = " ".join(map(str, coordinates))
-                    values_str = " ".join(map(str, values))
-                    key_np = np.dtype(Decoder.convert_map[key.replace('sparse_', '')]).name
-                    output[idx] = f"{key_np} {coordinates_len},{len(values)} {coordinates_str} {values_str}"
+                    output[idx] = (
+                        np.array(value["coordinates"], dtype=np.int64),
+                        np.array(value["values"], dtype=Decoder.convert_map[key.replace('sparse_', '')]),
+                    )
                 else:
                     if key == "binary_feature":
-                        v = str(value)
-                        length = 1
-                        key_np = key
+                        output[idx] = value
                     else:
-                        v = " ".join(map(str, value))
-                        length = len(value)
-                        key_np = np.dtype(Decoder.convert_map[key]).name
-                    output[idx] = f"{key_np} {length} {v}"
+                        output[idx] = np.array(value, dtype=Decoder.convert_map[key])
 
-        return " ".join(output)
+        return output
 
-    output = f'-1 {node["node_id"]} {node["node_type"]} {node["node_weight"]} {_dump_features(node)}'
-    for edge in node["edge"]:
-        output += f' {edge["src_id"]} {edge["dst_id"]} {edge["edge_type"]} {edge["weight"]} {_dump_features(edge)}'
+    decoder = LinearDecoder()
+    edges = [(edge["src_id"], edge["dst_id"], edge["edge_type"], edge["weight"], _dump_features(edge)) for edge in node["edge"]]
+    output = decoder.encode(node["node_id"], node["node_type"], node["node_type"], _dump_features(node), edges)
     output += '\n'
     return output
+
 
 def json_to_linear(filename_in, filename_out):
     """Convert graph.json to graph.linear."""
