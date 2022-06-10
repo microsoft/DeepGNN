@@ -477,6 +477,18 @@ TEST(DistributedTest, FullNeighborsMultipleServers)
     EXPECT_EQ(output_weights, std::vector<float>({1, 2, 1, 2, 1, 2, 1, 2}));
     EXPECT_EQ(output_counts, std::vector<uint64_t>({4, 4}));
 }
+
+TEST(DistributedTest, NeighborCountMultipleServers)
+{
+
+}
+
+TEST(DistributedTest, NeighborCountMultipleTypesMultipleServers)
+{
+    
+}
+
+
 namespace
 {
 

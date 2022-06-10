@@ -83,6 +83,12 @@ class EmptyGraphEngine final : public snark::GraphEngine::Service
         return grpc::Status::OK;
     }
 
+    grpc::Status GetNeighborCount (::grpc::ServerContext *context, const snark::GetNeighborsRequest *request,
+                                   snark::GetNeighborCountsReply *response) override
+    {
+        return grpc::Status::OK;
+    }
+
     grpc::Status GetNeighbors(::grpc::ServerContext *context, const snark::GetNeighborsRequest *request,
                               snark::GetNeighborsReply *response) override
     {

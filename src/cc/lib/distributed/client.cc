@@ -619,6 +619,59 @@ void GRPCClient::GetEdgeStringFeature(std::span<const NodeId> edge_src_ids, std:
     ExtractStringFeatures(response_index, replies, out_dimensions, out_values);
 }
 
+void GRPCClient::NeighborCount(std::span<const NodeId> node_ids, std::span<const Type> edge_types, 
+                                 std::span<uint64_t> output_neighbor_counts)
+{
+    GetNeighborsRequest request;
+
+    *request.mutable_node_ids() = {std::begin(node_ids), std::end(node_ids)};
+    *request.mutable_edge_types() = {std::begin(edge_types), std::end(edge_types)};
+
+    std::vector<std::future<void>> futures;
+    futures.reserve(m_engine_stubs.size());
+
+    std::vector<GetNeighborCountsReply> replies(std::size(m_engine_stubs));
+    std::vector<size_t> reply_offsets(std::size(m_engine_stubs));
+
+    std::atomic<size_t> responses_left{std::size(m_engine_stubs)};
+
+
+    for (size_t shard = 0; shard < m_engine_stubs.size(); ++shard)
+    {
+        auto *call = new AsyncClientCall();
+
+        auto response_reader = 
+            m_engine_stubs[shard]->PrepareAsyncGetNeighborCount(&call->context, request, NextCompletionQueue());
+
+        call->callback = [&responses_left, &replies, &output_neighbor_counts]() {
+            // Skip processing until all responses arrived. All responses are stored in the `replies` variable,
+            // so we can safely return.
+            if (responses_left.fetch_sub(1) > 1)
+            {
+                return;
+            }
+            for (size_t curr_node = 0; curr_node < std::size(output_neighbor_counts); ++curr_node)
+            {
+                for (size_t reply_index = 0; reply_index < std::size(replies); ++reply_index)
+                {
+                    const auto &reply = replies[reply_index];
+                    const auto count = reply.neighbor_counts(curr_node);
+                    if (count == 0)
+                    {
+                        continue;
+                    }
+                    output_neighbor_counts[curr_node] += count;
+                }
+            }
+        };
+
+        futures.emplace_back(call->promise.get_future());
+        response_reader->StartCall();
+        response_reader->Finish(&replies[shard], &call->status, static_cast<void *>(call));
+    }
+    WaitForFutures(futures);
+}
+
 void GRPCClient::FullNeighbor(std::span<const NodeId> node_ids, std::span<const Type> edge_types,
                               std::vector<NodeId> &output_nodes, std::vector<Type> &output_types,
                               std::vector<float> &output_weights, std::span<uint64_t> output_neighbor_counts)

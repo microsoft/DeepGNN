@@ -441,9 +441,9 @@ void Partition::GetNodeStringFeature(uint64_t internal_node_id, std::span<const 
     }
 }
 
-size_t Partition::FullNeighbor(uint64_t internal_id, std::span<const Type> edge_types,
-                               std::vector<NodeId> &out_neighbors_ids, std::vector<Type> &out_edge_types,
-                               std::vector<float> &out_edge_weights) const
+template<class F>
+size_t Partition::FetchNeighborInfo(uint64_t internal_id, std::span<const Type> edge_types, F func) const
+
 {
     const auto offset = m_neighbors_index[internal_id];
     const auto nb_count = m_neighbors_index[internal_id + 1] - offset;
@@ -476,24 +476,49 @@ size_t Partition::FullNeighbor(uint64_t internal_id, std::span<const Type> edge_
         {
             const auto start = m_edge_type_offset[i];
             const auto last = m_edge_type_offset[i + 1];
-            result += last - start;
 
-            // m_edge_destination[last-1]+1 - take the last element and then advance the pointer
-            // to imitate std::end, otherwise we'll have an out of range exception.
-            out_neighbors_ids.insert(std::end(out_neighbors_ids), &m_edge_destination[start],
-                                     &m_edge_destination[last - 1] + 1);
-            auto original_type_size = out_edge_types.size();
-            out_edge_types.resize(original_type_size + last - start, m_edge_types[i]);
-            out_edge_weights.reserve(out_edge_weights.size() + last - start);
-            for (size_t index = start; index < last; ++index)
-            {
-                out_edge_weights.emplace_back(index > start ? m_edge_weights[index] - m_edge_weights[index - 1]
-                                                            : m_edge_weights[start]);
-            }
+            result += func(start, last, i);
         }
     }
     return result;
 }
+
+
+size_t Partition::NeighborCount(uint64_t internal_id, std::span<const Type> edge_types) const
+{   
+    auto lambda = [&](auto start, auto last, int i)
+                        {
+                            return last - start;
+                        };
+
+    return FetchNeighborInfo(internal_id, edge_types, lambda);
+}
+
+size_t Partition::FullNeighbor(uint64_t internal_id, std::span<const Type> edge_types,
+                               std::vector<NodeId> &out_neighbors_ids, std::vector<Type> &out_edge_types,
+                               std::vector<float> &out_edge_weights) const
+{   
+    auto lambda = [&](auto start, auto last, int i)
+            {
+                // m_edge_destination[last-1]+1 - take the last element and then advance the pointer
+                // to imitate std::end, otherwise we'll have an out of range exception.
+                out_neighbors_ids.insert(std::end(out_neighbors_ids), &m_edge_destination[start],
+                                                &m_edge_destination[last - 1] + 1);
+                auto original_type_size = out_edge_types.size();
+                out_edge_types.resize(original_type_size + last - start, m_edge_types[i]);
+                out_edge_weights.reserve(out_edge_weights.size() + last - start);
+                for (size_t index = start; index < last; ++index)
+                {
+                    out_edge_weights.emplace_back(index > start ? m_edge_weights[index] - m_edge_weights[index - 1]
+                                                                        : m_edge_weights[start]);
+                }
+
+                return last - start;
+            };
+
+    return FetchNeighborInfo(internal_id, edge_types, lambda);
+}
+
 bool Partition::GetEdgeFeature(uint64_t internal_src_node_id, NodeId input_edge_dst, Type input_edge_type,
                                std::span<snark::FeatureMeta> features, std::span<uint8_t> output) const
 {
