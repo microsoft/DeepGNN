@@ -4,23 +4,15 @@
 import json
 import os
 from time import time
-import struct
-import sys
-import tempfile
-from pathlib import Path
-
-import pytest
 import numpy as np
-import numpy.testing as npt
-
 import deepgnn.graph_engine.snark.convert as convert
-from deepgnn.graph_engine.snark.decoders import LinearDecoder, JsonDecoder, json_to_linear
-from deepgnn.graph_engine.snark.dispatcher import QueueDispatcher
+from deepgnn.graph_engine.snark.decoders import JsonDecoder, LinearDecoder, json_to_linear
 
 
 def generate_json(folder, N, fan_out):
     data = open(os.path.join(folder, "graph.json"), "w+")
     dst_ids = np.random.randint(0, N, N)
+    features = list(range(FEATURE_LEN))
     for i in range(N):
         dst_id = int(dst_ids[i])
 
@@ -30,7 +22,7 @@ def generate_json(folder, N, fan_out):
                 "dst_id": (dst_id + ii) % N,
                 "edge_type": 0,
                 "weight": 0.5,
-                "uint64_feature": {"0": [1, 2, 3, 4, 5]},
+                "uint64_feature": {"0": features} if FEATURE_LEN else {},
                 "float_feature": {},
                 "binary_feature": {},
             }
@@ -46,10 +38,7 @@ def generate_json(folder, N, fan_out):
                 "1": {},
             },
             "uint64_feature": {},
-            "float_feature": {
-                "0": [0, 1, 2, 3, 4, 5],
-                "1": [-0.01, -0.02, 0.3, 0.4, 0.5],
-            },
+            "float_feature": {"0": features, "1": features} if FEATURE_LEN else {},
             "binary_feature": {},
             "edge": edges,
         }
@@ -78,7 +67,7 @@ def benchmark_json_to_linear(data_name, meta_name, linear_name):
     return time() - time_start
 
 
-def benchmark_to_binary(data_name, meta_name, output_dir, decoder_type, **kw):
+def benchmark_to_binary(data_name, meta_name, output_dir, decoder_class, **kw):
     from deepgnn.graph_engine.snark import dispatcher
 
     dispatcher.PROCESS_PRINT_INTERVAL = 10**10
@@ -88,7 +77,7 @@ def benchmark_to_binary(data_name, meta_name, output_dir, decoder_type, **kw):
         meta_path=meta_name,
         partition_count=1,
         output_dir=output_dir,
-        decoder_class=decoder_type,
+        decoder_class=decoder_class,
         **kw,
     ).convert()
     return time() - time_start
@@ -100,24 +89,30 @@ def benchmark_json_to_binary(data_name, meta_name, output_dir):
 
 def benchmark_linear_to_binary(data_name, meta_name, output_dir):
     # buffer_size reduces number of TextFileIterator q.get calls == json, record_per_step reduces number TextFileIterator.__next__ == json
-    return benchmark_to_binary(data_name, meta_name, output_dir, LinearDecoder, buffer_size=50 // 4, record_per_step=512 * (EDGES + 1))
+    return benchmark_to_binary(data_name, meta_name, output_dir, LinearDecoder, buffer_size=50 // 4)#, record_per_step=512 * (EDGES + 1))
 
 
-NODES = 10**5
-EDGES = 20
+NODES = 1 * 10**5  # 5
+EDGES = 100
+FEATURE_LEN = 0
 
 if __name__ == "__main__":
-    input_dir = "/tmp/convert_benchmark"
-    json_binary_dir = "/tmp/json_binary_dir"
-    linear_binary_dir = "/tmp/linear_binary_dir"
+    input_dir = "/tmp/convert_benchmark2"
+    json_binary_dir = "/tmp/json_binary_dir2"
+    linear_binary_dir = "/tmp/linear_binary_dir2"
 
     linear_name = os.path.join(input_dir, "graph.linear")
 
-    data_name, meta_name = generate_json(input_dir, NODES, EDGES)
-    print(
-        f"JSON to Linear: {benchmark_json_to_linear(data_name, meta_name, linear_name)}"
-    )
+    data_name = os.path.join(input_dir, "graph.json")
+    meta_name = os.path.join(input_dir, "meta.txt")
+    if False:
+        data_name, meta_name = generate_json(input_dir, NODES, EDGES)
 
+        print(
+            f"JSON to Linear: {benchmark_json_to_linear(data_name, meta_name, linear_name)}"
+        )
+
+        #exit()
     import cProfile, pstats
     from pstats import SortKey
 

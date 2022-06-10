@@ -175,7 +175,7 @@ def multi_partition_graph_data():
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        #dispatcher=d,
+        dispatcher=d,
     ).convert()
 
     yield output.name

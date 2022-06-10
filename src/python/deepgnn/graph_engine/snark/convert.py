@@ -38,7 +38,7 @@ import deepgnn.graph_engine.snark.meta as mt
 
 
 class _NoOpWriter:
-    def add(self, _: typing.Any):
+    def add(self, *_: typing.Any):
         return
 
     def close(self):
