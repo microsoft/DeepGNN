@@ -358,7 +358,7 @@ def json_node_to_linear(node):
 
     decoder = LinearDecoder()
     edges = [(edge["src_id"], edge["dst_id"], edge["edge_type"], edge["weight"], _dump_features(edge)) for edge in node["edge"]]
-    output = decoder.encode(node["node_id"], node["node_type"], node["node_type"], _dump_features(node), edges)
+    output = decoder.encode(node["node_id"], node["node_type"], node["node_weight"], _dump_features(node), edges)
     output += '\n'
     return output
 
