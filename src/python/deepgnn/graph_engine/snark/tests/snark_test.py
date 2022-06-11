@@ -25,7 +25,6 @@ from deepgnn.graph_engine.snark.meta_merger import merge_metadata_files
 def caveman_data(partitions: int = 1, worker_count: int = 1, output_dir: str = ""):
     random.seed(246)
     g = nx.connected_caveman_graph(30, 12)
-    nodes = []
     data = [""] * worker_count  # every worker process one sub file
     for node_id in g:
         # Set weights for neighbors
@@ -54,8 +53,7 @@ def caveman_data(partitions: int = 1, worker_count: int = 1, output_dir: str = "
             ],
             "neighbor": {"0": nbs},
         }
-        data[node_id % worker_count] += json_node_to_linear(node) + "\n"
-        nodes.append(node)
+        data[node_id % worker_count] += json_node_to_linear(node)
 
     meta = '{"node_float_feature_num": 1, \
             "edge_binary_feature_num": 0, \
@@ -69,7 +67,7 @@ def caveman_data(partitions: int = 1, worker_count: int = 1, output_dir: str = "
     meta_dir = tempfile.TemporaryDirectory()
 
     for i in range(worker_count):
-        raw_file = working_dir.name + f"/data{i}.json"
+        raw_file = working_dir.name + f"/data{i}.linear"
         with open(raw_file, "w+") as f:
             f.write(data[i])
 
@@ -101,7 +99,7 @@ def memory_graph(request):
     worker_count = 1 if not hasattr(request, "param") else request.param[1]
     caveman_data(partitions, worker_count, output_dir.name)
 
-    yield LocalClient(path=output_dir.name, partitions=[0, 1])
+    yield LocalClient(path=output_dir.name, partitions=list(range(partitions)))
     output_dir.cleanup()
 
 

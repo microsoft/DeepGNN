@@ -98,7 +98,7 @@ class LinearDecoder(Decoder):
                     else:
                         coordinates_str = " ".join((" ".join(map(str, c)) for c in coords))
                         length = f"{coords.shape[0]},{coords.shape[1]}"
-                    print(coords, coordinates_str)
+
                     return f"{values.dtype.name} {length},{values.size} {coordinates_str} {' '.join(map(str, values))}"
                 return f"{f.dtype.name} {f.size} {' '.join(map(str, f))}"
 
@@ -340,7 +340,7 @@ def json_node_to_linear(node):
             for idx, value in values.items():
                 idx = int(idx)
                 while idx > counter:
-                    output.append(np.array([0]))
+                    output.append(None)
                     counter += 1
                 if key.startswith("sparse"):
                     # TODO no sparse_binary_feature?
