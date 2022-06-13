@@ -111,14 +111,14 @@ Finally, in order to use this dataset we convert the files from json to binary w
 
 ```python
 >>> import deepgnn.graph_engine.snark.convert as convert
->>> from deepgnn.graph_engine.snark.decoders import DecoderType
+>>> from deepgnn.graph_engine.snark.decoders import LinearDecoder
 >>> partitions = 1
 >>> convert.MultiWorkersConverter(
 ...     graph_path=data_filename,
 ...     meta_path=meta_filename,
 ...     partition_count=partitions,
 ...     output_dir=working_dir,
-...     decoder_type=DecoderType.JSON,
+...     decoder_type=LinearDecoder,
 ... ).convert()
 
 ```

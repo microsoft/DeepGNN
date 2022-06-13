@@ -14,7 +14,7 @@ First import ``networkx`` and other relevant modules:
     >>> import networkx as nx
     >>> import numpy as np
     >>> import deepgnn.graph_engine.snark.convert as convert
-    >>> from deepgnn.graph_engine.snark.decoders import DecoderType
+    >>> from deepgnn.graph_engine.snark.decoders import LinearDecoder
     >>> import deepgnn.graph_engine.snark.client as client
 
 We are going to generate a random graph with 30 clusters, each cluster contains exactly 12 nodes.
@@ -82,7 +82,7 @@ Now we can convert graph to binary data:
     ...    meta_path=meta_file,
     ...    partition_count=1,
     ...    output_dir=working_dir.name,
-    ...    decoder_type=DecoderType.JSON,
+    ...    decoder_class=LinearDecoder,
     ... ).convert()
 
 Create a client to use from the temp folder:

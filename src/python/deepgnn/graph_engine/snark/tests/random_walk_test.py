@@ -16,7 +16,7 @@ import pytest
 import networkx as nx
 
 import deepgnn.graph_engine.snark.client as client
-from deepgnn.graph_engine.snark.decoders import DecoderType, json_node_to_linear
+from deepgnn.graph_engine.snark.decoders import json_node_to_linear
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.dispatcher as dispatcher

@@ -83,7 +83,7 @@ class PipeDispatcher(Dispatcher):
             folder (str): Location of graph files.
             parallel (int): Number of parallel process to use for conversion.
             meta (str): Meta data about graph.
-            process (typing.Callable[ [typing.Union[mp.Queue, Connection], mp.Queue, str, int, int, int, DecoderType], None ]): Function to call for processing lines in a file.
+            process (typing.Callable[ [typing.Union[mp.Queue, Connection], mp.Queue, str, int, int, int, Decoder], None ]): Function to call for processing lines in a file.
             decoder_class: decoder type.
             partition_offset(int): offset in a text file, where to start reading for a new partition.
             use_threads(bool): use threads instead of processes for parallel processing.

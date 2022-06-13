@@ -101,14 +101,14 @@ We generate this dataset with networkx, save it to json format and use snark to 
 281
 
 >>> import deepgnn.graph_engine.snark.convert as convert
->>> from deepgnn.graph_engine.snark.decoders import DecoderType
+>>> from deepgnn.graph_engine.snark.decoders import LinearDecoder
 >>> partitions = 1
 >>> convert.MultiWorkersConverter(
 ...     graph_path=data_filename,
 ...     meta_path=meta_filename,
 ...     partition_count=partitions,
 ...     output_dir=working_dir,
-...     decoder_type=DecoderType.JSON,
+...     decoder_class=LinearDecoder,
 ... ).convert()
 
 ```

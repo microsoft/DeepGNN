@@ -24,7 +24,6 @@ import deepgnn.graph_engine.snark.converter.converter as converter
 import deepgnn.graph_engine.snark.decoders as decoders
 from deepgnn.graph_engine.snark.decoders import (
     Decoder,
-    DecoderType,
     LinearDecoder,
 )
 import ctypes
@@ -52,7 +51,7 @@ def output(
     suffix: int,
     node_type_num: int,
     edge_type_num: int,
-    decoder_class: DecoderType,
+    decoder_class: Decoder,
     skip_node_sampler: bool,
     skip_edge_sampler: bool,
 ) -> None:
