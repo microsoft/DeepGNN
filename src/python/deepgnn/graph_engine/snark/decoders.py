@@ -212,7 +212,7 @@ class JsonDecoder(Decoder):
 
     def decode(self, line: str):
         """Use json package to convert the json text line into node object."""
-        data = json.loads(line)
+        data = json.loads(line) if isinstance(line, str) else line
         yield -1, data["node_id"], data["node_type"], data["node_weight"], self._pull_features(data)
         for edge in data["edge"]:
             yield edge["src_id"], edge["dst_id"], edge["edge_type"], edge["weight"], self._pull_features(edge)
@@ -317,36 +317,10 @@ class TsvDecoder(Decoder):
 
 def json_node_to_linear(node):
     """Convert graph.json to graph.linear."""
-    def _dump_features(features: dict) -> str:
-        """Serialize features for linear format."""
-        output = []
-        counter = -1
-        for key, values in features.items():
-            if not isinstance(values, dict) or key == "neighbor":
-                continue
-            
-            for idx, value in values.items():
-                idx = int(idx)
-                while idx > counter:
-                    output.append(None)
-                    counter += 1
-                if key.startswith("sparse"):
-                    # TODO no sparse_binary_feature?
-                    output[idx] = (
-                        np.array(value["coordinates"], dtype=np.int64),
-                        np.array(value["values"], dtype=Decoder.convert_map[key.replace('sparse_', '')]),
-                    )
-                else:
-                    if key == "binary_feature":
-                        output[idx] = value
-                    else:
-                        output[idx] = np.array(value, dtype=Decoder.convert_map[key])
-
-        return output
-
-    decoder = LinearDecoder()
-    edges = [(edge["src_id"], edge["dst_id"], edge["edge_type"], edge["weight"], _dump_features(edge)) for edge in node["edge"]]
-    output = decoder.encode(node["node_id"], node["node_type"], node["node_weight"], _dump_features(node), edges)
+    gen = JsonDecoder().decode(node)
+    node = next(gen)[1:]
+    edges = [edge for edge in gen]
+    output = LinearDecoder().encode(*node, edges)
     output += '\n'
     return output
 
