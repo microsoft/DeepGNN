@@ -55,6 +55,9 @@ class LinearDecoder(Decoder):
     def __init__(self):
         """Initialize the Decoder."""
         super().__init__()
+
+        self.node_type, self.node_weight, self.node_feature_types, self.node_feature_lens = None, None, [], []
+        self.edge_type, self.edge_weight, self.edge_feature_types, self.edge_feature_lens = None, None, [], []
     
     def encode(self, node_id: int, node_type: int, node_weight: float, node_features: list, edges: list) -> str:
         """
@@ -99,26 +102,86 @@ class LinearDecoder(Decoder):
             output += f"{edge_src} {edge_dst} {edge_type} {edge_weight} {_feature_str(edge_features)}"
         return output
 
-    def decode(self, line: str):
-        """Use json package to convert the json text line into node object."""
-        #for line in lines:
-        data = line.split()
-
-        idx = 0
+    def _parse_first_line(self, idx, data: str):
+        item_type, item_weight, item_features_types, item_features_lens = None, None, [], []
+        try:
+            v = data[idx]
+            if v.lower() != "none":
+                item_type = int(v)
+            idx += 1
+        except (IndexError, ValueError): 
+            pass
+        try:
+            v = data[idx]
+            if v.lower() != "none":
+                item_weight = float(v)
+            idx += 1
+        except (IndexError, ValueError):
+            pass
         while True:
             try:
-                src, dst, typ, weight = data[idx:idx+4]
+                item_features_type = data[idx]
+                int(item_features_type)
+                if item_features_type == "edge_defaults":
+                    break
+                if item_features_type.lower() == "none":
+                    item_features_type = None
+                item_features_types.append(item_features_type)
+                idx += 1
+            except (IndexError, ValueError): 
+                break
+            try:
+                item_features_len = int(data[idx])
+                item_features_lens.append(item_features_len)
+                idx += 1
+            except (IndexError, ValueError): 
+                continue
+        return idx, item_type, item_weight, item_features_types, item_features_lens
+
+    def decode(self, line: str):
+        """Use json package to convert the json text line into node object."""
+        data = line.split()
+        if not len(data):
+            return []
+
+        # (line optional)node_defaults type weight node_feature_type_1 node_feature_len_1 edge_defaults ...
+        idx = 0
+        # TODO only check on first node somehow
+        if data[idx] == "node_defaults":
+            idx, self.node_type, self.node_weight, self.node_feature_types, self.node_feature_lens = self._parse_first_line(idx + 1, data)
+        if len(data) > idx and data[idx] == "edge_defaults":
+            idx, self.edge_type, self.edge_weight, self.edge_feature_types, self.edge_feature_lens = self._parse_first_line(idx + 1, data)
+
+        if idx:
+            return []
+
+        while True:
+            try:
+                src, dst = data[idx:idx+2]
+                if idx == 0:
+                    typ, weight = self.node_type, self.node_weight
+                else:
+                    typ, weight = self.edge_type, self.edge_weight
+                idx += 2
+                if typ is None:
+                    typ = data[idx]
+                    idx += 1
+                if weight is None:
+                    weight = data[idx]
+                    idx += 1
             except ValueError:
                 break
-            idx += 4
+
             features = []
             while True:
                 try:
                     key = data[idx]
+
+                    # TODO check lengthsa sa well
                     try:
                         int(key)
                         break
-                    except Exception as e:
+                    except ValueError:
                         pass
                     length = list(map(int, data[idx+1].split(",")))
                 except IndexError:
