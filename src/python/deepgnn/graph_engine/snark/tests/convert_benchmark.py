@@ -92,7 +92,7 @@ def benchmark_linear_to_binary(data_name, meta_name, output_dir):
     return benchmark_to_binary(data_name, meta_name, output_dir, LinearDecoder, buffer_size=50 // 4)#, record_per_step=512 * (EDGES + 1))
 
 
-NODES = 1 * 10**5  # 5
+NODES = 2 * 10**5
 EDGES = 100
 FEATURE_LEN = 0
 

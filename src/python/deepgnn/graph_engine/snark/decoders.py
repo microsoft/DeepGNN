@@ -57,9 +57,9 @@ class LinearDecoder(Decoder):
         """Initialize the Decoder."""
         super().__init__()
 
-        self.node_type, self.node_weight, self.node_feature_types, self.node_feature_lens = None, None, [], []
-        self.edge_type, self.edge_weight, self.edge_feature_types, self.edge_feature_lens = None, None, [], []
-    
+        self.node_type, self.node_weight, self.node_feature_types, self.node_feature_lens, self.n_node_feature = None, None, [], [], 0
+        self.edge_type, self.edge_weight, self.edge_feature_types, self.edge_feature_lens, self.n_edge_feature = None, None, [], [], 0
+ 
     def encode(self, node_id: int, node_type: int, node_weight: float, node_features: list, edges: list) -> str:
         """
         Convert data to a line of the linear format.
@@ -139,7 +139,7 @@ class LinearDecoder(Decoder):
                     item_features_lens.append(None)
                     idx += 1
                 continue
-        return idx, item_type, item_weight, item_features_types, item_features_lens
+        return idx, item_type, item_weight, item_features_types, item_features_lens, len(item_features_types)
 
     def decode(self, line: str):
         """Use json package to convert the json text line into node object."""
@@ -149,12 +149,10 @@ class LinearDecoder(Decoder):
 
         # (line optional)node_defaults type weight node_feature_type_1 node_feature_len_1 edge_defaults ...
         idx = 0
-        # TODO only check on first node somehow
         if data[idx] == "node_defaults":
-            idx, self.node_type, self.node_weight, self.node_feature_types, self.node_feature_lens = self._parse_first_line(idx + 1, data)
+            idx, self.node_type, self.node_weight, self.node_feature_types, self.node_feature_lens, self.n_node_feature = self._parse_first_line(idx + 1, data)
         if len(data) > idx and data[idx] == "edge_defaults":
-            idx, self.edge_type, self.edge_weight, self.edge_feature_types, self.edge_feature_lens = self._parse_first_line(idx + 1, data)
-
+            idx, self.edge_type, self.edge_weight, self.edge_feature_types, self.edge_feature_lens, self.n_edge_feature = self._parse_first_line(idx + 1, data)
         if idx:
             return []
 
@@ -163,10 +161,10 @@ class LinearDecoder(Decoder):
                 src, dst = data[idx:idx+2]
                 if idx == 0:
                     typ, weight = self.node_type, self.node_weight
-                    item_feature_types, item_feature_lens = self.node_feature_types, self.node_feature_lens
+                    item_feature_types, item_feature_lens, default_feature_len = self.node_feature_types, self.node_feature_lens, self.n_node_feature
                 else:
                     typ, weight = self.edge_type, self.edge_weight
-                    item_feature_types, item_feature_lens = self.edge_feature_types, self.edge_feature_lens
+                    item_feature_types, item_feature_lens, default_feature_len = self.edge_feature_types, self.edge_feature_lens, self.n_edge_feature
                 idx += 2
                 if typ is None:
                     typ = data[idx]
@@ -176,12 +174,13 @@ class LinearDecoder(Decoder):
                     idx += 1
             except ValueError:
                 break
-
+            
             features = []
+            n_features = 0
             while True:
-                if len(item_feature_types) > len(features):
-                    key = item_feature_types[len(features)]
-                    length = item_feature_lens[len(features)]
+                if default_feature_len > n_features:
+                    key = item_feature_types[n_features]
+                    length = item_feature_lens[n_features]
                 else:
                     key, length = None, None
 
@@ -228,6 +227,7 @@ class LinearDecoder(Decoder):
                     idx += length
 
                 features.append(value)
+                n_features += 1
 
             yield int(src), int(dst), int(typ), float(weight), features
 
