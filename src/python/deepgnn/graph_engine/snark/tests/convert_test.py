@@ -798,7 +798,7 @@ def test_sanity_edge_sparse_features_data(graph_with_sparse_features):
         )
 
 
-def _gen_linear(output, data_data, meta_data):
+def _gen_linear(output, data_data, meta_data, partitions=1):
     data = open(os.path.join(output.name, "graph.linear"), "w+")
     for v in data_data:
         data.write(v)
@@ -811,7 +811,7 @@ def _gen_linear(output, data_data, meta_data):
     convert.MultiWorkersConverter(
         graph_path=data.name,
         meta_path=meta.name,
-        partition_count=1,
+        partition_count=partitions,
         output_dir=output.name,
         decoder_class=LinearDecoder,
     ).convert()
@@ -879,7 +879,7 @@ def test_linear_header():
         assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
         assert result[16:20] == (0).to_bytes(4, byteorder=sys.byteorder)
 
-    #
+    output = tempfile.TemporaryDirectory()
     data_data = [
         "edge_defaults 0 200\n",
         "-1 0 0 0 0 1 0 2\n",
@@ -915,6 +915,106 @@ def test_linear_header():
         assert result[88:92] == (0).to_bytes(4, byteorder=sys.byteorder)
         assert result[92:96] == struct.pack("f", 200)
 
+    output = tempfile.TemporaryDirectory()
+    data_data = [
+        "node_defaults 0 1.5 uint64 2 float32 2\n",
+        "-1 0 1 2 1.1 2.2\n",
+        "-1 1 3 4 3.3 4.4\n",
+        "-1 2 5 6 5.5 6.6\n",
+    ]
+    meta_data = '{"node_type_num": 1, "edge_type_num": 0, \
+        "node_uint64_feature_num": 1, "node_float_feature_num": 1, \
+        "node_binary_feature_num": 0, "edge_uint64_feature_num": 0, \
+        "edge_float_feature_num": 0, "edge_binary_feature_num": 0}'
+    _gen_linear(output, data_data, meta_data)
+    with open("{}/node_features_{}_{}.data".format(output.name, 0, 0), "rb") as nfd:
+        expected_size = 72
+        result = nfd.read(expected_size + 1)
+        assert len(result) == expected_size
+        npt.assert_equal(np.frombuffer(result[0:16], dtype=np.uint64), [1, 2])
+        npt.assert_almost_equal(np.frombuffer(result[16:24], dtype=np.float32), [1.1, 2.2])
+        npt.assert_equal(np.frombuffer(result[24:40], dtype=np.uint64), [3, 4])
+        npt.assert_almost_equal(np.frombuffer(result[40:48], dtype=np.float32), [3.3, 4.4])
+        npt.assert_equal(np.frombuffer(result[48:64], dtype=np.uint64), [5, 6])
+        npt.assert_almost_equal(np.frombuffer(result[64:72], dtype=np.float32), [5.5, 6.6])
+
+    output = tempfile.TemporaryDirectory()
+    data_data = [
+        "edge_defaults uint64 2 float32 2\n",
+        "-1 0 0 0 0 1 0 1.5 1 2 1.1 2.2\n",
+        "-1 1 0 0 1 0 0 1.5 3 4 3.3 4.4\n",
+        "-1 2 0 0 2 0 0 1.5 5 6 5.5 6.6\n",
+    ]
+    meta_data = '{"node_type_num": 1, "edge_type_num": 1, \
+        "node_uint64_feature_num": 1, "node_float_feature_num": 1, \
+        "node_binary_feature_num": 0, "edge_uint64_feature_num": 0, \
+        "edge_float_feature_num": 0, "edge_binary_feature_num": 0}'
+    _gen_linear(output, data_data, meta_data)
+    with open("{}/edge_features_{}_{}.data".format(output.name, 0, 0), "rb") as nfd:
+        expected_size = 72
+        result = nfd.read(expected_size + 1)
+        assert len(result) == expected_size
+        npt.assert_equal(np.frombuffer(result[0:16], dtype=np.uint64), [1, 2])
+        npt.assert_almost_equal(np.frombuffer(result[16:24], dtype=np.float32), [1.1, 2.2])
+        npt.assert_equal(np.frombuffer(result[24:40], dtype=np.uint64), [3, 4])
+        npt.assert_almost_equal(np.frombuffer(result[40:48], dtype=np.float32), [3.3, 4.4])
+        npt.assert_equal(np.frombuffer(result[48:64], dtype=np.uint64), [5, 6])
+        npt.assert_almost_equal(np.frombuffer(result[64:72], dtype=np.float32), [5.5, 6.6])
+
+    output = tempfile.TemporaryDirectory()
+    data_data = [
+        "node_defaults 0 1.5 none none float32 2\n",
+        "-1 0 uint64 2 1 2 1.1 2.2 int32 2 1 2\n",
+        "-1 1 uint64 2 3 4 3.3 4.4 int32 2 3 4\n",
+        "-1 2 uint64 2 5 6 5.5 6.6 int32 2 5 6\n",
+    ]
+    meta_data = '{"node_type_num": 1, "edge_type_num": 0, \
+        "node_uint64_feature_num": 1, "node_float_feature_num": 1, \
+        "node_binary_feature_num": 0, "edge_uint64_feature_num": 0, \
+        "edge_float_feature_num": 0, "edge_binary_feature_num": 0}'
+    _gen_linear(output, data_data, meta_data)
+    with open("{}/node_features_{}_{}.data".format(output.name, 0, 0), "rb") as nfd:
+        expected_size = 96
+        result = nfd.read(expected_size + 1)
+        assert len(result) == expected_size
+        npt.assert_equal(np.frombuffer(result[0:16], dtype=np.uint64), [1, 2])
+        npt.assert_almost_equal(np.frombuffer(result[16:24], dtype=np.float32), [1.1, 2.2])
+        npt.assert_equal(np.frombuffer(result[24:32], dtype=np.int32), [1, 2])
+        npt.assert_equal(np.frombuffer(result[32:48], dtype=np.uint64), [3, 4])
+        npt.assert_almost_equal(np.frombuffer(result[48:56], dtype=np.float32), [3.3, 4.4])
+        npt.assert_equal(np.frombuffer(result[56:64], dtype=np.int32), [3, 4])
+        npt.assert_equal(np.frombuffer(result[64:80], dtype=np.uint64), [5, 6])
+        npt.assert_almost_equal(np.frombuffer(result[80:88], dtype=np.float32), [5.5, 6.6])
+        npt.assert_equal(np.frombuffer(result[88:96], dtype=np.int32), [5, 6])
+'''
+
+def test_linear_header_multiple_partitions():
+    output = tempfile.TemporaryDirectory()
+    data_data = [
+        "node_defaults 0 1.5\n",
+        "-1 0\n",
+        "-1 1\n",
+        "-1 2\n",
+    ]
+    meta_data = '{"node_type_num": 1, "edge_type_num": 0, \
+        "node_uint64_feature_num": 0, "node_float_feature_num": 0, \
+        "node_binary_feature_num": 0, "edge_uint64_feature_num": 9, \
+        "edge_float_feature_num": 0, "edge_binary_feature_num": 0}'
+    _gen_linear(output, data_data, meta_data, partitions=2)
+    with open("{}/node_{}_{}.map".format(output.name, 0, 0), "rb") as nm:
+        expected_size = 3 * (2 * 8 + 4)
+        result = nm.read(expected_size + 8)
+        assert len(result) == expected_size
+        assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:20] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[20:28] == (1).to_bytes(8, byteorder=sys.byteorder)
+        assert result[28:36] == (1).to_bytes(8, byteorder=sys.byteorder)
+        assert result[36:40] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[40:48] == (2).to_bytes(8, byteorder=sys.byteorder)
+        assert result[48:56] == (2).to_bytes(8, byteorder=sys.byteorder)
+        assert result[56:60] == (0).to_bytes(4, byteorder=sys.byteorder)
+'''
 
 if __name__ == "__main__":
     sys.exit(

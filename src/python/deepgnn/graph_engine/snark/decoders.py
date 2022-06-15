@@ -3,6 +3,7 @@
 
 """Decoders wihch is used to decode a line of text into node object."""
 import abc
+from cmath import e
 import dataclasses
 import json
 import logging
@@ -121,7 +122,6 @@ class LinearDecoder(Decoder):
         while True:
             try:
                 item_features_type = data[idx]
-                int(item_features_type)
                 if item_features_type == "edge_defaults":
                     break
                 if item_features_type.lower() == "none":
@@ -131,10 +131,13 @@ class LinearDecoder(Decoder):
             except (IndexError, ValueError): 
                 break
             try:
-                item_features_len = int(data[idx])
+                item_features_len = list(map(int, data[idx].split(",")))
                 item_features_lens.append(item_features_len)
                 idx += 1
-            except (IndexError, ValueError): 
+            except (IndexError, ValueError):
+                if data[idx].lower() == "none":
+                    item_features_lens.append(None)
+                    idx += 1
                 continue
         return idx, item_type, item_weight, item_features_types, item_features_lens
 
@@ -160,8 +163,10 @@ class LinearDecoder(Decoder):
                 src, dst = data[idx:idx+2]
                 if idx == 0:
                     typ, weight = self.node_type, self.node_weight
+                    item_feature_types, item_feature_lens = self.node_feature_types, self.node_feature_lens
                 else:
                     typ, weight = self.edge_type, self.edge_weight
+                    item_feature_types, item_feature_lens = self.edge_feature_types, self.edge_feature_lens
                 idx += 2
                 if typ is None:
                     typ = data[idx]
@@ -174,19 +179,27 @@ class LinearDecoder(Decoder):
 
             features = []
             while True:
-                try:
-                    key = data[idx]
+                if len(item_feature_types) > len(features):
+                    key = item_feature_types[len(features)]
+                    length = item_feature_lens[len(features)]
+                else:
+                    key, length = None, None
 
-                    # TODO check lengthsa sa well
-                    try:
-                        int(key)
-                        break
-                    except ValueError:
-                        pass
-                    length = list(map(int, data[idx+1].split(",")))
+                try:
+                    if key is None:
+                        key = data[idx]
+                        try:
+                            int(key)
+                            break
+                        except ValueError:
+                            pass
+                        idx += 1
+                    if length is None:
+                        length = list(map(int, data[idx].split(",")))
+                        idx += 1
                 except IndexError:
                     break
-                idx += 2
+
                 if len(length) > 1:
                     coordinates_len = length[:-1]
                     coordinates_len_total = 1
@@ -215,7 +228,7 @@ class LinearDecoder(Decoder):
                     idx += length
 
                 features.append(value)
-            
+
             yield int(src), int(dst), int(typ), float(weight), features
 
 
