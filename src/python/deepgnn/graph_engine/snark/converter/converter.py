@@ -392,8 +392,7 @@ class EdgeAliasWriter:
                 ),
                 "wb",
             ) as nw:
-                for index in range(len(a.elements)):
-                    left = a.elements[index]
+                for index, left in enumerate(a.elements):
                     right = (
                         a.elements[a.alias[index]] if a.prob[index] < 1.0 else (0, 0)
                     )
