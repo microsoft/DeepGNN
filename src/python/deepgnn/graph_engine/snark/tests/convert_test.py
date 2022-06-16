@@ -978,21 +978,25 @@ def test_linear_header_multiple_partitions():
         "node_uint64_feature_num": 0, "node_float_feature_num": 0, \
         "node_binary_feature_num": 0, "edge_uint64_feature_num": 9, \
         "edge_float_feature_num": 0, "edge_binary_feature_num": 0, \
-        "node_defaults": "0 1.5"}'
+        "node_default_type": 0, "node_default_weight": 1.5}'
     _gen_linear(output, data_data, meta_data, partitions=2)
     with open("{}/node_{}_{}.map".format(output.name, 0, 0), "rb") as nm:
-        expected_size = 3 * (2 * 8 + 4)
+        expected_size = 2 * (2 * 8 + 4)
         result = nm.read(expected_size + 8)
         assert len(result) == expected_size
         assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
         assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
         assert result[16:20] == (0).to_bytes(4, byteorder=sys.byteorder)
-        assert result[20:28] == (1).to_bytes(8, byteorder=sys.byteorder)
+        assert result[20:28] == (2).to_bytes(8, byteorder=sys.byteorder)
         assert result[28:36] == (1).to_bytes(8, byteorder=sys.byteorder)
         assert result[36:40] == (0).to_bytes(4, byteorder=sys.byteorder)
-        assert result[40:48] == (2).to_bytes(8, byteorder=sys.byteorder)
-        assert result[48:56] == (2).to_bytes(8, byteorder=sys.byteorder)
-        assert result[56:60] == (0).to_bytes(4, byteorder=sys.byteorder)
+    with open("{}/node_{}_{}.map".format(output.name, 1, 0), "rb") as nm:
+        expected_size = 1 * (2 * 8 + 4)
+        result = nm.read(expected_size + 8)
+        assert len(result) == expected_size
+        assert result[0:8] == (1).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:20] == (0).to_bytes(4, byteorder=sys.byteorder)
 
 
 if __name__ == "__main__":

@@ -106,9 +106,7 @@ def output(
         for src, dst, typ, weight, features in decoder.decode(lines):
             if src == -1:
                 node_writer.add(dst, typ, features)
-                edge_writer.nbi.write(  # type: ignore
-                    ctypes.c_uint64(edge_writer.ei.tell() // (4 + 8 + 8 + 4))
-                )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
+                edge_writer.add_node()
                 node_alias.add(dst, typ, weight)
                 node_weight[typ] += float(weight)
                 node_type_count[typ] += 1

@@ -152,6 +152,13 @@ class EdgeWriter:
 
         self.feature_writer = EdgeFeatureWriter(folder, partition, self.efi)
 
+    def add_node(self):
+        """Add node."""
+        self.nbi.write(  # type: ignore
+            ctypes.c_uint64(self.ei.tell() // (4 + 8 + 8 + 4))
+        )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
+
+
     def add(self, dst: int, tp: int, weight: float, features: list):
         """Append edges starting at node to the output.
         Args:
