@@ -103,50 +103,45 @@ class LinearDecoder(Decoder):
             output += f"{edge_src} {edge_dst} {edge_type} {edge_weight} {_feature_str(edge_features)}"
         return output
 
-    def _parse_first_line(self, data: str):
-        idx = 0
-        item_type, item_weight, item_features_types, item_features_lens = None, None, [], []
-        data = data.split(" ")
-        try:
-            v = data[idx]
-            if v.lower() != "none":
-                item_type = int(v)
-            idx += 1
-        except (IndexError, ValueError): 
-            pass
-        try:
-            v = data[idx]
-            if v.lower() != "none":
-                item_weight = float(v)
-            idx += 1
-        except (IndexError, ValueError):
-            pass
-        while True:
-            try:
-                item_features_type = data[idx]
-                if item_features_type.lower() == "none":
-                    item_features_type = None
-                item_features_types.append(item_features_type)
-                idx += 1
-            except (IndexError, ValueError): 
-                break
-            try:
-                item_features_len = list(map(int, data[idx].split(",")))
-                item_features_lens.append(item_features_len)
-                idx += 1
-            except (IndexError, ValueError):
-                if data[idx].lower() == "none":
-                    item_features_lens.append(None)
-                    idx += 1
-                continue
-        return item_type, item_weight, item_features_types, item_features_lens, len(item_features_types)
-
     def set_metadata(self, metadata):
+        def _parse_default_features(data: str):
+                item_features_types, item_features_lens = [], []
+                data = data.split(" ")
+                idx = 0
+                while True:
+                    try:
+                        item_features_type = data[idx]
+                        if item_features_type.lower() == "none":
+                            item_features_type = None
+                        item_features_types.append(item_features_type)
+                        idx += 1
+                    except (IndexError, ValueError): 
+                        break
+                    try:
+                        item_features_len = list(map(int, data[idx].split(",")))
+                        item_features_lens.append(item_features_len)
+                        idx += 1
+                    except (IndexError, ValueError):
+                        if data[idx].lower() == "none":
+                            item_features_lens.append(None)
+                            idx += 1
+                        continue
+                return item_features_types, item_features_lens, len(item_features_types)
+
         # (line optional)node_defaults type weight node_feature_type_1 node_feature_len_1 edge_defaults ...
-        if "node_defaults" in metadata:
-            self.node_type, self.node_weight, self.node_feature_types, self.node_feature_lens, self.n_node_feature = self._parse_first_line(metadata["node_defaults"])
-        if "edge_defaults" in metadata:
-            self.edge_type, self.edge_weight, self.edge_feature_types, self.edge_feature_lens, self.n_edge_feature = self._parse_first_line(metadata["edge_defaults"])
+        if "node_default_type" in metadata:
+            self.node_type = metadata["node_default_type"]
+        if "node_default_weight" in metadata:
+            self.node_weight = metadata["node_default_weight"]
+        if "node_default_features" in metadata:
+            self.node_feature_types, self.node_feature_lens, self.n_node_feature = _parse_default_features(metadata["node_default_features"])
+
+        if "edge_default_type" in metadata:
+            self.edge_type = metadata["edge_default_type"]
+        if "edge_default_weight" in metadata:
+            self.edge_weight = metadata["edge_default_weight"]
+        if "edge_default_features" in metadata:
+            self.edge_feature_types, self.edge_feature_lens, self.n_edge_feature = _parse_default_features(metadata["edge_default_features"])
 
     def decode(self, line: str):
         """Use json package to convert the json text line into node object."""
