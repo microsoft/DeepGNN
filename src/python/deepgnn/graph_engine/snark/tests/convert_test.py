@@ -819,7 +819,6 @@ def _gen_linear(output, data_data, meta_data, partitions=1):
 def test_linear_header():
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "node_defaults 0 1.5\n",
         "-1 0\n",
         "-1 1\n",
         "-1 2\n",
@@ -827,7 +826,8 @@ def test_linear_header():
     meta_data = '{"node_type_num": 1, "edge_type_num": 0, \
         "node_uint64_feature_num": 0, "node_float_feature_num": 0, \
         "node_binary_feature_num": 0, "edge_uint64_feature_num": 9, \
-        "edge_float_feature_num": 0, "edge_binary_feature_num": 0}'
+        "edge_float_feature_num": 0, "edge_binary_feature_num": 0, \
+        "node_defaults": "0 1.5"}'
     _gen_linear(output, data_data, meta_data)
     with open("{}/node_{}_{}.map".format(output.name, 0, 0), "rb") as nm:
         expected_size = 3 * (2 * 8 + 4)
@@ -845,13 +845,13 @@ def test_linear_header():
 
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "node_defaults 0\n",
         "-1 0 1.5\n",
     ]
     meta_data = '{"node_type_num": 1, "edge_type_num": 0, \
         "node_uint64_feature_num": 0, "node_float_feature_num": 0, \
         "node_binary_feature_num": 0, "edge_uint64_feature_num": 9, \
-        "edge_float_feature_num": 0, "edge_binary_feature_num": 0}'
+        "edge_float_feature_num": 0, "edge_binary_feature_num": 0, \
+        "node_defaults": "0"}'
     _gen_linear(output, data_data, meta_data)
     with open("{}/node_{}_{}.map".format(output.name, 0, 0), "rb") as nm:
         expected_size = (2 * 8 + 4)
@@ -863,13 +863,13 @@ def test_linear_header():
 
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "node_defaults none 1.5\n",
         "-1 0 0\n",
     ]
     meta_data = '{"node_type_num": 1, "edge_type_num": 0, \
         "node_uint64_feature_num": 0, "node_float_feature_num": 0, \
         "node_binary_feature_num": 0, "edge_uint64_feature_num": 9, \
-        "edge_float_feature_num": 0, "edge_binary_feature_num": 0}'
+        "edge_float_feature_num": 0, "edge_binary_feature_num": 0, \
+        "node_defaults": "none 1.5"}'
     _gen_linear(output, data_data, meta_data)
     with open("{}/node_{}_{}.map".format(output.name, 0, 0), "rb") as nm:
         expected_size = (2 * 8 + 4)
@@ -881,7 +881,6 @@ def test_linear_header():
 
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "edge_defaults 0 200\n",
         "-1 0 0 0 0 1 0 2\n",
         "-1 1 0 0 1 0 1 2\n",
         "-1 2 0 0 2 0 2 1\n",
@@ -889,7 +888,8 @@ def test_linear_header():
     meta_data = '{"node_type_num": 1, "edge_type_num": 1, \
         "node_uint64_feature_num": 0, "node_float_feature_num": 0, \
         "node_binary_feature_num": 0, "edge_uint64_feature_num": 9, \
-        "edge_float_feature_num": 0, "edge_binary_feature_num": 0}'
+        "edge_float_feature_num": 0, "edge_binary_feature_num": 0, \
+        "edge_defaults": "0 200"}'
     _gen_linear(output, data_data, meta_data)
     with open("{}/edge_{}_{}.index".format(output.name, 0, 0), "rb") as ei:
         expected_size = 7 * 24
@@ -917,7 +917,6 @@ def test_linear_header():
 
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "node_defaults 0 1.5 uint64 2 float32 2\n",
         "-1 0 1 2 1.1 2.2\n",
         "-1 1 3 4 3.3 4.4\n",
         "-1 2 5 6 5.5 6.6\n",
@@ -925,7 +924,8 @@ def test_linear_header():
     meta_data = '{"node_type_num": 1, "edge_type_num": 0, \
         "node_uint64_feature_num": 1, "node_float_feature_num": 1, \
         "node_binary_feature_num": 0, "edge_uint64_feature_num": 0, \
-        "edge_float_feature_num": 0, "edge_binary_feature_num": 0}'
+        "edge_float_feature_num": 0, "edge_binary_feature_num": 0, \
+        "node_defaults": "0 1.5 uint64 2 float32 2"}'
     _gen_linear(output, data_data, meta_data)
     with open("{}/node_features_{}_{}.data".format(output.name, 0, 0), "rb") as nfd:
         expected_size = 72
@@ -940,7 +940,6 @@ def test_linear_header():
 
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "edge_defaults uint64 2 float32 2\n",
         "-1 0 0 0 0 1 0 1.5 1 2 1.1 2.2\n",
         "-1 1 0 0 1 0 0 1.5 3 4 3.3 4.4\n",
         "-1 2 0 0 2 0 0 1.5 5 6 5.5 6.6\n",
@@ -948,7 +947,8 @@ def test_linear_header():
     meta_data = '{"node_type_num": 1, "edge_type_num": 1, \
         "node_uint64_feature_num": 1, "node_float_feature_num": 1, \
         "node_binary_feature_num": 0, "edge_uint64_feature_num": 0, \
-        "edge_float_feature_num": 0, "edge_binary_feature_num": 0}'
+        "edge_float_feature_num": 0, "edge_binary_feature_num": 0, \
+        "edge_defaults": "uint64 2 float32 2"}'
     _gen_linear(output, data_data, meta_data)
     with open("{}/edge_features_{}_{}.data".format(output.name, 0, 0), "rb") as nfd:
         expected_size = 72
@@ -963,7 +963,6 @@ def test_linear_header():
 
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "node_defaults 0 1.5 none none float32 2\n",
         "-1 0 uint64 2 1 2 1.1 2.2 int32 2 1 2\n",
         "-1 1 uint64 2 3 4 3.3 4.4 int32 2 3 4\n",
         "-1 2 uint64 2 5 6 5.5 6.6 int32 2 5 6\n",
@@ -971,7 +970,8 @@ def test_linear_header():
     meta_data = '{"node_type_num": 1, "edge_type_num": 0, \
         "node_uint64_feature_num": 1, "node_float_feature_num": 1, \
         "node_binary_feature_num": 0, "edge_uint64_feature_num": 0, \
-        "edge_float_feature_num": 0, "edge_binary_feature_num": 0}'
+        "edge_float_feature_num": 0, "edge_binary_feature_num": 0, \
+        "node_defaults": "0 1.5 none none float32 2"}'
     _gen_linear(output, data_data, meta_data)
     with open("{}/node_features_{}_{}.data".format(output.name, 0, 0), "rb") as nfd:
         expected_size = 96
@@ -991,7 +991,6 @@ def test_linear_header():
 def test_linear_header_multiple_partitions():
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "node_defaults 0 1.5\n",
         "-1 0\n",
         "-1 1\n",
         "-1 2\n",
@@ -999,7 +998,8 @@ def test_linear_header_multiple_partitions():
     meta_data = '{"node_type_num": 1, "edge_type_num": 0, \
         "node_uint64_feature_num": 0, "node_float_feature_num": 0, \
         "node_binary_feature_num": 0, "edge_uint64_feature_num": 9, \
-        "edge_float_feature_num": 0, "edge_binary_feature_num": 0}'
+        "edge_float_feature_num": 0, "edge_binary_feature_num": 0, \
+        "node_defaults": "0 1.5"}'
     _gen_linear(output, data_data, meta_data, partitions=2)
     with open("{}/node_{}_{}.map".format(output.name, 0, 0), "rb") as nm:
         expected_size = 3 * (2 * 8 + 4)

@@ -54,6 +54,7 @@ def output(
     decoder_class: Decoder,
     skip_node_sampler: bool,
     skip_edge_sampler: bool,
+    meta_data: dict,
 ) -> None:
     """Process graph nodes from a queue to binary files.
 
@@ -70,6 +71,8 @@ def output(
     """
     assert decoder_class is not None
     decoder = decoder_class() if isinstance(decoder_class, type) else decoder_class
+    if isinstance(decoder, LinearDecoder):
+        decoder.set_metadata(meta_data)
 
     node_count = 0
     edge_count = 0

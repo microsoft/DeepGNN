@@ -115,6 +115,7 @@ class PipeDispatcher(Dispatcher):
                     decoder_class,
                     skip_node_sampler,
                     skip_edge_sampler,
+                    self.jsm,
                 ),
             )
             for i in range(parallel)
@@ -237,6 +238,7 @@ class QueueDispatcher(Dispatcher):
                     decoder_class,
                     skip_node_sampler,
                     skip_edge_sampler,
+                    self.jsm,
                 ),
             )
             for i in range(num_partitions)
