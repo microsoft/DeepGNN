@@ -1,5 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+"""Dataset implementation for torch models."""
 
 import torch
 from deepgnn.graph_engine import DeepGNNDataset, GraphEngineBackend
@@ -8,10 +9,7 @@ from typing import Callable
 
 
 class TorchDeepGNNDataset(IterableDataset, DeepGNNDataset):
-    """TorchDeepGNNDataset is used by pytorch models,
-    it derives from DeepGNNDataset and implements
-    the IterableDataset class.
-    """
+    """Implementation of DeepGNNDataset and IterableDataset for torch models."""
 
     def __init__(
         self,
@@ -26,6 +24,7 @@ class TorchDeepGNNDataset(IterableDataset, DeepGNNDataset):
         # parameters to initialize samplers
         **kwargs,
     ):
+        """Initialize TorchDeepGNNDataset."""
         super(TorchDeepGNNDataset, self).__init__(
             sampler_class,
             query_fn,
@@ -39,16 +38,21 @@ class TorchDeepGNNDataset(IterableDataset, DeepGNNDataset):
         )
 
     def init_graph_client(self):
-        # Note: when using multiple process to load the data in
-        # parallel, each process should has its own copy of graph
-        # client, otherwise there will be segmentfault error. Here
-        # we return a None to postpone the initializeation of the
-        # graph/sampler to __iter__.
+        """No-op function.
+
+        When using multiple process to load the data in
+        parallel, each process should has its own copy of graph
+        client, otherwise there will be segmentfault error. Here
+        we return a None to postpone the initializeation of the
+        graph/sampler to __iter__.
+        """
         pass
 
     def init_sampler(self):
-        # overide the base method to postpone the sampler
-        # initialization to __iter__
+        """No-op function.
+
+        Overide the base method to postpone the sampler initialization to __iter__
+        """
         return
 
     def _torch_init_sampler(self):
@@ -66,5 +70,6 @@ class TorchDeepGNNDataset(IterableDataset, DeepGNNDataset):
         super().init_sampler()
 
     def __iter__(self):
+        """Create sampler and start iteration."""
         self._torch_init_sampler()
         return DeepGNNDataset.__iter__(self)

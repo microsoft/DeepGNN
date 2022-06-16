@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Mutli-task layer implememntation."""
 import json
 import torch
 import torch.nn as nn
@@ -9,8 +9,12 @@ from consts import SIM_TYPE_COSINE
 
 
 class MultiTaskAggregator(nn.Module):
+    """Multi-task Layer, aggregate loss from separate tasks."""
+
     def __init__(self, config):
-        """Multi-task Layer, aggregate loss from separate tasks.
+        """
+        Initialize layer.
+
         Args:
             config: config of tasks.
         """
@@ -20,6 +24,7 @@ class MultiTaskAggregator(nn.Module):
             getattr(self, f"_init_{task_name}_task")(self.config[task_name])
 
     def calculate_loss(self, src_info, dst_info, multi_task_labels):
+        """Calculate multi-task loss."""
         src_vec = src_info[0]
         src_terms = src_info[1]
         src_mask = src_info[2]
@@ -105,7 +110,10 @@ class MultiTaskAggregator(nn.Module):
 
     @classmethod
     def init_config_from_file(cls, filename):
-        """multi-task config file format:
+        """
+        Initialize aggregator from a JSON file.
+
+        Multi-task config file format:
         {
             "relevance": { # task name
                 "weight": 1.0, # task parameters

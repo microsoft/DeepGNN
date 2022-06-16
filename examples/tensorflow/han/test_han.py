@@ -1,8 +1,16 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import random, json, tempfile, logging, glob, sys, pytest
-import os, subprocess, time
+import random
+import json
+import tempfile
+import logging
+import glob
+import sys
+import pytest
+import os
+import subprocess
+import time
 import networkx as nx
 import numpy as np
 import deepgnn.graph_engine.snark.convert as convert
@@ -126,7 +134,7 @@ def test_han():
     current_dir = os.path.dirname(os.path.realpath(__file__))
     mainfile = os.path.join(current_dir, "main.py")
 
-    ## start training
+    # start training
     training_cmd = (
         "python {} --mode train --graph_type local --model_dir {} --data_dir {} --seed 123"
         + " --training_node_types 0 --edge_types 0 --num_nodes 100 --feature_idx 0 --feature_dim 2 --partitions 0"
@@ -135,7 +143,7 @@ def test_han():
     res = run_commands(training_cmd)
     assert res == 0
 
-    ## start inference
+    # start inference
     inference_cmd = (
         "python {} --mode inference --graph_type local --model_dir {} --data_dir {} --seed 123"
         + " --edge_types 0 --num_nodes 50 --feature_idx 0 --feature_dim 2 --batch_size 8"
@@ -144,7 +152,7 @@ def test_han():
     res = run_commands(inference_cmd)
     assert res == 0
 
-    ## evaluate
+    # evaluate
     num_nodes = 50
     dim = 16
     emb = load_embeddings(model_dir, num_nodes + 1, dim)

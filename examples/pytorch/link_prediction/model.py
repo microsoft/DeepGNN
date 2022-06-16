@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Link prediction model implementation."""
 import numpy as np
 import os
 import torch
@@ -31,6 +31,8 @@ from consts import SIM_TYPE_COSINE_WITH_RNS, ENCODER_LABEL, FANOUTS_NAME
 
 
 class LinkPredictionModel(BaseSupervisedModel):
+    """Supervised link prediction model."""
+
     def __init__(
         self,
         args,
@@ -41,6 +43,7 @@ class LinkPredictionModel(BaseSupervisedModel):
         metric: BaseMetric = ROC(),
         vocab_index: int = 0,
     ):
+        """Initialize model."""
         assert feature_enc is not None and isinstance(
             feature_enc, MultiTypeFeatureEncoder
         )
@@ -94,10 +97,12 @@ class LinkPredictionModel(BaseSupervisedModel):
             self.multi_task_aggregator = MultiTaskAggregator(config)
 
     def get_score(self, context: dict):
+        """Calculate score."""
         self.encode_feature(context)
         return self.gnn_encoder(context)
 
     def forward(self, context: dict):
+        """Calculate scores and return them with loss and labels."""
         batch = context[NODE_FEATURES]
         # source nodes
         src_info = self.get_score(
@@ -188,7 +193,7 @@ class LinkPredictionModel(BaseSupervisedModel):
                 )
 
         if self.args.use_mse:
-            inf_label = self.inverse_sigmoid(inf_label.view(-1, 1))
+            inf_label = self._inverse_sigmoid(inf_label.view(-1, 1))
             loss = nn.MSELoss(reduce=False)(simscore.view(-1, 1), inf_label)
         elif self.args.sim_type == SIM_TYPE_COSINE_WITH_RNS:
             loss = -(simscore.view(-1, 1))
@@ -202,16 +207,19 @@ class LinkPredictionModel(BaseSupervisedModel):
         loss = torch.mean(loss)
         return loss, simscore
 
-    def inverse_sigmoid(self, x):
+    def _inverse_sigmoid(self, x):
         return torch.log(x / (-x + 1))
 
     def metric_name(self):
+        """Metric used for evaluation."""
         return self.metric.name()
 
-    # current format: row_id, source, seqid + seq_mask, destination, seqid + seq_mask, label
     def query(self, graph: Graph, inputs: np.array):
-        context = {INPUTS: inputs}
-        """ Input data format:
+        """
+        Query graph for training data.
+
+        Current format: row_id, source, seqid + seq_mask, destination, seqid + seq_mask, label.
+        Input data format:
             |row_id | src_id | src_seq_mask | dst_id | dst_seq_mask | label |
             | ----- | ------ | ------------ | ------ | ------------ | ----- |
             | 0 | 0 | 1266,9292,2298,0,0,0,1,1,1,0,0,0 | 27929 | 11166,2298,1042,0,0,0,1,1,1,0,0,0 | 0 |
@@ -226,7 +234,7 @@ class LinkPredictionModel(BaseSupervisedModel):
             The length of sequence and mask is the same which means we can divide it by 2 to get its
             seq: 'data[:feature_dim // 2]' and its mask: 'data[feature_dim // 2:]'
         """
-
+        context = {INPUTS: inputs}
         batch = context[INPUTS]
         batch_size = 0
 
@@ -328,6 +336,7 @@ class LinkPredictionModel(BaseSupervisedModel):
         return context
 
     def get_embedding(self, context: dict):
+        """Compute embeddings, scores for src and destination nodes."""
         batch = context[NODE_FEATURES]
         # source nodes
         src_info = self.get_score(
@@ -364,6 +373,7 @@ class LinkPredictionModel(BaseSupervisedModel):
         return scores, src_info[0], dst_info[0], batch[0]
 
     def output_embedding(self, output, context: dict, embeddings):
+        """Print embeddings."""
         scores, src_batch, dst_batch, row_id = embeddings
         scores = torch.sigmoid(scores).cpu().detach().numpy()
         src = src_batch.cpu().detach().numpy()

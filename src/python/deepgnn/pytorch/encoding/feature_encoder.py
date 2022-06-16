@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Common feature encoders."""
 import argparse
 import itertools
 import operator
@@ -35,7 +35,7 @@ class FeatureEncoder(torch.nn.Module):
     """Encoder for raw feature of graph nodes."""
 
     def __init__(self, feature_type: FeatureType, feature_dim: int, embed_dim: int):
-        """Initialization.
+        """Initialize feature encoder.
 
         Args:
             feature_type: type of raw features.
@@ -48,22 +48,24 @@ class FeatureEncoder(torch.nn.Module):
         self.embed_dim = embed_dim
 
     def transform(self, context):
-        """Perform necessary data transformation, e.g. tokenization for text data,
-            result is saved in the context, which will be converted to tensor for
-            forward execution. This function will be invoked by prefetch.
+        """Perform necessary data transformation, e.g. tokenization for text data.
 
-        Args:
+        Result is saved in the context, which will be converted to tensor for
+        forward execution. This function will be invoked by prefetch. Args:
             context: nested numpy array dictionary.
         """
         raise NotImplementedError()
 
     def forward(self, context):
+        """Encode context to get feature embedding."""
         raise NotImplementedError()
 
 
 class TwinBERTFeatureEncoder(FeatureEncoder):
+    """Wrapper for TwinBERTEncoder."""
+
     def __init__(self, feature_type: FeatureType, config: dict, pooler_count: int = 1):
-        """Initialization.
+        """Initialize TwinBERT encoder.
 
         Args:
             config_file: the file path of the twinber config file.
@@ -95,6 +97,7 @@ class TwinBERTFeatureEncoder(FeatureEncoder):
 
     @classmethod
     def get_feature_dim(cls, feature_type: FeatureType, config: dict):
+        """Extract feature dimensions."""
         max_seq_len = config[MAX_SEQ_LEN]
         if feature_type == FeatureType.BINARY:
             return config[MAX_SENT_CHARS]
@@ -114,7 +117,6 @@ class TwinBERTFeatureEncoder(FeatureEncoder):
 
     def _tokenize(self, context: dict):
         """Tokenize binary(string) feature recursively to get sequence ids and mask."""
-
         # lazy init tokenizer function
         if self.tokenize_func is None:
             self._init_tokenize_func()
@@ -161,10 +163,9 @@ class TwinBERTFeatureEncoder(FeatureEncoder):
                 )
 
     def _extract_sequence_id_and_mask(self, context: dict):
-        """If tokenization has been done offline, raw feature would be
-        corresponding sequence ids and mask. Here just need to extract them from
-        the combined vector.
-        """
+        # If tokenization has been done offline, raw feature would be
+        # corresponding sequence ids and mask. Here just need to extract them from
+        # the combined vector.
         for key in context:
             data = context[key]
             if isinstance(data, dict):
@@ -184,6 +185,7 @@ class TwinBERTFeatureEncoder(FeatureEncoder):
                 )
 
     def transform(self, context: dict):
+        """Transform binary or int64 features."""
         if self.feature_type == FeatureType.BINARY:
             self._tokenize(context)
         elif self.feature_type == FeatureType.INT64:
@@ -239,7 +241,7 @@ class MultiTypeFeatureEncoder(FeatureEncoder):
         encoder_types: list,
         share_encoder=False,
     ):
-
+        """Initialize MultiType feature encoder."""
         super(MultiTypeFeatureEncoder, self).__init__(
             feature_type=feature_type,
             feature_dim=TwinBERTFeatureEncoder.get_feature_dim(feature_type, config),
@@ -269,11 +271,13 @@ class MultiTypeFeatureEncoder(FeatureEncoder):
                 )
 
     def get_feature_encoder(self, encoder_type):
+        """Get encoder by type."""
         if self.share_encoder:
             return getattr(self, FEATURE_ENCODER_STR, None)
         return getattr(self, encoder_type + FEATURE_ENCODER_STR, None)
 
     def forward(self, context: dict):
+        """Compute embeddings and save in context."""
         seq_samples = context[ENCODER_SEQ]
         mask_samples = context[ENCODER_MASK]
         all_encoder_types = context[ENCODER_TYPES]
@@ -310,10 +314,12 @@ class MultiTypeFeatureEncoder(FeatureEncoder):
         context[ENCODER_MASK] = mask_samples[0][0].squeeze(0)
 
     def transform(self, context: dict):
+        """Skip transform."""
         pass
 
 
 def get_feature_encoder(args: argparse.Namespace):
+    """Create feature encoder from command line arguments."""
     if (
         args.meta_dir is not None
         and len(args.meta_dir) > 0

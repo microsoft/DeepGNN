@@ -1,14 +1,13 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Type conversions to parse command line arguments."""
 import argparse
 
 
 def vec2str(vec):
-    """Concat 1 or 2 dimention ndarray to str,
-    it is used when output embeddings to files.
+    """Concat 1 or 2 dimensionanl ndarray to str.
 
-    e.g.
+    It is used when output embeddings to files, e.g.:
     vec = [1,2,3]
     res = vec2str(vec)
     # res is "1 2 3"
@@ -24,7 +23,7 @@ def vec2str(vec):
 def str2bool(v):
     """Convert the string value to bool.
 
-    e.g.
+    For example:
     str2bool("yes") # True
     str2bool("Yes") # True
     str2bool("True") # True
@@ -46,7 +45,7 @@ def str2bool(v):
 def str2list_int(v):
     """Convert a comma separated string to int list.
 
-    e.g.
+    For example:
     str2list_int("1,2,3") # result is [1,2,3]
     str2list_int([1,2,3]) # result is [1,2,3]
     """
@@ -61,7 +60,7 @@ def str2list_int(v):
 def str2list2_int(v):
     """Convert string to 2d-list.
 
-    e.g. it is used to parse the metapath of the node.
+    It is used to parse the metapath of the node.
     metapath = "1;2;3,4"
     str2list2_int(metapath) # [[1],[2],[3, 4]]
     """
@@ -78,7 +77,7 @@ def str2list2_int(v):
 def str2list2(v):
     """Convert string to string list.
 
-    e.g. it is used to parse the edge types of the node.
+    It is used to parse the edge types of the node.
     edges = "q;k;s"
     str2list2(edges) # [['q'],['k'],['s']]
     """
@@ -91,6 +90,7 @@ def str2list2(v):
     return ret
 
 
-# str to string list, default sep is ","
+#
 def str2list_str(v):
+    """Convert string to string list, default separator is ","."""
     return v.split(",")

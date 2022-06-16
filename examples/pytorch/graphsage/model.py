@@ -85,6 +85,7 @@ class SupervisedGraphSage(BaseSupervisedModel):
         nn.init.xavier_uniform_(self.weight)
 
     def query(self, graph: Graph, inputs: np.array):
+        """Fetch training data from graph."""
         context = {"inputs": inputs}
         context["label"] = graph.node_features(
             context["inputs"],
@@ -103,7 +104,6 @@ class SupervisedGraphSage(BaseSupervisedModel):
 
     def get_score(self, context: dict):
         """Generate scores for a list of nodes."""
-
         self.encode_feature(context)
         embeds = self.enc(context["encoder"])
         scores = torch.matmul(embeds, self.weight)
@@ -111,9 +111,11 @@ class SupervisedGraphSage(BaseSupervisedModel):
         return scores
 
     def metric_name(self):
+        """Metric used for model evaluation."""
         return self.metric.name()
 
     def get_embedding(self, context: dict):
+        """Generate embedding."""
         return self.enc(context["encoder"])
 
 
@@ -195,6 +197,7 @@ class UnSupervisedGraphSage(BaseUnsupervisedModel):
         self.bce_loss = torch.nn.BCEWithLogitsLoss()
 
     def query(self, graph: Graph, inputs: np.array):
+        """Fetch training data from graph."""
         context = {"inputs": inputs}
         context["encoder"] = self.enc.query(
             context["inputs"],
@@ -218,11 +221,11 @@ class UnSupervisedGraphSage(BaseUnsupervisedModel):
         return context
 
     def get_embedding(self, context: dict):
+        """Generate embedding."""
         return self.enc(context["encoder"])
 
     def get_score(self, context: dict):
-        """Generate embeddings for the list of nodes."""
-
+        """Generate predictions for the list of nodes."""
         self.encode_feature(context)
         embeds = self.enc(context)
         scores = torch.matmul(embeds, self.weight)
@@ -266,4 +269,5 @@ class UnSupervisedGraphSage(BaseUnsupervisedModel):
         return loss, scores, labels
 
     def metric_name(self):
+        """Metric used for model evaluation."""
         return self.metric.name()

@@ -1,5 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+"""Setuptools to create deepgnn wheels."""
 
 import setuptools
 import platform
@@ -17,7 +18,7 @@ COMMON_PACKAGES = ["requests", "tensorboard"]
 
 
 def graph_engine(version: str):
-    """Setup tool to package graph engine."""
+    """Package graph engine."""
 
     def _shared_lib():
         if platform.system() == "Windows":
@@ -88,13 +89,13 @@ def graph_engine(version: str):
     os.remove("MANIFEST.in")
     os.remove(
         os.path.join(
-            os.path.dirname(__file__), "deepgnn/graph_engine/snark", _shared_lib()
+            os.path.dirname(__file__), "deepgnn", "graph_engine", "snark", _shared_lib()
         )
     )
 
 
 def deepgnn_tf(version: str):
-    """DeepGNN runtime and algorithms for tensorflow."""
+    """DeepGNN runtime and algorithms for tensorflow."""  # noqa: D403
     depens = ["tensorflow>=2", "deepgnn-ge>=0.1"]
     depens.extend(COMMON_PACKAGES)
 
@@ -131,7 +132,7 @@ def deepgnn_tf(version: str):
 
 
 def deepgnn_pytorch(version: str):
-    """DeepGNN runtime and algorithms for pytorch."""
+    """DeepGNN runtime and algorithms for pytorch."""  # noqa: D403
     depens = [
         "deepgnn-ge>=0.1",
         "torch>=1.8",
@@ -144,7 +145,7 @@ def deepgnn_pytorch(version: str):
     depens.extend(COMMON_PACKAGES)
 
     setuptools.setup(
-        name=f"deepgnn-torch",
+        name="deepgnn-torch",
         version=version,
         description="DeepGNN algorithms for pytorch.",
         long_description="See [DeepGNN package](https://pypi.org/project/deepgnn-ge/) for detailed description.",

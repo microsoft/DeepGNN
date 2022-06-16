@@ -17,6 +17,8 @@ from deepgnn.pytorch.encoding import FeatureEncoder
 
 
 class PTGSupervisedGraphSage(BaseSupervisedModel):
+    """Supervised graphsage model implementation with torch geometric."""
+
     def __init__(
         self,
         num_classes: int,
@@ -58,6 +60,7 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         nn.init.xavier_uniform_(self.weight)
 
     def build_edges_tensor(self, N, K):
+        """Build edge matrix."""
         nk = torch.arange((N * K).item(), dtype=torch.long, device=N.device)
         src = (nk // K).reshape(1, -1)
         dst = (N + nk).reshape(1, -1)
@@ -65,6 +68,7 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         return elist
 
     def query(self, graph: Graph, inputs: np.array):
+        """Query graph for training data."""
         context = {"inputs": inputs}
         context["label"] = graph.node_features(
             context["inputs"],
@@ -96,16 +100,17 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
 
     def get_score(self, context: dict):
         """Generate scores for a list of nodes."""
-
         self.encode_feature(context)
         embeds = self.get_embedding(context)
         scores = torch.matmul(embeds, self.weight)
         return scores
 
     def metric_name(self):
+        """Metric used for training."""
         return self.metric.name()
 
     def get_embedding(self, context: dict):
+        """Generate embedding."""
         out_1 = context["out_1"]
         out_2 = context["out_2"]
         edges_1 = self.build_edges_tensor(out_1, self.fanouts[0])  # Edges for 1st layer

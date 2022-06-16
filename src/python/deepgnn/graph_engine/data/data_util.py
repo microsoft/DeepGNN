@@ -1,13 +1,14 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Graph processing utility functions."""
 import os
 import json
 import logging
 import random
 from typing import List, Tuple, Dict, Set, DefaultDict
 import numpy as np
-import urllib.request, tarfile
+import urllib.request
+import tarfile
 import deepgnn.graph_engine.snark.convert as convert
 from deepgnn.graph_engine.snark.decoders import LinearDecoder
 
@@ -15,6 +16,7 @@ from deepgnn.graph_engine.snark.local import Client
 
 
 def download_file(url: str, data_dir: str, name: str):
+    """Create dir and download data."""
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
 
@@ -32,7 +34,8 @@ def get_json_node(
     train_neighbors: Set[int],
     test_neighbors: Set[int],
 ) -> str:
-    """return node with JSON format.
+    """Return node with JSON format.
+
     node type: 0(train), 1(test)
     use default value for node_weight(1.0), neighbor weight(1.0)
     """
@@ -80,6 +83,7 @@ def get_linear_node(
 
 
 def write_node_files(node_types: Dict[int, str], train_file: str, test_file: str):
+    """Save node files to disk."""
     with open(train_file, "w") as fout_train, open(test_file, "w") as fout_test:
         for nid, ntype in node_types.items():
             if ntype == "train":
@@ -91,8 +95,7 @@ def write_node_files(node_types: Dict[int, str], train_file: str, test_file: str
 def select_training_test_nodes(
     nodeids: List[int], train_node_ratio: float, random_selection: bool
 ) -> Dict[int, str]:
-    """Generate train/test nodes"""
-
+    """Generate train/test nodes."""
     random.seed(0)
     max_training_node_id = int(len(nodeids) * train_node_ratio)
     types = ["train"] * max_training_node_id + ["test"] * (
@@ -107,6 +110,8 @@ def select_training_test_nodes(
 
 
 class Dataset(Client):
+    """Helper class to generate data for cora and citeseer datasets."""
+
     def __init__(
         self,
         name: str,
@@ -118,6 +123,7 @@ class Dataset(Client):
         random_selection: bool,
         output_dir: str = None,
     ):
+        """Initialize Dataset."""
         assert name in ["cora_full", "citeseer_full"]
         self.url = url
         self.GRAPH_NAME = name
@@ -131,6 +137,7 @@ class Dataset(Client):
         super().__init__(path=self.output_dir, partitions=[0])
 
     def data_dir(self):
+        """Graph location on disk."""
         return self.output_dir
 
     def _build_graph_impl(
@@ -144,6 +151,7 @@ class Dataset(Client):
             data_dir, train_node_ratio, random_selection
         )
 
+<<<<<<< HEAD
         ## build graph - JSON
         graph_file = os.path.join(data_dir, "graph.linear")
         self._write_linear_graph(nodes, node_types, train_adjs, test_adjs, graph_file)
@@ -151,6 +159,15 @@ class Dataset(Client):
         self._write_meta_file(meta_file)
 
         ## convert graph: Linear -> Binary
+=======
+        # build graph - JSON
+        graph_file = os.path.join(data_dir, "graph.json")
+        self._write_json_graph(nodes, node_types, train_adjs, test_adjs, graph_file)
+        meta_file = os.path.join(data_dir, "meta.json")
+        self._write_meta_file(meta_file)
+
+        # convert graph: JSON -> Binary
+>>>>>>> 466a076605b7bef0a9b3147145e84fbbb8b272a3
         convert.MultiWorkersConverter(
             graph_path=graph_file,
             meta_path=meta_file,
@@ -158,7 +175,7 @@ class Dataset(Client):
             output_dir=data_dir,
         ).convert()
 
-        ## write training/testing nodes.
+        # write training/testing nodes.
         train_file = os.path.join(data_dir, "train.nodes")
         test_file = os.path.join(data_dir, "test.nodes")
         write_node_files(node_types, train_file, test_file)

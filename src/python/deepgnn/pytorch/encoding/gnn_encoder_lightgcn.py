@@ -1,16 +1,20 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Reference: http://staff.ustc.edu.cn/~hexn/papers/sigir20-LightGCN.pdf."""
 import torch
 import torch.nn as nn
 from deepgnn.pytorch.common.consts import INPUTS, FANOUTS
 
 
 class LightGCNEncoder(nn.Module):
+    """Encoder for lightGCN model."""
+
     def __init__(self):
+        """Initialize underlying nn.Module."""
         super(LightGCNEncoder, self).__init__()
 
     def forward(self, context: dict):
+        """Evaluate encoder."""
         samples = context[INPUTS]
         fanouts = context[FANOUTS]
 

@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Citation graph datasets."""
 import argparse
 import sys
 import os
@@ -47,8 +47,9 @@ def load_data(
     np.array,
 ]:
     """
-    Reference: https://github.com/tkipf/gcn/blob/master/gcn/utils.py
-    Loads input data from gcn/data directory.
+    Load input data from gcn/data directory.
+
+    Reference: https://github.com/tkipf/gcn/blob/master/gcn/utils.py.
 
     ind.dataset_str.x => the feature vectors of the training instances as scipy.sparse.csr.csr_matrix object;
     ind.dataset_str.tx => the feature vectors of the test instances as scipy.sparse.csr.csr_matrix object;
@@ -128,7 +129,7 @@ def load_data(
 
 
 def preprocess_features(features: sp.lil_matrix) -> np.array:
-    """Row-normalize feature matrix and convert to tuple representation"""
+    """Row-normalize feature matrix and convert to tuple representation."""
     rowsum = np.array(features.sum(1))
     r_inv = np.power(rowsum, -1).flatten()
     r_inv[np.isinf(r_inv)] = 0.0
@@ -138,6 +139,7 @@ def preprocess_features(features: sp.lil_matrix) -> np.array:
 
 
 def download_gcn_data(dataset: str, data_dir: str):
+    """Download GCN data."""
     url = "https://deepgraphpub.blob.core.windows.net/public/testdata/gcndata"
     names = ["x", "tx", "allx", "y", "ty", "ally", "graph", "test.index"]
     all_files = ["ind.{}.{}".format(dataset.lower(), name) for name in names]
@@ -153,6 +155,7 @@ def random_split(
     num_val: int,
     num_test: int,
 ) -> Tuple[np.array, np.array, np.array]:
+    """Split graph data to train/test/validation sets with node sampling."""
     num_train_per_class = 20
     num_nodes = labels.shape[0]
     train_idx = []
@@ -173,7 +176,10 @@ def random_split(
 
 
 class CitationGraph(Client):
+    """Citation graph dataset."""
+
     def __init__(self, name: str, output_dir: str = None, split: str = "public"):
+        """Initialize dataset."""
         assert name in ["cora", "citeseer"]
         self.GRAPH_NAME = name
         self.output_dir = output_dir
@@ -183,6 +189,7 @@ class CitationGraph(Client):
         super().__init__(path=self.output_dir, partitions=[0])
 
     def data_dir(self):
+        """Graph location on disk."""
         return self.output_dir
 
     def _load_raw_graph(self, data_dir: str):
@@ -234,6 +241,7 @@ class CitationGraph(Client):
     def get_node_types(
         self, train_mask: np.array, val_mask: np.array, test_mask: np.array
     ) -> List[str]:
+        """Return node types: train/val/test."""
         node_types = []
         for nid in range(train_mask.shape[0]):
             t = "other"
@@ -292,6 +300,7 @@ class CitationGraph(Client):
         label: int,
         neighbors: np.array,
     ) -> str:
+        """Convert node to json format."""
         assert type(flt_feat) is list and type(flt_feat[0]) == float
         assert type(label) is int
         ntype = self.NODE_TYPE_ID[node_type]
@@ -330,6 +339,7 @@ class CitationGraph(Client):
 class Cora(CitationGraph):
     """
     The citation network datasets "Cora".
+
     Args:
       output_dir (string): file directory for graph data.
       split (string): train/val/test data split. ["public", "random"]
@@ -348,12 +358,14 @@ class Cora(CitationGraph):
     """
 
     def __init__(self, output_dir: str = None, split: str = "public"):
+        """Initialize dataset."""
         super().__init__("cora", output_dir, split)
 
 
 class Citeseer(CitationGraph):
     """
     The citation network datasets "Citeseer".
+
     Args:
       output_dir (string): file directory for graph data.
       split (string): train/val/test data split. ["public", "random"]
@@ -372,6 +384,7 @@ class Citeseer(CitationGraph):
     """
 
     def __init__(self, output_dir: str = None, split: str = "public"):
+        """Initialize dataset."""
         super().__init__("citeseer", output_dir, split)
 
 

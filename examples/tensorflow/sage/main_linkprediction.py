@@ -29,7 +29,7 @@ def define_param_graphsage(parser):
     parser.add_argument("--epochs", type=int, default=1, help="num of epochs for training")
     parser.add_argument("--learning_rate", type=float, default=0.00001, help="learning rate")
 
-    ## GraphSAGE Model Parameters.
+    # GraphSAGE Model Parameters.
     parser.add_argument("--agg_type", type=str, default="mean", choices=["mean", "maxpool", "lstm"], help="aggregate functions.")
     parser.add_argument("--layer_dims", type=str2list_int, default="128,128", help="the output dimention for each layer (if concat=True, final dimension is 2x).")
     parser.add_argument("--num_classes", type=int, default=-1, help="number of classes for category")
@@ -37,10 +37,10 @@ def define_param_graphsage(parser):
     parser.add_argument("--identity_dim", type=int, default=-1, help="Set to positive value to use identity embedding features of that dimension.",)
     parser.add_argument("--all_node_count", type=int, default="0", help="number of nodes in graph.")
 
-    ## Sampler Setting:
+    # Sampler Setting:
     parser.add_argument("--edge_types", type=str2list_int, default="0", help="use GEEdgeSampler.")
 
-    ## Inference Setting:
+    # Inference Setting:
     parser.add_argument("--inference_node", type=str, default="", choices=["src", "dst"], help="inference node.")
     parser.add_argument("--inference_files", type=str, default="", help="inference node files.")
 

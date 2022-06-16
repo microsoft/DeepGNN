@@ -1,5 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+"""Common strings used in link prediction model."""
 
 ACT_FUN_ELU = "elu"
 ACT_FUN_LEAKY_RELU = "leaky_relu"

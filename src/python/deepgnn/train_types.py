@@ -1,11 +1,12 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Enums to define training."""
 from enum import Enum
 
 
 class TrainerType(Enum):
-    """Trainer types:
+    """Trainer types.
+
     DeepGNN currently support 4 trainer types:
     * BASE: The most basic local trainer, used for simple experiments.
     * PS: Parameter server based distributed trainer, used for tensorflow models only.
@@ -20,13 +21,17 @@ class TrainerType(Enum):
     DDP = "ddp"
 
     def __str__(self):
+        """Convert enum to string."""
         return self.value
 
 
 class TrainMode(Enum):
+    """What to do with a model."""
+
     TRAIN = "train"
     EVALUATE = "evaluate"
     INFERENCE = "inference"
 
     def __str__(self):
+        """Convert enum to string."""
         return self.value

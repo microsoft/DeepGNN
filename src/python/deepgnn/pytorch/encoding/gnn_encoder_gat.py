@@ -1,12 +1,14 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Encoder for GAT model."""
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 
 class GatEncoder(nn.Module):
+    """Reference: https://arxiv.org/pdf/1710.10903.pdf."""
+
     def __init__(
         self,
         in_features,
@@ -16,6 +18,7 @@ class GatEncoder(nn.Module):
         concat=True,
         act=None,
     ):
+        """Initialize encoder."""
         super(GatEncoder, self).__init__()
 
         self.dropout = dropout
@@ -31,6 +34,7 @@ class GatEncoder(nn.Module):
         self.attn_r = nn.Linear(self.out_features, 1)
 
     def forward(self, combind_feats):
+        """Evaluate encoder."""
         feats = self.fc(combind_feats)
         f_1 = self.attn_l(feats)
         f_2 = self.attn_r(feats)

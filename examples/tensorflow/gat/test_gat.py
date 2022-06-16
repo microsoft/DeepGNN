@@ -3,7 +3,8 @@
 
 import sys
 import pytest
-import tempfile, logging
+import tempfile
+import logging
 import os
 from deepgnn.tf.common.utils import run_commands, get_metrics_from_event_file
 from deepgnn.tf.common.test_helper import TestHelper
@@ -82,7 +83,7 @@ def run_citation_graph_test(
             f"python {mainfile} --mode inference --seed 123 --model_dir {model_dir} --data_dir {dataset.data_dir()}"
             + eager_param
             + " --batch_size 10"
-            + f" --inf_min_id 0 --inf_max_id 123"
+            + " --inf_min_id 0 --inf_max_id 123"
             + f" --neighbor_edge_types 0 --attn_drop 0.0 --ffd_drop 0.0 {hyper_param}"
             + f" --feature_idx 0 --feature_dim {dataset.FEATURE_DIM}"
             + f" --label_idx 1 --label_dim 1 --num_classes {dataset.NUM_CLASSES} --prefetch_worker_size 1 --log_save_steps 1"
@@ -106,7 +107,7 @@ def run_citation_graph_test(
 def test_gat_tf1():
     # fmt: off
     hyper_param = "--head_num 8,1 --l2_coef 0.0005 --hidden_dim 8 --gpu"
-    ## TF1Trainer
+    # TF1Trainer
     tmp_dir = tempfile.TemporaryDirectory()
     acc = run_citation_graph_test(Cora(output_dir=tmp_dir.name), 140, hyper_param, enable_eager=False, run_inference=True, attn_drop=0.2)
     assert acc > 0.823
@@ -116,7 +117,7 @@ def test_gat_tf1():
 def test_gat_eager():
     # fmt: off
     hyper_param = "--head_num 8,1 --l2_coef 0.0005 --hidden_dim 8 --gpu"
-    ## EagerTrainer
+    # EagerTrainer
     tmp_dir = tempfile.TemporaryDirectory()
     acc = run_citation_graph_test(Cora(output_dir=tmp_dir.name), 140, hyper_param, enable_eager=True, run_inference=True, attn_drop=0.2)
     assert acc > 0.823

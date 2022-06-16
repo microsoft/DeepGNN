@@ -1,5 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+"""Training utility functions."""
 
 import os
 from deepgnn import get_logger

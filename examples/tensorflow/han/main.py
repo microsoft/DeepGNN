@@ -54,7 +54,7 @@ def define_param_han(parser):
 def build_model(param):
     label_idx, label_dim = param.label_idx, param.label_dim
     if param.mode == common.args.TrainMode.INFERENCE:
-        ## inference job doesn't need label info.
+        # inference job doesn't need label info.
         label_idx, label_dim = -1, 1
 
     para = HANQueryParamemter(

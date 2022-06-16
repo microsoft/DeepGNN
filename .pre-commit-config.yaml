@@ -32,16 +32,7 @@ repos:
             additional_dependencies: [flake8-docstrings]
             # https://black.readthedocs.io/en/stable/compatible_configs.html#id2
             args: [--ignore,"E501", --extend-ignore,"E203,W503", --max-line-length, "88"]
-            files: src/python/deepgnn/graph_engine/snark
-            exclude: src/python/deepgnn/graph_engine/snark/tests
-    -   repo: https://github.com/pycqa/flake8
-        rev: '3.9.0'
-        hooks:
-        -   id: flake8
-            additional_dependencies: [flake8-docstrings]
-            # https://black.readthedocs.io/en/stable/compatible_configs.html#id2
-            args: [--ignore,"E501", --extend-ignore,"E203,W503,D103,D101,D102,D100,D104,D105,D107,D200,D202,D204,D205,D207,D208,D209,D210,D211,D300,D301,D400,D401,D402,D403,E401,E722,E266,E201,E302,E731,F541,W605", --max-line-length, "88"]
-            exclude: (deepspeed|src/python/deepgnn/graph_engine/snark)
+            exclude: (test_|_test.py|deepspeed|twinbert|main|conftest|testserver|_adl_reader)
     -   repo: https://github.com/pocc/pre-commit-hooks
         rev: v1.1.1
         hooks:

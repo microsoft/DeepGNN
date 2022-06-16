@@ -1,9 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-load("@rules_python//python:defs.bzl", "py_test")
-load("//config:variables.bzl", "PLATFORM_DEFINES")
-load("@rules_python//python:defs.bzl", "py_library")
+load("@rules_python//python:defs.bzl", "py_test", "py_library")
 load("@pip_deps//:requirements.bzl", "requirement")
 
 py_library(
@@ -12,12 +10,11 @@ py_library(
         "__init__.py",
         "args.py",
         "base_trainer.py",
-        "chief_checkpoint_saver_hook.py",
         "dataset.py",
         "dist_sync.py",
+        "hooks.py",
         "horovod_trainer.py",
         "ps_trainer.py",
-        "session_exit_hook.py",
         "tf2_horovod_trainer.py",
         "tf2_trainer.py",
         "test_helper.py",

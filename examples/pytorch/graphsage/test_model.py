@@ -5,7 +5,8 @@ import pytest
 import tempfile
 import time
 import numpy.testing as npt
-import os, sys
+import os
+import sys
 import torch
 import argparse
 import numpy as np
@@ -513,9 +514,10 @@ def train_unsupervised_graphsage_with_feature_encoder(tiny_graph):
 def test_unsupervised_graphsage_with_feature_encoder(
     train_unsupervised_graphsage_with_feature_encoder, tiny_graph
 ):
-    """This test is to go through the process of training a graphsage model with twinbert
-    feature encoder. As twinbert encoding on CPU is very time consuming, here we just
-    run few steps with a random tiny graph, metrics won't be checked strictly.
+    """This test is to go through the process of training a graphsage model with twinbert feature encoder.
+
+    Twinbert encoding on CPU is very time consuming, so we just run few steps with a random tiny graph,
+    and don't check exact metrics values.
     """
     train_ctx = train_unsupervised_graphsage_with_feature_encoder
 

@@ -3,7 +3,8 @@
 
 import numpy as np
 import numpy.testing as npt
-import os, sys
+import os
+import sys
 import pytest
 import random
 import argparse

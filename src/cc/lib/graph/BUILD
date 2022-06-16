@@ -1,8 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 load("@rules_cc//cc:defs.bzl", "cc_library")
-load("//config:variables.bzl", "CXX_OPTS")
-load("//config:variables.bzl", "PLATFORM_DEFINES")
+load("//config:variables.bzl", "CXX_OPTS", "PLATFORM_DEFINES")
 
 cc_library(
     name = "graph",

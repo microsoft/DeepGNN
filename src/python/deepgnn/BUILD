@@ -1,7 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-load("//config:variables.bzl", "PLATFORM_DEFINES")
 load("@rules_python//python:defs.bzl", "py_library")
 
 py_library(

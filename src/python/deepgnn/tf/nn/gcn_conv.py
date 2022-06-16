@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Convolution functions for GCN model."""
 import tensorflow as tf
 from typing import Callable
 
@@ -32,7 +32,7 @@ def gcn_norm_adj(adj):
 
 
 class GCNConv(tf.keras.layers.Layer):
-    """Graph Conv Layer"""
+    """Graph Conv Layer."""
 
     def __init__(
         self,
@@ -41,6 +41,7 @@ class GCNConv(tf.keras.layers.Layer):
         act: Callable = tf.nn.relu,
         use_bias: bool = False,
     ):
+        """Initialize convolution layer."""
         # TODO: support sparse input
         super().__init__()
 
@@ -59,6 +60,7 @@ class GCNConv(tf.keras.layers.Layer):
         )
 
     def call(self, inputs, training=True):
+        """Compute embeddings."""
         x, adj = inputs
         x = tf.nn.dropout(x, rate=self.dropout)
         x = self.w(x)
@@ -66,7 +68,7 @@ class GCNConv(tf.keras.layers.Layer):
             support = tf.sparse.sparse_dense_matmul(adj, x)
         else:
             support = tf.matmul(adj, x, a_is_sparse=True)
-        # output = tf.add_n(supports) ## skip this because len(support) == 1
+        # output = tf.add_n(supports) # skip this because len(support) == 1
         output = support
 
         if self.use_bias:

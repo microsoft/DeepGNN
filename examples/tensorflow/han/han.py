@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""HAN model implementation."""
 import numpy as np
 import tensorflow as tf
 from dataclasses import dataclass
@@ -12,6 +12,8 @@ from typing import Tuple
 
 @dataclass
 class HANQueryParamemter:
+    """Graph query parameters for HAN model."""
+
     edge_types: np.array
     feature_idx: int
     feature_dim: int
@@ -22,9 +24,10 @@ class HANQueryParamemter:
 
 
 class HANQuery:
-    """Graph Query: get sub graphs for HAN training"""
+    """Graph Query: get sub graphs for HAN training."""
 
     def __init__(self, param: HANQueryParamemter):
+        """Initialize graph query."""
         self.param = param
         self.label_meta = np.array([[param.label_idx, param.label_dim]], np.int32)
         self.feat_meta = np.array([[param.feature_idx, param.feature_dim]], np.int32)
@@ -34,6 +37,7 @@ class HANQuery:
     def query_trainning(
         self, graph: Graph, inputs: np.array, return_shape: bool = False
     ):
+        """Generate data to train model."""
         if self.param.label_idx == -1:
             label = np.empty([len(inputs), self.param.label_dim], np.int32)
         else:
@@ -88,6 +92,8 @@ class HANQuery:
 
 
 class HAN(tf.keras.Model):
+    """HAN model implementation."""
+
     def __init__(
         self,
         edge_types: list,
@@ -101,6 +107,7 @@ class HAN(tf.keras.Model):
         max_id=-1,
         loss_name="sigmoid",
     ):
+        """Initialize HAN model."""
         super().__init__(name="han")
         assert loss_name in ["sigmoid", "softmax"]
         self.max_id = max_id
@@ -122,17 +129,19 @@ class HAN(tf.keras.Model):
 
     def embedding_fn(self):
         """
-        output embedding:
+        Return output embeddings.
+
         * self.src_nodes: (batch_size, )
         * output_embedding: (batch_size, self.out_dim)
         """
-        ## self.src_embedding: (batch_size, 1, self.out_dim)
+        # self.src_embedding: (batch_size, 1, self.out_dim)
         output_embedding = tf.squeeze(self.src_emb)
         return [self.src_nodes, output_embedding]
 
     def call(
         self, inputs: Tuple[np.array, np.array, np.array, np.array], training=True
     ):
+        """Generate embeddings, loss and F1 score."""
         src_nodes, labels, node_feats_arr, neighbor_feats_arr = inputs
         embedding = self.encoder((node_feats_arr, neighbor_feats_arr))
         if not training:
@@ -145,7 +154,8 @@ class HAN(tf.keras.Model):
         return embedding, loss, {"f1": f1}
 
     def f1_score(self, labels, predictions):
-        ## TODO: remove this later. copied from deepgnn.tf.metrics
+        """Compute F1 score from labels and predictions."""
+        # TODO: remove this later. copied from deepgnn.tf.metrics
         with tf.compat.v1.variable_scope("f1", "f1", (labels, predictions)):
             epsilon = 1e-7
             _, tp = tf.compat.v1.metrics.true_positives(labels, predictions)
@@ -157,6 +167,7 @@ class HAN(tf.keras.Model):
         return f1
 
     def decoder(self, embeddings, labels):
+        """Compute loss and F1 score."""
         logits = self.predict_layer(embeddings)
         if self.loss_name == "sigmoid":
             loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=logits)
@@ -175,7 +186,7 @@ class HAN(tf.keras.Model):
         return loss, f1
 
     def train_step(self, data: Tuple[np.array, np.array, np.array, np.array]):
-        """override base train_step."""
+        """Override base train_step."""
         with tf.GradientTape() as tape:
             _, loss, metrics = self(data, training=True)
 
@@ -186,13 +197,13 @@ class HAN(tf.keras.Model):
         return result
 
     def test_step(self, data: Tuple[np.array, np.array, np.array, np.array]):
-        """override base test_step."""
+        """Override base test_step."""
         _, loss, metrics = self(data, training=False)
         result = {"loss": loss}
         result.update(metrics)
         return result
 
     def predict_step(self, data: Tuple[np.array, np.array, np.array, np.array]):
-        """override base predict_step."""
+        """Override base predict_step."""
         self(data, training=False)
         return [self.src_nodes, self.src_emb]

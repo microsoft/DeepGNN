@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""GAT model implememtation."""
 import numpy as np
 import tensorflow as tf
 from dataclasses import dataclass
@@ -13,7 +13,9 @@ from deepgnn.graph_engine import Graph, FeatureType, graph_ops
 
 
 @dataclass
-class GATQueryParamemter:
+class GATQueryParameter:
+    """Parameters for graph query."""
+
     neighbor_edge_types: np.array
     feature_idx: int
     feature_dim: int
@@ -25,9 +27,10 @@ class GATQueryParamemter:
 
 
 class GATQuery:
-    """Graph Query: get sub graph for GAT training"""
+    """Graph Query: get sub graph for GAT training."""
 
-    def __init__(self, param: GATQueryParamemter):
+    def __init__(self, param: GATQueryParameter):
+        """Initialize graph query."""
         self.param = param
         self.label_meta = np.array([[param.label_idx, param.label_dim]], np.int32)
         self.feat_meta = np.array([[param.feature_idx, param.feature_dim]], np.int32)
@@ -35,6 +38,7 @@ class GATQuery:
     def query_training(
         self, graph: Graph, inputs: np.array, return_shape: bool = False
     ):
+        """Query to fetch training data."""
         nodes, edges, src_idx = graph_ops.sub_graph(
             graph=graph,
             src_nodes=inputs,
@@ -74,7 +78,7 @@ class GATQuery:
 
 
 class GAT(tf.keras.Model):
-    """GAT Model (supervised)"""
+    """GAT Model (supervised)."""
 
     def __init__(
         self,
@@ -85,6 +89,7 @@ class GAT(tf.keras.Model):
         attn_drop: float = 0.0,
         l2_coef: float = 0.0005,
     ):
+        """Initialize GAT model."""
         super().__init__()
         self.num_classes = num_classes
         self.l2_coef = l2_coef
@@ -99,7 +104,7 @@ class GAT(tf.keras.Model):
             coef_drop=attn_drop,
             attn_aggregate="concat",
         )
-        ## TODO: support hidden layer
+        # TODO: support hidden layer
         assert len(head_num) == 2
         self.out_layer = GATConv(
             attn_heads=head_num[1],
@@ -111,12 +116,14 @@ class GAT(tf.keras.Model):
         )
 
     def forward(self, feat, bias_mat, training):
+        """Calculate embeddings."""
         h_1 = self.input_layer([feat, bias_mat], training=training)
         out = self.out_layer([h_1, bias_mat], training=training)
         tf.compat.v1.logging.info("h_1 {}, out shape {}".format(h_1.shape, out.shape))
         return out
 
     def call(self, inputs, training=True):
+        """Calculate predictions, loss and model accuracy."""
         # inputs: nodes    feat      mask    labels   edges       edges_value  adj_shape
         # shape:  [N]      [N, F]    [N]     [N]      [num_e, 2]  [num_e]      [2]
         nodes, feat, mask, labels, edges, edges_value, adj_shape = inputs
@@ -125,7 +132,7 @@ class GAT(tf.keras.Model):
         sp_adj = tf.SparseTensor(edges, edges_value, adj_shape)
         logits = self.forward(feat, sp_adj, training)
 
-        ## embedding results
+        # embedding results
         self.src_emb = tf.boolean_mask(logits, mask)
         self.src_nodes = tf.boolean_mask(nodes, mask)
 
@@ -134,15 +141,16 @@ class GAT(tf.keras.Model):
         labels = tf.reshape(labels, [-1, self.num_classes])
         mask = tf.reshape(mask, [-1])
 
-        ## loss
+        # loss
         xent_loss = masked_softmax_cross_entropy(logits, labels, mask)
         loss = xent_loss + self.l2_loss()
 
-        ## metric
+        # metric
         acc = masked_accuracy(logits, labels, mask)
         return logits, loss, {"accuracy": acc}
 
     def l2_loss(self):
+        """Calculate L2 loss."""
         vs = []
         for v in self.trainable_variables:
             vs.append(tf.nn.l2_loss(v))
@@ -150,7 +158,7 @@ class GAT(tf.keras.Model):
         return lossL2
 
     def train_step(self, data: dict):
-        """override base train_step."""
+        """Override base train_step."""
         with tf.GradientTape() as tape:
             _, loss, metrics = self(data, training=True)
 
@@ -161,13 +169,13 @@ class GAT(tf.keras.Model):
         return result
 
     def test_step(self, data: dict):
-        """override base test_step."""
+        """Override base test_step."""
         _, loss, metrics = self(data, training=False)
         result = {"loss": loss}
         result.update(metrics)
         return result
 
     def predict_step(self, data: dict):
-        """override base predict_step."""
+        """Override base predict_step."""
         self(data, training=False)
         return [self.src_nodes, self.src_emb]

@@ -1,5 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+"""Common logging functions."""
 
 import logging
 import logging.config
@@ -27,9 +28,10 @@ _logger_lock = threading.Lock()
 
 
 def get_current_user():
+    """Get user name."""
     try:
         return os.getenv("USER", socket.gethostbyname(socket.gethostname()))
-    except:
+    except socket.error:
         return "unknown"
 
 
@@ -40,13 +42,17 @@ class AzureAppInsightFilter(logging.Filter):
     ENABLE_TELEMETRY = False
 
     def filter(self, record):
+        """Filter records for telemetry."""
         return AzureAppInsightFilter.ENABLE_TELEMETRY and hasattr(
             record, LOG_PROPS_CUSTOM_DIMENSIONS
         )
 
 
 class DeepGNNAzureLogHandler(AzureLogHandler):
+    """Simple handler to log records to azure."""
+
     def __init__(self, **options):
+        """Initialize handler."""
         super(DeepGNNAzureLogHandler, self).__init__(**options)
         self.filters = []
 
@@ -63,6 +69,7 @@ def log_telemetry(
     worker_size: int = 1,
     platform: str = "",
 ):
+    """Log training job properties."""
     azlogger.info(
         content,
         extra={
@@ -106,6 +113,7 @@ LOGGING = {
 
 
 def add_azure_handler(name: str):
+    """Add azure log handler."""
     logger = logging.getLogger(name)
     azure_handler = DeepGNNAzureLogHandler()
     azure_handler.addFilter(AzureAppInsightFilter())
@@ -114,19 +122,22 @@ def add_azure_handler(name: str):
 
 
 def setup_default_logging_config(enable_telemetry: bool = False):
+    """Create a global logging config."""
     global _init
     if logging.getLoggerClass() is logging.Logger:
-        ## initialize logging config for default logger
+        # initialize logging config for default logger
         AzureAppInsightFilter.ENABLE_TELEMETRY = enable_telemetry
         logging.config.dictConfig(LOGGING)
         try:
             add_azure_handler(LOG_NAME_DEEPGNN)
-        except:
+        except ValueError:
             AzureAppInsightFilter.ENABLE_TELEMETRY = False
+
     _init = True
 
 
 def get_logger():
+    """Initialize logger and then return it."""
     global _logger
     global _init
 

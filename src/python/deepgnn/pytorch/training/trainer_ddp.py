@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Distributed pytorch trainer."""
 import argparse
 import os
 import torch
@@ -17,13 +17,15 @@ from deepgnn.pytorch.training.utils import disable_infini_band
 
 
 class DDPTrainer(FP16Trainer):
-    """Distributed Data Parallel(DDP) based trainer"""
+    """Distributed Data Parallel(DDP) based trainer."""
 
     def __init__(self, args: argparse.Namespace):
+        """Initialize trainer from command line arguments."""
         super().__init__(args)
         self._init_process_group()
 
     def __del__(self):
+        """Clear training processes."""
         dist.destroy_process_group()
 
     def _evaluate(self, model: Module):

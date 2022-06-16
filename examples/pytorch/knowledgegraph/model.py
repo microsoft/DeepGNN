@@ -19,12 +19,16 @@ EMB_INIT_EPS = 2.0
 
 
 class Mode(enum.Enum):
+    """Mode to control training accross batches."""
+
     Head = 0
     Tail = 1
     Single = 2
 
 
 class KGEModel(BaseModel):
+    """Knowledge graph embedding model."""
+
     def __init__(
         self,
         model_args: dict,
@@ -33,6 +37,7 @@ class KGEModel(BaseModel):
         metric: BaseMetric = MRR(),
         gpu: bool = False,
     ):
+        """Initialize model."""
         super(KGEModel, self).__init__(
             feature_dim=0,
             feature_idx=0,
@@ -116,6 +121,7 @@ class KGEModel(BaseModel):
         self.step = 0
 
     def query(self, graph: Graph, inputs: np.array):
+        """Fetch data from graph for training."""
         context = {"inputs": inputs}
 
         features = graph.edge_features(
@@ -169,6 +175,7 @@ class KGEModel(BaseModel):
         return context
 
     def query_eval(self, graph: Graph, inputs: np.array):
+        """Fetch data from graph for evaluation."""
         context = {}
         inputs[0][:, 2] = inputs[1][:, 0].astype("int64")
         context["inputs"] = inputs[0]
@@ -222,6 +229,7 @@ class KGEModel(BaseModel):
     def get_score(  # type: ignore
         self, sample: Union[torch.Tensor, Tuple[torch.Tensor]], mode=Mode.Single
     ):
+        """Calculate score according to model_name."""
         # 0: head-batch; 1: tail-batch; 2:single
         if mode == Mode.Single:
             batch_size, negative_sample_size = sample.size(0), 1  # type: ignore
@@ -293,6 +301,7 @@ class KGEModel(BaseModel):
     def transE(
         self, head: torch.Tensor, relation: torch.Tensor, tail: torch.Tensor, mode: Mode
     ):
+        """Calculate score for TransE model."""
         if mode == Mode.Head:
             score = head + (relation - tail)
         else:
@@ -304,6 +313,7 @@ class KGEModel(BaseModel):
     def distMult(
         self, head: torch.Tensor, relation: torch.Tensor, tail: torch.Tensor, mode: Mode
     ):
+        """Calculate score for DistMult model."""
         if mode == Mode.Head:
             score = head * (relation * tail)
         else:
@@ -315,6 +325,7 @@ class KGEModel(BaseModel):
     def complEx(
         self, head: torch.Tensor, relation: torch.Tensor, tail: torch.Tensor, mode: Mode
     ):
+        """Calculate score for ComplEx model."""
         re_head, im_head = torch.chunk(head, 2, dim=2)
         re_relation, im_relation = torch.chunk(relation, 2, dim=2)
         re_tail, im_tail = torch.chunk(tail, 2, dim=2)
@@ -334,6 +345,7 @@ class KGEModel(BaseModel):
     def rotatE(
         self, head: torch.Tensor, relation: torch.Tensor, tail: torch.Tensor, mode: Mode
     ):
+        """Calculate score for RotatE model."""
         re_head, im_head = torch.chunk(head, 2, dim=2)
         re_tail, im_tail = torch.chunk(tail, 2, dim=2)
 
@@ -362,7 +374,7 @@ class KGEModel(BaseModel):
         return score
 
     def forward(self, context: dict):
-
+        """Calculate loss."""
         if "bias" in context.keys():
             return self.loss_eval(context)
 
@@ -421,6 +433,7 @@ class KGEModel(BaseModel):
         return loss, 0.0, 0.0
 
     def loss_eval(self, context: dict):
+        """Calculate loss with bias."""
         positive_sample = context["inputs"]
         negative_sample = context["negs"]
         filter_bias = context["bias"]

@@ -19,7 +19,7 @@ from contextlib import closing
 from deepgnn.tf import common
 from deepgnn.tf.common.dataset import create_tf_dataset, get_distributed_dataset
 from deepgnn.tf.common.trainer_factory import get_trainer
-from gat import GAT, GATQuery, GATQueryParamemter
+from gat import GAT, GATQuery, GATQueryParameter
 
 
 # fmt: off
@@ -28,7 +28,7 @@ def define_param_gat(parser):
     parser.add_argument("--epochs", type=int, default=200, help="num of epochs for training")
     parser.add_argument("--learning_rate", type=float, default=0.005, help="learning rate")
 
-    ## GAT Model Parameters.
+    # GAT Model Parameters.
     parser.add_argument("--head_num", type=str2list_int, default="8,1", help="the number of attention headers.")
     parser.add_argument("--hidden_dim", type=int, default=8, help="hidden layer dimension.")
     parser.add_argument("--num_classes", type=int, default=-1, help="number of classes for category")
@@ -36,11 +36,11 @@ def define_param_gat(parser):
     parser.add_argument("--attn_drop", type=float, default=0.0, help="attention layer dropout rate.")
     parser.add_argument("--l2_coef", type=float, default=0.0005, help="l2 loss")
 
-    ## training node types.
+    # training node types.
     parser.add_argument("--node_types", type=str2list_int, default="0", help="Graph Node for training.")
-    ## evaluate node files.
+    # evaluate node files.
     parser.add_argument("--evaluate_node_files", type=str, help="evaluate node file list.")
-    ## inference node id
+    # inference node id
     parser.add_argument("--inf_min_id", type=int, default=0, help="inferece min node id.")
     parser.add_argument("--inf_max_id", type=int, default=-1, help="inference max node id.")
 
@@ -65,7 +65,7 @@ def define_param_gat(parser):
 
 
 def build_model(param):
-    p = GATQueryParamemter(
+    p = GATQueryParameter(
         neighbor_edge_types=np.array(param.neighbor_edge_types, np.int32),
         feature_idx=param.feature_idx,
         feature_dim=param.feature_dim,

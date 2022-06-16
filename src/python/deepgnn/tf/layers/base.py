@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
+"""Base classes to use with TF models."""
 import collections
 from typing import Dict, Any
 
@@ -24,34 +24,36 @@ from tensorflow.python.util import nest
 _LAYER_UIDS: Dict[str, Any] = collections.defaultdict(lambda: 0)
 
 
-def get_layer_uid(layer_name=""):
+def _get_layer_uid(layer_name=""):
     _LAYER_UIDS[layer_name] += 1
     return _LAYER_UIDS[layer_name]
 
 
 class Layer(object):
-    """
-    Layer class modeled after Keras (http://keras.io).
-    """
+    """Layer class modeled after Keras (http://keras.io)."""
 
     def __init__(self, name=None, **kwargs):
+        """Initialize layer."""
         self.built = False
 
         if name is None:
             layer_name = self.__class__.__name__.lower()
-            name = layer_name + "_" + str(get_layer_uid(layer_name))
+            name = layer_name + "_" + str(_get_layer_uid(layer_name))
 
         self._name = name
         self.partitioner = kwargs.get("partitioner", None)
         self.log_variable_info = []
 
     def build(self, input_shape):
+        """Freeze layer."""
         self.built = True
 
     def call(self, inputs):
+        """Return inputs to make derived classes simpler."""
         return inputs
 
     def __call__(self, inputs):
+        """Freeze model and evaluate it."""
         input_shapes = None
         if all(hasattr(x, "shape") for x in nest.flatten(inputs)):
             input_shapes = nest.map_structure(lambda x: x.shape, inputs)
@@ -63,9 +65,11 @@ class Layer(object):
             return outputs
 
     def compute_output_shape(self, input_shape):
+        """To be overriden in derived classes."""
         raise NotImplementedError()
 
     def print_model_variables(self):
+        """Print debug information about model."""
         print("-------------Model internal variable---------------")
         [print("\t{0}\t{1}".format(k, v)) for k, v in self.log_variable_info]
         print("-------------Local variables-----------------------")
@@ -89,9 +93,7 @@ class Layer(object):
 
 
 class Dense(Layer):
-    """
-    Basic full-connected layer.
-    """
+    """Basic full-connected layer."""
 
     def __init__(
         self,
@@ -104,6 +106,7 @@ class Dense(Layer):
         bias_initializer=lambda: tf.compat.v1.constant_initializer(value=0.0002),
         **kwargs
     ):
+        """Initialize dense layer."""
         super(Dense, self).__init__(**kwargs)
         self.dim = dim
         self.activation = activation
@@ -112,6 +115,7 @@ class Dense(Layer):
         self.bias_initializer = bias_initializer
 
     def build(self, input_shape):
+        """Compute shape, bias and then freeze layer."""
         input_shape = tf.TensorShape(input_shape)
         self.kernel = tf.compat.v1.get_variable(
             "kernel",
@@ -127,6 +131,7 @@ class Dense(Layer):
         self.built = True
 
     def call(self, inputs):
+        """Evaluate layer."""
         rank = inputs.shape.ndims
         if rank > 2:
             outputs = tf.tensordot(inputs, self.kernel, [[rank - 1], [0]])
@@ -140,9 +145,7 @@ class Dense(Layer):
 
 
 class Embedding(Layer):
-    """
-    Id to dense vector embedding.
-    """
+    """Id to dense vector embedding."""
 
     def __init__(
         self,
@@ -151,12 +154,14 @@ class Embedding(Layer):
         initializer=lambda: tf.compat.v1.truncated_normal_initializer(stddev=0.1),
         **kwargs
     ):
+        """Initialize embedding layer."""
         super(Embedding, self).__init__(**kwargs)
         self.max_id = max_id
         self.dim = dim
         self.initializer = initializer
 
     def build(self, input_shape):
+        """Compute layer shape and freeze it."""
         self.embeddings = tf.compat.v1.get_variable(
             "embeddings",
             shape=[self.max_id + 1, self.dim],
@@ -166,6 +171,7 @@ class Embedding(Layer):
         self.built = True
 
     def call(self, inputs):
+        """Lookup embeddings for inputs."""
         shape = inputs.shape
         inputs = tf.reshape(inputs, [-1])
         output_shape = shape.concatenate(self.dim)
@@ -176,9 +182,7 @@ class Embedding(Layer):
 
 
 class SparseEmbedding(Embedding):
-    """
-    Sparse id to dense vector embedding.
-    """
+    """Sparse id to dense vector embedding."""
 
     def __init__(
         self,
@@ -188,12 +192,14 @@ class SparseEmbedding(Embedding):
         combiner="sum",
         **kwargs
     ):
+        """Initialize sparse embedding layer."""
         super(SparseEmbedding, self).__init__(
             max_id=max_id, dim=dim, initializer=initializer, **kwargs
         )
         self.combiner = combiner
 
     def call(self, inputs):
+        """Lookup embeddings for sparse inputs."""
         return tf.nn.embedding_lookup_sparse(
             params=self.embeddings,
             sp_ids=inputs,

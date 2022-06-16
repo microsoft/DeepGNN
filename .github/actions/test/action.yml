@@ -1,5 +1,10 @@
 name: "Test"
 description: "Run unit tests"
+inputs:
+  disk_cache:
+    description: 'Build system cache key'
+    required: false
+    default: test-${{ github.ref }}-${{ runner.os }}
 runs:
   using: "composite"
   steps:
@@ -12,15 +17,32 @@ runs:
     - run: echo "BAZEL_CONFIG=darwin" >> $GITHUB_ENV
       shell: bash
       if: runner.os == 'macOS'
-    - run: echo ${{ env.BAZEL_CONFIG }}
+    - run: echo ${{ inputs.disk_cache }}
       shell: bash
-    - run: bazel test -c dbg //src/cc/tests:* --test_output=all --test_timeout 30 --config=${{ env.BAZEL_CONFIG }}
+
+    - uses: actions/cache@v3
+      id: cache
+      with:
+        path: ~/bazel-cache
+        key: ${{ inputs.disk_cache }}
+        restore-keys: |
+          test-${{ runner.os }}-${{ github.ref }}
+          test-${{ runner.os }}
+
+    - run: bazel test -c dbg //src/cc/tests:* --test_output=all --test_timeout 30 --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
       shell: bash
       name: run cpp tests
-    - run: bazel test -c dbg //src/python/deepgnn/...:* --jobs 1 --test_output=all --test_timeout 600 --config=${{ env.BAZEL_CONFIG }}
+    - run: bazel test -c dbg //src/python/deepgnn/...:* --jobs 1 --test_output=all --test_timeout 600 --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
       shell: bash
       name: run python tests
-    - run: bazel build -c dbg src/cc/lib/benchmark:* --config=${{ env.BAZEL_CONFIG }}
+    - run: |
+        bazel test -c dbg //examples/pytorch/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
+        bazel test -c dbg //examples/tensorflow/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
+        bazel test -c dbg //docs/tutorials:notebook_test --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
+      shell: bash
+      name: run python tests in examples folder
+      if: runner.os == 'Linux'
+    - run: bazel build -c dbg src/cc/lib/benchmark:* --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
       shell: bash
       name: build benchmarks
       if: runner.os == 'Linux'

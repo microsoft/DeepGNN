@@ -33,6 +33,7 @@ class Accuracy(BaseMetric):
     """Accuracy classification score."""
 
     def compute(self, scores: torch.Tensor, labels: torch.Tensor):
+        """Passthrough to scikit."""
         return torch.tensor(
             accuracy_score(y_true=labels.cpu(), y_pred=scores.detach().cpu().numpy())
         )
@@ -43,6 +44,8 @@ class MRR(BaseMetric):
 
     def __init__(self, rank_in_ascending_order=False) -> None:
         """
+        Initialize MRR metric.
+
         rank_in_ascending_order:
           Should we get the rank in the ascending order or
           descending order, if set to True will calculate
@@ -69,9 +72,7 @@ class MRR(BaseMetric):
 
 
 class ROC(BaseMetric):
-    """ROC score implementation. e.g. We can use it in the LinkPredictionModel to
-    compute the similarity of the src-dst nodes.
-    """
+    """ROC score implementation with scikit."""
 
     def compute(self, scores: torch.Tensor, labels: torch.Tensor):
         """Compute metric value based on model scores and expected labels."""

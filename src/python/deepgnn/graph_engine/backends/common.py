@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Base graph engine backend class."""
 import abc
 from deepgnn.graph_engine._base import Graph
 

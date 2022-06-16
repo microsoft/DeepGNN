@@ -1,5 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+"""Configure command line arguments for pytorch trainers."""
 
 import argparse
 import uuid
@@ -7,8 +8,10 @@ from deepgnn.pytorch.common.consts import FP16_AMP, FP16_APEX, FP16_NO
 from deepgnn import TrainerType, TrainMode, get_current_user
 from deepgnn.graph_engine.snark.client import PartitionStorageType
 
+
 # fmt: off
 def init_trainer_args(parser: argparse.ArgumentParser):
+    """Configure trainer."""
     group = parser.add_argument_group("Trainer Parameters")
     group.add_argument("--trainer", type=TrainerType, default=TrainerType.BASE, choices=[TrainerType.BASE, TrainerType.HVD, TrainerType.DDP], help="Trainer type.")
     group.add_argument("--user_name", type=str, default=get_current_user(), help="User name when running jobs.")
@@ -42,6 +45,7 @@ def init_trainer_args(parser: argparse.ArgumentParser):
 
 
 def init_fp16_args(parser: argparse.ArgumentParser):
+    """Configure arguments for training with half-precision floats."""
     group = parser.add_argument_group("FP16 Parameters")
     group.add_argument("--fp16", type=str, default=FP16_AMP, choices=[FP16_AMP, FP16_APEX, FP16_NO], help="Enable fp16 mix precision training.")
     group.add_argument("--apex_opt_level", type=str, default="O2", help="Apex FP16 mixed precision training opt level.")

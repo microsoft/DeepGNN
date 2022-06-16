@@ -1,9 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-load("@rules_python//python:defs.bzl", "py_test")
-load("//config:variables.bzl", "PLATFORM_DEFINES")
-load("@rules_python//python:defs.bzl", "py_library")
+load("@rules_python//python:defs.bzl", "py_test", "py_library")
 load("@pip_deps//:requirements.bzl", "requirement")
 
 py_library(
@@ -13,7 +11,6 @@ py_library(
         "_base.py",
         "adl_uploader.py",
         "graph_dataset.py",
-        "graph_fs.py",
         "graph_ops.py",
         "multihop.py",
         "prefetch.py",
