@@ -3,7 +3,6 @@
 
 """Decoders wihch is used to decode a line of text into node object."""
 import abc
-from cmath import e
 import json
 import logging
 import csv

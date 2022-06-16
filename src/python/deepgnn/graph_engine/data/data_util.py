@@ -151,23 +151,13 @@ class Dataset(Client):
             data_dir, train_node_ratio, random_selection
         )
 
-<<<<<<< HEAD
-        ## build graph - JSON
+        # build graph - JSON
         graph_file = os.path.join(data_dir, "graph.linear")
         self._write_linear_graph(nodes, node_types, train_adjs, test_adjs, graph_file)
         meta_file = os.path.join(data_dir, "meta.json")
         self._write_meta_file(meta_file)
 
-        ## convert graph: Linear -> Binary
-=======
-        # build graph - JSON
-        graph_file = os.path.join(data_dir, "graph.json")
-        self._write_json_graph(nodes, node_types, train_adjs, test_adjs, graph_file)
-        meta_file = os.path.join(data_dir, "meta.json")
-        self._write_meta_file(meta_file)
-
-        # convert graph: JSON -> Binary
->>>>>>> 466a076605b7bef0a9b3147145e84fbbb8b272a3
+        # convert graph: Linear -> Binary
         convert.MultiWorkersConverter(
             graph_path=graph_file,
             meta_path=meta_file,

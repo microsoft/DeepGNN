@@ -1,12 +1,11 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-"""Set of writers to convert graph from linar format to binary."""
+"""Set of writers to convert graph from decoded format to binary."""
 import ctypes
 import os
 import tempfile
 import struct
-import sys
 import typing
 
 import numpy as np
@@ -42,10 +41,12 @@ class NodeWriter:
         self.count = 0
         self.feature_writer = NodeFeatureWriter(folder, partition)
 
-    def add(self, node_id, node_type, features):
+    def add(self, node_id: int, node_type: int, features: list):
         """Write node features and data about edges from this node to binary.
         Args:
-            node (typing.Any): dictionary with information about
+            node_id: int
+            node_type: int
+            features: list[ndarray]
         """
         self.nm.write(
             struct.pack(
@@ -97,10 +98,10 @@ class NodeFeatureWriter:
         )
         self.nfd_pos = self.nfd.tell()
 
-    def add(self, node: typing.Any):
+    def add(self, node: dict):
         """Add node to binary output.
         Args:
-            node (typing.Any): graph node with all node features and edges from it.
+            node (dict): graph node with all node features and edges from it.
         """
         self.ni.write(ctypes.c_uint64(self.nfi.tell() // 8))  # type: ignore
         for k in convert_features(node):
@@ -151,10 +152,13 @@ class EdgeWriter:
 
         self.feature_writer = EdgeFeatureWriter(folder, partition, self.efi)
 
-    def add(self, dst, tp, weight, features: typing.Any):
+    def add(self, dst: int, tp: int, weight: float, features: list):
         """Append edges starting at node to the output.
         Args:
-            node (typing.Any): node with edges data
+            dst: int
+            tp: int
+            weight: float
+            features: list[ndarray]
         """
         # Record order is important for C++ reader: order fields by size for faster load.
         self.ei.write(
@@ -212,7 +216,7 @@ class EdgeFeatureWriter:
         )
         self.efd_pos = self.efd.tell()
 
-    def add(self, head: typing.Any):
+    def add(self, head: dict):
         """Add edge features the binary output.
         Args:
             head (typing.Dict): collection of float/uint64/binary features.
@@ -281,10 +285,12 @@ class NodeAliasWriter:
             for tp in range(node_type_count)
         ]
 
-    def add(self, node_id, tp, weight):
+    def add(self, node_id: int, tp: int, weight: float):
         """Record node information.
         Args:
-            node (typing.Any): Node with information about it's id, type and weight
+            node_id: int
+            tp: int
+            weight: float
         """
         self.nodes[tp].write(ctypes.c_uint64(node_id))
         self.weights[tp].write(ctypes.c_float(weight))
@@ -367,10 +373,13 @@ class EdgeAliasWriter:
             for tp in range(edge_type_count)
         ]
 
-    def add(self, src, dst, tp, weight: typing.Dict):
+    def add(self, src: int, dst: int, tp: int, weight: float):
         """Add edge to the alias tables.
         Args:
-            edge (typing.Dict): Edge with information about it's source/destination ids, type and weight
+            src: int
+            dst: int
+            tp: int
+            weight: float
         """
         self.pairs[tp].write(ctypes.c_uint64(src))  # type: ignore
         self.pairs[tp].write(ctypes.c_uint64(dst))  # type: ignore

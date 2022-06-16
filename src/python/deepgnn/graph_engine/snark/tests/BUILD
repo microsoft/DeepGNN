@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 load("@rules_python//python:defs.bzl", "py_test")
+load("//config:variables.bzl", "PLATFORM_DEFINES")
 load("@pip_deps//:requirements.bzl", "requirement")
 
 py_test(
@@ -247,4 +248,26 @@ py_test(
         requirement("scikit-learn"),
     ],
     target_compatible_with = ["@bazel_tools//platforms:linux"],
+)
+
+py_binary(
+    name = "convert_benchmark",
+    srcs = ["convert_benchmark.py"],
+    imports = ["../../../../"],
+    main = "convert_benchmark.py",
+    python_version = "PY3",
+    srcs_version = "PY3",
+    deps = [
+        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
+        "//src/python/deepgnn/graph_engine:graph_engine",
+        requirement("importlib_metadata"),
+        requirement("numpy"),
+        requirement("pytest"),
+        requirement("fsspec"),
+        requirement("networkx"),
+        requirement("opencensus"),
+        requirement("opencensus-context"),
+        requirement("opencensus-ext-azure"),
+        requirement("azure-datalake-store"),
+    ],
 )

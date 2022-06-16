@@ -967,7 +967,6 @@ def test_linear_header():
         npt.assert_equal(np.frombuffer(result[88:96], dtype=np.int32), [5, 6])
 
 
-"""
 def test_linear_header_multiple_partitions():
     output = tempfile.TemporaryDirectory()
     data_data = [
@@ -994,7 +993,7 @@ def test_linear_header_multiple_partitions():
         assert result[40:48] == (2).to_bytes(8, byteorder=sys.byteorder)
         assert result[48:56] == (2).to_bytes(8, byteorder=sys.byteorder)
         assert result[56:60] == (0).to_bytes(4, byteorder=sys.byteorder)
-"""
+
 
 if __name__ == "__main__":
     sys.exit(
