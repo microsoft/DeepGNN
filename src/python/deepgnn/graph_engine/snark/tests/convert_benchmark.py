@@ -6,7 +6,11 @@ import os
 from time import time
 import numpy as np
 import deepgnn.graph_engine.snark.convert as convert
-from deepgnn.graph_engine.snark.decoders import JsonDecoder, LinearDecoder, json_to_linear
+from deepgnn.graph_engine.snark.decoders import (
+    JsonDecoder,
+    LinearDecoder,
+    json_to_linear,
+)
 
 
 def generate_json(folder, N, fan_out):
@@ -89,7 +93,9 @@ def benchmark_json_to_binary(data_name, meta_name, output_dir):
 
 def benchmark_linear_to_binary(data_name, meta_name, output_dir):
     # buffer_size reduces number of TextFileIterator q.get calls == json, record_per_step reduces number TextFileIterator.__next__ == json
-    return benchmark_to_binary(data_name, meta_name, output_dir, LinearDecoder, buffer_size=50 // 4)#, record_per_step=512 * (EDGES + 1))
+    return benchmark_to_binary(
+        data_name, meta_name, output_dir, LinearDecoder, buffer_size=50 // 4
+    )  # , record_per_step=512 * (EDGES + 1))
 
 
 NODES = 2 * 10**5
@@ -112,7 +118,7 @@ if __name__ == "__main__":
             f"JSON to Linear: {benchmark_json_to_linear(data_name, meta_name, linear_name)}"
         )
 
-        #exit()
+        # exit()
     import cProfile, pstats
     from pstats import SortKey
 
@@ -123,24 +129,28 @@ if __name__ == "__main__":
             pr = cProfile.Profile()
             pr.enable()
 
-        print(f"JSON to Binary: {benchmark_json_to_binary(data_name, meta_name, json_binary_dir)}")
+        print(
+            f"JSON to Binary: {benchmark_json_to_binary(data_name, meta_name, json_binary_dir)}"
+        )
 
         if profile:
             pr.disable()
             ps = pstats.Stats(pr)
             ps.strip_dirs()
-            ps.sort_stats(SortKey.CUMULATIVE) #.print_stats()
+            ps.sort_stats(SortKey.CUMULATIVE)  # .print_stats()
             ps.dump_stats("/home/user/DeepGNN/profile_json")
 
     if profile:
         pr = cProfile.Profile()
         pr.enable()
 
-    print(f"Linear to Binary: {benchmark_linear_to_binary(linear_name, meta_name, linear_binary_dir)}")
+    print(
+        f"Linear to Binary: {benchmark_linear_to_binary(linear_name, meta_name, linear_binary_dir)}"
+    )
 
     if profile:
         pr.disable()
         ps = pstats.Stats(pr)
         ps.strip_dirs()
-        ps.sort_stats(SortKey.CUMULATIVE) #.print_stats()
+        ps.sort_stats(SortKey.CUMULATIVE)  # .print_stats()
         ps.dump_stats("/home/user/DeepGNN/profile")

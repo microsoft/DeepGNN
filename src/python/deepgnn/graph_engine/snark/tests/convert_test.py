@@ -14,7 +14,12 @@ import numpy as np
 import numpy.testing as npt
 
 import deepgnn.graph_engine.snark.convert as convert
-from deepgnn.graph_engine.snark.decoders import LinearDecoder, JsonDecoder, TsvDecoder, json_to_linear
+from deepgnn.graph_engine.snark.decoders import (
+    LinearDecoder,
+    JsonDecoder,
+    TsvDecoder,
+    json_to_linear,
+)
 from deepgnn.graph_engine.snark.dispatcher import QueueDispatcher
 
 
@@ -605,9 +610,7 @@ def graph_with_sparse_features(request):
 param_sparse = [LinearDecoder, JsonDecoder]
 
 
-@pytest.mark.parametrize(
-    "graph_with_sparse_features", param_sparse, indirect=True
-)
+@pytest.mark.parametrize("graph_with_sparse_features", param_sparse, indirect=True)
 def test_sanity_node_sparse_features_index(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
     data_name, meta_name, decoder = graph_with_sparse_features
@@ -629,9 +632,7 @@ def test_sanity_node_sparse_features_index(graph_with_sparse_features):
         assert actual[6:11] == [60, 96, 96, 96, 128]
 
 
-@pytest.mark.parametrize(
-    "graph_with_sparse_features", param_sparse, indirect=True
-)
+@pytest.mark.parametrize("graph_with_sparse_features", param_sparse, indirect=True)
 def test_sanity_node_sparse_features_data(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
     data_name, meta_name, decoder = graph_with_sparse_features
@@ -676,9 +677,7 @@ def test_sanity_node_sparse_features_data(graph_with_sparse_features):
         )
 
 
-@pytest.mark.parametrize(
-    "graph_with_sparse_features", param_sparse, indirect=True
-)
+@pytest.mark.parametrize("graph_with_sparse_features", param_sparse, indirect=True)
 def test_sanity_edge_sparse_features_index(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
     data_name, meta_name, decoder = graph_with_sparse_features
@@ -701,9 +700,7 @@ def test_sanity_edge_sparse_features_index(graph_with_sparse_features):
         assert actual[16:19] == [362, 362, 394]
 
 
-@pytest.mark.parametrize(
-    "graph_with_sparse_features", param_sparse, indirect=True
-)
+@pytest.mark.parametrize("graph_with_sparse_features", param_sparse, indirect=True)
 def test_sanity_edge_sparse_features_data(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
     data_name, meta_name, decoder = graph_with_sparse_features
@@ -816,6 +813,7 @@ def _gen_linear(output, data_data, meta_data, partitions=1):
         decoder_class=LinearDecoder,
     ).convert()
 
+
 def test_linear_header():
     output = tempfile.TemporaryDirectory()
     data_data = [
@@ -895,11 +893,17 @@ def test_linear_header():
         result = nfd.read(expected_size + 1)
         assert len(result) == expected_size
         npt.assert_equal(np.frombuffer(result[0:16], dtype=np.uint64), [1, 2])
-        npt.assert_almost_equal(np.frombuffer(result[16:24], dtype=np.float32), [1.1, 2.2])
+        npt.assert_almost_equal(
+            np.frombuffer(result[16:24], dtype=np.float32), [1.1, 2.2]
+        )
         npt.assert_equal(np.frombuffer(result[24:40], dtype=np.uint64), [3, 4])
-        npt.assert_almost_equal(np.frombuffer(result[40:48], dtype=np.float32), [3.3, 4.4])
+        npt.assert_almost_equal(
+            np.frombuffer(result[40:48], dtype=np.float32), [3.3, 4.4]
+        )
         npt.assert_equal(np.frombuffer(result[48:64], dtype=np.uint64), [5, 6])
-        npt.assert_almost_equal(np.frombuffer(result[64:72], dtype=np.float32), [5.5, 6.6])
+        npt.assert_almost_equal(
+            np.frombuffer(result[64:72], dtype=np.float32), [5.5, 6.6]
+        )
 
     output = tempfile.TemporaryDirectory()
     data_data = [
@@ -918,11 +922,17 @@ def test_linear_header():
         result = nfd.read(expected_size + 1)
         assert len(result) == expected_size
         npt.assert_equal(np.frombuffer(result[0:16], dtype=np.uint64), [1, 2])
-        npt.assert_almost_equal(np.frombuffer(result[16:24], dtype=np.float32), [1.1, 2.2])
+        npt.assert_almost_equal(
+            np.frombuffer(result[16:24], dtype=np.float32), [1.1, 2.2]
+        )
         npt.assert_equal(np.frombuffer(result[24:40], dtype=np.uint64), [3, 4])
-        npt.assert_almost_equal(np.frombuffer(result[40:48], dtype=np.float32), [3.3, 4.4])
+        npt.assert_almost_equal(
+            np.frombuffer(result[40:48], dtype=np.float32), [3.3, 4.4]
+        )
         npt.assert_equal(np.frombuffer(result[48:64], dtype=np.uint64), [5, 6])
-        npt.assert_almost_equal(np.frombuffer(result[64:72], dtype=np.float32), [5.5, 6.6])
+        npt.assert_almost_equal(
+            np.frombuffer(result[64:72], dtype=np.float32), [5.5, 6.6]
+        )
 
     output = tempfile.TemporaryDirectory()
     data_data = [
@@ -941,16 +951,23 @@ def test_linear_header():
         result = nfd.read(expected_size + 1)
         assert len(result) == expected_size
         npt.assert_equal(np.frombuffer(result[0:16], dtype=np.uint64), [1, 2])
-        npt.assert_almost_equal(np.frombuffer(result[16:24], dtype=np.float32), [1.1, 2.2])
+        npt.assert_almost_equal(
+            np.frombuffer(result[16:24], dtype=np.float32), [1.1, 2.2]
+        )
         npt.assert_equal(np.frombuffer(result[24:32], dtype=np.int32), [1, 2])
         npt.assert_equal(np.frombuffer(result[32:48], dtype=np.uint64), [3, 4])
-        npt.assert_almost_equal(np.frombuffer(result[48:56], dtype=np.float32), [3.3, 4.4])
+        npt.assert_almost_equal(
+            np.frombuffer(result[48:56], dtype=np.float32), [3.3, 4.4]
+        )
         npt.assert_equal(np.frombuffer(result[56:64], dtype=np.int32), [3, 4])
         npt.assert_equal(np.frombuffer(result[64:80], dtype=np.uint64), [5, 6])
-        npt.assert_almost_equal(np.frombuffer(result[80:88], dtype=np.float32), [5.5, 6.6])
+        npt.assert_almost_equal(
+            np.frombuffer(result[80:88], dtype=np.float32), [5.5, 6.6]
+        )
         npt.assert_equal(np.frombuffer(result[88:96], dtype=np.int32), [5, 6])
 
-'''
+
+"""
 def test_linear_header_multiple_partitions():
     output = tempfile.TemporaryDirectory()
     data_data = [
@@ -977,7 +994,7 @@ def test_linear_header_multiple_partitions():
         assert result[40:48] == (2).to_bytes(8, byteorder=sys.byteorder)
         assert result[48:56] == (2).to_bytes(8, byteorder=sys.byteorder)
         assert result[56:60] == (0).to_bytes(4, byteorder=sys.byteorder)
-'''
+"""
 
 if __name__ == "__main__":
     sys.exit(

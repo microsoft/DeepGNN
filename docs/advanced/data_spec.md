@@ -9,8 +9,64 @@ DeepGNN supports both homogeneous and heterogeneous graphs. Nodes and Edges supp
 
 DeepGNN supports two file formats: JSON and TSV. Users can generate a graph in either format then our pipeline will convert it into binary for training and inference.
 
-1. [JSON](#json-format): Heterogeneous or homegeneous graph.
-2. [TSV](#tsv-format): Homogeneous graph only.
+1. [Linear](#linear-format): Heterogeneous or homegeneous graph.
+2. [JSON](#json-format): Heterogeneous or homegeneous graph.
+3. [TSV](#tsv-format): Homogeneous graph only.
+
+## Linear Format
+
+Here is the graph data Linear format. The format requires two files: graph.linear and meta.json.
+
+### Graph Data
+
+`graph.linear` layout
+
+```
+<node info> <edge_1_info> <edge_2_info> ...
+```
+  node_info: -1 node_id node_type node_weight <features>
+  edge_info: src dst edge_type edge_weight <features>
+  features[dense]: dtype_name length v1 v2 ... dtype_name2 length2 v1 v2 ...
+  features[sparse]: dtype_name coords.size,values.size c1 c2 ... v1 v2 ...
+  features[sparse]: dtype_name coords.shape[0],coords.shape[1],values.size c1 c2 ... v1 v2
+
+Here is a concrete example,
+
+```
+-1 0 1 .5 int32 3 1 1 1 float32 2 1.1 1.1 0 1 0 .5 uint8 2,3 0 4 1 1 1
+-1 1 1 .5 int32 3 1 1 1 float32 2 1.1 1.1 1 0 0 .5 uint8 2,3 0 4 1 1 1
+```
+
+### Graph Metadata
+
+The metadata describes the number of node/edge types and the number of three attributes of the nodes/edges in the graph.
+
+Here is a concrete `meta.json` example,
+
+```JSON
+{
+    "node_type_num": 1,
+    "edge_type_num": 1,
+    "node_uint64_feature_num": 1,
+    "node_float_feature_num": 1,
+    "node_binary_feature_num": 1,
+    "edge_uint64_feature_num": 0,
+    "edge_float_feature_num": 2,
+    "edge_binary_feature_num": 1
+}
+```
+
+In this example `node_uint64_feature_num` field represents both dense and sparse features.
+
+Optional linear format only headers:
+    "node_default_type": int Type of all nodes, if set do not add node type to any nodes.
+    "node_default_weight": int Weight of all nodes, if set do not add node weight to any nodes.
+    "node_default_features": "dtype_name length ..." Feature vectors dtype and length.
+        Any value can be "none" which will require it to be specified for each node.
+        There can be more feature vectors than specified.
+    "edge_default_type": int Same as node except for all edges.
+    "edge_default_weight": int Same as node except for all edges.
+    "edge_default_features": "dtype_name length ..." Same as node except for all edges.
 
 ## JSON Format
 

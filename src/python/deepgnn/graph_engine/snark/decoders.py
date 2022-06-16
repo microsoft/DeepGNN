@@ -4,11 +4,9 @@
 """Decoders wihch is used to decode a line of text into node object."""
 import abc
 from cmath import e
-import dataclasses
 import json
 import logging
 import csv
-from enum import Enum
 from typing import Any, Dict
 import numpy as np
 
@@ -17,6 +15,7 @@ logger = logging.getLogger()
 
 class Decoder(abc.ABC):
     """Interface to convert one line of text into node object."""
+
     convert_map = {
         "double_feature": np.float64,
         "float_feature": np.float32,
@@ -33,6 +32,9 @@ class Decoder(abc.ABC):
         "int8_feature": np.int8,
     }
 
+    def set_metadata(self, metadata: dict):
+        """Parse dict from metadata.json."""
+
     @abc.abstractmethod
     def decode(self, line: str):
         """Decode the line into a "node" object."""
@@ -40,10 +42,12 @@ class Decoder(abc.ABC):
 
 class LinearDecoder(Decoder):
     """Convert the text line into node object.
-    Linear format:
-        {node info} {edge_1_info} {edge_2_info} ...
-        node_info: -1 node_id node_type node_weight {features}
-        edge_info: src dst edge_type edge_weight {features}
+
+    Linear Format:
+        <node info> <edge_1_info> <edge_2_info> ...
+
+        node_info: -1 node_id node_type node_weight <features>
+        edge_info: src dst edge_type edge_weight <features>
         features[dense]: dtype_name length v1 v2 ... dtype_name2 length2 v1 v2 ...
         features[sparse]: dtype_name coords.size,values.size c1 c2 ... v1 v2 ...
         features[sparse]: dtype_name coords.shape[0],coords.shape[1],values.size c1 c2 ... v1 v2
@@ -51,16 +55,46 @@ class LinearDecoder(Decoder):
     Linear Format Example
         -1 0 1 .5 int32 3 1 1 1 float32 2 1.1 1.1 0 1 0 .5 uint8 2,3 0 4 1 1 1
         -1 1 1 .5 int32 3 1 1 1 float32 2 1.1 1.1 1 0 0 .5 uint8 2,3 0 4 1 1 1
+
+    Metadata:
+        The following headers can be added to the metadata json file.
+        "node_default_type": int Type of all nodes, if set do not add node type to any nodes.
+        "node_default_weight": int Weight of all nodes, if set do not add node weight to any nodes.
+        "node_default_features": "dtype_name length ..." Feature vectors dtype and length.
+            Any value can be "none" which will require it to be specified for each node.
+            There can be more feature vectors than specified.
+        "edge_default_type": int Same as node except for all edges.
+        "edge_default_weight": int Same as node except for all edges.
+        "edge_default_features": "dtype_name length ..." Same as node except for all edges.
     """
 
     def __init__(self):
         """Initialize the Decoder."""
         super().__init__()
 
-        self.node_type, self.node_weight, self.node_feature_types, self.node_feature_lens, self.n_node_feature = None, None, [], [], 0
-        self.edge_type, self.edge_weight, self.edge_feature_types, self.edge_feature_lens, self.n_edge_feature = None, None, [], [], 0
- 
-    def encode(self, node_id: int, node_type: int, node_weight: float, node_features: list, edges: list) -> str:
+        (
+            self.node_type,
+            self.node_weight,
+            self.node_feature_types,
+            self.node_feature_lens,
+            self.n_node_feature,
+        ) = (None, None, [], [], 0)
+        (
+            self.edge_type,
+            self.edge_weight,
+            self.edge_feature_types,
+            self.edge_feature_lens,
+            self.n_edge_feature,
+        ) = (None, None, [], [], 0)
+
+    def encode(
+        self,
+        node_id: int,
+        node_type: int,
+        node_weight: float,
+        node_features: list,
+        edges: list,
+    ) -> str:
         """
         Convert data to a line of the linear format.
 
@@ -76,6 +110,7 @@ class LinearDecoder(Decoder):
         ------
         str Linear format version of input.
         """
+
         def _feature_str(features):
             def get_f(f):
                 if f is None:
@@ -88,7 +123,9 @@ class LinearDecoder(Decoder):
                         coordinates_str = " ".join(map(str, coords))
                         length = f"{coords.shape[0]}"
                     else:
-                        coordinates_str = " ".join((" ".join(map(str, c)) for c in coords))
+                        coordinates_str = " ".join(
+                            (" ".join(map(str, c)) for c in coords)
+                        )
                         length = f"{coords.shape[0]},{coords.shape[1]}"
 
                     return f"{values.dtype.name} {length},{values.size} {coordinates_str} {' '.join(map(str, values))}"
@@ -96,6 +133,7 @@ class LinearDecoder(Decoder):
 
             # TODO None and string case
             return " ".join(get_f(f) for f in features)
+
         output = f"-1 {node_id} {node_type} {node_weight} {_feature_str(node_features)}"
         for edge_src, edge_dst, edge_type, edge_weight, edge_features in edges:
             if output[-1] != " ":
@@ -103,30 +141,32 @@ class LinearDecoder(Decoder):
             output += f"{edge_src} {edge_dst} {edge_type} {edge_weight} {_feature_str(edge_features)}"
         return output
 
-    def set_metadata(self, metadata):
+    def set_metadata(self, metadata: dict):
+        """Parse dict from metadata.json."""
+
         def _parse_default_features(data: str):
-                item_features_types, item_features_lens = [], []
-                data = data.split(" ")
-                idx = 0
-                while True:
-                    try:
-                        item_features_type = data[idx]
-                        if item_features_type.lower() == "none":
-                            item_features_type = None
-                        item_features_types.append(item_features_type)
+            item_features_types, item_features_lens = [], []
+            data = data.split(" ")
+            idx = 0
+            while True:
+                try:
+                    item_features_type = data[idx]
+                    if item_features_type.lower() == "none":
+                        item_features_type = None
+                    item_features_types.append(item_features_type)
+                    idx += 1
+                except (IndexError, ValueError):
+                    break
+                try:
+                    item_features_len = list(map(int, data[idx].split(",")))
+                    item_features_lens.append(item_features_len)
+                    idx += 1
+                except (IndexError, ValueError):
+                    if data[idx].lower() == "none":
+                        item_features_lens.append(None)
                         idx += 1
-                    except (IndexError, ValueError): 
-                        break
-                    try:
-                        item_features_len = list(map(int, data[idx].split(",")))
-                        item_features_lens.append(item_features_len)
-                        idx += 1
-                    except (IndexError, ValueError):
-                        if data[idx].lower() == "none":
-                            item_features_lens.append(None)
-                            idx += 1
-                        continue
-                return item_features_types, item_features_lens, len(item_features_types)
+                    continue
+            return item_features_types, item_features_lens, len(item_features_types)
 
         # (line optional)node_defaults type weight node_feature_type_1 node_feature_len_1 edge_defaults ...
         if "node_default_type" in metadata:
@@ -134,29 +174,45 @@ class LinearDecoder(Decoder):
         if "node_default_weight" in metadata:
             self.node_weight = metadata["node_default_weight"]
         if "node_default_features" in metadata:
-            self.node_feature_types, self.node_feature_lens, self.n_node_feature = _parse_default_features(metadata["node_default_features"])
+            (
+                self.node_feature_types,
+                self.node_feature_lens,
+                self.n_node_feature,
+            ) = _parse_default_features(metadata["node_default_features"])
 
         if "edge_default_type" in metadata:
             self.edge_type = metadata["edge_default_type"]
         if "edge_default_weight" in metadata:
             self.edge_weight = metadata["edge_default_weight"]
         if "edge_default_features" in metadata:
-            self.edge_feature_types, self.edge_feature_lens, self.n_edge_feature = _parse_default_features(metadata["edge_default_features"])
+            (
+                self.edge_feature_types,
+                self.edge_feature_lens,
+                self.n_edge_feature,
+            ) = _parse_default_features(metadata["edge_default_features"])
 
-    def decode(self, line: str):
-        """Use json package to convert the json text line into node object."""
+    def decode(self, line: str) -> (int, int, int, float, list):
+        """Convert text line into node object."""
         data = line.split()
 
         idx = 0
         while True:
             try:
-                src, dst = data[idx:idx+2]
+                src, dst = data[idx : idx + 2]
                 if idx == 0:
                     typ, weight = self.node_type, self.node_weight
-                    item_feature_types, item_feature_lens, default_feature_len = self.node_feature_types, self.node_feature_lens, self.n_node_feature
+                    item_feature_types, item_feature_lens, default_feature_len = (
+                        self.node_feature_types,
+                        self.node_feature_lens,
+                        self.n_node_feature,
+                    )
                 else:
                     typ, weight = self.edge_type, self.edge_weight
-                    item_feature_types, item_feature_lens, default_feature_len = self.edge_feature_types, self.edge_feature_lens, self.n_edge_feature
+                    item_feature_types, item_feature_lens, default_feature_len = (
+                        self.edge_feature_types,
+                        self.edge_feature_lens,
+                        self.n_edge_feature,
+                    )
                 idx += 2
                 if typ is None:
                     typ = data[idx]
@@ -166,7 +222,7 @@ class LinearDecoder(Decoder):
                     idx += 1
             except ValueError:
                 break
-            
+
             features = []
             n_features = 0
             while True:
@@ -204,8 +260,15 @@ class LinearDecoder(Decoder):
                         value = None
                     else:
                         value = (
-                            np.array(data[idx:coordinates_offset], dtype=np.int64).reshape(coordinates_len),
-                            np.array(data[coordinates_offset:coordinates_offset+values_len], dtype=key),
+                            np.array(
+                                data[idx:coordinates_offset], dtype=np.int64
+                            ).reshape(coordinates_len),
+                            np.array(
+                                data[
+                                    coordinates_offset : coordinates_offset + values_len
+                                ],
+                                dtype=key,
+                            ),
                         )
                     idx += coordinates_len_total + values_len
                 else:
@@ -215,7 +278,7 @@ class LinearDecoder(Decoder):
                     elif length == 1 and key == "binary_feature":
                         value = data[idx]
                     else:
-                        value = np.array(data[idx:idx+length], dtype=key)
+                        value = np.array(data[idx : idx + length], dtype=key)
                     idx += length
 
                 features.append(value)
@@ -270,7 +333,10 @@ class JsonDecoder(Decoder):
                 if key.startswith("sparse"):
                     value = (
                         np.array(value["coordinates"], dtype=np.int64),
-                        np.array(value["values"], dtype=self.convert_map[key.replace("sparse_", "")]),
+                        np.array(
+                            value["values"],
+                            dtype=self.convert_map[key.replace("sparse_", "")],
+                        ),
                     )
                 elif key != "binary_feature":
                     value = np.array(value, dtype=self.convert_map[key])
@@ -278,12 +344,16 @@ class JsonDecoder(Decoder):
 
         return ret_list
 
-    def decode(self, line: str):
+    def decode(self, line: str) -> (int, int, int, float, list):
         """Use json package to convert the json text line into node object."""
         data = json.loads(line) if isinstance(line, str) else line
-        yield -1, data["node_id"], data["node_type"], data["node_weight"], self._pull_features(data)
+        yield -1, data["node_id"], data["node_type"], data[
+            "node_weight"
+        ], self._pull_features(data)
         for edge in data["edge"]:
-            yield edge["src_id"], edge["dst_id"], edge["edge_type"], edge["weight"], self._pull_features(edge)
+            yield edge["src_id"], edge["dst_id"], edge["edge_type"], edge[
+                "weight"
+            ], self._pull_features(edge)
 
 
 class TsvDecoder(Decoder):
@@ -347,7 +417,7 @@ class TsvDecoder(Decoder):
 
         return feature_map
 
-    def decode(self, line: str):
+    def decode(self, line: str) -> (int, int, int, float, list):
         """Decode tsv based text line into node object."""
         assert line is not None and len(line) > 0
         columns = next(csv.reader([line], delimiter="\t"))
@@ -361,7 +431,9 @@ class TsvDecoder(Decoder):
         node_id = int(columns[0])
         node_type = int(columns[1]) if columns[1] else 0
         node_weight = float(columns[2]) if columns[2] else 0.0
-        yield -1, node_id, node_type, node_weight, self._parse_feature_string(columns[3])
+        yield -1, node_id, node_type, node_weight, self._parse_feature_string(
+            columns[3]
+        )
 
         if not columns[4]:
             return
@@ -373,14 +445,14 @@ class TsvDecoder(Decoder):
             assert len(neighbor_columns) > 0 and len(neighbor_columns[0]) > 0
             dst_id = int(neighbor_columns[0])
 
-            for i in range(
-                TsvDecoder.NEIGHBOR_COLUMN_COUNT - len(neighbor_columns)
-            ):
+            for i in range(TsvDecoder.NEIGHBOR_COLUMN_COUNT - len(neighbor_columns)):
                 neighbor_columns.append("")
 
             dst_type = int(neighbor_columns[1]) if neighbor_columns[1] else 0
             dst_weight = float(neighbor_columns[2]) if neighbor_columns[2] else 0.0
-            yield node_id, dst_id, dst_type, dst_weight, self._parse_feature_string(neighbor_columns[3])
+            yield node_id, dst_id, dst_type, dst_weight, self._parse_feature_string(
+                neighbor_columns[3]
+            )
 
 
 def json_node_to_linear(node):
@@ -389,7 +461,7 @@ def json_node_to_linear(node):
     node = next(gen)[1:]
     edges = [edge for edge in gen]
     output = LinearDecoder().encode(*node, edges)
-    output += '\n'
+    output += "\n"
     return output
 
 

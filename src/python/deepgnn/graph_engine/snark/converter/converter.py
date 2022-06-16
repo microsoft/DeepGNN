@@ -429,6 +429,7 @@ feature_items = [
     ("int8_feature", ctypes.c_int8),
 ]
 
+
 def convert_features(features: list):
     """Convert the node's feature into bytes sorted by index."""
     # Use a single container for all node features to make sure there are unique feature_ids
