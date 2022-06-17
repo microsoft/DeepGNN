@@ -6,7 +6,6 @@ import abc
 import json
 import logging
 import csv
-from typing import Any, Dict
 import numpy as np
 
 logger = logging.getLogger()
@@ -317,7 +316,7 @@ class JsonDecoder(Decoder):
         super().__init__()
 
     def _pull_features(self, item: dict) -> list:
-        """From item, pull all value dicts {idx: value} and order the values by idx"""
+        """From item, pull all value dicts {idx: value} and order the values by idx."""
         ret_list = []  # type: ignore
         curr = 0
         for key, values in item.items():

@@ -8,7 +8,6 @@ import typing
 import math
 import platform
 from operator import add
-from typing import Optional
 
 if platform.system() == "Windows":
     from multiprocessing.connection import PipeConnection as Connection  # type: ignore
@@ -26,7 +25,6 @@ from deepgnn.graph_engine.snark.decoders import (
     Decoder,
     LinearDecoder,
 )
-import ctypes
 from deepgnn.graph_engine.snark.dispatcher import (
     PipeDispatcher,
     Dispatcher,

@@ -17,8 +17,8 @@ from deepgnn.graph_engine.snark.meta import _Element
 
 
 class NodeWriter:
-    """
-    NodeWriter is an entry point for conversion from euler json files to DeepGNN files.
+    """NodeWriter is an entry point for conversion from euler json files to DeepGNN files.
+
     Every record is parsed one by one and passed to the relevant writers below. These writers
     put data in files with the partition suffix: `node_{partition}...`. We reserve one more
     suffix to follow after partition to split large files into smaller ones, so files will have names
@@ -27,6 +27,7 @@ class NodeWriter:
 
     def __init__(self, folder: str, partition: int):
         """Initialize writer and create binary files.
+
         Args:
             folder (str): location to write output
             partition (int): first part of the suffix to identify files from this writer.
@@ -43,6 +44,7 @@ class NodeWriter:
 
     def add(self, node_id: int, node_type: int, features: list):
         """Write node features and data about edges from this node to binary.
+
         Args:
             node_id: int
             node_type: int
@@ -70,6 +72,7 @@ class NodeFeatureWriter:
 
     def __init__(self, folder: str, partition: int):
         """Construct writer.
+
         Args:
             folder (str): path to output save output
             partition (int): first part of the suffix for binary files
@@ -100,6 +103,7 @@ class NodeFeatureWriter:
 
     def add(self, node: dict):
         """Add node to binary output.
+
         Args:
             node (dict): graph node with all node features and edges from it.
         """
@@ -124,6 +128,7 @@ class EdgeWriter:
 
     def __init__(self, folder: str, partition: int):
         """Initialize writer.
+
         Args:
             folder (str): path to save binary files
             partition (int): first part of a suffix in filename to identify partition
@@ -158,9 +163,9 @@ class EdgeWriter:
             ctypes.c_uint64(self.ei.tell() // (4 + 8 + 8 + 4))
         )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
 
-
     def add(self, dst: int, tp: int, weight: float, features: list):
         """Append edges starting at node to the output.
+
         Args:
             dst: int
             tp: int
@@ -205,6 +210,7 @@ class EdgeFeatureWriter:
 
     def __init__(self, folder: str, partition: int, efi: typing.BinaryIO):
         """Create writer and open binary files for output.
+
         Args:
             folder (str): location to store binary files
             partition (int): suffix to identify binary files from this writer
@@ -225,6 +231,7 @@ class EdgeFeatureWriter:
 
     def add(self, head: dict):
         """Add edge features the binary output.
+
         Args:
             head (typing.Dict): collection of float/uint64/binary features.
         """
@@ -238,6 +245,7 @@ class EdgeFeatureWriter:
 
     def tell(self) -> int:
         """Tell start position for the next feature data.
+
         Returns:
             [int]: Last position in data file.
         """
@@ -249,8 +257,8 @@ class EdgeFeatureWriter:
 
 
 class NodeAliasWriter:
-    """
-    NodeAliasWriter creates alias tables for weighted node sampling.
+    """NodeAliasWriter creates alias tables for weighted node sampling.
+
     To avoid using lots of memory it utilizes temp files to store all nodes added to
     it and creates alias tables from them when the writer is closed.
     Each file has a fixed record format: node[8 bytes], alias node[8 bytes]
@@ -259,6 +267,7 @@ class NodeAliasWriter:
 
     def __init__(self, folder: str, partition: int, node_type_count: int):
         """Initialize alias tables.
+
         Args:
             folder (str): where to store files
             partition (int): suffix identifier for alias tables created with this writer.
@@ -294,6 +303,7 @@ class NodeAliasWriter:
 
     def add(self, node_id: int, tp: int, weight: float):
         """Record node information.
+
         Args:
             node_id: int
             tp: int
@@ -336,8 +346,8 @@ class NodeAliasWriter:
 
 
 class EdgeAliasWriter:
-    """
-    EdgeAliasWriter creates alias tables for edges.
+    """EdgeAliasWriter creates alias tables for edges.
+
     These tables can be used for weighted edge sampling with the same pattern
     as NodeAliasWriter. Final files have a fixed record format with following contents:
     (edge source[8 bytes], alias edge_source[8_bytes],
@@ -347,6 +357,7 @@ class EdgeAliasWriter:
 
     def __init__(self, folder: str, partition: int, edge_type_count: int):
         """Initialize alias tables.
+
         Args:
             folder (str): where to store files
             partition (int): suffix identifier for alias tables created with this writer.
@@ -382,6 +393,7 @@ class EdgeAliasWriter:
 
     def add(self, src: int, dst: int, tp: int, weight: float):
         """Add edge to the alias tables.
+
         Args:
             src: int
             dst: int
