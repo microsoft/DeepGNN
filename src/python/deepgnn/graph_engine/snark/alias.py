@@ -27,7 +27,7 @@ class Vose:
     def _generate_table(self, weights: np.array):
         small = []
         large = []
-        for i, w in enumerate(weights):
+        for i, w in enumerate(weights):  # type: ignore
             if w < 1:
                 small.append(i)
             else:

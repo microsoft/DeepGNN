@@ -142,15 +142,15 @@ class LinearDecoder(Decoder):
     def set_metadata(self, metadata: dict):
         """Parse dict from metadata.json."""
 
-        def _parse_default_features(data: str):
+        def _parse_default_features(line: str):
             item_features_types, item_features_lens = [], []
-            data = data.split(" ")
+            data = line.split(" ")
             idx = 0
             while True:
                 try:
                     item_features_type = data[idx]
                     if item_features_type.lower() == "none":
-                        item_features_type = None
+                        item_features_type = None  # type: ignore
                     item_features_types.append(item_features_type)
                     idx += 1
                 except (IndexError, ValueError):
@@ -161,7 +161,7 @@ class LinearDecoder(Decoder):
                     idx += 1
                 except (IndexError, ValueError):
                     if data[idx].lower() == "none":
-                        item_features_lens.append(None)
+                        item_features_lens.append(None)  # type: ignore
                         idx += 1
                     continue
             return item_features_types, item_features_lens, len(item_features_types)
@@ -189,7 +189,7 @@ class LinearDecoder(Decoder):
                 self.n_edge_feature,
             ) = _parse_default_features(metadata["edge_default_features"])
 
-    def decode(self, line: str) -> (int, int, int, float, list):
+    def decode(self, line: str):
         """Convert text line into node object."""
         data = line.split()
 
@@ -274,9 +274,9 @@ class LinearDecoder(Decoder):
                     if not length:
                         value = None
                     elif length == 1 and key == "binary_feature":
-                        value = data[idx]
+                        value = data[idx]  # type: ignore
                     else:
-                        value = np.array(data[idx : idx + length], dtype=key)
+                        value = np.array(data[idx : idx + length], dtype=key)  # type: ignore
                     idx += length
 
                 features.append(value)
@@ -342,7 +342,7 @@ class JsonDecoder(Decoder):
 
         return ret_list
 
-    def decode(self, line: str) -> (int, int, int, float, list):
+    def decode(self, line: str):
         """Use json package to convert the json text line into node object."""
         data = json.loads(line) if isinstance(line, str) else line
         yield -1, data["node_id"], data["node_type"], data[
@@ -415,7 +415,7 @@ class TsvDecoder(Decoder):
 
         return feature_map
 
-    def decode(self, line: str) -> (int, int, int, float, list):
+    def decode(self, line: str):
         """Decode tsv based text line into node object."""
         assert line is not None and len(line) > 0
         columns = next(csv.reader([line], delimiter="\t"))

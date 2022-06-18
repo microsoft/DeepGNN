@@ -78,7 +78,7 @@ def get_linear_node(
         np.array(flt_feat, dtype=np.float32),
         np.array([label], dtype=np.float32),
     ]
-    edges = [(node_id, dst, 0, 1.0, []) for dst in train_neighbors]
+    edges: list = [(node_id, dst, 0, 1.0, []) for dst in train_neighbors]
     edges += [(node_id, dst, 1, 1.0, []) for dst in test_neighbors]
     return LinearDecoder().encode(node_id, ntype, 1.0, node_features, edges)
 

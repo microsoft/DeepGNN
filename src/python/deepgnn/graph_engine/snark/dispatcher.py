@@ -189,7 +189,7 @@ class QueueDispatcher(Dispatcher):
         meta: str,
         process: typing.Callable[[mp.Queue, mp.Queue, str, int, int], None],
         partion_func: typing.Callable[[str], int],
-        decoder_class: Decoder = LinearDecoder,
+        decoder_class: Decoder = LinearDecoder,  # type: ignore
         partition_offset: int = 0,
         use_threads: bool = False,
         skip_node_sampler: bool = False,

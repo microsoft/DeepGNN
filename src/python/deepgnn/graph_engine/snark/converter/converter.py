@@ -101,7 +101,7 @@ class NodeFeatureWriter:
         )
         self.nfd_pos = self.nfd.tell()
 
-    def add(self, node: dict):
+    def add(self, node: list):
         """Add node to binary output.
 
         Args:
@@ -229,14 +229,14 @@ class EdgeFeatureWriter:
         )
         self.efd_pos = self.efd.tell()
 
-    def add(self, head: dict):
+    def add(self, features: list):
         """Add edge features the binary output.
 
         Args:
-            head (typing.Dict): collection of float/uint64/binary features.
+            features (list): collection of float/uint64/binary features.
         """
         count = 0
-        for k in convert_features(head):
+        for k in convert_features(features):
             count += self.efi.write(ctypes.c_uint64(self.efd_pos))  # type: ignore
             if k is not None:
                 self.efd_pos += self.efd.write(k)
@@ -309,8 +309,8 @@ class NodeAliasWriter:
             tp: int
             weight: float
         """
-        self.nodes[tp].write(ctypes.c_uint64(node_id))
-        self.weights[tp].write(ctypes.c_float(weight))
+        self.nodes[tp].write(ctypes.c_uint64(node_id))  # type: ignore
+        self.weights[tp].write(ctypes.c_float(weight))  # type: ignore
 
     def close(self):
         """Convert temporary files to the final alias tables."""
@@ -477,19 +477,19 @@ def convert_features(features: list):
             ), f"Coordinates {coordinates} and values {values} dimensions don't match"
 
             coordinates_meta = bytes(
-                ctypes.c_uint32(coordinates.shape[-1] if coordinates.ndim > 1 else 1)
+                ctypes.c_uint32(coordinates.shape[-1] if coordinates.ndim > 1 else 1)  # type: ignore
             )
 
             if values.dtype == np.float16:
                 values_buf = np.array(values, dtype=np.float16).tobytes()
             else:
                 values_buf = (np.ctypeslib.as_ctypes_type(values.dtype) * len(values))()
-                values_buf[:] = values
+                values_buf[:] = values  # type: ignore
 
             # For matrices the number of values might be different than number of coordinates
             # Pack data in the following format: number of coordinates as uint32, then coordinates, and actual values in the end
             output.append(
-                bytes(ctypes.c_uint32(coordinates.size))
+                bytes(ctypes.c_uint32(coordinates.size))  # type: ignore
                 + coordinates_meta
                 + bytes(coordinates.data)
                 + values_buf
