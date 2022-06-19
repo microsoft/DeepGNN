@@ -457,11 +457,11 @@ def __add_sparse(node, feature, tp, container):
         )
 
         if int(k) in container:
-            newId = __get_unassigned_index(node)
+            new_id = __get_unassigned_index(node)
             get_logger().warning(
-                f"Duplicate feature ids found for a node, original: {k}, replaced with: {newId}"
+                f"Duplicate feature ids found for a node, original: {k}, replaced with: {new_id}"
             )
-            k = newId
+            k = new_id
 
         container[int(k)] = final_buf
 
@@ -486,11 +486,11 @@ def __add_dense(node, feature, tp, container):
         buf[:] = values
 
         if int(k) in container:
-            newId = __get_unassigned_index(node)
+            new_id = __get_unassigned_index(node)
             get_logger().warning(
-                f"Duplicate feature ids found for a node, original: {k}, replaced with: {newId}"
+                f"Duplicate feature ids found for a node, original: {k}, replaced with: {new_id}"
             )
-            k = newId
+            k = new_id
 
         container[int(k)] = buf
 
@@ -540,11 +540,11 @@ def convert_features(node: typing.Any):
         __convert_list_feature_to_dict(node, "float16_feature")
         for k in node["float16_feature"]:
             if int(k) in container:
-                newId = __get_unassigned_index(node)
+                new_id = __get_unassigned_index(node)
                 get_logger().warning(
-                    f"Duplicate feature ids found for a node, original: {k}, replaced with: {newId}"
+                    f"Duplicate feature ids found for a node, original: {k}, replaced with: {new_id}"
                 )
-                k = newId
+                k = new_id
 
             container[int(k)] = np.array(
                 node["float16_feature"][k], dtype=np.float16
@@ -566,11 +566,11 @@ def convert_features(node: typing.Any):
             ), f"Coordinates {coordinates} and values {values} dimensions don't match"
 
             if int(k) in container:
-                newId = __get_unassigned_index(node)
+                new_id = __get_unassigned_index(node)
                 get_logger().warning(
-                    f"Duplicate feature ids found for a node, original: {k}, replaced with: {newId}"
+                    f"Duplicate feature ids found for a node, original: {k}, replaced with: {new_id}"
                 )
-                k = newId
+                k = new_id
 
             container[int(k)] = (
                 int.to_bytes(
@@ -592,11 +592,11 @@ def convert_features(node: typing.Any):
         __convert_list_feature_to_dict(node, "binary_feature")
         for k in node["binary_feature"]:
             if int(k) in container:
-                newId = __get_unassigned_index(node)
+                new_id = __get_unassigned_index(node)
                 get_logger().warning(
-                    f"Duplicate feature ids found for a node, original: {k}, replaced with: {newId}"
+                    f"Duplicate feature ids found for a node, original: {k}, replaced with: {new_id}"
                 )
-                k = newId
+                k = new_id
 
             container[int(k)] = bytes(node["binary_feature"][k], "utf-8")
 
