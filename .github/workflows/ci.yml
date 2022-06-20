@@ -182,4 +182,4 @@ jobs:
         with:
           name: examples
       - name: Run ansible examples
-        run: cd ./examples/distributed/ansible/ && sudo chmod +x *.sh && bash ./run.sh
+        run: cd ./distributed/ansible/ && sudo chmod +x *.sh && bash ./run.sh
