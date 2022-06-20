@@ -24,4 +24,4 @@ Training time: (200 epochs)
 * GPU: P100 16GB
 
 ### Run GCN with your graph
-* [Prepare Graph Data](../../../docs/prepare_graph_data.md)
+* [Prepare Graph Data](../../../docs/advanced/data_spec.md)

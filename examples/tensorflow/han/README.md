@@ -2,7 +2,7 @@
 Reference: [Paper](https://arxiv.org/pdf/1903.07293).
 
 # Generate Graph Data
-* [Prepare Graph Data](../../prepare_graph_data.md)
+* [Prepare Graph Data](../../../docs/advanced/data_spec.md)
 
 # Job Augmentations
 ## HAN
