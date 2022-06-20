@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+"""Setup distributed GE using ansible."""
 import logging
 import os
 import json
@@ -17,7 +18,6 @@ def start_distributed_ge(
     partition_count: int = 1,
 ):
     """Start distributed graph engine using ansible playbook."""
-
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger()
 
@@ -26,7 +26,7 @@ def start_distributed_ge(
     # if force to deploy infrastructure, playbook will remote to
     # each host and install softwares depended.
     if deploy_infra:
-        logger.info(f"Start to deploy infrastructure to all machines.")
+        logger.info("Start to deploy infrastructure to all machines.")
         r = ansible_runner.run(
             private_data_dir=work_dir, playbook="playbooks/deploy.yml"
         )
@@ -78,9 +78,9 @@ def start_distributed_ge(
     # start playbook to launch GE.
     r = ansible_runner.run(private_data_dir=work_dir, playbook=tmp_playbook)
     if r.rc != 0:
-        logger.error(f"Error when start graph engine in distributed servers.")
+        logger.error("Error when start graph engine in distributed servers.")
     else:
-        logger.info(f"Success when start graph engine in distributed servers.")
+        logger.info("Success when start graph engine in distributed servers.")
 
     os.remove(tmp_playbook)
 
