@@ -467,7 +467,10 @@ def json_to_linear(filename_in, filename_out):
     """Convert graph.json to graph.linear."""
     file_in = open(filename_in, "r")
     file_out = open(filename_out, "w")
-    for line in file_in.readlines():
+    while True:
+        line = file_in.readline().strip()
+        if not line:
+            break
         node = json.loads(line)
         file_out.write(json_node_to_linear(node))
     file_in.close()
