@@ -83,7 +83,7 @@ class EmptyGraphEngine final : public snark::GraphEngine::Service
         return grpc::Status::OK;
     }
 
-    grpc::Status GetNeighborCount (::grpc::ServerContext *context, const snark::GetNeighborsRequest *request,
+    grpc::Status GetNeighborCounts (::grpc::ServerContext *context, const snark::GetNeighborsRequest *request,
                                    snark::GetNeighborCountsReply *response) override
     {
         return grpc::Status::OK;
@@ -180,6 +180,7 @@ void GRPCServer::HandleRpcs(size_t index)
     if (m_engine_service_impl)
     {
         new GetNeighborsCallData(m_engine_service, queue, *m_engine_service_impl);
+        new GetNeighborCountCallData(m_engine_service, queue, *m_engine_service_impl);
         new SampleNeighborsCallData(m_engine_service, queue, *m_engine_service_impl);
         new UniformSampleNeighborsCallData(m_engine_service, queue, *m_engine_service_impl);
         new NodeFeaturesCallData(m_engine_service, queue, *m_engine_service_impl);

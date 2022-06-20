@@ -231,6 +231,33 @@ def test_full_neighbor_graph_handle_empty_list(multi_partition_graph_data):
     npt.assert_array_equal(counts, [0])
 
 
+# Neighbor Count Tests
+def test_neighbor_count_graph_multiple_partitions(multi_partition_graph_data):
+    g = client.MemoryGraph(multi_partition_graph_data, [0, 1])
+    output_node_counts = g.neighbor_counts(
+        nodes=np.array([9, 0, 5], dtype=np.int64), edge_types=1
+    )
+
+    npt.assert_array_equal(output_node_counts, [0, 1, 1])
+
+
+def test_neighbor_count_graph_single_partition(multi_partition_graph_data):
+    g = client.MemoryGraph(multi_partition_graph_data, [1])
+    output_node_counts = g.neighbors(
+        nodes=np.array([9, 0, 5], dtype=np.int64), edge_types=1
+    )
+
+    npt.assert_array_equal(output_node_counts, [0, 0, 1])
+
+
+def test_neighbor_count_graph_handle_empty_list(multi_partition_graph_data):
+    g = client.MemoryGraph(multi_partition_graph_data, [0])
+    output_node_counts = g.neighbor_counts(
+        nodes=np.array([9], dtype=np.int64), edge_types=1
+    )
+    npt.assert_array_equal(output_node_counts, [0])
+
+
 def test_neighbor_sampling_after_reset(multi_partition_graph_data):
     cl = client.MemoryGraph(multi_partition_graph_data, [0])
     cl.reset()

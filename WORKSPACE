@@ -17,16 +17,16 @@ http_archive(
 
 http_archive(
     name = "rules_python",
-    sha256 = "a30abdfc7126d497a7698c29c46ea9901c6392d6ed315171a6df5ce433aa4502",
-    strip_prefix = "rules_python-0.6.0",
-    url = "https://github.com/bazelbuild/rules_python/archive/0.6.0.tar.gz",
+    sha256 = "5fa3c738d33acca3b97622a13a741129f67ef43f5fdfcec63b29374cc0574c29",
+    strip_prefix = "rules_python-0.9.0",
+    url = "https://github.com/bazelbuild/rules_python/archive/refs/tags/0.9.0.tar.gz",
 )
 
 load("@rules_python//python:pip.bzl", "pip_parse")
 
 pip_parse(
     name = "pip_deps",
-    python_interpreter = "python",
+    python_interpreter = "python3-intel64",
     requirements_lock = "//:requirements.txt",
 )
 

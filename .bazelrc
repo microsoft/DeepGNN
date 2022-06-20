@@ -15,8 +15,7 @@ build:manylinux --crosstool_top=//tools/toolchain:manylinux
 build:manylinux --cpu=k8
 build:manylinux --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
 
-build:darwin --action_env=BAZEL_LINKLIBS=-l%:libstdc++.a
-build:darwin --action_env=BAZEL_LINKOPTS=-static-libgcc:-lm:-pthread
+build:darwin --action_env=BAZEL_LINKOPTS=-lm:-pthreadj
 build:darwin --action_env=SETUPTOOLS_USE_DISTUTILS="false"
 build:darwin --action_env=HADOOP_HOME="/tmp/snark/"
 build:darwin --action_env=SNARK_LIB_PATH="./src/cc/lib/libwrapper.so"
