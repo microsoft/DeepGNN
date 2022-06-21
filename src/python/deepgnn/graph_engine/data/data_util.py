@@ -66,7 +66,7 @@ def get_linear_node(
     train_neighbors: Set[int],
     test_neighbors: Set[int],
 ) -> str:
-    """Return node with JSON format.
+    """Return node with linear format.
 
     node type: 0(train), 1(test)
     use default value for node_weight(1.0), neighbor weight(1.0)

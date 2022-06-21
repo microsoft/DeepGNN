@@ -230,7 +230,7 @@ class CitationGraph(Client):
             meta_path=meta_file,
             partition_count=1,
             output_dir=data_dir,
-            decoder_class=decoders.JsonDecoder,  # type: ignore
+            decoder_class=decoders.JsonDecoder,
         ).convert()
 
         train_file = os.path.join(data_dir, "train.nodes")

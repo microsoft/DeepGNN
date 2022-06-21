@@ -8,12 +8,6 @@ import threading
 import platform
 import typing
 from abc import ABC, abstractmethod
-
-if platform.system() == "Windows":
-    from multiprocessing.connection import PipeConnection as Connection  # type: ignore
-else:
-    from multiprocessing.connection import Connection  # type: ignore
-
 from deepgnn.graph_engine.snark.decoders import Decoder, LinearDecoder
 from deepgnn import get_logger
 
@@ -58,20 +52,10 @@ class PipeDispatcher(Dispatcher):
         parallel: int,
         meta: str,
         process: typing.Callable[
-            [
-                typing.Union[mp.Queue, Connection],
-                mp.Queue,
-                str,
-                int,
-                int,
-                int,
-                Decoder,
-                bool,
-                bool,
-            ],
+            ...,
             None,
         ],
-        decoder_class: Decoder,
+        decoder_class: typing.TypeVar("S", bound=str),
         partition_offset: int = 0,
         use_threads: bool = False,
         skip_node_sampler: bool = False,
@@ -83,7 +67,7 @@ class PipeDispatcher(Dispatcher):
             folder (str): Location of graph files.
             parallel (int): Number of parallel process to use for conversion.
             meta (str): Meta data about graph.
-            process (typing.Callable[ [typing.Union[mp.Queue, Connection], mp.Queue, str, int, int, int, Decoder], None ]): Function to call for processing lines in a file.
+            process (typing.Callable[ ..., None ]): Function to call for processing lines in a file.
             decoder_class: decoder type.
             partition_offset(int): offset in a text file, where to start reading for a new partition.
             use_threads(bool): use threads instead of processes for parallel processing.
@@ -187,9 +171,9 @@ class QueueDispatcher(Dispatcher):
         folder: str,
         num_partitions: int,
         meta: str,
-        process: typing.Callable[[mp.Queue, mp.Queue, str, int, int], None],
+        process: typing.Callable[..., None],
         partion_func: typing.Callable[[str], int],
-        decoder_class: Decoder = LinearDecoder,  # type: ignore
+        decoder_class: typing.TypeVar("S", bound=str) = LinearDecoder,
         partition_offset: int = 0,
         use_threads: bool = False,
         skip_node_sampler: bool = False,
@@ -201,7 +185,7 @@ class QueueDispatcher(Dispatcher):
             folder (str): Location of graph files.
             num_partitions (int): number of binary partitions to create.
             meta (str): meta data about graph.
-            process (typing.Callable[[mp.Queue, mp.Queue, str, int, int], None]): function to use for conversion.
+            process (typing.Callable[..., None]): function to use for conversion.
             partion_func (typing.Callable[[str], int]): how to assign graph elements to a partition.
             decoder_class: decoder type.
             partition_offset(int): offset in a text file, where to start reading for a new partition.

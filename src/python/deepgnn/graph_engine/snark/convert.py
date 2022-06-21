@@ -146,7 +146,7 @@ class MultiWorkersConverter:
         graph_path: str,
         meta_path: str,
         output_dir: str,
-        decoder_class: Decoder = LinearDecoder,  # type: ignore
+        decoder_class: typing.TypeVar("S", bound=str) = LinearDecoder,
         partition_count: int = 1,
         worker_index: int = 0,
         worker_count: int = 1,
@@ -205,7 +205,7 @@ class MultiWorkersConverter:
                 self.output_dir,
                 self.partition_count,
                 meta_path_local,
-                output,  # type: ignore
+                output,
                 decoder_class,
                 self.partition_offset,
                 False
