@@ -42,17 +42,25 @@ class LinearDecoder(Decoder):
     """Convert the text line into node object.
 
     Linear Format:
+        ```
         <node info> <edge_1_info> <edge_2_info> ...
-
+        ```
         node_info: -1 node_id node_type node_weight <features>
         edge_info: src dst edge_type edge_weight <features>
         features[dense]: dtype_name length v1 v2 ... dtype_name2 length2 v1 v2 ...
         features[sparse]: dtype_name coords.size,values.size c1 c2 ... v1 v2 ...
         features[sparse]: dtype_name coords.shape[0],coords.shape[1],values.size c1 c2 ... v1 v2
+        * Nodes must be sorted by node_id, edges sorted by src and then dst.
 
     Linear Format Example
+        A graph with 2 nodes {0, 1} each with type = 1, weight = .5 and
+        feature vectors [1, 1, 1] dtype=int32 and [1.1, 1.1] dtype=float32.
+        Edges: {0 -> 1, 1 -> 0} both with type = 0, weight = .5 and a sparse feature
+        vector (coords=[0, 4], values=[1, 1, 1] dtype=uint8).
+        ```
         -1 0 1 .5 int32 3 1 1 1 float32 2 1.1 1.1 0 1 0 .5 uint8 2,3 0 4 1 1 1
         -1 1 1 .5 int32 3 1 1 1 float32 2 1.1 1.1 1 0 0 .5 uint8 2,3 0 4 1 1 1
+        ```
 
     Metadata:
         The following headers can be added to the metadata json file.
@@ -64,6 +72,23 @@ class LinearDecoder(Decoder):
         "edge_default_type": int Same as node except for all edges.
         "edge_default_weight": int Same as node except for all edges.
         "edge_default_features": "dtype_name length ..." Same as node except for all edges.
+
+        e.g. the same graph as above with meta.json fully filled in
+        ```
+        {
+            "node_default_type": 1,
+            "node_default_weight": .5,
+            "node_default_features": "int32 3 float32 2",
+            "edge_default_type": 0,
+            "edge_default_weight": .5,
+            "edge_default_features": "uint8 2,3",
+        }
+        ```
+        graph.linear
+        ```
+        -1 0 1 1 1 1.1 1.1 0 1 0 4 1 1 1
+        -1 1 1 1 1 1.1 1.1 1 0 0 4 1 1 1
+        ```
     """
 
     def __init__(self):
