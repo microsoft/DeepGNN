@@ -22,7 +22,6 @@ from deepgnn.graph_engine._base import get_fs
 import deepgnn.graph_engine.snark.converter.converter as converter
 import deepgnn.graph_engine.snark.decoders as decoders
 from deepgnn.graph_engine.snark.decoders import (
-    decoder_type,
     LinearDecoder,
 )
 from deepgnn.graph_engine.snark.dispatcher import (
@@ -49,7 +48,7 @@ def output(
     suffix: int,
     node_type_num: int,
     edge_type_num: int,
-    decoder_class: decoder_type,
+    decoder_class: typing.Any,
     skip_node_sampler: bool,
     skip_edge_sampler: bool,
     meta_data: dict,
@@ -145,7 +144,7 @@ class MultiWorkersConverter:
         graph_path: str,
         meta_path: str,
         output_dir: str,
-        decoder_class: decoder_type = LinearDecoder,
+        decoder_class: typing.Any = LinearDecoder,
         partition_count: int = 1,
         worker_index: int = 0,
         worker_count: int = 1,
