@@ -293,8 +293,8 @@ class MemoryGraph:
             c_size_t,
             POINTER(c_uint64),
         ]
-        self.lib.GetNeighbors.restype = c_int32
-        self.lib.GetNeighbors.errcheck = _ErrCallback("get neighbor counts")  # type: ignore
+        self.lib.NeighborCount.restype = c_int32
+        self.lib.NeighborCount.errcheck = _ErrCallback("get neighbor counts")  # type: ignore
 
         self.lib.GetNeighbors.argtypes = [
             POINTER(_DEEP_GRAPH),
@@ -614,8 +614,18 @@ class MemoryGraph:
 
         return py_cb.values, dimensions // py_cb.values.itemsize
 
-    def neighbor_counts(self, nodes: np.array, edge_types:  Union[List[int], int]
+    def neighbor_counts(
+        self, nodes: np.array, edge_types: Union[List[int], int]
     ) -> np.array:
+        """Retrieve degree of node with satisfying edge types.
+
+        Args:
+            nodes -- array of nodes to select neighbors
+            edge_types -- type of edges to use for selection.
+
+        Returns:
+            np.array: neighbor count
+        """
         nodes = np.array(nodes, dtype=np.int64)
         edge_types = _make_sorted_list(edge_types)
         TypeArray = c_int32 * len(edge_types)

@@ -75,16 +75,16 @@ class GetNeighborCountCallData final : public CallData
 {
   public:
     GetNeighborCountCallData(GraphEngine::AsyncService &service, grpc::ServerCompletionQueue &cq,
-                         snark::GraphEngine::Service &service_impl);
-    
+                             snark::GraphEngine::Service &service_impl);
+
     void Proceed() override;
 
-    private:
-      GetNeighborsRequest m_request;
-      GetNeighborCountsReply m_reply;
-      grpc::ServerAsyncResponseWriter<GetNeighborCountsReply> m_responder;
-      snark::GraphEngine::Service &m_service_impl;
-      GraphEngine::AsyncService &m_service;
+  private:
+    GetNeighborsRequest m_request;
+    GetNeighborCountsReply m_reply;
+    grpc::ServerAsyncResponseWriter<GetNeighborCountsReply> m_responder;
+    snark::GraphEngine::Service &m_service_impl;
+    GraphEngine::AsyncService &m_service;
 };
 
 class GetNeighborsCallData final : public CallData
