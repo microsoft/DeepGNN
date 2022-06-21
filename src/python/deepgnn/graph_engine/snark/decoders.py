@@ -7,6 +7,7 @@ import json
 import logging
 import csv
 import numpy as np
+import typing
 
 logger = logging.getLogger()
 
@@ -36,6 +37,9 @@ class Decoder(abc.ABC):
     @abc.abstractmethod
     def decode(self, line: str):
         """Decode the line into a "node" object."""
+
+
+decoder_type = typing.TypeVar("S", bound=Decoder)
 
 
 class LinearDecoder(Decoder):

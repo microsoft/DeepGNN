@@ -8,7 +8,7 @@ import threading
 import platform
 import typing
 from abc import ABC, abstractmethod
-from deepgnn.graph_engine.snark.decoders import Decoder, LinearDecoder
+from deepgnn.graph_engine.snark.decoders import decoder_type, LinearDecoder
 from deepgnn import get_logger
 
 FLAG_ALL_DONE = b"WORK_FINISHED"
@@ -55,7 +55,7 @@ class PipeDispatcher(Dispatcher):
             ...,
             None,
         ],
-        decoder_class: typing.TypeVar("S", bound=str),
+        decoder_class: decoder_type,
         partition_offset: int = 0,
         use_threads: bool = False,
         skip_node_sampler: bool = False,
@@ -173,7 +173,7 @@ class QueueDispatcher(Dispatcher):
         meta: str,
         process: typing.Callable[..., None],
         partion_func: typing.Callable[[str], int],
-        decoder_class: typing.TypeVar("S", bound=str) = LinearDecoder,
+        decoder_class: decoder_type = LinearDecoder,
         partition_offset: int = 0,
         use_threads: bool = False,
         skip_node_sampler: bool = False,
