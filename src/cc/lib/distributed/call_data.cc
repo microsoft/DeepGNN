@@ -74,7 +74,7 @@ void EdgeFeaturesCallData::Proceed()
 }
 
 GetNeighborCountCallData::GetNeighborCountCallData(GraphEngine::AsyncService &service, grpc::ServerCompletionQueue &cq,
-                                           snark::GraphEngine::Service &service_impl)
+                                                   snark::GraphEngine::Service &service_impl)
     : CallData(cq), m_responder(&m_ctx), m_service_impl(service_impl), m_service(service)
 
 {
@@ -83,15 +83,13 @@ GetNeighborCountCallData::GetNeighborCountCallData(GraphEngine::AsyncService &se
 
 void GetNeighborCountCallData::Proceed()
 {
-    if(m_status == CREATE)
+    if (m_status == CREATE)
     {
-        //std::cout << "inside create" << std::endl;
         m_status = PROCESS;
         m_service.RequestGetNeighborCounts(&m_ctx, &m_request, &m_responder, &m_cq, &m_cq, this);
     }
-    else if(m_status == PROCESS)
+    else if (m_status == PROCESS)
     {
-        //std::cout << "inside process" << std::endl;
         new GetNeighborCountCallData(m_service, m_cq, m_service_impl);
         const auto status = m_service_impl.GetNeighborCounts(&m_ctx, &m_request, &m_reply);
         m_status = FINISH;
@@ -99,7 +97,6 @@ void GetNeighborCountCallData::Proceed()
     }
     else
     {
-        //std::cout << "inside finish" << std::endl;
         GPR_ASSERT(m_status == FINISH);
         delete this;
     }

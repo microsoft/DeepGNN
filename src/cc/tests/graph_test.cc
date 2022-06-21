@@ -1004,15 +1004,6 @@ TEST(GraphTest, GetNodeTypesAcrossPartitions)
     EXPECT_EQ(std::vector<snark::Type>({0, 2, 1, 2, 2, -1}), types);
 }
 
-void print_content(std::span<uint64_t> container)
-{
-    for (const auto &e : container)
-    {
-        std::cout << e << ' ';
-    }
-    std::cout << '\n';
-}
-
 // Neighbor Count Tests
 TEST(GraphTest, GetNeigborCountSinglePartition)
 {
