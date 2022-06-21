@@ -1,5 +1,5 @@
-ansible==5.4.0
-ansible-core==2.12.3
+ansible==4.10.0
+ansible-core== 2.11.12
 ansible-runner==2.1.2
 bcrypt==3.2.0
 certifi==2021.10.8

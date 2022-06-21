@@ -3,7 +3,7 @@
 
 set -ex
 
-DIR_NAME=$(dirname "$0")
+DIR_NAME=$( dirname "$(readlink -f -- "$0")" )
 
 pip install --upgrade pip
 pip install -r $DIR_NAME/requirements.txt

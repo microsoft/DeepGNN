@@ -181,5 +181,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: examples
+      - name: Copy wheels to ansible folder
+        run: cp -fr deepgnn*.whl ./distributed/ansible/playbooks/
       - name: Run ansible examples
         run: cd ./distributed/ansible/ && sudo chmod +x *.sh && bash ./run.sh
