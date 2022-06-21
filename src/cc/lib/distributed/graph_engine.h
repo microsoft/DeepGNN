@@ -35,7 +35,7 @@ class GraphEngineServiceImpl final : public snark::GraphEngine::Service
     grpc::Status GetEdgeStringFeatures(::grpc::ServerContext *context, const snark::EdgeSparseFeaturesRequest *request,
                                        snark::StringFeaturesReply *response) override;
     grpc::Status GetNeighborCounts(::grpc::ServerContext *context, const snark::GetNeighborsRequest *request,
-                                       snark::GetNeighborCountsReply *response) override;
+                                   snark::GetNeighborCountsReply *response) override;
     grpc::Status GetNeighbors(::grpc::ServerContext *context, const snark::GetNeighborsRequest *request,
                               snark::GetNeighborsReply *response) override;
     grpc::Status WeightedSampleNeighbors(::grpc::ServerContext *context,

@@ -529,8 +529,6 @@ TEST(DistributedTest, FullNeighborsMultipleServers)
     EXPECT_EQ(output_counts, std::vector<uint64_t>({4, 4}));
 }
 
-
-
 namespace
 {
 
