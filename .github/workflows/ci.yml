@@ -181,6 +181,10 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: examples
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
       - name: Copy wheels to ansible folder
         run: cp -fr deepgnn*.whl ./distributed/ansible/playbooks/
       - name: Run ansible examples
