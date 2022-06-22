@@ -3,6 +3,7 @@
 
 """Set of writers to convert graph from decoded format to binary."""
 import ctypes
+from curses import tparm
 import os
 import tempfile
 import struct
@@ -265,41 +266,23 @@ class NodeAliasWriter:
     and probability to pick node [4 bytes] over alias node.
     """
 
-    def __init__(self, folder: str, partition: int, node_type_count: int):
+    def __init__(self, folder: str, partition: int):
         """Initialize alias tables.
 
         Args:
             folder (str): where to store files
             partition (int): suffix identifier for alias tables created with this writer.
-            node_type_count (int): number of node types in the graph
         """
         self.fs, _ = get_fs(folder)
         self.folder = folder
         self.partition = partition
-        self.node_type_count = node_type_count
 
         # generate temp alias file in local and then write final
         # results to destination. Hold the temp folder reference
         # to avoid deleting.
         self.meta_tmp_folder = tempfile.TemporaryDirectory()
-        self.nodes = [
-            open(
-                "{}/tmp_alias_node_{}_{}.ids".format(
-                    self.meta_tmp_folder.name, tp, partition
-                ),
-                "wb+",
-            )
-            for tp in range(node_type_count)
-        ]
-        self.weights = [
-            open(
-                "{}/tmp_alias_node_{}_{}.weights".format(
-                    self.meta_tmp_folder.name, tp, partition
-                ),
-                "wb+",
-            )
-            for tp in range(node_type_count)
-        ]
+        self.nodes = []
+        self.weights = []
 
     def add(self, node_id: int, tp: int, weight: float):
         """Record node information.
@@ -312,9 +295,27 @@ class NodeAliasWriter:
         self.nodes[tp].write(ctypes.c_uint64(node_id))  # type: ignore
         self.weights[tp].write(ctypes.c_float(weight))  # type: ignore
 
+    def add_type(self, tp: int):
+        """Add type to alias writer."""
+        self.nodes.append(open(
+            "{}/tmp_alias_node_{}_{}.ids".format(
+                self.meta_tmp_folder.name, tp, self.partition
+            ),
+            "wb+",
+        ))
+        self.weights.append(
+            open(
+                "{}/tmp_alias_node_{}_{}.weights".format(
+                    self.meta_tmp_folder.name, tp, self.partition
+                ),
+                "wb+",
+            )
+        )
+
     def close(self):
         """Convert temporary files to the final alias tables."""
-        for tp in range(self.node_type_count):
+        self.node_type_num = len(self.nodes)
+        for tp in range(self.node_type_num):
             wts = np.fromfile(
                 self.weights[tp],
                 dtype=np.float32,
@@ -336,7 +337,7 @@ class NodeAliasWriter:
                     right = a.elements[a.alias[index]] if a.prob[index] < 1.0 else 0
                     nw.write(struct.pack("=qqf", left, right, a.prob[index]))
 
-        for tp in range(self.node_type_count):
+        for tp in range(self.node_type_num):
             self.weights[tp].close()
             os.remove(self.weights[tp].name)
             self.nodes[tp].close()
@@ -355,41 +356,23 @@ class EdgeAliasWriter:
      probability [4 bytes] to select edge over an alias element).
     """
 
-    def __init__(self, folder: str, partition: int, edge_type_count: int):
+    def __init__(self, folder: str, partition: int):
         """Initialize alias tables.
 
         Args:
             folder (str): where to store files
             partition (int): suffix identifier for alias tables created with this writer.
-            edge_type_count (int): number of edge types in the graph
         """
         self.fs, _ = get_fs(folder)
         self.folder = folder
         self.partition = partition
-        self.edge_type_count = edge_type_count
 
         # generate temp alias file in local and then write final
         # results to destination. Hold the temp folder reference
         # to avoid deleting.
         self.meta_tmp_folder = tempfile.TemporaryDirectory()
-        self.pairs = [
-            open(
-                "{}/tmp_alias_edge_{}_{}.ids".format(
-                    self.meta_tmp_folder.name, tp, partition
-                ),
-                "wb+",
-            )
-            for tp in range(edge_type_count)
-        ]
-        self.weights = [
-            open(
-                "{}/tmp_alias_edge_{}_{}.weights".format(
-                    self.meta_tmp_folder.name, tp, partition
-                ),
-                "wb+",
-            )
-            for tp in range(edge_type_count)
-        ]
+        self.pairs = []
+        self.weights = []
 
     def add(self, src: int, dst: int, tp: int, weight: float):
         """Add edge to the alias tables.
@@ -404,9 +387,29 @@ class EdgeAliasWriter:
         self.pairs[tp].write(ctypes.c_uint64(dst))  # type: ignore
         self.weights[tp].write(ctypes.c_float(weight))  # type: ignore
 
+    def add_type(self, tp: int):
+        """Add type to alias writer."""
+        self.pairs.append(
+            open(
+                "{}/tmp_alias_edge_{}_{}.ids".format(
+                    self.meta_tmp_folder.name, tp, self.partition
+                ),
+                "wb+",
+            )
+        )
+        self.weights.append(
+            open(
+                "{}/tmp_alias_edge_{}_{}.weights".format(
+                    self.meta_tmp_folder.name, tp, self.partition
+                ),
+                "wb+",
+            )
+        )
+
     def close(self):
         """Convert temporary files to the final alias tables."""
-        for tp in range(self.edge_type_count):
+        self.edge_type_num = len(self.pairs)
+        for tp in range(self.edge_type_num):
             wts = np.fromfile(
                 self.weights[tp], dtype=np.float32, offset=-self.weights[tp].tell()
             )
@@ -435,7 +438,7 @@ class EdgeAliasWriter:
                         )
                     )
 
-        for tp in range(self.edge_type_count):
+        for tp in range(self.edge_type_num):
             self.weights[tp].close()
             os.remove(self.weights[tp].name)
             self.pairs[tp].close()

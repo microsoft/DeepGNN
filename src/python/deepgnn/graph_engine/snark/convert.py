@@ -36,6 +36,9 @@ import deepgnn.graph_engine.snark.meta as mt
 class _NoOpWriter:
     def add(self, *_: typing.Any):
         return
+    
+    def add_type(self, _: int):
+        return
 
     def close(self):
         return
@@ -46,8 +49,6 @@ def output(
     q_out: mp.Queue,
     folder: str,
     suffix: int,
-    node_type_num: int,
-    edge_type_num: int,
     decoder_class: typing.Any,
     skip_node_sampler: bool,
     skip_edge_sampler: bool,
@@ -60,8 +61,6 @@ def output(
         q_out (mp.Queue): signal processing is done
         folder (str): where to save binaries
         suffix (int): file suffix in the name of binary files
-        node_type_num (int): number of node types in the graph
-        edge_type_num (int): number of edge types in the graph
         decoder_class (Decoder): Class of decoder which is used to parse the raw graph data file.
         skip_node_sampler(bool): skip generation of node alias tables
         skip_edge_sampler(bool): skip generation of edge alias tables
@@ -69,24 +68,23 @@ def output(
     assert decoder_class is not None
     decoder = decoder_class() if isinstance(decoder_class, type) else decoder_class
     decoder.set_metadata(meta_data)
-
     node_count = 0
     edge_count = 0
-    node_weight = [0] * node_type_num
-    node_type_count = [0] * node_type_num
-    edge_weight = [0] * edge_type_num
-    edge_type_count = [0] * edge_type_num
+    node_weight = []
+    node_type_count = []
+    edge_weight = []
+    edge_type_count = []
     node_writer = converter.NodeWriter(str(folder), suffix)
     edge_writer = converter.EdgeWriter(str(folder), suffix)
     node_alias: typing.Union[converter.NodeAliasWriter, _NoOpWriter] = (
         _NoOpWriter()
         if skip_node_sampler
-        else converter.NodeAliasWriter(str(folder), suffix, node_type_num)
+        else converter.NodeAliasWriter(str(folder), suffix)
     )
     edge_alias: typing.Union[converter.EdgeAliasWriter, _NoOpWriter] = (
         _NoOpWriter()
         if skip_edge_sampler
-        else converter.EdgeAliasWriter(str(folder), suffix, edge_type_num)
+        else converter.EdgeAliasWriter(str(folder), suffix)
     )
     count = 0
     while True:
@@ -103,12 +101,22 @@ def output(
             if src == -1:
                 node_writer.add(dst, typ, features)
                 edge_writer.add_node()
+                if typ+1 > len(node_weight): # try is faster
+                    for i in range(len(node_weight), typ+1):
+                        node_weight.append(0)
+                        node_type_count.append(0)
+                        node_alias.add_type(i)
                 node_alias.add(dst, typ, weight)
                 node_weight[typ] += float(weight)
                 node_type_count[typ] += 1
                 node_count += 1
             else:
                 edge_writer.add(dst, typ, weight, features)
+                if typ+1 > len(edge_weight): # try is faster
+                    for i in range(len(edge_weight), typ+1):
+                        edge_weight.append(0)
+                        edge_type_count.append(0)
+                        edge_alias.add_type(i)
                 edge_alias.add(src, dst, typ, weight)
                 edge_weight[typ] += weight
                 edge_type_count[typ] += 1
@@ -130,6 +138,8 @@ def output(
                     "node_type_count": node_type_count,
                     "edge_weight": edge_weight,
                     "edge_type_count": edge_type_count,
+                    "node_type_num": len(node_weight),
+                    "edge_type_num": len(edge_weight),
                 },
             },
         )
@@ -243,6 +253,9 @@ class MultiWorkersConverter:
         d.join()
 
         fs, _ = get_fs(self.output_dir)
+        partitions = sorted(d.prop("partitions"), key=lambda x: x["id"])
+        node_type_num = max([p["node_type_num"] for p in partitions])
+        edge_type_num = max([p["edge_type_num"] for p in partitions])
         with fs.open(
             "{}/meta{}.txt".format(
                 self.output_dir,
@@ -256,9 +269,9 @@ class MultiWorkersConverter:
                     "\n",
                     str(d.prop("edge_count")),
                     "\n",
-                    str(d.prop("node_type_num")),
+                    str(node_type_num),
                     "\n",
-                    str(d.prop("edge_type_num")),
+                    str(edge_type_num),
                     "\n",
                     str(
                         int(d.prop("node_float_feature_num"))
@@ -272,14 +285,14 @@ class MultiWorkersConverter:
                         + int(d.prop("edge_uint64_feature_num"))
                     ),
                     "\n",
-                    str(len(d.prop("partitions"))),
+                    str(len(partitions)),
                     "\n",
                 ]
             )
 
-            edge_count_per_type = [0] * int(d.prop("edge_type_num"))
-            node_count_per_type = [0] * int(d.prop("node_type_num"))
-            for p in sorted(d.prop("partitions"), key=lambda x: x["id"]):
+            edge_count_per_type = [0] * int(edge_type_num)
+            node_count_per_type = [0] * int(node_type_num)
+            for p in partitions:
                 edge_count_per_type = list(
                     map(add, edge_count_per_type, p["edge_type_count"])
                 )

@@ -94,7 +94,7 @@ def triangle_graph_json(folder):
 
     meta = open(os.path.join(folder, "meta.txt"), "w+")
     meta.write(
-        '{"node_type_num": 3, "edge_type_num": 2, \
+        '{"node_type_num": 3, \
         "node_uint64_feature_num": 0, "node_float_feature_num": 2, \
         "node_binary_feature_num": 0, "edge_uint64_feature_num": 1, \
         "edge_float_feature_num": 1, "edge_binary_feature_num": 1}'
@@ -115,8 +115,7 @@ def triangle_graph_tsv(folder):
 
     meta = open(os.path.join(folder, "meta.txt"), "w+")
     meta.write(
-        '{"node_type_num": 3, "edge_type_num": 2, \
-        "node_uint64_feature_num": 0, "node_float_feature_num": 2, \
+        '{"node_uint64_feature_num": 0, "node_float_feature_num": 2, \
         "node_binary_feature_num": 0, "edge_uint64_feature_num": 1, \
         "edge_float_feature_num": 1, "edge_binary_feature_num": 1}'
     )
@@ -579,8 +578,7 @@ def graph_with_sparse_features_json(folder):
 
     meta = open(os.path.join(folder, "meta.txt"), "w+")
     meta.write(
-        '{"node_type_num": 3, "edge_type_num": 2, \
-        "node_uint64_feature_num": 0, "node_float_feature_num": 2, \
+        '{"node_uint64_feature_num": 0, "node_float_feature_num": 2, \
         "node_binary_feature_num": 0, "edge_uint64_feature_num": 1, \
         "edge_float_feature_num": 1, "edge_binary_feature_num": 1}'
     )
@@ -821,8 +819,7 @@ def test_linear_header():
         "-1 1\n",
         "-1 2\n",
     ]
-    meta_data = '{"node_type_num": 1, "edge_type_num": 0, \
-        "node_uint64_feature_num": 0, "node_float_feature_num": 0, \
+    meta_data = '{"node_uint64_feature_num": 0, "node_float_feature_num": 0, \
         "node_binary_feature_num": 0, "edge_uint64_feature_num": 9, \
         "edge_float_feature_num": 0, "edge_binary_feature_num": 0, \
         "node_default_type": 0, "node_default_weight": 1.5}'
@@ -846,8 +843,7 @@ def test_linear_header():
         "-1 1 0 0 1 0 1 2\n",
         "-1 2 0 0 2 0 2 1\n",
     ]
-    meta_data = '{"node_type_num": 1, "edge_type_num": 1, \
-        "node_uint64_feature_num": 0, "node_float_feature_num": 0, \
+    meta_data = '{"node_uint64_feature_num": 0, "node_float_feature_num": 0, \
         "node_binary_feature_num": 0, "edge_uint64_feature_num": 9, \
         "edge_float_feature_num": 0, "edge_binary_feature_num": 0, \
         "edge_default_type": 0, "edge_default_weight": 200}'
@@ -882,8 +878,7 @@ def test_linear_header():
         "-1 1 3 4 3.3 4.4\n",
         "-1 2 5 6 5.5 6.6\n",
     ]
-    meta_data = '{"node_type_num": 1, "edge_type_num": 0, \
-        "node_uint64_feature_num": 1, "node_float_feature_num": 1, \
+    meta_data = '{"node_uint64_feature_num": 1, "node_float_feature_num": 1, \
         "node_binary_feature_num": 0, "edge_uint64_feature_num": 0, \
         "edge_float_feature_num": 0, "edge_binary_feature_num": 0, \
         "node_default_type": 0, "node_default_weight": 1.5, "node_default_features": "uint64 2 float32 2"}'
@@ -911,8 +906,7 @@ def test_linear_header():
         "-1 1 0 0 1 0 0 1.5 3 4 3.3 4.4\n",
         "-1 2 0 0 2 0 0 1.5 5 6 5.5 6.6\n",
     ]
-    meta_data = '{"node_type_num": 1, "edge_type_num": 1, \
-        "node_uint64_feature_num": 1, "node_float_feature_num": 1, \
+    meta_data = '{"node_uint64_feature_num": 1, "node_float_feature_num": 1, \
         "node_binary_feature_num": 0, "edge_uint64_feature_num": 0, \
         "edge_float_feature_num": 0, "edge_binary_feature_num": 0, \
         "edge_default_features": "uint64 2 float32 2"}'
@@ -940,8 +934,7 @@ def test_linear_header():
         "-1 1 uint64 2 3 4 3.3 4.4 int32 2 3 4\n",
         "-1 2 uint64 2 5 6 5.5 6.6 int32 2 5 6\n",
     ]
-    meta_data = '{"node_type_num": 1, "edge_type_num": 0, \
-        "node_uint64_feature_num": 1, "node_float_feature_num": 1, \
+    meta_data = '{"node_uint64_feature_num": 1, "node_float_feature_num": 1, \
         "node_binary_feature_num": 0, "edge_uint64_feature_num": 0, \
         "edge_float_feature_num": 0, "edge_binary_feature_num": 0, \
         "node_default_type": 0, "node_default_weight": 1.5, "node_default_features": "none none float32 2"}'
@@ -974,8 +967,7 @@ def test_linear_header_multiple_partitions():
         "-1 1\n",
         "-1 2\n",
     ]
-    meta_data = '{"node_type_num": 1, "edge_type_num": 0, \
-        "node_uint64_feature_num": 0, "node_float_feature_num": 0, \
+    meta_data = '{"node_uint64_feature_num": 0, "node_float_feature_num": 0, \
         "node_binary_feature_num": 0, "edge_uint64_feature_num": 9, \
         "edge_float_feature_num": 0, "edge_binary_feature_num": 0, \
         "node_default_type": 0, "node_default_weight": 1.5}'
