@@ -290,22 +290,31 @@ class MultiWorkersConverter:
                 ]
             )
 
-            edge_count_per_type = [0] * int(edge_type_num)
             node_count_per_type = [0] * int(node_type_num)
+            edge_count_per_type = [0] * int(edge_type_num)
             for p in partitions:
-                edge_count_per_type = list(
-                    map(add, edge_count_per_type, p["edge_type_count"])
-                )
-                node_count_per_type = list(
-                    map(add, node_count_per_type, p["node_type_count"])
-                )
+                for i, v in enumerate(p["node_type_count"]):
+                    node_count_per_type[i] += v
+                for i, v in enumerate(p["edge_type_count"]):
+                    edge_count_per_type[i] += v
 
                 mtxt.writelines([str(p["id"]), "\n"])
-                for nw in p["node_weight"]:
+                for i, nw in enumerate(p["node_weight"]):
                     mtxt.writelines([str(nw), "\n"])
 
-                for ew in p["edge_weight"]:
+                c = converter.NodeAliasWriter(self.output_dir, p["id"])
+                for ii in range(i+1, node_type_num):
+                    c.add_type(ii)
+                    mtxt.writelines([str(0), "\n"])
+                c.close()
+
+                for i, ew in enumerate(p["edge_weight"]):
                     mtxt.writelines([str(ew), "\n"])
+                c = converter.EdgeAliasWriter(self.output_dir, p["id"])
+                for ii in range(i+1, edge_type_num):
+                    c.add_type(ii)
+                    mtxt.writelines([str(0), "\n"])
+                c.close()
             for count in node_count_per_type:
                 mtxt.writelines([str(count), "\n"])
             for count in edge_count_per_type:

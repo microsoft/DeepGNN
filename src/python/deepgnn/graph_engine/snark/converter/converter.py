@@ -297,13 +297,17 @@ class NodeAliasWriter:
 
     def add_type(self, tp: int):
         """Add type to alias writer."""
-        self.nodes.append(open(
+        while tp >= len(self.nodes):
+            self.nodes.append(None)
+            self.weights.append(None)
+
+        self.nodes[tp] = open(
             "{}/tmp_alias_node_{}_{}.ids".format(
                 self.meta_tmp_folder.name, tp, self.partition
             ),
             "wb+",
-        ))
-        self.weights.append(
+        )
+        self.weights[tp] = (
             open(
                 "{}/tmp_alias_node_{}_{}.weights".format(
                     self.meta_tmp_folder.name, tp, self.partition
@@ -316,6 +320,8 @@ class NodeAliasWriter:
         """Convert temporary files to the final alias tables."""
         self.node_type_num = len(self.nodes)
         for tp in range(self.node_type_num):
+            if self.nodes[tp] is None:
+                continue
             wts = np.fromfile(
                 self.weights[tp],
                 dtype=np.float32,
@@ -338,6 +344,8 @@ class NodeAliasWriter:
                     nw.write(struct.pack("=qqf", left, right, a.prob[index]))
 
         for tp in range(self.node_type_num):
+            if self.nodes[tp] is None:
+                continue
             self.weights[tp].close()
             os.remove(self.weights[tp].name)
             self.nodes[tp].close()
@@ -389,7 +397,11 @@ class EdgeAliasWriter:
 
     def add_type(self, tp: int):
         """Add type to alias writer."""
-        self.pairs.append(
+        while tp >= len(self.pairs):
+            self.pairs.append(None)
+            self.weights.append(None)
+
+        self.pairs[tp] = (
             open(
                 "{}/tmp_alias_edge_{}_{}.ids".format(
                     self.meta_tmp_folder.name, tp, self.partition
@@ -397,7 +409,7 @@ class EdgeAliasWriter:
                 "wb+",
             )
         )
-        self.weights.append(
+        self.weights[tp] = (
             open(
                 "{}/tmp_alias_edge_{}_{}.weights".format(
                     self.meta_tmp_folder.name, tp, self.partition
@@ -410,6 +422,8 @@ class EdgeAliasWriter:
         """Convert temporary files to the final alias tables."""
         self.edge_type_num = len(self.pairs)
         for tp in range(self.edge_type_num):
+            if self.pairs[tp] is None:
+                continue
             wts = np.fromfile(
                 self.weights[tp], dtype=np.float32, offset=-self.weights[tp].tell()
             )
@@ -439,6 +453,8 @@ class EdgeAliasWriter:
                     )
 
         for tp in range(self.edge_type_num):
+            if self.pairs[tp] is None:
+                continue
             self.weights[tp].close()
             os.remove(self.weights[tp].name)
             self.pairs[tp].close()

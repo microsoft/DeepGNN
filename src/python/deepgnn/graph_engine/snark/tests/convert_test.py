@@ -472,7 +472,6 @@ def test_node_alias_tables(triangle_graph):
         assert result[16:20] == struct.pack("=f", 1.0)
 
     assert os.path.getsize("{}/node_0_1.alias".format(output.name)) == 0
-    assert os.path.getsize("{}/node_2_1.alias".format(output.name)) == 0
     assert os.path.getsize("{}/node_1_0.alias".format(output.name)) == 0
 
 
