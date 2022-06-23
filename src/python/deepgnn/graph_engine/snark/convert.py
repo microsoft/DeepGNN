@@ -140,6 +140,8 @@ def output(
                     "edge_type_count": edge_type_count,
                     "node_type_num": len(node_weight),
                     "edge_type_num": len(edge_weight),
+                    "node_feature_num": node_writer.feature_writer.node_feature_num,
+                    "edge_feature_num": edge_writer.feature_writer.edge_feature_num,
                 },
             },
         )
@@ -256,6 +258,8 @@ class MultiWorkersConverter:
         partitions = sorted(d.prop("partitions"), key=lambda x: x["id"])
         node_type_num = max([p["node_type_num"] for p in partitions])
         edge_type_num = max([p["edge_type_num"] for p in partitions])
+        node_feature_num = max([p["node_feature_num"] for p in partitions])
+        edge_feature_num = max([p["edge_feature_num"] for p in partitions])
         with fs.open(
             "{}/meta{}.txt".format(
                 self.output_dir,
@@ -273,17 +277,9 @@ class MultiWorkersConverter:
                     "\n",
                     str(edge_type_num),
                     "\n",
-                    str(
-                        int(d.prop("node_float_feature_num"))
-                        + int(d.prop("node_binary_feature_num"))
-                        + int(d.prop("node_uint64_feature_num"))
-                    ),
+                    str(node_feature_num),
                     "\n",
-                    str(
-                        int(d.prop("edge_float_feature_num"))
-                        + int(d.prop("edge_binary_feature_num"))
-                        + int(d.prop("edge_uint64_feature_num"))
-                    ),
+                    str(edge_feature_num),
                     "\n",
                     str(len(partitions)),
                     "\n",

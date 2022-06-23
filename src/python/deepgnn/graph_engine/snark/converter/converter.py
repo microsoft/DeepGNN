@@ -102,6 +102,8 @@ class NodeFeatureWriter:
         )
         self.nfd_pos = self.nfd.tell()
 
+        self.node_feature_num = 0
+
     def add(self, node: list):
         """Add node to binary output.
 
@@ -109,11 +111,12 @@ class NodeFeatureWriter:
             node (dict): graph node with all node features and edges from it.
         """
         self.ni.write(ctypes.c_uint64(self.nfi.tell() // 8))  # type: ignore
-        for k in convert_features(node):
+        for i, k in enumerate(convert_features(node)):
             # Fill the gaps between features
             self.nfi.write(ctypes.c_uint64(self.nfd_pos))  # type: ignore
             if k is not None:
                 self.nfd_pos += self.nfd.write(k)
+        self.node_feature_num = max(self.node_feature_num, i)
 
     def close(self):
         """Close output binary files."""
@@ -229,6 +232,7 @@ class EdgeFeatureWriter:
             "wb",
         )
         self.efd_pos = self.efd.tell()
+        self.edge_feature_num = 0
 
     def add(self, features: list):
         """Add edge features the binary output.
@@ -237,10 +241,11 @@ class EdgeFeatureWriter:
             features (list): collection of float/uint64/binary features.
         """
         count = 0
-        for k in convert_features(features):
+        for i, k in enumerate(convert_features(features)):
             count += self.efi.write(ctypes.c_uint64(self.efd_pos))  # type: ignore
             if k is not None:
                 self.efd_pos += self.efd.write(k)
+        self.edge_feature_num = max(self.edge_feature_num, i)
 
         return count
 
