@@ -7,7 +7,6 @@ import multiprocessing as mp
 import typing
 import math
 import platform
-from operator import add
 
 if platform.system() == "Windows":
     from multiprocessing.connection import PipeConnection as Connection  # type: ignore

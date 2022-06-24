@@ -3,7 +3,6 @@
 
 """Set of writers to convert graph from decoded format to binary."""
 import ctypes
-from curses import tparm
 import os
 import tempfile
 import struct
