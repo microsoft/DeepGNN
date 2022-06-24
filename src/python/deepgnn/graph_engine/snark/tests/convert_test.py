@@ -342,7 +342,7 @@ def test_sanity_metadata(triangle_graph):
         assert int(result[2]) == 3
         assert int(result[3]) == 2
         assert int(result[4]) == 2
-        assert int(result[5]) == 3
+        assert int(result[5]) == 2  # 3 if different types all have different indicies
 
         # partition information
         assert int(result[6]) == 1

@@ -111,7 +111,9 @@ class NodeFeatureWriter:
             node (dict): graph node with all node features and edges from it.
         """
         self.ni.write(ctypes.c_uint64(self.nfi.tell() // 8))  # type: ignore
-        for i, k in enumerate(convert_features(node)):
+        i = 0
+        for k in convert_features(node):
+            i += 1
             # Fill the gaps between features
             self.nfi.write(ctypes.c_uint64(self.nfd_pos))  # type: ignore
             if k is not None:
@@ -241,7 +243,9 @@ class EdgeFeatureWriter:
             features (list): collection of float/uint64/binary features.
         """
         count = 0
-        for i, k in enumerate(convert_features(features)):
+        i = 0
+        for k in convert_features(features):
+            i += 1
             count += self.efi.write(ctypes.c_uint64(self.efd_pos))  # type: ignore
             if k is not None:
                 self.efd_pos += self.efd.write(k)
