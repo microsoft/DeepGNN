@@ -154,8 +154,8 @@ class MultiWorkersConverter:
     def __init__(
         self,
         graph_path: str,
-        meta_path: str,
         output_dir: str,
+        meta_path: str = "",
         decoder_class: typing.Any = LinearDecoder,
         partition_count: int = 1,
         worker_index: int = 0,
@@ -172,8 +172,8 @@ class MultiWorkersConverter:
 
         Args:
             graph_path: the raw graph file folder.
-            meta_path: the path of the meta.json.
             output_dir: the output directory to put the generated graph binary files.
+            meta_path(optional): the path of the meta.json.
             decoder_class: decoder type.
             partition_count: how many partitions will be generated.
             worker_index: the work index when running in multi worker mode.
@@ -200,9 +200,12 @@ class MultiWorkersConverter:
 
         self.fs, _ = get_fs(graph_path)
         # download the meta.json to local folder for dispatcher.
-        tmp_folder = tempfile.TemporaryDirectory()
-        meta_path_local = mt._get_meta_path(tmp_folder.name)
-        self.fs.get_file(meta_path, meta_path_local)
+        if meta_path:
+            tmp_folder = tempfile.TemporaryDirectory()
+            meta_path_local = mt._get_meta_path(tmp_folder.name)
+            self.fs.get_file(meta_path, meta_path_local)
+        else:
+            meta_path_local = ""
 
         # calculate the partition offset and count of this worker.
         self.partition_count = int(math.ceil(partition_count / worker_count))
@@ -214,9 +217,9 @@ class MultiWorkersConverter:
             self.dispatcher = PipeDispatcher(
                 self.output_dir,
                 self.partition_count,
-                meta_path_local,
                 output,
                 decoder_class,
+                meta_path_local,
                 self.partition_offset,
                 False
                 if hasattr(fsspec.implementations, "hdfs")
@@ -337,7 +340,7 @@ if __name__ == "__main__":
         "-n", "--worker_count", type=int, default=1, help="Number of workers"
     )
     parser.add_argument(
-        "-m", "--meta", help="Metadata about graph: number of node, types, etc"
+        "-m", "--meta", default="", help="Metadata about graph: number of node, types, etc"
     )
     parser.add_argument("-o", "--out", help="Output folder to store binary data")
     parser.add_argument(

@@ -47,18 +47,8 @@ def karate_club_json(folder):
     for el in graph:
         data.write(json_node_to_linear(el))
     data.flush()
-
-    meta = open(os.path.join(folder, "meta.txt"), "w+")
-    meta.write(
-        '{"node_type_num": 1, "edge_type_num": 1, \
-        "node_uint64_feature_num": 0, "node_float_feature_num": 0, \
-        "node_binary_feature_num": 0, "edge_uint64_feature_num": 0, \
-        "edge_float_feature_num": 0, "edge_binary_feature_num": 0}'
-    )
-    meta.flush()
     data.close()
-    meta.close()
-    return data.name, meta.name
+    return data.name
 
 
 def get_lib_name():
@@ -85,14 +75,13 @@ class Counter:
 @pytest.fixture(scope="module")
 def binary_karate_club_data():
     with tempfile.TemporaryDirectory() as workdir:
-        data_name, meta_name = karate_club_json(workdir)
+        data_name = karate_club_json(workdir)
         d = dispatcher.QueueDispatcher(
-            Path(workdir), 2, meta_name, convert.output, Counter()
+            Path(workdir), 2, convert.output, Counter()
         )
 
         convert.MultiWorkersConverter(
             graph_path=data_name,
-            meta_path=meta_name,
             partition_count=2,
             output_dir=workdir,
             dispatcher=d,
