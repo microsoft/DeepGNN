@@ -87,6 +87,8 @@ def output(
         else converter.EdgeAliasWriter(str(folder), suffix)
     )
     count = 0
+    node_type_num = 0
+    edge_type_num = 0
     while True:
         count += 1
         if type(q_in) == Connection:
@@ -101,8 +103,9 @@ def output(
             if src == -1:
                 node_writer.add(dst, typ, features)
                 edge_writer.add_node()
-                if typ+1 > len(node_weight): # try is faster
-                    for i in range(len(node_weight), typ+1):
+                if typ+1 > node_type_num:
+                    for i in range(node_type_num, typ+1):
+                        node_type_num += 1
                         node_weight.append(0)
                         node_type_count.append(0)
                         node_alias.add_type(i)
@@ -112,8 +115,9 @@ def output(
                 node_count += 1
             else:
                 edge_writer.add(dst, typ, weight, features)
-                if typ+1 > len(edge_weight): # try is faster
-                    for i in range(len(edge_weight), typ+1):
+                if typ+1 > edge_type_num:
+                    for i in range(edge_type_num, typ+1):
+                        edge_type_num += 1
                         edge_weight.append(0)
                         edge_type_count.append(0)
                         edge_alias.add_type(i)
@@ -138,8 +142,8 @@ def output(
                     "node_type_count": node_type_count,
                     "edge_weight": edge_weight,
                     "edge_type_count": edge_type_count,
-                    "node_type_num": len(node_weight),
-                    "edge_type_num": len(edge_weight),
+                    "node_type_num": node_type_num,
+                    "edge_type_num": edge_type_num,
                     "node_feature_num": node_writer.feature_writer.node_feature_num,
                     "edge_feature_num": edge_writer.feature_writer.edge_feature_num,
                 },

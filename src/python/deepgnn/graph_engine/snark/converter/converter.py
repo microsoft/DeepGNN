@@ -118,7 +118,8 @@ class NodeFeatureWriter:
             self.nfi.write(ctypes.c_uint64(self.nfd_pos))  # type: ignore
             if k is not None:
                 self.nfd_pos += self.nfd.write(k)
-        self.node_feature_num = max(self.node_feature_num, i)
+        if self.node_feature_num < i:
+            self.node_feature_num = i
 
     def close(self):
         """Close output binary files."""
@@ -249,7 +250,8 @@ class EdgeFeatureWriter:
             count += self.efi.write(ctypes.c_uint64(self.efd_pos))  # type: ignore
             if k is not None:
                 self.efd_pos += self.efd.write(k)
-        self.edge_feature_num = max(self.edge_feature_num, i)
+        if self.edge_feature_num < i:
+            self.edge_feature_num = i
 
         return count
 
