@@ -36,7 +36,7 @@ import deepgnn.graph_engine.snark.meta as mt
 class _NoOpWriter:
     def add(self, *_: typing.Any):
         return
-    
+
     def add_type(self, _: int):
         return
 
@@ -103,8 +103,8 @@ def output(
             if src == -1:
                 node_writer.add(dst, typ, features)
                 edge_writer.add_node()
-                if typ+1 > node_type_num:
-                    for i in range(node_type_num, typ+1):
+                if typ + 1 > node_type_num:
+                    for i in range(node_type_num, typ + 1):
                         node_type_num += 1
                         node_weight.append(0)
                         node_type_count.append(0)
@@ -115,8 +115,8 @@ def output(
                 node_count += 1
             else:
                 edge_writer.add(dst, typ, weight, features)
-                if typ+1 > edge_type_num:
-                    for i in range(edge_type_num, typ+1):
+                if typ + 1 > edge_type_num:
+                    for i in range(edge_type_num, typ + 1):
                         edge_type_num += 1
                         edge_weight.append(0)
                         edge_type_count.append(0)
@@ -165,7 +165,7 @@ class MultiWorkersConverter:
         worker_index: int = 0,
         worker_count: int = 1,
         record_per_step: int = 512,
-        buffer_size: int = 50,
+        buffer_size: int = 10,
         queue_size: int = 30,
         thread_count: int = mp.cpu_count(),
         dispatcher: Dispatcher = None,
@@ -306,7 +306,7 @@ class MultiWorkersConverter:
                     mtxt.writelines([str(nw), "\n"])
 
                 c = converter.NodeAliasWriter(self.output_dir, p["id"])
-                for ii in range(i+1, node_type_num):
+                for ii in range(i + 1, node_type_num):
                     c.add_type(ii)
                     mtxt.writelines([str(0), "\n"])
                 c.close()
@@ -314,7 +314,7 @@ class MultiWorkersConverter:
                 for i, ew in enumerate(p["edge_weight"]):
                     mtxt.writelines([str(ew), "\n"])
                 c = converter.EdgeAliasWriter(self.output_dir, p["id"])
-                for ii in range(i+1, edge_type_num):
+                for ii in range(i + 1, edge_type_num):
                     c.add_type(ii)
                     mtxt.writelines([str(0), "\n"])
                 c.close()
@@ -344,7 +344,10 @@ if __name__ == "__main__":
         "-n", "--worker_count", type=int, default=1, help="Number of workers"
     )
     parser.add_argument(
-        "-m", "--meta", default="", help="Metadata about graph: number of node, types, etc"
+        "-m",
+        "--meta",
+        default="",
+        help="Metadata about graph: number of node, types, etc",
     )
     parser.add_argument("-o", "--out", help="Output folder to store binary data")
     parser.add_argument(

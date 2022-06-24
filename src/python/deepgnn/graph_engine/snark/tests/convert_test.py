@@ -349,9 +349,7 @@ def test_edge_alias_tables(triangle_graph):
             self.count += 1
             return self.count % 2
 
-    d = QueueDispatcher(
-        Path(output.name), 2, convert.output, Counter(), decoder
-    )
+    d = QueueDispatcher(Path(output.name), 2, convert.output, Counter(), decoder)
     convert.MultiWorkersConverter(
         graph_path=data_name,
         partition_count=2,
@@ -404,9 +402,7 @@ def test_node_alias_tables(triangle_graph):
             self.count += 1
             return self.count % 2
 
-    d = QueueDispatcher(
-        Path(output.name), 2, convert.output, Counter(), decoder
-    )
+    d = QueueDispatcher(Path(output.name), 2, convert.output, Counter(), decoder)
     convert.MultiWorkersConverter(
         graph_path=data_name,
         partition_count=2,

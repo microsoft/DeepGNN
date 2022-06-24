@@ -76,9 +76,7 @@ class Counter:
 def binary_karate_club_data():
     with tempfile.TemporaryDirectory() as workdir:
         data_name = karate_club_json(workdir)
-        d = dispatcher.QueueDispatcher(
-            Path(workdir), 2, convert.output, Counter()
-        )
+        d = dispatcher.QueueDispatcher(Path(workdir), 2, convert.output, Counter())
 
         convert.MultiWorkersConverter(
             graph_path=data_name,

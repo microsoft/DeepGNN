@@ -292,8 +292,8 @@ class NodeAliasWriter:
         # results to destination. Hold the temp folder reference
         # to avoid deleting.
         self.meta_tmp_folder = tempfile.TemporaryDirectory()
-        self.nodes = []
-        self.weights = []
+        self.nodes: list = []
+        self.weights: list = []
 
     def add(self, node_id: int, tp: int, weight: float):
         """Record node information.
@@ -318,13 +318,11 @@ class NodeAliasWriter:
             ),
             "wb+",
         )
-        self.weights[tp] = (
-            open(
-                "{}/tmp_alias_node_{}_{}.weights".format(
-                    self.meta_tmp_folder.name, tp, self.partition
-                ),
-                "wb+",
-            )
+        self.weights[tp] = open(
+            "{}/tmp_alias_node_{}_{}.weights".format(
+                self.meta_tmp_folder.name, tp, self.partition
+            ),
+            "wb+",
         )
 
     def close(self):
@@ -390,8 +388,8 @@ class EdgeAliasWriter:
         # results to destination. Hold the temp folder reference
         # to avoid deleting.
         self.meta_tmp_folder = tempfile.TemporaryDirectory()
-        self.pairs = []
-        self.weights = []
+        self.pairs: list = []
+        self.weights: list = []
 
     def add(self, src: int, dst: int, tp: int, weight: float):
         """Add edge to the alias tables.
@@ -412,21 +410,17 @@ class EdgeAliasWriter:
             self.pairs.append(None)
             self.weights.append(None)
 
-        self.pairs[tp] = (
-            open(
-                "{}/tmp_alias_edge_{}_{}.ids".format(
-                    self.meta_tmp_folder.name, tp, self.partition
-                ),
-                "wb+",
-            )
+        self.pairs[tp] = open(
+            "{}/tmp_alias_edge_{}_{}.ids".format(
+                self.meta_tmp_folder.name, tp, self.partition
+            ),
+            "wb+",
         )
-        self.weights[tp] = (
-            open(
-                "{}/tmp_alias_edge_{}_{}.weights".format(
-                    self.meta_tmp_folder.name, tp, self.partition
-                ),
-                "wb+",
-            )
+        self.weights[tp] = open(
+            "{}/tmp_alias_edge_{}_{}.weights".format(
+                self.meta_tmp_folder.name, tp, self.partition
+            ),
+            "wb+",
         )
 
     def close(self):

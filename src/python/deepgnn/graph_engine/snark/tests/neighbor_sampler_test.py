@@ -156,9 +156,7 @@ class Counter:
 def multi_partition_graph_data():
     output = tempfile.TemporaryDirectory()
     data_name = triangle_graph_json(output.name)
-    d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, convert.output, Counter()
-    )
+    d = dispatcher.QueueDispatcher(Path(output.name), 2, convert.output, Counter())
     convert.MultiWorkersConverter(
         graph_path=data_name,
         partition_count=1,
@@ -372,9 +370,7 @@ def karate_club_json(folder):
 def karate_club_graph():
     with tempfile.TemporaryDirectory() as workdir:
         data_name = karate_club_json(workdir)
-        d = dispatcher.QueueDispatcher(
-            Path(workdir), 2, convert.output, Counter()
-        )
+        d = dispatcher.QueueDispatcher(Path(workdir), 2, convert.output, Counter())
         convert.MultiWorkersConverter(
             graph_path=data_name,
             partition_count=2,

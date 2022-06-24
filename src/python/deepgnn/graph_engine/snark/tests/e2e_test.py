@@ -235,9 +235,7 @@ class Counter:
 def multi_partition_graph_data():
     output = tempfile.TemporaryDirectory()
     data_name = triangle_graph_linear(output.name)
-    d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, convert.output, Counter()
-    )
+    d = dispatcher.QueueDispatcher(Path(output.name), 2, convert.output, Counter())
     convert.MultiWorkersConverter(
         graph_path=data_name,
         partition_count=2,
@@ -1323,9 +1321,7 @@ def no_features_graph_linear(folder):
 def no_features_graph():
     output = tempfile.TemporaryDirectory()
     data_name = no_features_graph_linear(output.name)
-    d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, convert.output, Counter()
-    )
+    d = dispatcher.QueueDispatcher(Path(output.name), 2, convert.output, Counter())
 
     convert.MultiWorkersConverter(
         graph_path=data_name,
