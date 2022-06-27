@@ -124,27 +124,16 @@ def graph_with_sparse_features_json(folder):
     for el in graph:
         data.write(json_node_to_linear(el))
     data.flush()
-
-    meta = open(os.path.join(folder, "meta.json"), "w+")
-    meta.write(
-        '{"node_type_num": 3, "edge_type_num": 2, \
-        "node_uint64_feature_num": 0, "node_float_feature_num": 1, \
-        "node_binary_feature_num": 0, "edge_uint64_feature_num": 0, \
-        "edge_float_feature_num": 1, "edge_binary_feature_num": 1}'
-    )
-    meta.flush()
     data.close()
-    meta.close()
-    return data.name, meta.name
+    return data.name
 
 
 @pytest.fixture(scope="module")
 def graph_with_sparse_features(request):
     workdir = tempfile.TemporaryDirectory()
-    data_name, meta_name = graph_with_sparse_features_json(workdir.name)
+    data_name = graph_with_sparse_features_json(workdir.name)
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=request.param,
         output_dir=workdir.name,
         skip_edge_sampler=True,
@@ -200,10 +189,9 @@ def test_multiple_edges_sparse_features(graph_with_sparse_features):
 @pytest.fixture(scope="module")
 def multi_server_sparse_features_graph():
     workdir = tempfile.TemporaryDirectory()
-    data_name, meta_name = graph_with_sparse_features_json(workdir.name)
+    data_name = graph_with_sparse_features_json(workdir.name)
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=2,
         output_dir=workdir.name,
         skip_edge_sampler=True,

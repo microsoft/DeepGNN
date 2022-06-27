@@ -87,25 +87,11 @@ We generate this dataset with networkx, save it to json format and use snark to 
 ...     f.write(data)
 357456
 
->>> meta = '{"node_float_feature_num": 1, \
-...          "edge_binary_feature_num": 0, \
-...          "edge_type_num": 2, \
-...          "edge_float_feature_num": 0, \
-...          "node_type_num": 2, \
-...          "node_uint64_feature_num": 0, \
-...          "node_binary_feature_num": 0, \
-...          "edge_uint64_feature_num": 0}'
->>> meta_filename = working_dir + "/meta.json"
->>> with open(meta_filename, "w+") as f:
-...     f.write(meta)
-281
-
 >>> import deepgnn.graph_engine.snark.convert as convert
 >>> from deepgnn.graph_engine.snark.decoders import LinearDecoder
 >>> partitions = 1
 >>> convert.MultiWorkersConverter(
 ...     graph_path=data_filename,
-...     meta_path=meta_filename,
 ...     partition_count=partitions,
 ...     output_dir=working_dir,
 ...     decoder_class=LinearDecoder,
