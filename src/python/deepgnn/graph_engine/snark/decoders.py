@@ -117,7 +117,7 @@ class LinearDecoder(Decoder):
         node_weight: float,
         node_features: list,
         edges: list,
-        buffer: object = None,
+        buffer: object = None,  # type: ignore
     ) -> str:
         """
         Convert data to a line of the linear format.
@@ -155,23 +155,30 @@ class LinearDecoder(Decoder):
                     return f"{values.dtype.name} {length},{values.size} {coordinates_str} {' '.join(map(str, values))}"
                 return f"{f.dtype.name} {f.size} {' '.join(map(str, f))}"
 
-            # TODO None and string case
             return " ".join(get_f(f) for f in features)
 
         if buffer is None:
+
             class StrBuffer:
                 def __init__(self):
                     self.output = ""
+
                 def write(self, v):
                     self.output += v
+
             buffer = StrBuffer()
 
-        buffer.write(f"-1 {node_id} {node_type} {node_weight} {_feature_str(node_features)}")
+        buffer.write(  # type: ignore
+            f"-1 {node_id} {node_type} {node_weight} {_feature_str(node_features)}"
+        )
         for edge_src, edge_dst, edge_type, edge_weight, edge_features in edges:
-            buffer.write(f" {edge_src} {edge_dst} {edge_type} {edge_weight} {_feature_str(edge_features)}")
+            buffer.write(  # type: ignore
+                f" {edge_src} {edge_dst} {edge_type} {edge_weight} {_feature_str(edge_features)}"
+            )
 
         if hasattr(buffer, "output"):
-            return buffer.output
+            return buffer.output  # type: ignore
+        return ""
 
     def set_metadata(self, metadata: dict):
         """Parse dict from metadata.json."""
@@ -287,7 +294,6 @@ class LinearDecoder(Decoder):
                     values_len = length[-1]
                     coordinates_offset = idx + coordinates_len_total
 
-                    # TODO no sparse_binary_feature?
                     if not coordinates_len:
                         value = None
                     else:

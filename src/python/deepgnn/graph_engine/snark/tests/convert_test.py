@@ -742,19 +742,20 @@ def test_sanity_edge_sparse_features_data(graph_with_sparse_features):
         )
 
 
-def _gen_linear(output, data_data, meta_data, partitions=1):
+def _gen_linear(output, data_data, meta_data=None, partitions=1):
     data = open(os.path.join(output.name, "graph.linear"), "w+")
     for v in data_data:
         data.write(v)
     data.flush()
     data.close()
-    meta = open(os.path.join(output.name, "meta.json"), "w+")
-    meta.write(meta_data)
-    meta.flush()
-    meta.close()
+    if meta_data is not None:
+        meta = open(os.path.join(output.name, "meta.json"), "w+")
+        meta.write(meta_data)
+        meta.flush()
+        meta.close()
     convert.MultiWorkersConverter(
         graph_path=data.name,
-        meta_path=meta.name,
+        meta_path=meta.name if meta_data is not None else None,
         partition_count=partitions,
         output_dir=output.name,
         decoder_class=LinearDecoder,
@@ -913,13 +914,26 @@ def test_linear_header_multiple_partitions():
         assert result[20:28] == (2).to_bytes(8, byteorder=sys.byteorder)
         assert result[28:36] == (1).to_bytes(8, byteorder=sys.byteorder)
         assert result[36:40] == (0).to_bytes(4, byteorder=sys.byteorder)
-    with open("{}/node_{}_{}.map".format(output.name, 1, 0), "rb") as nm:
-        expected_size = 1 * (2 * 8 + 4)
-        result = nm.read(expected_size + 8)
-        assert len(result) == expected_size
-        assert result[0:8] == (1).to_bytes(8, byteorder=sys.byteorder)
-        assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
-        assert result[16:20] == (0).to_bytes(4, byteorder=sys.byteorder)
+
+
+def test_linear_error_checking():
+    output = tempfile.TemporaryDirectory()
+    data_data = [
+        "-1 0 3 3\n",
+        "-1 1 3 3\n",
+        "-1 2 3 4\n",
+        "\n",
+        "",
+    ]
+    _gen_linear(output, data_data)
+
+    output = tempfile.TemporaryDirectory()
+    data_data = [
+        "-1 0 3 3\n",
+        "-1 1 3 3\n",
+        "-1 2 3 4\n",
+    ]
+    _gen_linear(output, data_data)
 
 
 if __name__ == "__main__":
