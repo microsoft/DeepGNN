@@ -19,6 +19,7 @@ import pytest
 from deepgnn.graph_engine.snark.local import Client as LocalClient
 import deepgnn.graph_engine.snark.distributed as distributed
 from deepgnn.graph_engine._base import SamplingStrategy, FeatureType
+from deepgnn.graph_engine.snark.meta_merger import merge_metadata_files
 
 
 def caveman_data(partitions: int = 1, worker_count: int = 1, output_dir: str = ""):
@@ -72,6 +73,8 @@ def caveman_data(partitions: int = 1, worker_count: int = 1, output_dir: str = "
         for n in range(worker_count)
     ]
 
+    merge_metadata_files(output_dir)
+
 
 @pytest.fixture(scope="module")
 def memory_graph(request):
@@ -82,7 +85,7 @@ def memory_graph(request):
     worker_count = 1 if not hasattr(request, "param") else request.param[1]
     caveman_data(partitions, worker_count, output_dir.name)
 
-    yield LocalClient(path=output_dir.name, partitions=list(range(partitions)))
+    yield LocalClient(path=output_dir.name, partitions=[0, 1])
     output_dir.cleanup()
 
 

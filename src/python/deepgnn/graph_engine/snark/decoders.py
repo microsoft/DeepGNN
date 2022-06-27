@@ -117,6 +117,7 @@ class LinearDecoder(Decoder):
         node_weight: float,
         node_features: list,
         edges: list,
+        buffer: object = None,
     ) -> str:
         """
         Convert data to a line of the linear format.
@@ -157,12 +158,20 @@ class LinearDecoder(Decoder):
             # TODO None and string case
             return " ".join(get_f(f) for f in features)
 
-        output = f"-1 {node_id} {node_type} {node_weight} {_feature_str(node_features)}"
+        if buffer is None:
+            class StrBuffer:
+                def __init__(self):
+                    self.output = ""
+                def write(self, v):
+                    self.output += v
+            buffer = StrBuffer()
+
+        buffer.write(f"-1 {node_id} {node_type} {node_weight} {_feature_str(node_features)}")
         for edge_src, edge_dst, edge_type, edge_weight, edge_features in edges:
-            if output[-1] != " ":
-                output += " "
-            output += f"{edge_src} {edge_dst} {edge_type} {edge_weight} {_feature_str(edge_features)}"
-        return output
+            buffer.write(f" {edge_src} {edge_dst} {edge_type} {edge_weight} {_feature_str(edge_features)}")
+
+        if hasattr(buffer, "output"):
+            return buffer.output
 
     def set_metadata(self, metadata: dict):
         """Parse dict from metadata.json."""
@@ -478,13 +487,16 @@ class TsvDecoder(Decoder):
             )
 
 
-def json_node_to_linear(node):
+def json_node_to_linear(node, buffer=None):
     """Convert graph.json to graph.linear."""
     gen = JsonDecoder().decode(node)
     node = next(gen)[1:]
     edges = [edge for edge in gen]
-    output = LinearDecoder().encode(*node, edges)
-    output += "\n"
+    output = LinearDecoder().encode(*node, edges, buffer)
+    if buffer is None:
+        output += "\n"
+    else:
+        buffer.write("\n")
     return output
 
 
@@ -497,6 +509,6 @@ def json_to_linear(filename_in, filename_out):
         if not line:
             break
         node = json.loads(line)
-        file_out.write(json_node_to_linear(node))
+        json_node_to_linear(node, file_out)
     file_in.close()
     file_out.close()
