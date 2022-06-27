@@ -917,23 +917,38 @@ def test_linear_header_multiple_partitions():
 
 
 def test_linear_error_checking():
-    output = tempfile.TemporaryDirectory()
-    data_data = [
-        "-1 0 3 3\n",
-        "-1 1 3 3\n",
-        "-1 2 3 4\n",
-        "\n",
-        "",
-    ]
-    _gen_linear(output, data_data)
-
-    output = tempfile.TemporaryDirectory()
-    data_data = [
-        "-1 0 3 3\n",
-        "-1 1 3 3\n",
-        "-1 2 3 4\n",
-    ]
-    _gen_linear(output, data_data)
+    decoder = LinearDecoder()
+    with pytest.raises(StopIteration):
+        next(decoder.decode(""))
+    with pytest.raises(IndexError):
+        next(decoder.decode("-1 x"))
+    with pytest.raises(IndexError):
+        next(decoder.decode("-1 0"))
+    with pytest.raises(IndexError):
+        next(decoder.decode("-1 0 4"))
+    with pytest.raises(ValueError):
+        next(decoder.decode("-1 0 4 x"))
+    # ignores feature vector if fails to read
+    next(decoder.decode("-1 0 4 1 bad_key"))
+    next(decoder.decode("-1 0 4 1 float32"))
+    next(decoder.decode("-1 0 4 1 float32 2"))
+    next(decoder.decode("-1 0 4 1 float32 2 1"))
+    with pytest.raises(ValueError):
+        next(decoder.decode("-1 0 4 1 float32 2 1 x"))
+    next(decoder.decode("-1 0 4 1 float32 2 1 1"))
+    next(decoder.decode("-1 0 4 1 binary_feature 1 test"))
+    next(decoder.decode("-1 0 4 1 float32 0"))
+    with pytest.raises(IndexError):
+        gen = decoder.decode("-1 0 4 1 float32 0 0 1")
+        next(gen)
+        next(gen)
+    with pytest.raises(IndexError):
+        gen = decoder.decode("-1 0 4 1 float32 0 0 1 4")
+        next(gen)
+        next(gen)
+    gen = decoder.decode("-1 0 4 1 float32 0 0 1 4 1")
+    next(gen)
+    next(gen)
 
 
 if __name__ == "__main__":
