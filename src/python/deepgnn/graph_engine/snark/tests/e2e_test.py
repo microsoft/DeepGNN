@@ -262,7 +262,7 @@ def multi_partition_graph_data():
     output = tempfile.TemporaryDirectory()
     data_name, meta_name = triangle_graph_json(output.name)
     d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, meta_name, convert.output, Counter(), DecoderType.JSON
+        Path(output.name), 2, meta_name, Counter(), DecoderType.JSON
     )
     convert.MultiWorkersConverter(
         graph_path=data_name,
@@ -1381,7 +1381,7 @@ def no_features_graph():
     output = tempfile.TemporaryDirectory()
     data_name, meta_name = no_features_graph_json(output.name)
     d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, meta_name, convert.output, Counter(), DecoderType.JSON
+        Path(output.name), 2, meta_name, Counter(), DecoderType.JSON
     )
 
     convert.MultiWorkersConverter(

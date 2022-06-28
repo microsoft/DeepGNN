@@ -16,10 +16,12 @@ else:
 
 from deepgnn.graph_engine.snark.decoders import DecoderType
 from deepgnn import get_logger
-
-FLAG_ALL_DONE = b"WORK_FINISHED"
-FLAG_WORKER_FINISHED_PROCESSING = b"WORKER_FINISHED_PROCESSING"
-PROCESS_PRINT_INTERVAL = 1000
+from deepgnn.graph_engine.snark.converter.process import (
+    converter_process,
+    FLAG_ALL_DONE,
+    FLAG_WORKER_FINISHED_PROCESSING,
+    PROCESS_PRINT_INTERVAL,
+)
 
 
 class Dispatcher(ABC):
@@ -57,6 +59,7 @@ class PipeDispatcher(Dispatcher):
         folder: str,
         parallel: int,
         meta: str,
+        decoder_type: DecoderType,
         process: typing.Callable[
             [
                 typing.Union[mp.Queue, Connection],
@@ -70,8 +73,7 @@ class PipeDispatcher(Dispatcher):
                 bool,
             ],
             None,
-        ],
-        decoder_type: DecoderType,
+        ] = converter_process,
         partition_offset: int = 0,
         use_threads: bool = False,
         skip_node_sampler: bool = False,
@@ -186,9 +188,11 @@ class QueueDispatcher(Dispatcher):
         folder: str,
         num_partitions: int,
         meta: str,
-        process: typing.Callable[[mp.Queue, mp.Queue, str, int, int], None],
         partion_func: typing.Callable[[str], int],
         decoder_type: DecoderType,
+        process: typing.Callable[
+            [mp.Queue, mp.Queue, str, int, int], None
+        ] = converter_process,
         partition_offset: int = 0,
         use_threads: bool = False,
         skip_node_sampler: bool = False,

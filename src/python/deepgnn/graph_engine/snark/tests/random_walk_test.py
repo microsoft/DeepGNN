@@ -88,7 +88,7 @@ def binary_karate_club_data():
     with tempfile.TemporaryDirectory() as workdir:
         data_name, meta_name = karate_club_json(workdir)
         d = dispatcher.QueueDispatcher(
-            Path(workdir), 2, meta_name, convert.output, Counter(), DecoderType.JSON
+            Path(workdir), 2, meta_name, Counter(), DecoderType.JSON
         )
 
         convert.MultiWorkersConverter(

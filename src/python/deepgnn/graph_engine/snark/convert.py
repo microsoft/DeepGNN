@@ -4,141 +4,21 @@
 """Conversion functions to internal binary format."""
 import tempfile
 import multiprocessing as mp
-import typing
 import math
-import platform
 from operator import add
-from typing import Optional
-
-if platform.system() == "Windows":
-    from multiprocessing.connection import PipeConnection as Connection  # type: ignore
-else:
-    from multiprocessing.connection import Connection  # type: ignore
-
 import fsspec
-
 from deepgnn import get_logger
 from deepgnn.graph_engine._adl_reader import TextFileIterator
 from deepgnn.graph_engine._base import get_fs
-import deepgnn.graph_engine.snark.converter.json_converter as json_converter
+from deepgnn.graph_engine.snark.converter.process import converter_process
 from deepgnn.graph_engine.snark.decoders import (
-    Decoder,
     DecoderType,
-    JsonDecoder,
-    TsvDecoder,
 )
 from deepgnn.graph_engine.snark.dispatcher import (
     PipeDispatcher,
     Dispatcher,
-    FLAG_ALL_DONE,
-    FLAG_WORKER_FINISHED_PROCESSING,
 )
 import deepgnn.graph_engine.snark.meta as mt
-
-
-class _NoOpWriter:
-    def add(self, _: typing.Any):
-        return
-
-    def close(self):
-        return
-
-
-def output(
-    q_in: typing.Union[mp.Queue, Connection],
-    q_out: mp.Queue,
-    folder: str,
-    suffix: int,
-    node_type_num: int,
-    edge_type_num: int,
-    decoder_type: DecoderType,
-    skip_node_sampler: bool,
-    skip_edge_sampler: bool,
-) -> None:
-    """Process graph nodes from a queue to binary files.
-
-    Args:
-        q_in (typing.Union[mp.Queue, Connection]): input nodes
-        q_out (mp.Queue): signal processing is done
-        folder (str): where to save binaries
-        suffix (int): file suffix in the name of binary files
-        node_type_num (int): number of node types in the graph
-        edge_type_num (int): number of edge types in the graph
-        decoder_type (DecoderType): Decoder which is used to parse the raw graph data file, Supported: json/tsv
-        skip_node_sampler(bool): skip generation of node alias tables
-        skip_edge_sampler(bool): skip generation of edge alias tables
-    """
-    decoder: Optional[Decoder] = None
-    if decoder_type == DecoderType.JSON:
-        decoder = JsonDecoder()
-    elif decoder_type == DecoderType.TSV:
-        decoder = TsvDecoder()
-    else:
-        raise ValueError("Unsupported decoder type.")
-
-    assert decoder is not None
-
-    node_count = 0
-    edge_count = 0
-    node_weight = [0] * node_type_num
-    node_type_count = [0] * node_type_num
-    edge_weight = [0] * edge_type_num
-    edge_type_count = [0] * edge_type_num
-    writer = json_converter.NodeWriter(str(folder), suffix)
-    node_alias: typing.Union[json_converter.NodeAliasWriter, _NoOpWriter] = (
-        _NoOpWriter()
-        if skip_node_sampler
-        else json_converter.NodeAliasWriter(str(folder), suffix, node_type_num)
-    )
-    edge_alias: typing.Union[json_converter.EdgeAliasWriter, _NoOpWriter] = (
-        _NoOpWriter()
-        if skip_edge_sampler
-        else json_converter.EdgeAliasWriter(str(folder), suffix, edge_type_num)
-    )
-    count = 0
-    while True:
-        count += 1
-        if type(q_in) == Connection:
-            line = q_in.recv()  # type: ignore
-        else:
-            line = q_in.get()  # type: ignore
-
-        if line == FLAG_ALL_DONE:
-            break
-
-        node = decoder.decode(line)
-        writer.add(node)
-        node_alias.add(node)
-
-        for eet in node["edge"]:
-            edge_alias.add(eet)
-            edge_weight[eet["edge_type"]] += eet["weight"]
-            edge_type_count[eet["edge_type"]] += 1
-
-        edge_count += len(node["edge"])
-        node_count += 1
-        node_weight[node["node_type"]] += float(node["node_weight"])
-        node_type_count[node["node_type"]] += 1
-
-    writer.close()
-    node_alias.close()
-    edge_alias.close()
-    q_out.put(
-        (
-            FLAG_WORKER_FINISHED_PROCESSING,
-            {
-                "node_count": node_count,
-                "edge_count": edge_count,
-                "partition": {
-                    "id": suffix,
-                    "node_weight": node_weight,
-                    "node_type_count": node_type_count,
-                    "edge_weight": edge_weight,
-                    "edge_type_count": edge_type_count,
-                },
-            },
-        )
-    )
 
 
 class MultiWorkersConverter:
@@ -208,8 +88,8 @@ class MultiWorkersConverter:
                 self.output_dir,
                 self.partition_count,
                 meta_path_local,
-                output,
                 self.decoder_type,
+                converter_process,
                 self.partition_offset,
                 False
                 if hasattr(fsspec.implementations, "hdfs")
