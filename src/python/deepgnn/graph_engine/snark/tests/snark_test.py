@@ -52,7 +52,6 @@ def caveman_data(partitions: int = 1, worker_count: int = 1, output_dir: str = "
                 }
                 for nb in nx.neighbors(g, node_id)
             ],
-            "neighbor": {"0": nbs},
         }
         data[node_id % worker_count] += json.dumps(node) + "\n"
         nodes.append(node)

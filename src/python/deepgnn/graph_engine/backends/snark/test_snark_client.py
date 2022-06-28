@@ -59,7 +59,6 @@ def caveman_data():
                 }
                 for nb in nx.neighbors(g, node_id)
             ],
-            "neighbor": {"0": nbs},
         }
         data += json.dumps(node) + "\n"
         nodes.append(node)

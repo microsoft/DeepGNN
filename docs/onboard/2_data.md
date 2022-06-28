@@ -72,14 +72,6 @@ Full json format, [here](~/advanced/data_spec.md).
 ...             }
 ...             for neighbor_id in nx.neighbors(g, node_id)
 ...         ],
-...         "neighbor": {
-...             "0": dict(
-...                 [
-...                     (str(neighbor_id), 1.0)
-...                     for neighbor_id in nx.neighbors(g, node_id)
-...                 ]
-...             )
-...         },  # {"edge type": {"neighbor id": "weight", "...": "..."}, "...": "..."}
 ...     }
 ...     data += json.dumps(node) + "\n"
 ...     nodes.append(node)
