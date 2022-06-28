@@ -191,7 +191,18 @@ class QueueDispatcher(Dispatcher):
         partion_func: typing.Callable[[str], int],
         decoder_type: DecoderType,
         process: typing.Callable[
-            [mp.Queue, mp.Queue, str, int, int], None
+            [
+                typing.Union[mp.Queue, Connection],
+                mp.Queue,
+                str,
+                int,
+                int,
+                int,
+                DecoderType,
+                bool,
+                bool,
+            ],
+            None,
         ] = converter_process,
         partition_offset: int = 0,
         use_threads: bool = False,
