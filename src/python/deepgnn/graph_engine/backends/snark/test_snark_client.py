@@ -87,7 +87,7 @@ def caveman_data():
         meta_path=meta_file,
         partition_count=2,
         output_dir=working_dir.name,
-        decoder_class=decoders.JsonDecoder(),
+        decoder=decoders.JsonDecoder(),
     ).convert()
 
     yield working_dir.name

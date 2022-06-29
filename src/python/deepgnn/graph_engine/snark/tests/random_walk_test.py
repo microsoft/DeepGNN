@@ -96,7 +96,7 @@ def binary_karate_club_data():
             meta_path=meta_name,
             partition_count=2,
             output_dir=workdir,
-            decoder_class=JsonDecoder(),
+            decoder=JsonDecoder(),
             dispatcher=d,
         ).convert()
         yield workdir

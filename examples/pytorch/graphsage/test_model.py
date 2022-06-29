@@ -423,7 +423,7 @@ def tiny_graph():
         meta_path=os.path.join(graph_dir.name, "twinbert/tiny_meta.json"),
         partition_count=1,
         output_dir=graph_dir.name,
-        decoder_class=JsonDecoder(),
+        decoder=JsonDecoder(),
     ).convert()
 
     yield graph_dir.name

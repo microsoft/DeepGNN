@@ -176,7 +176,7 @@ def multi_partition_graph_data():
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_class=JsonDecoder(),
+        decoder=JsonDecoder(),
         dispatcher=d,
     ).convert()
 
@@ -406,7 +406,7 @@ def karate_club_graph():
             meta_path=meta_name,
             partition_count=2,
             output_dir=workdir,
-            decoder_class=JsonDecoder(),
+            decoder=JsonDecoder(),
             dispatcher=d,
             skip_edge_sampler=True,
             skip_node_sampler=True,

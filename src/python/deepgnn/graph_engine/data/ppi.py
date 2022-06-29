@@ -151,7 +151,7 @@ class PPI(Client):
             meta_path=meta_file,
             partition_count=1,
             output_dir=data_dir,
-            decoder_class=decoders.JsonDecoder(),
+            decoder=decoders.JsonDecoder(),
         ).convert()
 
         return data_dir

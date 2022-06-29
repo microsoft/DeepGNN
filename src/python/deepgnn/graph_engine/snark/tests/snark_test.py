@@ -85,7 +85,7 @@ def caveman_data(partitions: int = 1, worker_count: int = 1, output_dir: str = "
             output_dir=output_dir,
             worker_index=n,
             worker_count=worker_count,
-            decoder_class=decoders.JsonDecoder(),
+            decoder=decoders.JsonDecoder(),
         ).convert()
         for n in range(worker_count)
     ]

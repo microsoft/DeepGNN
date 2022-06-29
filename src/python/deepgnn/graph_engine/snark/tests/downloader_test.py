@@ -117,7 +117,7 @@ def multi_partition_graph_data(request):
         meta_path=meta_name,
         partition_count=2,
         output_dir=output.name,
-        decoder_class=JsonDecoder(),
+        decoder=JsonDecoder(),
         dispatcher=d,
         skip_node_sampler=request.param[0],
         skip_edge_sampler=request.param[1],

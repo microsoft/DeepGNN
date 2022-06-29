@@ -183,7 +183,7 @@ def default_triangle_graph():
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_class=JsonDecoder(),
+        decoder=JsonDecoder(),
     ).convert()
     yield output.name
 
@@ -269,7 +269,7 @@ def multi_partition_graph_data():
         meta_path=meta_name,
         partition_count=2,
         output_dir=output.name,
-        decoder_class=JsonDecoder(),
+        decoder=JsonDecoder(),
         dispatcher=d,
     ).convert()
     yield output.name
@@ -579,7 +579,7 @@ def test_edge_sampling_graph_single_partition(triangle_graph_data):
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_class=JsonDecoder(),
+        decoder=JsonDecoder(),
     ).convert()
 
     g = client.MemoryGraph(output.name, [0])
@@ -598,7 +598,7 @@ def test_edge_sampling_graph_single_partition_raises_empty_types(triangle_graph_
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_class=JsonDecoder(),
+        decoder=JsonDecoder(),
     ).convert()
 
     g = client.MemoryGraph(output.name, [0, 1])
@@ -1288,7 +1288,7 @@ def default_node_sampling_graph(sampling_graph_data):
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_class=JsonDecoder(),
+        decoder=JsonDecoder(),
     ).convert()
 
     yield output.name
@@ -1389,7 +1389,7 @@ def no_features_graph():
         meta_path=meta_name,
         partition_count=2,
         output_dir=output.name,
-        decoder_class=JsonDecoder(),
+        decoder=JsonDecoder(),
         dispatcher=d,
         skip_edge_sampler=True,
         skip_node_sampler=True,

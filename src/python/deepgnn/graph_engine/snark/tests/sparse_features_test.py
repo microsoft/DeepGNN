@@ -154,7 +154,7 @@ def graph_with_sparse_features(request):
         meta_path=meta_name,
         partition_count=request.param,
         output_dir=workdir.name,
-        decoder_class=JsonDecoder(),
+        decoder=JsonDecoder(),
         skip_edge_sampler=True,
         skip_node_sampler=True,
     ).convert()
@@ -214,7 +214,7 @@ def multi_server_sparse_features_graph():
         meta_path=meta_name,
         partition_count=2,
         output_dir=workdir.name,
-        decoder_class=JsonDecoder(),
+        decoder=JsonDecoder(),
         skip_edge_sampler=True,
         skip_node_sampler=True,
     ).convert()

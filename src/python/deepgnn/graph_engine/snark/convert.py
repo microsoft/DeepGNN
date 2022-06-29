@@ -30,7 +30,7 @@ class MultiWorkersConverter:
         graph_path: str,
         meta_path: str,
         output_dir: str,
-        decoder_class: Optional[DecoderType] = None,
+        decoder: Optional[DecoderType] = None,
         partition_count: int = 1,
         worker_index: int = 0,
         worker_count: int = 1,
@@ -48,7 +48,7 @@ class MultiWorkersConverter:
             graph_path: the raw graph file folder.
             meta_path: the path of the meta.json.
             output_dir: the output directory to put the generated graph binary files.
-            decoder_class: decoder type.
+            decoder: decoder type.
             partition_count: how many partitions will be generated.
             worker_index: the work index when running in multi worker mode.
             worker_count: how many workers will be started to convert the data.
@@ -65,7 +65,7 @@ class MultiWorkersConverter:
         self.worker_index = worker_index
         self.worker_count = worker_count
         self.output_dir = output_dir
-        self.decoder_class = decoder_class
+        self.decoder = decoder
         self.record_per_step = record_per_step
         self.read_block_in_M = buffer_size
         self.buffer_queue_size = queue_size
@@ -89,7 +89,7 @@ class MultiWorkersConverter:
                 self.output_dir,
                 self.partition_count,
                 meta_path_local,
-                self.decoder_class,
+                self.decoder,
                 converter_process,
                 self.partition_offset,
                 False
@@ -230,8 +230,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    decoder_class = getattr(decoders, f"{args.type.capitalize()}Decoder")()
-    if decoder_class is None:
+    decoder = getattr(decoders, f"{args.type.capitalize()}Decoder")()
+    if decoder is None:
         raise ValueError("Unsupported decoder type.")
 
     c = MultiWorkersConverter(
@@ -241,7 +241,7 @@ if __name__ == "__main__":
         output_dir=args.out,
         worker_index=args.worker_index,
         worker_count=args.worker_count,
-        decoder_class=decoder_class,
+        decoder=decoder,
         skip_node_sampler=args.skip_node_sampler,
         skip_edge_sampler=args.skip_edge_sampler,
     )
