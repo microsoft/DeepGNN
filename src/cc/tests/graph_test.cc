@@ -1054,7 +1054,6 @@ TEST(GraphTest, GetNeigborCountSinglePartition)
     std::vector<uint64_t> output_neighbors_count(nodes.size());
 
     g.NeighborCount(std::span(nodes), std::span(types), output_neighbors_count);
-    print_content(output_neighbors_count);
     EXPECT_EQ(std::vector<uint64_t>({2, 2}), output_neighbors_count);
 
     // Check for different singe edge type filter
