@@ -4,4 +4,4 @@
 
 * Dispatchers make argument 'process' default to converter.process.convert_process and set the argument after decoder type.
 
-* Dispatchers argument "decoder_type" -> "decoder_class" that accepts Decoder class or object.
+* Remove DecoderType. Converter and dispatcher's argument "decoder_type" -> "decoder_class" that accepts Decoder class or object.
