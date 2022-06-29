@@ -24,7 +24,6 @@ def triangle_graph_json(folder):
             "node_id": 9,
             "node_type": 0,
             "node_weight": 1,
-            "neighbor": {"0": {"0": 0.5}, "1": {}},
             "uint64_feature": {},
             "float_feature": {"0": [0, 1], "1": [-0.01, -0.02]},
             "binary_feature": {},
@@ -44,7 +43,6 @@ def triangle_graph_json(folder):
             "node_id": 0,
             "node_type": 1,
             "node_weight": 1,
-            "neighbor": {"0": {}, "1": {"5": 1}},
             "uint64_feature": {},
             "float_feature": {"0": [1], "1": [-0.03, -0.04]},
             "binary_feature": {},
@@ -64,7 +62,6 @@ def triangle_graph_json(folder):
             "node_id": 5,
             "node_type": 2,
             "node_weight": 1,
-            "neighbor": {"0": {}, "1": {"9": 0.7}},
             "uint64_feature": {},
             "float_feature": {"0": [1, 1], "1": [-0.05, -0.06]},
             "binary_feature": {},
@@ -474,7 +471,6 @@ def graph_with_sparse_features_json(folder):
             "node_id": 9,
             "node_type": 0,
             "node_weight": 1,
-            "neighbor": {"0": {"0": 0.5}, "1": {}},
             "float_feature": {"0": [0, 1], "3": [-0.01, -0.02]},
             "sparse_float_feature": {
                 "2": {"coordinates": [5, 13], "values": [1.0, 2.13]}
@@ -528,7 +524,6 @@ def graph_with_sparse_features_json(folder):
             "node_id": 0,
             "node_type": 1,
             "node_weight": 1,
-            "neighbor": {"0": {}, "1": {"5": 1}},
             "float_feature": {"0": [1], "1": [-0.03, -0.04]},
             "sparse_float_feature": {"2": {"coordinates": [1, 3, 7], "values": [5.5]}},
             "edge": [
@@ -545,7 +540,6 @@ def graph_with_sparse_features_json(folder):
             "node_id": 5,
             "node_type": 2,
             "node_weight": 1,
-            "neighbor": {"0": {}, "1": {"9": 0.7}},
             "sparse_float_feature": {
                 "2": {"coordinates": [1, 3], "values": [5.5, 6.89]}
             },

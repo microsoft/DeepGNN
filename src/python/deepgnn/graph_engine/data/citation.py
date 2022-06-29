@@ -320,7 +320,6 @@ class CitationGraph(Client):
                 }
                 for nb in neighbors
             ],
-            "neighbor": {"0": dict([(str(nb), 1.0) for nb in neighbors])},
         }
         return json.dumps(node)
 

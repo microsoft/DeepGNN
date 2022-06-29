@@ -74,10 +74,6 @@ We generate this dataset with networkx, save it to json format and use snark to 
 ...             }
 ...             for neighbor_id in test_list
 ...         ],
-...         "neighbor": {
-...             "0": dict([(str(neighbor_id), 1.0) for neighbor_id in train_list]),
-...             "1": dict([(str(neighbor_id), 1.0) for neighbor_id in test_list])
-...         },
 ...     }
 ...     data += json.dumps(node) + "\n"
 ...     nodes.append(node)
