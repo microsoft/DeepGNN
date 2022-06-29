@@ -8,9 +8,13 @@ bazel-DeepGNN*
 bazel-testlogs*
 
 # Python package artifacts
-dist/*
-build/*
+src/python/dist/*
+src/python/build/*
 *.egg-info
+
+# Examples output
+docs/tutorials/pytorch/tmp/*
+docs/tutorials/tf/graphdata/*
 
 #Python cache files
 *.pyc
