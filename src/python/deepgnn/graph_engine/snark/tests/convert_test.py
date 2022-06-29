@@ -589,9 +589,7 @@ def graph_with_sparse_features(request):
     workdir.cleanup()
 
 
-@pytest.mark.parametrize(
-    "graph_with_sparse_features", [JsonDecoder], indirect=True
-)
+@pytest.mark.parametrize("graph_with_sparse_features", [JsonDecoder], indirect=True)
 def test_sanity_node_sparse_features_index(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
     data_name, meta_name, decoder = graph_with_sparse_features
@@ -613,9 +611,7 @@ def test_sanity_node_sparse_features_index(graph_with_sparse_features):
         assert actual[6:11] == [60, 96, 96, 96, 128]
 
 
-@pytest.mark.parametrize(
-    "graph_with_sparse_features", [JsonDecoder], indirect=True
-)
+@pytest.mark.parametrize("graph_with_sparse_features", [JsonDecoder], indirect=True)
 def test_sanity_node_sparse_features_data(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
     data_name, meta_name, decoder = graph_with_sparse_features
@@ -660,9 +656,7 @@ def test_sanity_node_sparse_features_data(graph_with_sparse_features):
         )
 
 
-@pytest.mark.parametrize(
-    "graph_with_sparse_features", [JsonDecoder], indirect=True
-)
+@pytest.mark.parametrize("graph_with_sparse_features", [JsonDecoder], indirect=True)
 def test_sanity_edge_sparse_features_index(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
     data_name, meta_name, decoder = graph_with_sparse_features
@@ -685,9 +679,7 @@ def test_sanity_edge_sparse_features_index(graph_with_sparse_features):
         assert actual[16:19] == [362, 362, 394]
 
 
-@pytest.mark.parametrize(
-    "graph_with_sparse_features", [JsonDecoder], indirect=True
-)
+@pytest.mark.parametrize("graph_with_sparse_features", [JsonDecoder], indirect=True)
 def test_sanity_edge_sparse_features_data(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
     data_name, meta_name, decoder = graph_with_sparse_features

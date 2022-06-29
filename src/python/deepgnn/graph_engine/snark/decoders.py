@@ -6,7 +6,6 @@ import abc
 import json
 import logging
 import csv
-from enum import Enum
 from typing import Any, Dict
 
 logger = logging.getLogger()

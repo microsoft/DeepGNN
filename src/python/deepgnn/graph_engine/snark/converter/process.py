@@ -5,7 +5,6 @@
 import multiprocessing as mp
 import typing
 import platform
-from typing import Optional
 
 if platform.system() == "Windows":
     from multiprocessing.connection import PipeConnection as Connection  # type: ignore
@@ -13,11 +12,6 @@ else:
     from multiprocessing.connection import Connection  # type: ignore
 
 import deepgnn.graph_engine.snark.converter.writers as writers
-from deepgnn.graph_engine.snark.decoders import (
-    Decoder,
-    JsonDecoder,
-    TsvDecoder,
-)
 
 
 FLAG_ALL_DONE = b"WORK_FINISHED"
@@ -40,7 +34,8 @@ def converter_process(
     suffix: int,
     node_type_num: int,
     edge_type_num: int,
-    decoder_class: typing.Any,    skip_node_sampler: bool,
+    decoder_class: typing.Any,
+    skip_node_sampler: bool,
     skip_edge_sampler: bool,
 ) -> None:
     """Process graph nodes from a queue to binary files.
