@@ -87,7 +87,7 @@ def prepare_connected_caveman_graph(working_dir):
         meta_path=meta_file,
         partition_count=1,
         output_dir=working_dir,
-        decoder_class=decoders.JsonDecoder,
+        decoder_class=decoders.JsonDecoder(),
     ).convert()
 
     logger.info(working_dir)

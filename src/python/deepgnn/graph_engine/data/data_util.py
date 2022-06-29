@@ -139,7 +139,7 @@ class Dataset(Client):
             meta_path=meta_file,
             partition_count=1,
             output_dir=data_dir,
-            decoder_class=decoders.JsonDecoder,
+            decoder_class=decoders.JsonDecoder(),
         ).convert()
 
         # write training/testing nodes.

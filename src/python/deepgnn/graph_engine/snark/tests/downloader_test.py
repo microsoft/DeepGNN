@@ -110,14 +110,14 @@ def multi_partition_graph_data(request):
     output = tempfile.TemporaryDirectory()
     data_name, meta_name = small_graph_json(output.name)
     d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, meta_name, Counter(), JsonDecoder
+        Path(output.name), 2, meta_name, Counter(), JsonDecoder()
     )
     convert.MultiWorkersConverter(
         graph_path=data_name,
         meta_path=meta_name,
         partition_count=2,
         output_dir=output.name,
-        decoder_class=JsonDecoder,
+        decoder_class=JsonDecoder(),
         dispatcher=d,
         skip_node_sampler=request.param[0],
         skip_edge_sampler=request.param[1],

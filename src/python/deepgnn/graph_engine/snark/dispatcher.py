@@ -3,6 +3,7 @@
 
 """Orchestrate multiple converters."""
 import json
+from typing import Optional
 import multiprocessing as mp
 import threading
 import platform
@@ -21,6 +22,7 @@ from deepgnn.graph_engine.snark.converter.process import (
     FLAG_WORKER_FINISHED_PROCESSING,
     PROCESS_PRINT_INTERVAL,
 )
+from deepgnn.graph_engine.snark.decoders import DecoderType
 
 
 class Dispatcher(ABC):
@@ -58,7 +60,7 @@ class PipeDispatcher(Dispatcher):
         folder: str,
         parallel: int,
         meta: str,
-        decoder_class: typing.Any,
+        decoder_class: Optional[DecoderType],
         process: typing.Callable[
             [
                 typing.Union[mp.Queue, Connection],
@@ -67,7 +69,7 @@ class PipeDispatcher(Dispatcher):
                 int,
                 int,
                 int,
-                typing.Any,
+                DecoderType,
                 bool,
                 bool,
             ],
@@ -85,7 +87,7 @@ class PipeDispatcher(Dispatcher):
             parallel (int): Number of parallel process to use for conversion.
             meta (str): Meta data about graph.
             process (typing.Callable[ [typing.Union[mp.Queue, Connection], mp.Queue, str, int, int, int, Decoder], None ]): Function to call for processing lines in a file.
-            decoder_class (Decoder): Class of decoder which is used to parse the raw graph data file.
+            decoder_class (Decoder): Decoder object which is used to parse the raw graph data file.
             partition_offset(int): offset in a text file, where to start reading for a new partition.
             use_threads(bool): use threads instead of processes for parallel processing.
             skip_node_sampler(bool): skip generation of node alias tables.
@@ -188,7 +190,7 @@ class QueueDispatcher(Dispatcher):
         num_partitions: int,
         meta: str,
         partion_func: typing.Callable[[str], int],
-        decoder_class: typing.Any,
+        decoder_class: Optional[DecoderType],
         process: typing.Callable[
             [
                 typing.Union[mp.Queue, Connection],
@@ -197,7 +199,7 @@ class QueueDispatcher(Dispatcher):
                 int,
                 int,
                 int,
-                typing.Any,
+                DecoderType,
                 bool,
                 bool,
             ],
@@ -216,7 +218,7 @@ class QueueDispatcher(Dispatcher):
             meta (str): meta data about graph.
             process (typing.Callable[[mp.Queue, mp.Queue, str, int, int], None]): function to use for conversion.
             partion_func (typing.Callable[[str], int]): how to assign graph elements to a partition.
-            decoder_class (Decoder): Class of decoder which is used to parse the raw graph data file.
+            decoder_class (Decoder): Decoder object which is used to parse the raw graph data file.
             partition_offset(int): offset in a text file, where to start reading for a new partition.
             use_threads(bool): use threads instead of processes for parallel processing.
             skip_node_sampler(bool): skip generation of node alias tables.

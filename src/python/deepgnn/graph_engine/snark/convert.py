@@ -3,7 +3,7 @@
 
 """Conversion functions to internal binary format."""
 import tempfile
-import typing
+from typing import Optional
 import multiprocessing as mp
 import math
 from operator import add
@@ -13,7 +13,7 @@ from deepgnn.graph_engine._adl_reader import TextFileIterator
 from deepgnn.graph_engine._base import get_fs
 from deepgnn.graph_engine.snark.converter.process import converter_process
 from deepgnn.graph_engine.snark.decoders import (
-    JsonDecoder,
+    DecoderType,
 )
 from deepgnn.graph_engine.snark.dispatcher import (
     PipeDispatcher,
@@ -30,7 +30,7 @@ class MultiWorkersConverter:
         graph_path: str,
         meta_path: str,
         output_dir: str,
-        decoder_class: typing.Any = JsonDecoder,
+        decoder_class: Optional[DecoderType] = None,
         partition_count: int = 1,
         worker_index: int = 0,
         worker_count: int = 1,
@@ -230,7 +230,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    decoder_class = getattr(decoders, f"{args.type.capitalize()}Decoder")
+    decoder_class = getattr(decoders, f"{args.type.capitalize()}Decoder")()
     if decoder_class is None:
         raise ValueError("Unsupported decoder type.")
 

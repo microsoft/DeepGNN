@@ -169,14 +169,14 @@ def multi_partition_graph_data():
     output = tempfile.TemporaryDirectory()
     data_name, meta_name = triangle_graph_json(output.name)
     d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, meta_name, Counter(), JsonDecoder
+        Path(output.name), 2, meta_name, Counter(), JsonDecoder()
     )
     convert.MultiWorkersConverter(
         graph_path=data_name,
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_class=JsonDecoder,
+        decoder_class=JsonDecoder(),
         dispatcher=d,
     ).convert()
 
@@ -399,14 +399,14 @@ def karate_club_graph():
     with tempfile.TemporaryDirectory() as workdir:
         data_name, meta_name = karate_club_json(workdir)
         d = dispatcher.QueueDispatcher(
-            Path(workdir), 2, meta_name, Counter(), JsonDecoder
+            Path(workdir), 2, meta_name, Counter(), JsonDecoder()
         )
         convert.MultiWorkersConverter(
             graph_path=data_name,
             meta_path=meta_name,
             partition_count=2,
             output_dir=workdir,
-            decoder_class=JsonDecoder,
+            decoder_class=JsonDecoder(),
             dispatcher=d,
             skip_edge_sampler=True,
             skip_node_sampler=True,

@@ -118,7 +118,7 @@ Finally, in order to use this dataset we convert the files from json to binary w
 ...     meta_path=meta_filename,
 ...     partition_count=partitions,
 ...     output_dir=working_dir,
-...     decoder_class=JsonDecoder,
+...     decoder_class=JsonDecoder(),
 ... ).convert()
 
 ```

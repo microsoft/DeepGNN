@@ -12,6 +12,7 @@ else:
     from multiprocessing.connection import Connection  # type: ignore
 
 import deepgnn.graph_engine.snark.converter.writers as writers
+from deepgnn.graph_engine.snark.decoders import DecoderType, JsonDecoder
 
 
 FLAG_ALL_DONE = b"WORK_FINISHED"
@@ -34,7 +35,7 @@ def converter_process(
     suffix: int,
     node_type_num: int,
     edge_type_num: int,
-    decoder_class: typing.Any,
+    decoder: typing.Optional[DecoderType],
     skip_node_sampler: bool,
     skip_edge_sampler: bool,
 ) -> None:
@@ -47,12 +48,12 @@ def converter_process(
         suffix (int): file suffix in the name of binary files
         node_type_num (int): number of node types in the graph
         edge_type_num (int): number of edge types in the graph
-        decoder_class (Decoder): Class of decoder which is used to parse the raw graph data file.
+        decoder (Decoder): Decoder object which is used to parse the raw graph data file.
         skip_node_sampler(bool): skip generation of node alias tables
         skip_edge_sampler(bool): skip generation of edge alias tables
     """
-    assert decoder_class is not None
-    decoder = decoder_class() if isinstance(decoder_class, type) else decoder_class
+    if decoder is None:
+        decoder = JsonDecoder()  # type: ignore
 
     node_count = 0
     edge_count = 0
@@ -82,7 +83,7 @@ def converter_process(
         if line == FLAG_ALL_DONE:
             break
 
-        node = decoder.decode(line)
+        node = decoder.decode(line)  # type: ignore
         writer.add(node)
         node_alias.add(node)
 

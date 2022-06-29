@@ -6,7 +6,7 @@ import abc
 import json
 import logging
 import csv
-from typing import Any, Dict
+from typing import Any, Dict, TypeVar
 
 logger = logging.getLogger()
 
@@ -17,6 +17,9 @@ class Decoder(abc.ABC):
     @abc.abstractmethod
     def decode(self, line: str):
         """Decode the line into a "node" object."""
+
+
+DecoderType = TypeVar("DecoderType", bound=Decoder)
 
 
 class JsonDecoder(Decoder):
