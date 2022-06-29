@@ -12,10 +12,6 @@ src/python/dist/*
 src/python/build/*
 *.egg-info
 
-# Examples output
-docs/tutorials/pytorch/tmp/*
-docs/tutorials/tf/graphdata/*
-
 #Python cache files
 *.pyc
 
