@@ -3,6 +3,7 @@
 
 """Conversion functions to internal binary format."""
 import tempfile
+import typing
 import multiprocessing as mp
 import math
 from operator import add
@@ -12,7 +13,7 @@ from deepgnn.graph_engine._adl_reader import TextFileIterator
 from deepgnn.graph_engine._base import get_fs
 from deepgnn.graph_engine.snark.converter.process import converter_process
 from deepgnn.graph_engine.snark.decoders import (
-    DecoderType,
+    JsonDecoder,
 )
 from deepgnn.graph_engine.snark.dispatcher import (
     PipeDispatcher,
@@ -29,7 +30,7 @@ class MultiWorkersConverter:
         graph_path: str,
         meta_path: str,
         output_dir: str,
-        decoder_type: DecoderType = DecoderType.JSON,
+        decoder_class: typing.Any = JsonDecoder,
         partition_count: int = 1,
         worker_index: int = 0,
         worker_count: int = 1,
@@ -47,7 +48,7 @@ class MultiWorkersConverter:
             graph_path: the raw graph file folder.
             meta_path: the path of the meta.json.
             output_dir: the output directory to put the generated graph binary files.
-            decoder_type: decoder type.
+            decoder_class: decoder type.
             partition_count: how many partitions will be generated.
             worker_index: the work index when running in multi worker mode.
             worker_count: how many workers will be started to convert the data.
@@ -64,7 +65,7 @@ class MultiWorkersConverter:
         self.worker_index = worker_index
         self.worker_count = worker_count
         self.output_dir = output_dir
-        self.decoder_type = decoder_type
+        self.decoder_class = decoder_class
         self.record_per_step = record_per_step
         self.read_block_in_M = buffer_size
         self.buffer_queue_size = queue_size
@@ -88,7 +89,7 @@ class MultiWorkersConverter:
                 self.output_dir,
                 self.partition_count,
                 meta_path_local,
-                self.decoder_type,
+                self.decoder_class,
                 converter_process,
                 self.partition_offset,
                 False
@@ -187,6 +188,7 @@ class MultiWorkersConverter:
 if __name__ == "__main__":
     # import here for special usage of the module.
     import argparse
+    import deepgnn.graph_engine.snark.decoders as decoders
 
     parser = argparse.ArgumentParser(
         description="Convert graph from euler json format to the deepgnn binary."
@@ -210,9 +212,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-t",
         "--type",
-        type=DecoderType,
-        default=DecoderType.JSON,
-        help="Type of the graph data file. Supported: json, tsv",
+        type=str,
+        default="json",
+        help="Type of the graph data file. Supported: linear, json, tsv",
     )
     parser.add_argument(
         "--skip_node_sampler",
@@ -228,6 +230,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    decoder_class = getattr(decoders, f"{args.type.capitalize()}Decoder")
+    if decoder_class is None:
+        raise ValueError("Unsupported decoder type.")
+
     c = MultiWorkersConverter(
         graph_path=args.data,
         meta_path=args.meta,
@@ -235,7 +241,7 @@ if __name__ == "__main__":
         output_dir=args.out,
         worker_index=args.worker_index,
         worker_count=args.worker_count,
-        decoder_type=args.type,
+        decoder_class=decoder_class,
         skip_node_sampler=args.skip_node_sampler,
         skip_edge_sampler=args.skip_edge_sampler,
     )

@@ -19,7 +19,7 @@ import grpc
 from grpc_health.v1 import health_pb2, health_pb2_grpc
 
 import deepgnn.graph_engine.snark.client as client
-from deepgnn.graph_engine.snark.decoders import DecoderType
+from deepgnn.graph_engine.snark.decoders import JsonDecoder
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.dispatcher as dispatcher
@@ -183,7 +183,7 @@ def default_triangle_graph():
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=DecoderType.JSON,
+        decoder_class=JsonDecoder,
     ).convert()
     yield output.name
 
@@ -262,14 +262,14 @@ def multi_partition_graph_data():
     output = tempfile.TemporaryDirectory()
     data_name, meta_name = triangle_graph_json(output.name)
     d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, meta_name, Counter(), DecoderType.JSON
+        Path(output.name), 2, meta_name, Counter(), JsonDecoder
     )
     convert.MultiWorkersConverter(
         graph_path=data_name,
         meta_path=meta_name,
         partition_count=2,
         output_dir=output.name,
-        decoder_type=DecoderType.JSON,
+        decoder_class=JsonDecoder,
         dispatcher=d,
     ).convert()
     yield output.name
@@ -579,7 +579,7 @@ def test_edge_sampling_graph_single_partition(triangle_graph_data):
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=DecoderType.JSON,
+        decoder_class=JsonDecoder,
     ).convert()
 
     g = client.MemoryGraph(output.name, [0])
@@ -598,7 +598,7 @@ def test_edge_sampling_graph_single_partition_raises_empty_types(triangle_graph_
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=DecoderType.JSON,
+        decoder_class=JsonDecoder,
     ).convert()
 
     g = client.MemoryGraph(output.name, [0, 1])
@@ -1288,7 +1288,7 @@ def default_node_sampling_graph(sampling_graph_data):
         meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=DecoderType.JSON,
+        decoder_class=JsonDecoder,
     ).convert()
 
     yield output.name
@@ -1381,7 +1381,7 @@ def no_features_graph():
     output = tempfile.TemporaryDirectory()
     data_name, meta_name = no_features_graph_json(output.name)
     d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, meta_name, Counter(), DecoderType.JSON
+        Path(output.name), 2, meta_name, Counter(), JsonDecoder
     )
 
     convert.MultiWorkersConverter(
@@ -1389,7 +1389,7 @@ def no_features_graph():
         meta_path=meta_name,
         partition_count=2,
         output_dir=output.name,
-        decoder_type=DecoderType.JSON,
+        decoder_class=JsonDecoder,
         dispatcher=d,
         skip_edge_sampler=True,
         skip_node_sampler=True,

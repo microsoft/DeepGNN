@@ -14,7 +14,6 @@ if platform.system() == "Windows":
 else:
     from multiprocessing.connection import Connection  # type: ignore
 
-from deepgnn.graph_engine.snark.decoders import DecoderType
 from deepgnn import get_logger
 from deepgnn.graph_engine.snark.converter.process import (
     converter_process,
@@ -59,7 +58,7 @@ class PipeDispatcher(Dispatcher):
         folder: str,
         parallel: int,
         meta: str,
-        decoder_type: DecoderType,
+        decoder_class: typing.Any,
         process: typing.Callable[
             [
                 typing.Union[mp.Queue, Connection],
@@ -68,7 +67,7 @@ class PipeDispatcher(Dispatcher):
                 int,
                 int,
                 int,
-                DecoderType,
+                typing.Any,
                 bool,
                 bool,
             ],
@@ -85,8 +84,8 @@ class PipeDispatcher(Dispatcher):
             folder (str): Location of graph files.
             parallel (int): Number of parallel process to use for conversion.
             meta (str): Meta data about graph.
-            process (typing.Callable[ [typing.Union[mp.Queue, Connection], mp.Queue, str, int, int, int, DecoderType], None ]): Function to call for processing lines in a file.
-            decoder_type (DecoderType): Decoder which is used to parse the raw graph data file, Supported: json/tsv.
+            process (typing.Callable[ [typing.Union[mp.Queue, Connection], mp.Queue, str, int, int, int, Decoder], None ]): Function to call for processing lines in a file.
+            decoder_class (Decoder): Class of decoder which is used to parse the raw graph data file.
             partition_offset(int): offset in a text file, where to start reading for a new partition.
             use_threads(bool): use threads instead of processes for parallel processing.
             skip_node_sampler(bool): skip generation of node alias tables.
@@ -114,7 +113,7 @@ class PipeDispatcher(Dispatcher):
                     i + partition_offset,
                     int(self.jsm["node_type_num"]),
                     int(self.jsm["edge_type_num"]),
-                    decoder_type,
+                    decoder_class,
                     skip_node_sampler,
                     skip_edge_sampler,
                 ),
@@ -189,7 +188,7 @@ class QueueDispatcher(Dispatcher):
         num_partitions: int,
         meta: str,
         partion_func: typing.Callable[[str], int],
-        decoder_type: DecoderType,
+        decoder_class: typing.Any,
         process: typing.Callable[
             [
                 typing.Union[mp.Queue, Connection],
@@ -198,7 +197,7 @@ class QueueDispatcher(Dispatcher):
                 int,
                 int,
                 int,
-                DecoderType,
+                typing.Any,
                 bool,
                 bool,
             ],
@@ -217,7 +216,7 @@ class QueueDispatcher(Dispatcher):
             meta (str): meta data about graph.
             process (typing.Callable[[mp.Queue, mp.Queue, str, int, int], None]): function to use for conversion.
             partion_func (typing.Callable[[str], int]): how to assign graph elements to a partition.
-            decoder_type (DecoderType): Decoder which is used to parse the raw graph data file, Supported: json/tsv.
+            decoder_class (Decoder): Class of decoder which is used to parse the raw graph data file.
             partition_offset(int): offset in a text file, where to start reading for a new partition.
             use_threads(bool): use threads instead of processes for parallel processing.
             skip_node_sampler(bool): skip generation of node alias tables.
@@ -249,7 +248,7 @@ class QueueDispatcher(Dispatcher):
                     i + partition_offset,
                     int(self.jsm["node_type_num"]),
                     int(self.jsm["edge_type_num"]),
-                    decoder_type,
+                    decoder_class,
                     skip_node_sampler,
                     skip_edge_sampler,
                 ),

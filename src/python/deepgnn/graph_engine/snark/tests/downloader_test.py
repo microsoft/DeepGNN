@@ -15,7 +15,7 @@ import numpy.testing as npt
 import pytest
 
 import deepgnn.graph_engine.snark.client as client
-from deepgnn.graph_engine.snark.decoders import DecoderType
+from deepgnn.graph_engine.snark.decoders import JsonDecoder
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.dispatcher as dispatcher
@@ -110,14 +110,14 @@ def multi_partition_graph_data(request):
     output = tempfile.TemporaryDirectory()
     data_name, meta_name = small_graph_json(output.name)
     d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, meta_name, Counter(), DecoderType.JSON
+        Path(output.name), 2, meta_name, Counter(), JsonDecoder
     )
     convert.MultiWorkersConverter(
         graph_path=data_name,
         meta_path=meta_name,
         partition_count=2,
         output_dir=output.name,
-        decoder_type=DecoderType.JSON,
+        decoder_class=JsonDecoder,
         dispatcher=d,
         skip_node_sampler=request.param[0],
         skip_edge_sampler=request.param[1],

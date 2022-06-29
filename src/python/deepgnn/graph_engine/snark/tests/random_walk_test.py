@@ -16,7 +16,7 @@ import pytest
 import networkx as nx
 
 import deepgnn.graph_engine.snark.client as client
-from deepgnn.graph_engine.snark.decoders import DecoderType
+from deepgnn.graph_engine.snark.decoders import JsonDecoder
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.dispatcher as dispatcher
@@ -88,7 +88,7 @@ def binary_karate_club_data():
     with tempfile.TemporaryDirectory() as workdir:
         data_name, meta_name = karate_club_json(workdir)
         d = dispatcher.QueueDispatcher(
-            Path(workdir), 2, meta_name, Counter(), DecoderType.JSON
+            Path(workdir), 2, meta_name, Counter(), JsonDecoder
         )
 
         convert.MultiWorkersConverter(
@@ -96,7 +96,7 @@ def binary_karate_club_data():
             meta_path=meta_name,
             partition_count=2,
             output_dir=workdir,
-            decoder_type=DecoderType.JSON,
+            decoder_class=JsonDecoder,
             dispatcher=d,
         ).convert()
         yield workdir

@@ -34,7 +34,7 @@ from deepgnn.graph_engine import (
     create_backend,
 )
 import deepgnn.graph_engine.snark.convert as convert
-from deepgnn.graph_engine.snark.decoders import DecoderType
+from deepgnn.graph_engine.snark.decoders import JsonDecoder
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
 from model import SupervisedGraphSage, UnSupervisedGraphSage
 
@@ -423,7 +423,7 @@ def tiny_graph():
         meta_path=os.path.join(graph_dir.name, "twinbert/tiny_meta.json"),
         partition_count=1,
         output_dir=graph_dir.name,
-        decoder_type=DecoderType.JSON,
+        decoder_class=JsonDecoder,
     ).convert()
 
     yield graph_dir.name

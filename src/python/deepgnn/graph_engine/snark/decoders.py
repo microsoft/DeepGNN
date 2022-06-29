@@ -12,17 +12,6 @@ from typing import Any, Dict
 logger = logging.getLogger()
 
 
-class DecoderType(Enum):
-    """Decoder types supported by converter."""
-
-    JSON = "json"
-    TSV = "tsv"
-
-    def __str__(self):
-        """Convert instance to string."""
-        return self.value
-
-
 class Decoder(abc.ABC):
     """Interface to convert one line of text into node object."""
 

@@ -14,7 +14,6 @@ else:
 
 import deepgnn.graph_engine.snark.converter.writers as writers
 from deepgnn.graph_engine.snark.decoders import (
-    DecoderType,
     Decoder,
     JsonDecoder,
     TsvDecoder,
@@ -41,8 +40,7 @@ def converter_process(
     suffix: int,
     node_type_num: int,
     edge_type_num: int,
-    decoder_type: DecoderType,
-    skip_node_sampler: bool,
+    decoder_class: typing.Any,    skip_node_sampler: bool,
     skip_edge_sampler: bool,
 ) -> None:
     """Process graph nodes from a queue to binary files.
@@ -54,19 +52,12 @@ def converter_process(
         suffix (int): file suffix in the name of binary files
         node_type_num (int): number of node types in the graph
         edge_type_num (int): number of edge types in the graph
-        decoder_type (DecoderType): Decoder which is used to parse the raw graph data file, Supported: json/tsv
+        decoder_class (Decoder): Class of decoder which is used to parse the raw graph data file.
         skip_node_sampler(bool): skip generation of node alias tables
         skip_edge_sampler(bool): skip generation of edge alias tables
     """
-    decoder: Optional[Decoder] = None
-    if decoder_type == DecoderType.JSON:
-        decoder = JsonDecoder()
-    elif decoder_type == DecoderType.TSV:
-        decoder = TsvDecoder()
-    else:
-        raise ValueError("Unsupported decoder type.")
-
-    assert decoder is not None
+    assert decoder_class is not None
+    decoder = decoder_class() if isinstance(decoder_class, type) else decoder_class
 
     node_count = 0
     edge_count = 0
