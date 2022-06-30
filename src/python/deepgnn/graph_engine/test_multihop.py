@@ -11,7 +11,7 @@ from deepgnn.graph_engine import multihop
 
 class NeighborGraph(Graph):
     def neighbors(
-        self, nodes: np.ndarray, edge_types: Union[int, np.ndarray[Any, Any]]
+        self, nodes: np.ndarray, edge_types: Union[int, np.ndarray]
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         return (
             np.array([[1, 2, 3]]),
@@ -69,7 +69,7 @@ class FanoutGraph(Graph):
     def sample_neighbors(
         self,
         nodes: np.ndarray,
-        edge_types: Union[int, np.ndarray[Any, Any]],
+        edge_types: Union[int, np.ndarray],
         count: int = 10,
         strategy: str = "byweight",
         default_node: int = -1,
