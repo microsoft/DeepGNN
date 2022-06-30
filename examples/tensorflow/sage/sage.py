@@ -17,7 +17,7 @@ class LayerInfo:
     """Layer configuration."""
 
     num_samples: int
-    neighbor_edge_types: np.array
+    neighbor_edge_types: np.ndarray
     strategy: str
 
 
@@ -49,7 +49,7 @@ class SAGEQuery:
         ), f"feature less {self.param.identity_feature}, feature_dim {self.param.feature_dim}"
 
     def _sample_n_hop_neighbors(
-        self, graph: Graph, inputs: np.array, layer_infos: List[LayerInfo]
+        self, graph: Graph, inputs: np.ndarray, layer_infos: List[LayerInfo]
     ):
         """
         GraphSAGE: Sample neighbors for multi-layer convolutions.
@@ -92,7 +92,7 @@ class SAGEQuery:
         return all_nodes, neighbor_list_idx
 
     def query_training(
-        self, graph: Graph, inputs: np.array, return_shape: bool = False
+        self, graph: Graph, inputs: np.ndarray, return_shape: bool = False
     ):
         """Fetch training data from graph."""
         # fmt: off

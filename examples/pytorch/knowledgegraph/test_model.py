@@ -50,13 +50,13 @@ class MockGraph(Graph):
         size: int,
         edge_type: int,
         strategy: SamplingStrategy = SamplingStrategy.Random,
-    ) -> np.array:
+    ) -> np.ndarray:
         indexes = np.random.randint(0, len(self.edge_array), size)
         return self.edge_array[indexes]
 
     def edge_features(
-        self, edges: np.array, features: np.array, feature_type: FeatureType
-    ) -> np.array:
+        self, edges: np.ndarray, features: np.ndarray, feature_type: FeatureType
+    ) -> np.ndarray:
         features = []
 
         for edge in edges:
@@ -64,8 +64,8 @@ class MockGraph(Graph):
         return np.array(features)
 
     def neighbors(
-        self, nodes: np.array, edge_type: np.array
-    ) -> Tuple[np.array, np.array, np.array, np.array]:
+        self, nodes: np.ndarray, edge_type: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         neighbors = []
         neighbor_count = []
         for node_id in nodes:

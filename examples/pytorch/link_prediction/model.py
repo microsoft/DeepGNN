@@ -214,7 +214,7 @@ class LinkPredictionModel(BaseSupervisedModel):
         """Metric used for evaluation."""
         return self.metric.name()
 
-    def query(self, graph: Graph, inputs: np.array):
+    def query(self, graph: Graph, inputs: np.ndarray):
         """
         Query graph for training data.
 

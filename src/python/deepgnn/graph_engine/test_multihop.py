@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 
 import pytest
-from typing import Tuple
+from typing import Tuple, Union, Any
 import numpy as np
 import numpy.testing as npt
 from deepgnn.graph_engine._base import Graph
@@ -11,8 +11,8 @@ from deepgnn.graph_engine import multihop
 
 class NeighborGraph(Graph):
     def neighbors(
-        self, nodes: np.array, edge_type: np.array
-    ) -> Tuple[np.array, np.array, np.array, np.array]:
+        self, nodes: np.ndarray, edge_types: Union[int, np.ndarray[Any, Any]]
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         return (
             np.array([[1, 2, 3]]),
             np.array([[1.0, 1.0, 1.0]]),
@@ -68,14 +68,14 @@ def test_get_neighbor_overfit(neighbor_graph):
 class FanoutGraph(Graph):
     def sample_neighbors(
         self,
-        nodes: np.array,
-        edge_types: np.array,
+        nodes: np.ndarray,
+        edge_types: Union[int, np.ndarray[Any, Any]],
         count: int = 10,
         strategy: str = "byweight",
         default_node: int = -1,
         default_weight: float = 0.0,
         default_node_type: int = -1,
-    ) -> Tuple[np.array, np.array, np.array, np.array]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         adj_lists = [[1, 2, 3], [2, 3], [3], []]
         res = np.empty((len(nodes), count), dtype=np.int64)
         for i in range(len(nodes)):
