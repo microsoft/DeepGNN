@@ -21,7 +21,7 @@ PROCESS_PRINT_INTERVAL = 1000
 
 
 class _NoOpWriter:
-    def add(self, _: typing.Any):
+    def add(self, *_: typing.Any):
         return
 
     def close(self):
@@ -61,7 +61,8 @@ def converter_process(
     node_type_count = [0] * node_type_num
     edge_weight = [0] * edge_type_num
     edge_type_count = [0] * edge_type_num
-    writer = writers.NodeWriter(str(folder), suffix)
+    node_writer = writers.NodeWriter(str(folder), suffix)
+    edge_writer = writers.EdgeWriter(str(folder), suffix)
     node_alias: typing.Union[writers.NodeAliasWriter, _NoOpWriter] = (
         _NoOpWriter()
         if skip_node_sampler
@@ -83,21 +84,23 @@ def converter_process(
         if line == FLAG_ALL_DONE:
             break
 
-        node = decoder.decode(line)  # type: ignore
-        writer.add(node)
-        node_alias.add(node)
+        for src, dst, typ, weight, features in decoder.decode(line):  # type: ignore
+            if src == -1:
+                node_writer.add(dst, typ, features)
+                edge_writer.add_node()
+                node_alias.add(dst, typ, weight)
+                node_weight[typ] += float(weight)
+                node_type_count[typ] += 1
+                node_count += 1
+            else:
+                edge_writer.add(dst, typ, weight, features)
+                edge_alias.add(src, dst, typ, weight)
+                edge_weight[typ] += weight
+                edge_type_count[typ] += 1
+                edge_count += 1
 
-        for eet in node["edge"]:
-            edge_alias.add(eet)
-            edge_weight[eet["edge_type"]] += eet["weight"]
-            edge_type_count[eet["edge_type"]] += 1
-
-        edge_count += len(node["edge"])
-        node_count += 1
-        node_weight[node["node_type"]] += float(node["node_weight"])
-        node_type_count[node["node_type"]] += 1
-
-    writer.close()
+    node_writer.close()
+    edge_writer.close()
     node_alias.close()
     edge_alias.close()
     q_out.put(
