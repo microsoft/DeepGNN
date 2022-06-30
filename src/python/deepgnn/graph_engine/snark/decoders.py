@@ -32,7 +32,7 @@ class Decoder(abc.ABC):
     @abc.abstractmethod
     def decode(self, line: str) -> Iterator[Tuple[int, int, int, float, list]]:
         """Decode the line of text.
-        
+
         This is a generator that yields a node then its outgoing edges in order.
         Yield format is (-1/src, node_id/dst, type, weight, features).
         Features being a list of dense features as ndarrays and sparse features as 2 tuples, coordinates and values.
@@ -101,7 +101,7 @@ class JsonDecoder(Decoder):
 
     def decode(self, line: str) -> Iterator[Tuple[int, int, int, float, list]]:
         """Use json package to convert the json text line into a node and edge iterator.
-        
+
         This is a generator that yields a node then its outgoing edges in order.
         Yield format is (-1/src, node_id/dst, type, weight, features).
         Features being a list of dense features as ndarrays and sparse features as 2 tuples, coordinates and values.
@@ -178,7 +178,7 @@ class TsvDecoder(Decoder):
 
     def decode(self, line: str) -> Iterator[Tuple[int, int, int, float, list]]:
         """Decode tsv based text line into a node and edge iterator.
-        
+
         This is a generator that yields a node then its outgoing edges in order.
         Yield format is (-1/src, node_id/dst, type, weight, features).
         Features being a list of dense features as ndarrays and sparse features as 2 tuples, coordinates and values.
