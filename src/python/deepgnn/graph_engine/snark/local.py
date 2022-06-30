@@ -186,6 +186,14 @@ class Client(Graph):
         """Fetch full information about node neighbors."""
         return self.graph.neighbors(nodes, self.__check_types(edge_types))
 
+
+    def neighbor_count(
+        self, nodes: np.array, edge_types: Union[List[int], int]
+    ) -> np.array:
+        """Fetch node degrees."""
+        return self.graph.neighbor_counts(nodes, self.__check_types(edge_types))
+
+
     def node_types(self, nodes: np.array) -> np.array:
         """Fetch node types."""
         return self.graph.node_types(nodes, -1)
