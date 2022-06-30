@@ -57,9 +57,9 @@ def converter_process(
 
     node_count = 0
     edge_count = 0
-    node_weight = [0] * node_type_num
+    node_weight = [0.0] * node_type_num
     node_type_count = [0] * node_type_num
-    edge_weight = [0] * edge_type_num
+    edge_weight = [0.0] * edge_type_num
     edge_type_count = [0] * edge_type_num
     node_writer = writers.NodeWriter(str(folder), suffix)
     edge_writer = writers.EdgeWriter(str(folder), suffix)

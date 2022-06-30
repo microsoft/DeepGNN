@@ -5,13 +5,14 @@
 import abc
 import json
 import csv
-from typing import TypeVar
+from typing import TypeVar, Iterator, Tuple
 import numpy as np
 
 
 class Decoder(abc.ABC):
     """Interface to convert one line of text into node object."""
 
+    # For converting json strings to numpy types.
     convert_map = {
         "double_feature": np.float64,
         "float_feature": np.float32,
@@ -29,8 +30,13 @@ class Decoder(abc.ABC):
     }
 
     @abc.abstractmethod
-    def decode(self, line: str):
-        """Decode the line into a "node" object."""
+    def decode(self, line: str) -> Iterator[Tuple[int, int, int, float, list]]:
+        """Decode the line of text.
+        
+        This is a generator that yields a node then its outgoing edges in order.
+        Yield format is (-1/src, node_id/dst, type, weight, features).
+        Features being a list of dense features as ndarrays and sparse features as 2 tuples, coordinates and values.
+        """
 
 
 DecoderType = TypeVar("DecoderType", bound=Decoder)
@@ -93,8 +99,13 @@ class JsonDecoder(Decoder):
 
         return ret_list
 
-    def decode(self, line: str):
-        """Use json package to convert the json text line into node object."""
+    def decode(self, line: str) -> Iterator[Tuple[int, int, int, float, list]]:
+        """Use json package to convert the json text line into a node and edge iterator.
+        
+        This is a generator that yields a node then its outgoing edges in order.
+        Yield format is (-1/src, node_id/dst, type, weight, features).
+        Features being a list of dense features as ndarrays and sparse features as 2 tuples, coordinates and values.
+        """
         data = json.loads(line) if isinstance(line, str) else line
         yield -1, data["node_id"], data["node_type"], data[
             "node_weight"
@@ -165,8 +176,13 @@ class TsvDecoder(Decoder):
 
         return feature_map
 
-    def decode(self, line: str):
-        """Decode tsv based text line into node object."""
+    def decode(self, line: str) -> Iterator[Tuple[int, int, int, float, list]]:
+        """Decode tsv based text line into a node and edge iterator.
+        
+        This is a generator that yields a node then its outgoing edges in order.
+        Yield format is (-1/src, node_id/dst, type, weight, features).
+        Features being a list of dense features as ndarrays and sparse features as 2 tuples, coordinates and values.
+        """
         assert line is not None and len(line) > 0
 
         columns = next(csv.reader([line], delimiter="\t"))
