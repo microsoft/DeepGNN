@@ -22,5 +22,8 @@ build/*
 #IDE related
 .vscode
 
+# compiler toolchain
+.dt11*
+
 # ansible artifacts
 examples/distributed/ansible/artifacts

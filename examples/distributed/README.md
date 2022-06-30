@@ -1,5 +1,14 @@
 # Launch distributed DeepGNN in cluster
 
+***Note:*** This example is used to setup DeepGNN in distributed machines with big dataset. When processing big dataset, we need to convert the graph into several partitions and each partition should be loaded by a graph engine process. So we need to setup DeepGNN enviroment in these distributed machines. This example uses ansible to remote to each machine and install DeeGNN and its dependencies in the machine. It will also use a jinja2 template to generate the command to launch graph engine process in each machine.
+
+`./ansible/inventory/hosts`: Ansible hosts files which contains all the agents which are used to launch distributed graph engine services (linux and windows).
+`./ansible/playbooks/deploy.yml`: Ansible playbook to install DeepGNN and its depedencies in each agent (from hosts file).
+`./ansible/playbooks/centos.yml`: Some special commands to install DeepGNN dependencies in CentOS . This is used by `./ansible/playbooks/deploy.yml`.
+`./ansible/playbooks/ubuntu.yml`: Some special commands to install DeepGNN dependencies in Ubuntu. This is used by `./ansible/playbooks/deploy.yml`.
+`./ansible/playbooks/start.yml.template`: A jinja2 template which is used to generate commands to launch distributed graph engine servers. This template will be rendered using hosts from `./ansible/inventory/hosts`
+`./ansible/distribute.py`: A python entrance to launch ansible scripts above.
+
 ## Using ansible
 
 ### Preparation
@@ -46,11 +55,9 @@
 Go to `distributed/ansible` folder and invoke following command:
 
 ```Shell
-python distributed.py \
-    --port 12345 \
-    --data_dir /path/to/your/data/folder \
-    --host_count 3 \
-    --partition_count 3
+python ./distribute.py --deploy_infra
+python -m deepgnn.graph_engine.data.citation --data_dir /tmp/cora
+python ./distribute.py --port 12345 --data_dir /tmp/cora --host_count 1 --partition_count 1
 ```
 
 #### Parameters
