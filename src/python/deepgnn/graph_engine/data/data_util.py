@@ -130,13 +130,10 @@ class Dataset(Client):
         # build graph - JSON
         graph_file = os.path.join(data_dir, "graph.json")
         self._write_json_graph(nodes, node_types, train_adjs, test_adjs, graph_file)
-        meta_file = os.path.join(data_dir, "meta.json")
-        self._write_meta_file(meta_file)
 
         # convert graph: JSON -> Binary
         convert.MultiWorkersConverter(
             graph_path=graph_file,
-            meta_path=meta_file,
             partition_count=1,
             output_dir=data_dir,
             decoder=decoders.JsonDecoder(),
@@ -201,16 +198,3 @@ class Dataset(Client):
                 )
                 fout.write(tmp)
                 fout.write("\n")
-
-    def _write_meta_file(self, meta_file: str):
-        meta = '{"node_type_num": 2, \
-                 "node_float_feature_num": 2, \
-                 "node_binary_feature_num": 0, \
-                 "node_uint64_feature_num": 0, \
-                 "edge_type_num": 2, \
-                 "edge_float_feature_num": 0, \
-                 "edge_binary_feature_num": 0, \
-                 "edge_uint64_feature_num": 0}'
-
-        with open(meta_file, "w") as fout:
-            fout.write(meta)

@@ -142,13 +142,10 @@ class PPI(Client):
                 fout.write(tmp)
                 fout.write("\n")
 
-        meta_file = os.path.join(data_dir, "meta.json")
-        self._write_meta_file(meta_file)
         self._write_node_files(data_dir, nodes, nodes_type)
         # convert graph: JSON -> Binary
         convert.MultiWorkersConverter(
             graph_path=graph_file,
-            meta_path=meta_file,
             partition_count=1,
             output_dir=data_dir,
             decoder=decoders.JsonDecoder(),
@@ -170,19 +167,6 @@ class PPI(Client):
                     fout_val.write(str(nid) + "\n")
                 elif ntype == 2:
                     fout_test.write(str(nid) + "\n")
-
-    def _write_meta_file(self, meta_file: str):
-        meta = '{"node_type_num": 3, \
-                 "node_float_feature_num": 2, \
-                 "node_binary_feature_num": 0, \
-                 "node_uint64_feature_num": 0, \
-                 "edge_type_num": 2, \
-                 "edge_float_feature_num": 0, \
-                 "edge_binary_feature_num": 0, \
-                 "edge_uint64_feature_num": 0}'
-
-        with open(meta_file, "w") as fout:
-            fout.write(meta)
 
     def _to_json_node(
         self,

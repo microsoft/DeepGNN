@@ -112,18 +112,8 @@ def triangle_graph_json(folder):
         json.dump(el, data)
         data.write("\n")
     data.flush()
-
-    meta = open(os.path.join(folder, "meta.txt"), "w+")
-    meta.write(
-        '{"node_type_num": 3, "edge_type_num": 2, \
-        "node_uint64_feature_num": 1, "node_float_feature_num": 2, \
-        "node_binary_feature_num": 1, "edge_uint64_feature_num": 1, \
-        "edge_float_feature_num": 1, "edge_binary_feature_num": 1}'
-    )
-    meta.flush()
     data.close()
-    meta.close()
-    return data.name, meta.name
+    return data.name
 
 
 def triangle_graph_tsv(folder):
@@ -134,27 +124,15 @@ def triangle_graph_tsv(folder):
         "5\t2\t1\tf:1 1;f:-0.05 -0.06;;;u8:5 6 7;i8:15 16 17;u16:25 26 27;i16:35 36 37;u32:45 46 47;i32:55 56 57;u64:65 66 67;i64:75 76 77;d:85 86 87;f16:95 96 97\t9,1,0.7,;;b:hello;;u8:5 6 7;i8:15 16 17;u16:25 26 27;i16:35 36 37;u32:45 46 47;i32:55 56 57;u64:65 66 67;i64:75 76 77;d:85 86 87;f16:95 96 97\n"
     )
     data.flush()
-
-    meta = open(os.path.join(folder, "meta.txt"), "w+")
-    meta.write(
-        '{"node_type_num": 3, "edge_type_num": 2, \
-        "node_uint64_feature_num": 1, "node_float_feature_num": 2, \
-        "node_binary_feature_num": 1, "edge_uint64_feature_num": 1, \
-        "edge_float_feature_num": 1, "edge_binary_feature_num": 1}'
-    )
-    meta.flush()
-
     data.close()
-    meta.close()
-
-    return data.name, meta.name
+    return data.name
 
 
 @pytest.fixture(scope="module")
 def triangle_graph_data():
     workdir = tempfile.TemporaryDirectory()
-    data_name, meta_name = triangle_graph_json(workdir.name)
-    yield data_name, meta_name
+    data_name = triangle_graph_json(workdir.name)
+    yield data_name
     workdir.cleanup()
 
 
@@ -177,10 +155,9 @@ def setup_module(module):
 @pytest.fixture(scope="module")
 def default_triangle_graph():
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name = triangle_graph_json(output.name)
+    data_name = triangle_graph_json(output.name)
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
         decoder=JsonDecoder(),
@@ -260,13 +237,12 @@ class Counter:
 @pytest.fixture(scope="module")
 def multi_partition_graph_data():
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name = triangle_graph_json(output.name)
+    data_name = triangle_graph_json(output.name)
     d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, meta_name, Counter(), JsonDecoder()
+        Path(output.name), 2, Counter(), JsonDecoder()
     )
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=2,
         output_dir=output.name,
         decoder=JsonDecoder(),
@@ -573,10 +549,9 @@ def test_uniform_edge_sampling_graph_multiple_partitions(multi_partition_graph_d
 
 def test_edge_sampling_graph_single_partition(triangle_graph_data):
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name = triangle_graph_data
+    data_name = triangle_graph_data
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
         decoder=JsonDecoder(),
@@ -592,10 +567,9 @@ def test_edge_sampling_graph_single_partition(triangle_graph_data):
 
 def test_edge_sampling_graph_single_partition_raises_empty_types(triangle_graph_data):
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name = triangle_graph_data
+    data_name = triangle_graph_data
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
         decoder=JsonDecoder(),
@@ -1262,30 +1236,18 @@ def sampling_graph_data():
         data.write("\n")
     data.flush()
 
-    meta = open(os.path.join(workdir.name, "meta.txt"), "w+")
-    meta.write('{"node_type_num": ')
-    meta.write(str(num_types))
-    meta.write(
-        ', "edge_type_num": 0, \
-        "node_uint64_feature_num": 0, "node_float_feature_num": 0, \
-        "node_binary_feature_num": 0, "edge_uint64_feature_num": 0, \
-        "edge_float_feature_num": 0, "edge_binary_feature_num": 0}'
-    )
-    meta.flush()
-    yield data.name, meta.name
+    yield data.name
 
     data.close()
-    meta.close()
     workdir.cleanup()
 
 
 @pytest.fixture(scope="module")
 def default_node_sampling_graph(sampling_graph_data):
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name = sampling_graph_data
+    data_name = sampling_graph_data
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
         decoder=JsonDecoder(),
@@ -1362,31 +1324,20 @@ def no_features_graph_json(folder):
         json.dump(el, data)
         data.write("\n")
     data.flush()
-
-    meta = open(os.path.join(folder, "meta.txt"), "w+")
-    meta.write(
-        '{"node_type_num": 2, "edge_type_num": 2, \
-        "node_uint64_feature_num": 0, "node_float_feature_num": 0, \
-        "node_binary_feature_num": 0, "edge_uint64_feature_num": 0, \
-        "edge_float_feature_num": 0, "edge_binary_feature_num": 0}'
-    )
-    meta.flush()
     data.close()
-    meta.close()
-    return data.name, meta.name
+    return data.name
 
 
 @pytest.fixture(scope="module")
 def no_features_graph():
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name = no_features_graph_json(output.name)
+    data_name = no_features_graph_json(output.name)
     d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, meta_name, Counter(), JsonDecoder()
+        Path(output.name), 2, Counter(), JsonDecoder()
     )
 
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=2,
         output_dir=output.name,
         decoder=JsonDecoder(),

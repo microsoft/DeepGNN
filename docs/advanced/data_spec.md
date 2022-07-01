@@ -14,7 +14,7 @@ DeepGNN supports two file formats: JSON and TSV. Users can generate a graph in e
 
 ## JSON Format
 
-Here is the graph data JSON format. The format requires two files: graph.json and meta.json.
+Here is the graph data JSON format. The format requires the file graph.json.
 
 ### Graph Data
 
@@ -77,33 +77,11 @@ Here is a concrete example,
 }
 ```
 
-### Graph Metadata
-
-The metadata describes the number of node/edge types and the number of three attributes of the nodes/edges in the graph.
-
-Here is a concrete `meta.json` example,
-
-```JSON
-{
-    "node_type_num": 1,
-    "edge_type_num": 1,
-    "node_uint64_feature_num": 1,
-    "node_float_feature_num": 1,
-    "node_binary_feature_num": 1,
-    "edge_uint64_feature_num": 0,
-    "edge_float_feature_num": 2,
-    "edge_binary_feature_num": 1
-}
-```
-
-In this example `node_uint64_feature_num` field represents both dense and sparse features.
-
-
 ## TSV Format
 
 Currently TSV format ONLY support homogenous graphs.
 
-The format requires two files: graph.tsv and meta.tsv. The graph.tsv format is as follows,
+The format requires the file graph.tsv. The graph.tsv format is as follows,
 
 ```tsv
 | node_id | node_type | node_weight | node_features                | neighbors                                  |
@@ -117,40 +95,6 @@ node_type: int, Node type, typically 0 for training, 1 for testing and 2 for inf
 node_weight: float, Node weight.
 node_features: | type1:v1 v2;type2:v1 v2 |, Node feature vectors, type can be one of the following: {f: float, b: binary, i: integer}. There can be any number of values for each feature. There can only be a single vector for each feature type.
 neighbors: | int, int, float, int, features |, src_id, dst_id, edge_weight, edge_type and a feature vector in the same form as node_features.
-
-Graph `meta.txt` is as follows with all pieces of text replaced by integers,
-
-```
-node_count
-edge_count
-node_type_count
-edge_type_count
-node_feature_count
-edge_feature_count
-partition_count
-partition_id_0 == 0
-p0_node_type_0
-...
-p0_node_type_n
-p0_edge_type_0
-...
-p0_edge_type_n
-...
-partition_id_N == N
-pN_node_type_0
-...
-pN_node_type_n
-pN_edge_type_0
-...
-pN_edge_type_n
-node_count_per_type_0
-...
-node_count_per_type_n
-edge_count_per_type_0
-...
-edge_count_per_type_n
-```
-
 
 # fsspec support
 

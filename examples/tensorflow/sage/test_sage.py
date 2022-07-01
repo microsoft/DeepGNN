@@ -68,25 +68,12 @@ def prepare_connected_caveman_graph(working_dir):
         data += json.dumps(node) + "\n"
         nodes.append(node)
 
-    meta = '{"node_type_num": 1, \
-             "node_float_feature_num": 2, \
-             "node_binary_feature_num": 0, \
-             "node_uint64_feature_num": 0, \
-             "edge_type_num": 1, \
-             "edge_float_feature_num": 0, \
-             "edge_binary_feature_num": 0, \
-             "edge_uint64_feature_num": 0}'
-
     raw_file = working_dir.name + "/data.json"
     with open(raw_file, "w+") as f:
         f.write(data)
-    meta_file = working_dir.name + "/meta.json"
-    with open(meta_file, "w+") as f:
-        f.write(meta)
 
     convert.MultiWorkersConverter(
         graph_path=raw_file,
-        meta_path=meta_file,
         partition_count=1,
         output_dir=working_dir.name,
         decoder=decoders.JsonDecoder(),
@@ -94,7 +81,6 @@ def prepare_connected_caveman_graph(working_dir):
 
     logger.info(working_dir.name)
     logger.info(raw_file)
-    logger.info(meta_file)
 
 
 def setup_test(main_file):

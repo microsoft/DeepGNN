@@ -33,8 +33,6 @@ def converter_process(
     q_out: mp.Queue,
     folder: str,
     suffix: int,
-    node_type_num: int,
-    edge_type_num: int,
     decoder: typing.Optional[DecoderType],
     skip_node_sampler: bool,
     skip_edge_sampler: bool,
@@ -46,8 +44,6 @@ def converter_process(
         q_out (mp.Queue): signal processing is done
         folder (str): where to save binaries
         suffix (int): file suffix in the name of binary files
-        node_type_num (int): number of node types in the graph
-        edge_type_num (int): number of edge types in the graph
         decoder (Decoder): Decoder object which is used to parse the raw graph data file.
         skip_node_sampler(bool): skip generation of node alias tables
         skip_edge_sampler(bool): skip generation of edge alias tables
@@ -57,6 +53,12 @@ def converter_process(
 
     node_count = 0
     edge_count = 0
+    node_type_num = 10
+    edge_type_num = 10
+
+    node_feature_num = 5
+    edge_feature_num = 5
+
     node_weight = [0.0] * node_type_num
     node_type_count = [0] * node_type_num
     edge_weight = [0.0] * edge_type_num
@@ -109,6 +111,10 @@ def converter_process(
             {
                 "node_count": node_count,
                 "edge_count": edge_count,
+                "node_type_num": node_type_num,
+                "edge_type_num": edge_type_num,
+                "node_feature_num": node_feature_num,
+                "edge_feature_num": edge_feature_num,
                 "partition": {
                     "id": suffix,
                     "node_weight": node_weight,

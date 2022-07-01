@@ -57,30 +57,14 @@ def caveman_data(partitions: int = 1, worker_count: int = 1, output_dir: str = "
         data[node_id % worker_count] += json.dumps(node) + "\n"
         nodes.append(node)
 
-    meta = '{"node_float_feature_num": 1, \
-            "edge_binary_feature_num": 0, \
-            "edge_type_num": 1, \
-            "edge_float_feature_num": 0, \
-            "node_type_num": 1, \
-            "node_uint64_feature_num": 0, \
-            "node_binary_feature_num": 0, \
-            "edge_uint64_feature_num": 0}'
     working_dir = tempfile.TemporaryDirectory()
-    meta_dir = tempfile.TemporaryDirectory()
-
     for i in range(worker_count):
         raw_file = working_dir.name + f"/data{i}.json"
         with open(raw_file, "w+") as f:
             f.write(data[i])
-
-    meta_file = meta_dir.name + "/meta.json"
-    with open(meta_file, "w+") as f:
-        f.write(meta)
-
     [
         convert.MultiWorkersConverter(
             graph_path=working_dir.name,
-            meta_path=meta_file,
             partition_count=partitions,
             output_dir=output_dir,
             worker_index=n,

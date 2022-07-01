@@ -79,18 +79,8 @@ def small_graph_json(folder):
         json.dump(el, data)
         data.write("\n")
     data.flush()
-
-    meta = open(os.path.join(folder, "meta.txt"), "w+")
-    meta.write(
-        '{"node_type_num": 2, "edge_type_num": 2, \
-        "node_uint64_feature_num": 1, "node_float_feature_num": 0, \
-        "node_binary_feature_num": 0, "edge_uint64_feature_num": 0, \
-        "edge_float_feature_num": 0, "edge_binary_feature_num": 0}'
-    )
-    meta.flush()
     data.close()
-    meta.close()
-    return data.name, meta.name
+    return data.name
 
 
 # We'll use this class for deterministic partitioning
@@ -108,13 +98,12 @@ class Counter:
 )
 def multi_partition_graph_data(request):
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name = small_graph_json(output.name)
+    data_name = small_graph_json(output.name)
     d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, meta_name, Counter(), JsonDecoder()
+        Path(output.name), 2, Counter(), JsonDecoder()
     )
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=2,
         output_dir=output.name,
         decoder=JsonDecoder(),

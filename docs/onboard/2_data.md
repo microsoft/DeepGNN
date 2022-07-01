@@ -27,7 +27,7 @@ The caveman graph consists of M clusters each with N nodes, every cluster has a 
 
 ### Save
 
-Then we save the graph in [json format](~/advanced/data_spec.md) which includes files `graph.json` and `meta.json`. `graph.json` contains all feature and connectivity information. `meta.json` describes the high level information of the graph: the number of node and edge types and the number of typed attributes for nodes and edges.
+Then we save the graph in [json format](~/advanced/data_spec.md) which includes the file `graph.json`. `graph.json` contains all feature and connectivity information.
 
 Full json format, [here](~/advanced/data_spec.md).
 
@@ -89,20 +89,6 @@ Full json format, [here](~/advanced/data_spec.md).
 ...     f.write(data)
 4...
 
->>> meta = '{"node_type_num": 2, \
-...             "node_float_feature_num": 2, \
-...             "node_binary_feature_num": 0, \
-...             "node_uint64_feature_num": 0, \
-...             "edge_type_num": 1, \
-...             "edge_float_feature_num": 0, \
-...             "edge_binary_feature_num": 0, \
-...             "edge_uint64_feature_num": 0}'
-
->>> meta_filename = f"{working_dir}/meta.json"
->>> with open(meta_filename, "w+") as f:
-...     f.write(meta)
-302
-
 ```
 
 ### Convert
@@ -115,7 +101,6 @@ Finally, in order to use this dataset we convert the files from json to binary w
 >>> partitions = 1
 >>> convert.MultiWorkersConverter(
 ...     graph_path=data_filename,
-...     meta_path=meta_filename,
 ...     partition_count=partitions,
 ...     output_dir=working_dir,
 ...     decoder=JsonDecoder(),
@@ -126,7 +111,7 @@ Finally, in order to use this dataset we convert the files from json to binary w
 or via command line,
 
 ```bash
-python -m deepgnn.graph_engine.snark.convert -d /tmp/caveman/graph.json -m /tmp/caveman/meta.json -o /tmp/caveman -p 1
+python -m deepgnn.graph_engine.snark.convert -d /tmp/caveman/graph.json -o /tmp/caveman -p 1
 ```
 
 At this point the dataset is complete and ready to be used in a model.
