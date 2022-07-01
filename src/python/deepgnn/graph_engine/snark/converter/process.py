@@ -53,27 +53,27 @@ def converter_process(
 
     node_count = 0
     edge_count = 0
-    node_type_num = 10
-    edge_type_num = 10
+    node_type_num = -1
+    edge_type_num = -1
 
     node_feature_num = 5
     edge_feature_num = 5
 
-    node_weight = [0.0] * node_type_num
-    node_type_count = [0] * node_type_num
-    edge_weight = [0.0] * edge_type_num
-    edge_type_count = [0] * edge_type_num
+    node_weight = []
+    node_type_count = []
+    edge_weight = []
+    edge_type_count = []
     node_writer = writers.NodeWriter(str(folder), suffix)
     edge_writer = writers.EdgeWriter(str(folder), suffix)
     node_alias: typing.Union[writers.NodeAliasWriter, _NoOpWriter] = (
         _NoOpWriter()
         if skip_node_sampler
-        else writers.NodeAliasWriter(str(folder), suffix, node_type_num)
+        else writers.NodeAliasWriter(str(folder), suffix)
     )
     edge_alias: typing.Union[writers.EdgeAliasWriter, _NoOpWriter] = (
         _NoOpWriter()
         if skip_edge_sampler
-        else writers.EdgeAliasWriter(str(folder), suffix, edge_type_num)
+        else writers.EdgeAliasWriter(str(folder), suffix)
     )
     count = 0
     while True:
@@ -91,11 +91,23 @@ def converter_process(
                 node_writer.add(dst, typ, features)
                 edge_writer.add_node()
                 node_alias.add(dst, typ, weight)
+                if typ > node_type_num:
+                    for _ in range(typ - node_type_num):
+                        node_alias.add_type()
+                        node_weight.append(0)
+                        node_type_count.append(0)
+                    node_type_num = typ
                 node_weight[typ] += float(weight)
                 node_type_count[typ] += 1
                 node_count += 1
             else:
                 edge_writer.add(dst, typ, weight, features)
+                if typ > edge_type_num:
+                    for _ in range(typ - edge_type_num):
+                        edge_alias.add_type()
+                        edge_weight.append(0)
+                        edge_type_count.append(0)
+                    edge_type_num = typ
                 edge_alias.add(src, dst, typ, weight)
                 edge_weight[typ] += weight
                 edge_type_count[typ] += 1
@@ -111,8 +123,8 @@ def converter_process(
             {
                 "node_count": node_count,
                 "edge_count": edge_count,
-                "node_type_num": node_type_num,
-                "edge_type_num": edge_type_num,
+                "node_type_num": node_type_num+1,
+                "edge_type_num": edge_type_num+1,
                 "node_feature_num": node_feature_num,
                 "edge_feature_num": edge_feature_num,
                 "partition": {
