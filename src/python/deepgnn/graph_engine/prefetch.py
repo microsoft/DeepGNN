@@ -150,7 +150,7 @@ class Generator:
         """Initialize generator."""
         self.count = 0
         self.index = 0
-        self.outputs: Queue[Tuple[np.array]] = Queue(prefetch_size)
+        self.outputs: Queue[Tuple[np.ndarray]] = Queue(prefetch_size)
         self.max_workers = max_workers
         self.pool = ThreadPoolExecutor(max_workers=max_workers)
         self.workers = []  # type: ignore

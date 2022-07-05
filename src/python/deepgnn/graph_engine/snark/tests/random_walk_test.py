@@ -33,12 +33,10 @@ def karate_club_json(folder):
             "node_id": node_id,
             "node_type": 0,
             "node_weight": 1,
-            "neighbor": {"0": {}},
             "edge": [],
         }
         for nb in raw.neighbors(nx_node):
             nb_index = nb + 1
-            node["neighbor"]["0"][str(nb_index)] = 1
             node["edge"].append(
                 {"src_id": node_id, "dst_id": nb_index, "edge_type": 0, "weight": 1}
             )
@@ -77,9 +75,7 @@ class Counter:
 def binary_karate_club_data():
     with tempfile.TemporaryDirectory() as workdir:
         data_name = karate_club_json(workdir)
-        d = dispatcher.QueueDispatcher(
-            Path(workdir), 2, Counter(), JsonDecoder()
-        )
+        d = dispatcher.QueueDispatcher(Path(workdir), 2, Counter(), JsonDecoder())
 
         convert.MultiWorkersConverter(
             graph_path=data_name,

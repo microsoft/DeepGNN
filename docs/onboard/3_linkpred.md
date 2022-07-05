@@ -74,10 +74,6 @@ We generate this dataset with networkx, save it to json format and use snark to 
 ...             }
 ...             for neighbor_id in test_list
 ...         ],
-...         "neighbor": {
-...             "0": dict([(str(neighbor_id), 1.0) for neighbor_id in train_list]),
-...             "1": dict([(str(neighbor_id), 1.0) for neighbor_id in test_list])
-...         },
 ...     }
 ...     data += json.dumps(node) + "\n"
 ...     nodes.append(node)
@@ -125,7 +121,7 @@ In this example, the query function will generate a set of positive and negative
 ```python
 >>> @dataclass
 ... class LinkPredictionQueryParameter:
-...     neighbor_edge_types: np.array
+...     neighbor_edge_types: np.ndarray
 ...     feature_idx: int
 ...     feature_dim: int
 ...     label_idx: int
@@ -211,7 +207,7 @@ In this example,
 ...
 ...         self.metric = F1Score()
 ...
-...     def get_score(self, context: torch.Tensor, edge_types: np.array):
+...     def get_score(self, context: torch.Tensor, edge_types: np.ndarray):
 ...         edges, src, src_nbs, dst, dst_nbs = context
 ...         src, src_nbs, dst, dst_nbs = [v.detach().numpy() for v in (src, src_nbs, dst, dst_nbs)]
 ...
@@ -222,7 +218,7 @@ In this example,
 ...         score = self.weight.mm(embed)
 ...         return torch.sigmoid(score)
 ...
-...     def forward(self, context: torch.Tensor, edge_types: np.array = np.array([0], dtype=np.int32)):
+...     def forward(self, context: torch.Tensor, edge_types: np.ndarray = np.array([0], dtype=np.int32)):
 ...         context = [v.squeeze(0) for v in context]
 ...         pos_label = self.get_score(context[:5], edge_types)
 ...         true_xent = torch.nn.functional.binary_cross_entropy(

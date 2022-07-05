@@ -33,7 +33,6 @@ def triangle_graph_json(folder):
             "node_id": 9,
             "node_type": 0,
             "node_weight": 1,
-            "neighbor": {"0": {"0": 0.5}, "1": {}},
             "uint64_feature": {"2": [13, 17]},
             "float_feature": {"0": [0, 1], "1": [-0.01, -0.02]},
             "binary_feature": {},
@@ -53,7 +52,6 @@ def triangle_graph_json(folder):
             "node_id": 0,
             "node_type": 1,
             "node_weight": 1,
-            "neighbor": {"0": {}, "1": {"5": 1}},
             "uint64_feature": {},
             "float_feature": {"0": [1], "1": [-0.03, -0.04]},
             "binary_feature": {"3": "abcd"},
@@ -73,7 +71,6 @@ def triangle_graph_json(folder):
             "node_id": 5,
             "node_type": 2,
             "node_weight": 1,
-            "neighbor": {"0": {}, "1": {"9": 0.7}},
             "float_feature": {"0": [1, 1], "1": [-0.05, -0.06]},
             "binary_feature": {},
             "uint8_feature": {"4": [5, 6, 7]},
@@ -238,9 +235,7 @@ class Counter:
 def multi_partition_graph_data():
     output = tempfile.TemporaryDirectory()
     data_name = triangle_graph_json(output.name)
-    d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, Counter(), JsonDecoder()
-    )
+    d = dispatcher.QueueDispatcher(Path(output.name), 2, Counter(), JsonDecoder())
     convert.MultiWorkersConverter(
         graph_path=data_name,
         partition_count=2,
@@ -1223,7 +1218,6 @@ def sampling_graph_data():
                 "node_id": node_id,
                 "node_type": (node_id % num_types),
                 "node_weight": 1,
-                "neighbor": {},
                 "uint64_feature": None,
                 "float_feature": None,
                 "binary_feature": None,
@@ -1283,7 +1277,6 @@ def no_features_graph_json(folder):
             "node_id": 9,
             "node_type": 0,
             "node_weight": 1,
-            "neighbor": {"0": {"0": 0.5}, "1": {}},
             "uint64_feature": {},
             "float_feature": {},
             "binary_feature": {},
@@ -1303,7 +1296,6 @@ def no_features_graph_json(folder):
             "node_id": 0,
             "node_type": 1,
             "node_weight": 1,
-            "neighbor": {"0": {}, "1": {"5": 1}},
             "uint64_feature": {},
             "float_feature": {},
             "binary_feature": {},
@@ -1332,9 +1324,7 @@ def no_features_graph_json(folder):
 def no_features_graph():
     output = tempfile.TemporaryDirectory()
     data_name = no_features_graph_json(output.name)
-    d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, Counter(), JsonDecoder()
-    )
+    d = dispatcher.QueueDispatcher(Path(output.name), 2, Counter(), JsonDecoder())
 
     convert.MultiWorkersConverter(
         graph_path=data_name,

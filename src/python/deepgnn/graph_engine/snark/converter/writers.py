@@ -16,14 +16,104 @@ from deepgnn.graph_engine._base import get_fs
 from deepgnn.graph_engine.snark.meta import _Element
 
 
-class NodeWriter:
-    """NodeWriter is an entry point for conversion from input files to node binary files.
+class BinaryWriter:
+    """BinaryWriter is an entry point for conversion from input files to binary files.
 
     Every record is parsed one by one and passed to the relevant writers below. These writers
     put data in files with the partition suffix: `node_{partition}...`. We reserve one more
     suffix to follow after partition to split large files into smaller ones, so files will have names
     like this: `node_{partition}_{iteration}...`.
     """
+
+    def __init__(
+        self,
+        folder: str,
+        suffix: int,
+        skip_node_sampler: bool,
+        skip_edge_sampler: bool,
+    ):
+        """Initialize writer and create binary files.
+
+        Args:
+            folder (str): where to save binaries
+            suffix (int): file suffix in the name of binary files
+            skip_node_sampler(bool): skip generation of node alias tables
+            skip_edge_sampler(bool): skip generation of edge alias tables
+        """
+        self.folder = folder
+        self.suffix = suffix
+        self.skip_node_sampler = skip_node_sampler
+        self.skip_edge_sampler = skip_edge_sampler
+
+        self.node_writer = NodeWriter(self.folder, self.suffix)
+        self.edge_writer = EdgeWriter(self.folder, self.suffix)
+
+        self.node_alias: typing.Union[NodeAliasWriter, _NoOpWriter] = (
+            _NoOpWriter()
+            if skip_node_sampler
+            else NodeAliasWriter(self.folder, self.suffix)
+        )
+        self.edge_alias: typing.Union[EdgeAliasWriter, _NoOpWriter] = (
+            _NoOpWriter()
+            if skip_edge_sampler
+            else EdgeAliasWriter(self.folder, self.suffix)
+        )
+
+        self.node_count: int = 0
+        self.edge_count: int = 0
+        self.node_type_num: int = -1
+        self.edge_type_num: int = -1
+        self.node_weight: typing.List[float] = []
+        self.node_type_count: typing.List[int] = []
+        self.edge_weight: typing.List[float] = []
+        self.edge_type_count: typing.List[int] = []
+
+    def add(self, data: typing.Iterator[typing.Tuple[int, int, int, float, list]]):
+        """
+        Write binary for a node and all of its edges.
+
+        args:
+            data: Iterable[(int, int, int, float, list)] Data for a node first, then all of
+                its edges in order of dst. Each entry for a node/edge is,
+                (-1/src, node_id/dst, type, weight, [ndarray for each feature vector or None in order of feature index]).
+        """
+        for src, dst, typ, weight, features in data:
+            if src == -1:
+                self.node_writer.add(dst, typ, features)
+                self.edge_writer.add_node()
+                if typ > self.node_type_num:
+                    for _ in range(typ - self.node_type_num):
+                        self.node_alias.add_type()
+                        self.node_weight.append(0)
+                        self.node_type_count.append(0)
+                    self.node_type_num = typ
+                self.node_alias.add(dst, typ, weight)
+                self.node_weight[typ] += float(weight)
+                self.node_type_count[typ] += 1
+                self.node_count += 1
+            else:
+                self.edge_writer.add(dst, typ, weight, features)
+                if typ > self.edge_type_num:
+                    for _ in range(typ - self.edge_type_num):
+                        self.edge_alias.add_type()
+                        self.edge_weight.append(0)
+                        self.edge_type_count.append(0)
+                    self.edge_type_num = typ
+                self.edge_alias.add(src, dst, typ, weight)
+                self.edge_weight[typ] += weight
+                self.edge_type_count[typ] += 1
+                self.edge_count += 1
+
+    def close(self):
+        """Close output binary files."""
+        self.node_writer.close()
+        self.edge_writer.close()
+        self.node_alias.close()
+        self.edge_alias.close()
+
+
+class NodeWriter:
+    """NodeWriter records information about nodes and adds node features to a NodeFeatureWriter."""
 
     def __init__(self, folder: str, partition: int):
         """Initialize writer and create binary files.
@@ -257,6 +347,17 @@ class EdgeFeatureWriter:
         self.efd.close()
 
 
+class _NoOpWriter:
+    def add(self, *_: typing.Any):
+        return
+
+    def add_type(self):
+        return
+
+    def close(self):
+        return
+
+
 class NodeAliasWriter:
     """NodeAliasWriter creates alias tables for weighted node sampling.
 
@@ -281,8 +382,8 @@ class NodeAliasWriter:
         # results to destination. Hold the temp folder reference
         # to avoid deleting.
         self.meta_tmp_folder = tempfile.TemporaryDirectory()
-        self.nodes = []
-        self.weights = []
+        self.nodes: typing.List[object] = []
+        self.weights: typing.List[object] = []
 
     def add_type(self):
         """Add type to alias."""
@@ -373,8 +474,8 @@ class EdgeAliasWriter:
         # results to destination. Hold the temp folder reference
         # to avoid deleting.
         self.meta_tmp_folder = tempfile.TemporaryDirectory()
-        self.pairs = []
-        self.weights = []
+        self.pairs: typing.List[object] = []
+        self.weights: typing.List[object] = []
 
     def add_type(self):
         """Add type to alias."""

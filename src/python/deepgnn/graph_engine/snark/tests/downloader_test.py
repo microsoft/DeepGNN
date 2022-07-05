@@ -40,7 +40,6 @@ def small_graph_json(folder):
             "node_id": 0,
             "node_type": 0,
             "node_weight": 1,
-            "neighbor": {"0": {"1": 0.5}},
             "uint64_feature": {"0": [1, 2]},
             "edge": [
                 {
@@ -58,7 +57,6 @@ def small_graph_json(folder):
             "node_id": 1,
             "node_type": 1,
             "node_weight": 1,
-            "neighbor": {"0": {"1": 1}},
             "uint64_feature": {"0": [3, 4]},
             "float_feature": {},
             "binary_feature": {},
@@ -99,9 +97,7 @@ class Counter:
 def multi_partition_graph_data(request):
     output = tempfile.TemporaryDirectory()
     data_name = small_graph_json(output.name)
-    d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, Counter(), JsonDecoder()
-    )
+    d = dispatcher.QueueDispatcher(Path(output.name), 2, Counter(), JsonDecoder())
     convert.MultiWorkersConverter(
         graph_path=data_name,
         partition_count=2,

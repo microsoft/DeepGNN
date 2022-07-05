@@ -50,7 +50,6 @@ class JsonDecoder(Decoder):
             "node_id": 0,
             "node_type": 1,
             "node_weight": 1,
-            "neighbor": {"0": {}, "1": {"5": 1}},
             "uint64_feature": {},
             "float_feature": {"0": [1], "1": [-0.03, -0.04]},
             "binary_feature": {},
@@ -106,7 +105,7 @@ class JsonDecoder(Decoder):
         Yield format is (-1/src, node_id/dst, type, weight, features).
         Features being a list of dense features as ndarrays and sparse features as 2 tuples, coordinates and values.
         """
-        data = json.loads(line) if isinstance(line, str) else line
+        data = json.loads(line)
         yield -1, data["node_id"], data["node_type"], data[
             "node_weight"
         ], self._pull_features(data)
@@ -193,6 +192,7 @@ class TsvDecoder(Decoder):
 
         # make sure the node id is valid
         assert columns[0] is not None and len(columns[0]) > 0
+
         node_id = int(columns[0])
         node_type = int(columns[1]) if columns[1] else 0
         node_weight = float(columns[2]) if columns[2] else 0.0

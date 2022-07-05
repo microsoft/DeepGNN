@@ -47,8 +47,8 @@ class Graph:
         raise NotImplementedError
 
     def sample_nodes(
-        self, size: int, node_types: Union[int, np.array], strategy: SamplingStrategy
-    ) -> np.array:
+        self, size: int, node_types: Union[int, np.ndarray], strategy: SamplingStrategy
+    ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
         """
         Return a list of nodes with a specified type.
 
@@ -59,13 +59,13 @@ class Graph:
 
         Returns:
             if node_types is `int`, return node_ids (an np.int64 array with length size).
-            if node_types is `np.array`, return node_ids, node_types (an np.int64 array, an np.int32 array with length size).
+            if node_types is `np.ndarray`, return node_ids, node_types (an np.int64 array, an np.int32 array with length size).
         """
         raise NotImplementedError
 
     def sample_edges(
-        self, size: int, edge_types: Union[int, np.array], strategy: SamplingStrategy
-    ) -> np.array:
+        self, size: int, edge_types: Union[int, np.ndarray], strategy: SamplingStrategy
+    ) -> np.ndarray:
         """
         Return a list of edges with a specified type.
 
@@ -80,14 +80,14 @@ class Graph:
 
     def sample_neighbors(
         self,
-        nodes: np.array,
-        edge_types: Union[int, np.array],
+        nodes: np.ndarray,
+        edge_types: Union[int, np.ndarray],
         count: int = 10,
         strategy: str = "byweight",
         default_node: int = -1,
         default_weight: float = 0.0,
         default_node_type: int = -1,
-    ) -> Tuple[np.array, np.array, np.array, np.array]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Sample node neighbors.
 
@@ -106,13 +106,13 @@ class Graph:
 
     def random_walk(
         self,
-        node_ids: np.array,
-        metapath: np.array,
+        node_ids: np.ndarray,
+        metapath: np.ndarray,
         walk_len: int,
         p: float,
         q: float,
         default_node: int = -1,
-    ) -> np.array:
+    ) -> np.ndarray:
         """
         Sample nodes via random walk.
 
@@ -127,8 +127,8 @@ class Graph:
         raise NotImplementedError
 
     def neighbors(
-        self, nodes: np.array, edge_types: Union[int, np.array]
-    ) -> Tuple[np.array, np.array, np.array, np.array]:
+        self, nodes: np.ndarray, edge_types: Union[int, np.ndarray]
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Full list of node neighbors.
 
@@ -146,8 +146,8 @@ class Graph:
         raise NotImplementedError
 
     def node_features(
-        self, nodes: np.array, features: np.array, feature_type: FeatureType
-    ) -> np.array:
+        self, nodes: np.ndarray, features: np.ndarray, feature_type: FeatureType
+    ) -> np.ndarray:
         """Fetch node features.
 
         nodes -- array of nodes to fetch features from.
@@ -160,8 +160,8 @@ class Graph:
         raise NotImplementedError
 
     def edge_features(
-        self, edges: np.array, features: np.array, feature_type: FeatureType
-    ) -> np.array:
+        self, edges: np.ndarray, features: np.ndarray, feature_type: FeatureType
+    ) -> np.ndarray:
         """Fetch edge features.
 
         edges -- array of triples [src, dst, type].
@@ -170,7 +170,7 @@ class Graph:
         """
         raise NotImplementedError
 
-    def node_types(self, nodes: np.array) -> np.array:
+    def node_types(self, nodes: np.ndarray) -> np.ndarray:
         """Fetch node types.
 
         nodes -- input array of nodes.
@@ -178,11 +178,11 @@ class Graph:
         """
         raise NotImplementedError
 
-    def node_count(self, types: Union[int, np.array]) -> int:
+    def node_count(self, types: Union[int, np.ndarray]) -> int:
         """Return the number of nodes."""
         raise NotImplementedError
 
-    def edge_count(self, types: Union[int, np.array]) -> int:
+    def edge_count(self, types: Union[int, np.ndarray]) -> int:
         """Return the number of edges."""
         raise NotImplementedError
 

@@ -84,7 +84,7 @@ class SupervisedGraphSage(BaseSupervisedModel):
         self.metric = metric
         nn.init.xavier_uniform_(self.weight)
 
-    def query(self, graph: Graph, inputs: np.array):
+    def query(self, graph: Graph, inputs: np.ndarray):
         """Fetch training data from graph."""
         context = {"inputs": inputs}
         context["label"] = graph.node_features(
@@ -196,7 +196,7 @@ class UnSupervisedGraphSage(BaseUnsupervisedModel):
         nn.init.xavier_uniform_(self.weight)
         self.bce_loss = torch.nn.BCEWithLogitsLoss()
 
-    def query(self, graph: Graph, inputs: np.array):
+    def query(self, graph: Graph, inputs: np.ndarray):
         """Fetch training data from graph."""
         context = {"inputs": inputs}
         context["encoder"] = self.enc.query(
