@@ -18,18 +18,18 @@ and provide a node/edge iterator.
 
 Most of algorithms need information not only about a current node/edge, but also their neighborood.
 Here are the descriptions of the functions that are part of the API:
-- `sample_nodes(size: int, node_types: Union[int, np.array], strategy: SamplingStrategy) -> np.array`
+- `sample_nodes(size: int, node_types: Union[int, np.ndarray], strategy: SamplingStrategy) -> np.ndarray`
 
     Return an array of nodes with a specified type. This operation is helpful to provide negative samples
     for unsupervised training.
 
-- `sample_edges(size: int, edge_types: Union[int, np.array], strategy: SamplingStrategy) -> np.array`
+- `sample_edges(size: int, edge_types: Union[int, np.ndarray], strategy: SamplingStrategy) -> np.ndarray`
 
     Return an array of edges with a specified type.
 
-- `sample_neighbors(self, nodes: np.array, edge_types: np.array, count: int = 10, strategy: string = "byweight", `
+- `sample_neighbors(self, nodes: np.ndarray, edge_types: np.ndarray, count: int = 10, strategy: string = "byweight", `
   `default_node: int = -1, default_weight: float = 0.0, `
-  `default_node_type: int = -1) -> Tuple[np.array, np.array, np.array, np.array]`
+  `default_node_type: int = -1) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]`
 
     Sample direct neighbors that are connected by by one of the `edge_types` to the seed nodes.
     Count parameter specifies how many neighbors to sample and it is up to implementation how to fill that array.
@@ -40,7 +40,7 @@ Here are the descriptions of the functions that are part of the API:
     and in case of nodes without any neighbors node ids will be `-1`s. The existing algorithms don't have explcit
     requirement to use unique nodes.
 
-- `node_features(nodes: np.array, features: List[(id, dim)], feature_type: FeatureType) -> np.array`
+- `node_features(nodes: np.ndarray, features: List[(id, dim)], feature_type: FeatureType) -> np.ndarray`
 
     Fetch node features specified by ids. All the features should share the same type. The return type is an array
     of shape `(len(nodes), sum(map(lambda f: f[1], features)))` where features values are placed in the same order
@@ -58,19 +58,19 @@ Here are the descriptions of the functions that are part of the API:
     result = torch.mm(embed, features[:, 64:])
     ```
 
-- `edge_features(edges: np.array, features: List[(id, dim)], feature_type: FeatureType) -> np.array`
+- `edge_features(edges: np.ndarray, features: List[(id, dim)], feature_type: FeatureType) -> np.ndarray`
 
     Similar function to `node_features`, but for edges.
 
-- `node_count(types: Union[int, np.array]) -> int`
+- `node_count(types: Union[int, np.ndarray]) -> int`
 
     Return the number of nodes for the specific node types.
 
-- `edge_count(types: Union[int, np.array]) -> int`
+- `edge_count(types: Union[int, np.ndarray]) -> int`
 
     Return the number of edge for the specific edge types.
 
-- `random_walk(self, nodes: np.array, edge_types: np.array, walk_len: int, p: float, q: float, default_node: int = -1, seed: Optional[int] = None) -> np.array`
+- `random_walk(self, nodes: np.ndarray, edge_types: np.ndarray, walk_len: int, p: float, q: float, default_node: int = -1, seed: Optional[int] = None) -> np.ndarray`
 
     Execute a random walk starting with nodes given. A random walk is equivalent to repeatedly calling sample_neighbors walk_len times, each time setting nodes to be the newly sampled neighbors.
 
@@ -86,7 +86,7 @@ following record:
 ```python
 class Record:
     """Represent a row of features from a database"""
-    def __init__(self, f:np.array, fn:List[np.array], sn:[List[List[np.array]]]):
+    def __init__(self, f:np.ndarray, fn:List[np.ndarray], sn:[List[List[np.ndarray]]]):
         self.nodeFeatures = f
         self.fstHopNeighborFeatures = fn
         self.sndHopNeighborFeatures = sn
@@ -123,14 +123,14 @@ class RecordGraph:
         return self.counter
 
     # Actual graph API
-    def sample_nodes(self, count: int, node_types: Unoin[int, np.array], strategy: SamplingStrategy) -> np.array:
+    def sample_nodes(self, count: int, node_types: Unoin[int, np.ndarray], strategy: SamplingStrategy) -> np.ndarray:
         return [random.randint(0, len(self.records)) for i in range(count)]
 
-    def sample_edges(self, size: int, edge_types: Union[int, np.array], strategy: SamplingStrategy) -> np.array:
+    def sample_edges(self, size: int, edge_types: Union[int, np.ndarray], strategy: SamplingStrategy) -> np.ndarray:
         raise NotImplementedError
 
-    def sample_neighbors(self, nodes: np.array, edge_types: np.array, count: int = 10,
-        default_node: int = -1, default_weight: float = 0.0, default_node_type: int = -1) -> np.array:
+    def sample_neighbors(self, nodes: np.ndarray, edge_types: np.ndarray, count: int = 10,
+        default_node: int = -1, default_weight: float = 0.0, default_node_type: int = -1) -> np.ndarray:
         result = []
         for n in nodes:
             # Simple use case: n belongs to the records list
@@ -161,10 +161,10 @@ class RecordGraph:
 
     def node_features(
         self,
-        nodes: np.array,
+        nodes: np.ndarray,
         features: List[(int, int)],
         feature_type: FeatureType,
-    ) -> np.array:
+    ) -> np.ndarray:
         result = []
         for n in nodes:
             if n < len(self.records):
@@ -180,9 +180,9 @@ class RecordGraph:
 
     def edge_features(
         self,
-        edges: np.array,
+        edges: np.ndarray,
         feature: List[(int, int)],
         feature_type: FeatureType,
-    ) -> np.array:
+    ) -> np.ndarray:
         raise NotImplementedError
 ```

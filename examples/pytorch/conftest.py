@@ -76,7 +76,7 @@ class MockSimpleDataLoader(IterableDataset):
 
 
 class MockFixedSimpleDataLoader(IterableDataset):
-    def __init__(self, inputs: np.array, query_fn, graph: Graph):
+    def __init__(self, inputs: np.ndarray, query_fn, graph: Graph):
         self.inputs = inputs
         self.query_fn = query_fn
         self.graph = graph
@@ -100,21 +100,21 @@ class MockGraph(Graph):
         size: int,
         node_type: int,
         strategy: SamplingStrategy = SamplingStrategy.Random,
-    ) -> np.array:
+    ) -> np.ndarray:
         return np.random.randint(
             self.type_ranges[node_type][0], self.type_ranges[node_type][1], size
         )
 
     def sample_neighbors(
         self,
-        nodes: np.array,
-        edge_types: np.array,
+        nodes: np.ndarray,
+        edge_types: np.ndarray,
         count: int = 10,
         strategy: str = "byweight",
         default_node: int = -1,
         default_weight: float = 0.0,
         default_node_type: int = -1,
-    ) -> Tuple[np.array, np.array, np.array, np.array]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         res = np.empty((len(nodes), count), dtype=np.int64)
         nodes = nodes.reshape(-1)
         for i in range(len(nodes)):
@@ -135,8 +135,8 @@ class MockGraph(Graph):
         )
 
     def node_features(
-        self, nodes: np.array, features: np.array, feature_type: FeatureType
-    ) -> np.array:
+        self, nodes: np.ndarray, features: np.ndarray, feature_type: FeatureType
+    ) -> np.ndarray:
         if np.array_equal(features, np.array([[1, 7]])):
             rt = []
             for n in nodes:

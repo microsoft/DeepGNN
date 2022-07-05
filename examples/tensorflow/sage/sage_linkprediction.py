@@ -20,7 +20,7 @@ class SAGELinkPredictionQuery(SAGEQuery):
         super().__init__(param)
 
     def query_training(
-        self, graph: Graph, inputs: np.array, return_shape: bool = False
+        self, graph: Graph, inputs: np.ndarray, return_shape: bool = False
     ):
         """Fetch data to train model."""
         # fmt: off
@@ -55,7 +55,7 @@ class SAGELinkPredictionQuery(SAGEQuery):
         # fmt: on
 
     def query_inference(
-        self, graph: Graph, inputs: np.array, return_shape: bool = False
+        self, graph: Graph, inputs: np.ndarray, return_shape: bool = False
     ):
         """Inference `inputs` is different with train `inputs`.
 

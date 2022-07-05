@@ -74,7 +74,7 @@ class PipeDispatcher(Dispatcher):
                 bool,
             ],
             None,
-        ] = converter_process,
+        ] = None,
         partition_offset: int = 0,
         use_threads: bool = False,
         skip_node_sampler: bool = False,
@@ -86,8 +86,8 @@ class PipeDispatcher(Dispatcher):
             folder (str): Location of graph files.
             parallel (int): Number of parallel process to use for conversion.
             meta (str): Meta data about graph.
-            process (typing.Callable[ [typing.Union[mp.Queue, Connection], mp.Queue, str, int, int, int, Decoder], None ]): Function to call for processing lines in a file.
             decoder (Decoder): Decoder object which is used to parse the raw graph data file.
+            process (typing.Callable[ [typing.Union[mp.Queue, Connection], mp.Queue, str, int, int, int, Decoder], None ]): Function to call for processing lines in a file.
             partition_offset(int): offset in a text file, where to start reading for a new partition.
             use_threads(bool): use threads instead of processes for parallel processing.
             skip_node_sampler(bool): skip generation of node alias tables.
@@ -97,6 +97,7 @@ class PipeDispatcher(Dispatcher):
         with open(meta, "r") as fm:
             self.jsm = json.load(fm)
 
+        process = process or converter_process
         parallel_func = mp.Process  # type: ignore
         if use_threads:
             parallel_func = threading.Thread  # type: ignore
@@ -204,7 +205,7 @@ class QueueDispatcher(Dispatcher):
                 bool,
             ],
             None,
-        ] = converter_process,
+        ] = None,
         partition_offset: int = 0,
         use_threads: bool = False,
         skip_node_sampler: bool = False,
@@ -216,9 +217,9 @@ class QueueDispatcher(Dispatcher):
             folder (str): Location of graph files.
             num_partitions (int): number of binary partitions to create.
             meta (str): meta data about graph.
-            process (typing.Callable[[mp.Queue, mp.Queue, str, int, int], None]): function to use for conversion.
             partion_func (typing.Callable[[str], int]): how to assign graph elements to a partition.
             decoder (Decoder): Decoder object which is used to parse the raw graph data file.
+            process (typing.Callable[[mp.Queue, mp.Queue, str, int, int], None]): function to use for conversion.
             partition_offset(int): offset in a text file, where to start reading for a new partition.
             use_threads(bool): use threads instead of processes for parallel processing.
             skip_node_sampler(bool): skip generation of node alias tables.
@@ -228,6 +229,7 @@ class QueueDispatcher(Dispatcher):
         with open(meta, "r") as fm:
             self.jsm = json.load(fm)
 
+        process = process or converter_process
         parallel_func = mp.Process  # type: ignore
         if use_threads:
             parallel_func = threading.Thread  # type: ignore

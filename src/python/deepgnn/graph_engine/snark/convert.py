@@ -11,7 +11,6 @@ import fsspec
 from deepgnn import get_logger
 from deepgnn.graph_engine._adl_reader import TextFileIterator
 from deepgnn.graph_engine._base import get_fs
-from deepgnn.graph_engine.snark.converter.process import converter_process
 from deepgnn.graph_engine.snark.decoders import (
     DecoderType,
 )
@@ -48,7 +47,7 @@ class MultiWorkersConverter:
             graph_path: the raw graph file folder.
             meta_path: the path of the meta.json.
             output_dir: the output directory to put the generated graph binary files.
-            decoder: decoder type.
+            decoder (Decoder): Decoder object which is used to parse the raw graph data file.
             partition_count: how many partitions will be generated.
             worker_index: the work index when running in multi worker mode.
             worker_count: how many workers will be started to convert the data.
@@ -85,19 +84,21 @@ class MultiWorkersConverter:
             self.partition_count = partition_count - self.partition_offset
 
         if self.dispatcher is None:
+            # when converting data in HDFS make sure to turn it off: https://hdfs3.readthedocs.io/en/latest/limitations.html
+            use_threads = True
+            if hasattr(fsspec.implementations, "hdfs") and isinstance(
+                self.fs, fsspec.implementations.hdfs.PyArrowHDFS
+            ):
+                use_threads = False
             self.dispatcher = PipeDispatcher(
                 self.output_dir,
                 self.partition_count,
                 meta_path_local,
                 self.decoder,
-                converter_process,
-                self.partition_offset,
-                False
-                if hasattr(fsspec.implementations, "hdfs")
-                and isinstance(self.fs, fsspec.implementations.hdfs.PyArrowHDFS)
-                else True,  # when converting data in HDFS make sure to turn it off: https://hdfs3.readthedocs.io/en/latest/limitations.html
-                skip_node_sampler,
-                skip_edge_sampler,
+                partition_offset=self.partition_offset,
+                use_threads=use_threads,
+                skip_node_sampler=skip_node_sampler,
+                skip_edge_sampler=skip_edge_sampler,
             )
 
     def convert(self):
@@ -214,7 +215,7 @@ if __name__ == "__main__":
         "--type",
         type=str,
         default="json",
-        help="Type of the graph data file. Supported: linear, json, tsv",
+        help="Type of decoder object which is used to parse the raw graph data file. Supported: json, tsv",
     )
     parser.add_argument(
         "--skip_node_sampler",

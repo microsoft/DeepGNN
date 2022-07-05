@@ -190,7 +190,7 @@ class BaseUnsupervisedModel(BaseModel):
         return graph.sample_nodes(num_negs, neg_type, SamplingStrategy.Weighted)
 
     def get_pos_node(
-        self, graph: Graph, nodes: np.array, edge_types: np.array, count: int = 1
+        self, graph: Graph, nodes: np.ndarray, edge_types: np.ndarray, count: int = 1
     ):
         """Return positive examples, node neighbors."""
         return graph.sample_neighbors(nodes, edge_types, count)[0]

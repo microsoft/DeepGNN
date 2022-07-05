@@ -78,7 +78,7 @@ In the GAT model, query samples neighbors repeatedly num_hops times in order to 
 ```python
 >>> @dataclass
 ... class GATQueryParameter:
-...     neighbor_edge_types: np.array
+...     neighbor_edge_types: np.ndarray
 ...     feature_idx: int
 ...     feature_dim: int
 ...     label_idx: int

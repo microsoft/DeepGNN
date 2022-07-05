@@ -19,7 +19,7 @@ from deepgnn import get_logger
 class GCNQueryParameter:
     """Graph query configuration."""
 
-    neighbor_edge_types: np.array
+    neighbor_edge_types: np.ndarray
     feature_idx: int
     feature_dim: int
     label_idx: int
@@ -39,7 +39,7 @@ class GCNQuery:
         self.feat_meta = np.array([[param.feature_idx, param.feature_dim]], np.int32)
 
     def query_training(
-        self, graph: Graph, inputs: np.array, return_shape: bool = False
+        self, graph: Graph, inputs: np.ndarray, return_shape: bool = False
     ):
         """Query function to train a GCN model."""
         nodes, edges, src_idx = graph_ops.sub_graph(

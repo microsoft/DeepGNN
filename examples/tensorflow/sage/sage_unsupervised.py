@@ -18,10 +18,10 @@ from sage import SAGEQuery, SAGEQueryParameter
 class UnsupervisedSamplingParam:
     """Graph query parameters."""
 
-    positive_edge_types: np.array
+    positive_edge_types: np.ndarray
     positive_sampling_strategy: str = "random"
 
-    negative_node_types: np.array = np.array([0], np.int32)
+    negative_node_types: np.ndarray = np.array([0], np.int32)
     negative_num: int = 5
 
 
@@ -62,7 +62,7 @@ class UnsupervisedQuery(SAGEQuery):
         return positive, negative
 
     def query_training(
-        self, graph: Graph, inputs: np.array, return_shape: bool = False
+        self, graph: Graph, inputs: np.ndarray, return_shape: bool = False
     ):
         """Retrieve graph data to train model."""
         seed_nodes = inputs

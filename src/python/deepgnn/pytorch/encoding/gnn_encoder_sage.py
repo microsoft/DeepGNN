@@ -63,7 +63,7 @@ class SageEncoder(nn.Module):
 
     def query(
         self,
-        nodes: np.array,
+        nodes: np.ndarray,
         graph: Graph,
         feature_type: FeatureType,
         feature_idx: int,
@@ -97,7 +97,7 @@ class SageEncoder(nn.Module):
 
     def query_feature(
         self,
-        nodes: np.array,
+        nodes: np.ndarray,
         graph: Graph,
         feature_type: FeatureType,
         feature_idx: int,
