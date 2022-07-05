@@ -38,7 +38,7 @@ class LinkPredictionModel(BaseSupervisedModel):
         args,
         feature_dim=0,
         feature_idx=0,
-        feature_type=None,
+        dtype=None,
         feature_enc: Optional[FeatureEncoder] = None,
         metric: BaseMetric = ROC(),
         vocab_index: int = 0,
@@ -49,7 +49,7 @@ class LinkPredictionModel(BaseSupervisedModel):
         )
 
         super(LinkPredictionModel, self).__init__(
-            feature_type=feature_type,
+            dtype=dtype,
             feature_idx=feature_idx,
             feature_dim=feature_dim,
             feature_enc=feature_enc,

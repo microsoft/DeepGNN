@@ -60,9 +60,7 @@ pytestmark = pytest.mark.skipif(not IS_ADL_CONFIG_VALID, reason="Invalid adl con
 def get_source_dest_vec(params, config, graph):
     feature_enc = MultiTypeFeatureEncoder(np.int64, config, ["q", "k", "s"], False)
 
-    lp = LinkPredictionModel(
-        args=params, feature_type=np.int64, feature_enc=feature_enc
-    )
+    lp = LinkPredictionModel(args=params, dtype=np.int64, feature_enc=feature_enc)
 
     args = argparse.Namespace(
         data_dir="/mock/doesnt/need/physical/path",

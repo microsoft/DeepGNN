@@ -15,16 +15,16 @@ from deepgnn import get_logger
 from deepgnn.pytorch.common.consts import PREFIX_CHECKPOINT
 
 
-def get_feature_type(feature_type_str: str):
+def get_dtype(dtype_str: str):
     """Convert string to feature type Enum."""
-    feature_type_str = feature_type_str.lower()
-    if feature_type_str == "float":
+    dtype_str = dtype_str.lower()
+    if dtype_str == "float":
         return np.float32
-    if feature_type_str == "uint64":
+    if dtype_str == "uint64":
         return np.int64
-    if feature_type_str == "binary":
+    if dtype_str == "binary":
         return np.bool8
-    raise RuntimeError(f"Unknown feature type:{feature_type_str}")
+    raise RuntimeError(f"Unknown feature type:{dtype_str}")
 
 
 def set_seed(seed: int):

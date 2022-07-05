@@ -40,7 +40,7 @@ Here are the descriptions of the functions that are part of the API:
     and in case of nodes without any neighbors node ids will be `-1`s. The existing algorithms don't have explcit
     requirement to use unique nodes.
 
-- `node_features(nodes: np.ndarray, features: List[(id, dim)], feature_type: np.dtype) -> np.ndarray`
+- `node_features(nodes: np.ndarray, features: List[(id, dim)], dtype: np.dtype) -> np.ndarray`
 
     Fetch node features specified by ids. All the features should share the same type. The return type is an array
     of shape `(len(nodes), sum(map(lambda f: f[1], features)))` where features values are placed in the same order
@@ -58,7 +58,7 @@ Here are the descriptions of the functions that are part of the API:
     result = torch.mm(embed, features[:, 64:])
     ```
 
-- `edge_features(edges: np.ndarray, features: List[(id, dim)], feature_type: np.dtype) -> np.ndarray`
+- `edge_features(edges: np.ndarray, features: List[(id, dim)], dtype: np.dtype) -> np.ndarray`
 
     Similar function to `node_features`, but for edges.
 
@@ -163,7 +163,7 @@ class RecordGraph:
         self,
         nodes: np.ndarray,
         features: List[(int, int)],
-        feature_type: np.dtype,
+        dtype: np.dtype,
     ) -> np.ndarray:
         result = []
         for n in nodes:
@@ -182,7 +182,7 @@ class RecordGraph:
         self,
         edges: np.ndarray,
         feature: List[(int, int)],
-        feature_type: np.dtype,
+        dtype: np.dtype,
     ) -> np.ndarray:
         raise NotImplementedError
 ```

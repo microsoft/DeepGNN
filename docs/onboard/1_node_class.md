@@ -83,7 +83,7 @@ In the GAT model, query samples neighbors repeatedly num_hops times in order to 
 ...     feature_dim: int
 ...     label_idx: int
 ...     label_dim: int
-...     feature_type: np.dtype = np.float32
+...     dtype: np.dtype = np.float32
 ...     label_type: np.dtype = np.float32
 ...     num_hops: int = 2
 
@@ -109,7 +109,7 @@ In the GAT model, query samples neighbors repeatedly num_hops times in order to 
 ...         input_mask = np.zeros(nodes.size, np.bool)
 ...         input_mask[src_idx] = True
 ...
-...         feat = graph.node_features(nodes, self.feat_meta, self.p.feature_type)
+...         feat = graph.node_features(nodes, self.feat_meta, self.p.dtype)
 ...         label = graph.node_features(nodes, self.label_meta, self.p.label_type)
 ...         label = label.astype(np.int32)
 ...         edges_value = np.ones(edges.shape[0], np.float32)

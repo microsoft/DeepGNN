@@ -41,7 +41,7 @@ class KGEModel(BaseModel):
         super(KGEModel, self).__init__(
             feature_dim=0,
             feature_idx=0,
-            feature_type=np.int64,
+            dtype=np.int64,
             feature_enc=None,
         )
         self.model_args = model_args

@@ -135,7 +135,7 @@ class MockGraph(Graph):
         )
 
     def node_features(
-        self, nodes: np.ndarray, features: np.ndarray, feature_type: np.dtype
+        self, nodes: np.ndarray, features: np.ndarray, dtype: np.dtype
     ) -> np.ndarray:
         if np.array_equal(features, np.array([[1, 7]])):
             rt = []

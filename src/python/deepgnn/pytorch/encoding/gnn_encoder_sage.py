@@ -65,7 +65,7 @@ class SageEncoder(nn.Module):
         self,
         nodes: np.ndarray,
         graph: Graph,
-        feature_type: np.dtype,
+        dtype: np.dtype,
         feature_idx: int,
         feature_dim: int,
     ):
@@ -77,11 +77,11 @@ class SageEncoder(nn.Module):
         neigh_nodes_unique, idx = np.unique(neigh_nodes, return_inverse=True)
 
         context["node_feats"] = self.query_func(
-            nodes, graph, feature_type, feature_idx, feature_dim
+            nodes, graph, dtype, feature_idx, feature_dim
         )
 
         neigh_feats_unique = self.query_func(
-            neigh_nodes_unique, graph, feature_type, feature_idx, feature_dim
+            neigh_nodes_unique, graph, dtype, feature_idx, feature_dim
         )
 
         if isinstance(neigh_feats_unique, dict):
@@ -99,13 +99,13 @@ class SageEncoder(nn.Module):
         self,
         nodes: np.ndarray,
         graph: Graph,
-        feature_type: np.dtype,
+        dtype: np.dtype,
         feature_idx: int,
         feature_dim: int,
     ):
         """Fetch features."""
         features = graph.node_features(
-            nodes, np.array([[feature_idx, feature_dim]]), feature_type
+            nodes, np.array([[feature_idx, feature_dim]]), dtype
         )
         return features
 

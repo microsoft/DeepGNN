@@ -117,9 +117,7 @@ def train_linkprediction_model(params, config, model_path, lp_mock_graph):
 
     feature_enc = MultiTypeFeatureEncoder(np.int64, config, ["q", "k", "s"], False)
 
-    lp = LinkPredictionModel(
-        args=params, feature_type=np.int64, feature_enc=feature_enc
-    )
+    lp = LinkPredictionModel(args=params, dtype=np.int64, feature_enc=feature_enc)
 
     optimizer = torch.optim.SGD(
         filter(lambda p: p.requires_grad, lp.parameters()),
@@ -260,9 +258,7 @@ def test_link_prediction_model_gat(train_linkprediction_model_gat):
     config = train_linkprediction_model_gat["config"]
     feature_enc = MultiTypeFeatureEncoder(np.int64, config, ["q", "k", "s"], False)
 
-    lp = LinkPredictionModel(
-        args=params, feature_type=np.int64, feature_enc=feature_enc
-    )
+    lp = LinkPredictionModel(args=params, dtype=np.int64, feature_enc=feature_enc)
 
     args = argparse.Namespace(
         data_dir="/mock/doesnt/need/physical/path",
@@ -334,9 +330,7 @@ def test_link_prediction_model_hetgnn(train_linkprediction_model_hetgnn):
     feature_enc = MultiTypeFeatureEncoder(np.int64, config, ["q", "k", "s"], False)
     params.gnn_encoder = "hetgnn_lgcl"
 
-    lp = LinkPredictionModel(
-        args=params, feature_type=np.int64, feature_enc=feature_enc
-    )
+    lp = LinkPredictionModel(args=params, dtype=np.int64, feature_enc=feature_enc)
 
     args = argparse.Namespace(
         data_dir="/mock/doesnt/need/physical/path",
@@ -386,9 +380,7 @@ def test_link_prediction_model_hetgnn(train_linkprediction_model_hetgnn):
 def do_inference(params, config, mock_graph, model_path):
     feature_enc = MultiTypeFeatureEncoder(np.int64, config, ["q", "k", "s"], False)
 
-    lp = LinkPredictionModel(
-        args=params, feature_type=np.int64, feature_enc=feature_enc
-    )
+    lp = LinkPredictionModel(args=params, dtype=np.int64, feature_enc=feature_enc)
 
     lp.load_state_dict(torch.load(model_path))
     lp.eval()
@@ -476,9 +468,7 @@ def test_linkprediction_query(lp_mock_graph, prepare_local_twinbert_test_files):
     mock_graph = lp_mock_graph
     params, config = prepare_params(prepare_local_twinbert_test_files)
     feature_enc = MultiTypeFeatureEncoder(np.int64, config, ["q", "k", "s"], False)
-    lp = LinkPredictionModel(
-        args=params, feature_type=np.int64, feature_enc=feature_enc
-    )
+    lp = LinkPredictionModel(args=params, dtype=np.int64, feature_enc=feature_enc)
 
     sampler = TextFileSampler(
         batch_size=1,
@@ -511,7 +501,7 @@ def run_multitype_feature_encoder(params, config, graph, shared=False):
     node_types = ["q", "k", "s"]
     enc = MultiTypeFeatureEncoder(np.int64, config, node_types, shared)
 
-    lp = LinkPredictionModel(args=params, feature_type=np.int64, feature_enc=enc)
+    lp = LinkPredictionModel(args=params, dtype=np.int64, feature_enc=enc)
 
     args = argparse.Namespace(
         data_dir="/mock/doesnt/need/physical/path",

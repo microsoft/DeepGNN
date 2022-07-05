@@ -140,7 +140,7 @@ In this example, the query function will generate a set of positive and negative
 ...     feature_dim: int
 ...     label_idx: int
 ...     label_dim: int
-...     feature_type: np.dtype = np.float32
+...     dtype: np.dtype = np.float32
 ...     label_type: np.dtype = np.float32
 
 
@@ -164,7 +164,7 @@ In this example, the query function will generate a set of positive and negative
 ...         nbs_features = g.node_features(
 ...             nodes=nbs.reshape(-1),
 ...             features=self.feat_meta,
-...             feature_type=self.p.feature_type)
+...             dtype=self.p.dtype)
 ...
 ...         # reshape the feature tensor to [nodes, neighbors, features]
 ...         # and aggregate along neighbors dimension.
@@ -172,7 +172,7 @@ In this example, the query function will generate a set of positive and negative
 ...         node_features = g.node_features(
 ...             nodes=nodes.astype(dtype=np.int64),
 ...             features=self.feat_meta,
-...             feature_type=self.p.feature_type,
+...             dtype=self.p.dtype,
 ...         )
 ...         return node_features, nbs_agg
 ...
@@ -207,7 +207,7 @@ In this example,
 ...     def __init__(self, q_param):
 ...         self.q = LinkPredictionQuery(q_param)
 ...         super().__init__(
-...             feature_type=q_param.feature_type,
+...             dtype=q_param.dtype,
 ...             feature_idx=q_param.feature_idx,
 ...             feature_dim=q_param.feature_dim,
 ...             feature_enc=None

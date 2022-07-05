@@ -79,8 +79,8 @@ class TsvDecoder(Decoder):
                         e.g. 0
         node_weight:    (float)
                         e.g. 0.1
-        node_features:  (feature_type: feature_content;feature_type: feature_content)
-                        feature_type: i(nt)8/16/32/64, u(int)8/16/32/64, f(loat)16, f(loat), d(ouble), b(inary)
+        node_features:  (dtype: feature_content;dtype: feature_content)
+                        dtype: i(nt)8/16/32/64, u(int)8/16/32/64, f(loat)16, f(loat), d(ouble), b(inary)
                         e.g. f:0.1 0.2;b:stringfeatures;i:1 2 3;i16: 1 2 3;u32: 1 2 3
         neighbors:      (dst_id,edge_type,edge_weight,edge_label,edge_features|dst_id,edge_type,edge_weight,edge_label,edge_features|...)
                         e.g. 2, 0, 0.3, 1, 0.1 0.2:stringfeatures:1 2 3|3, 1, 0.4, 2, 0.1 0.2:stringfeatures:4 5 6|...

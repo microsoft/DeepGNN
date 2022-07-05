@@ -20,7 +20,7 @@ class BaseModel(nn.Module):
 
     def __init__(
         self,
-        feature_type: np.dtype,
+        dtype: np.dtype,
         feature_idx: int,
         feature_dim: int,
         feature_enc: Optional[FeatureEncoder],
@@ -28,7 +28,7 @@ class BaseModel(nn.Module):
         """Initialize common fields.
 
         Args:
-            feature_type: feature type used for graph querying.
+            dtype: feature type used for graph querying.
             feature_idx: feature index used for graph querying.
             feature_dim: feature dimension used for graph querying.
             feature_enc: feature encoder used to encode input raw feature(mainly for binary) to embedding.
@@ -36,9 +36,9 @@ class BaseModel(nn.Module):
         super(BaseModel, self).__init__()
 
         get_logger().info(
-            f"[BaseModel] feature_type: {feature_type}, feature_idx:{feature_idx}, feature_dim:{feature_dim}."
+            f"[BaseModel] dtype: {dtype}, feature_idx:{feature_idx}, feature_dim:{feature_dim}."
         )
-        self.feature_type = feature_type
+        self.dtype = dtype
         self.feature_idx = feature_idx
 
         # If feature_enc is valid, overwrite self.feature_dim with feature_enc.feature_dim.
@@ -128,14 +128,14 @@ class BaseSupervisedModel(BaseModel):
 
     def __init__(
         self,
-        feature_type: np.dtype,
+        dtype: np.dtype,
         feature_idx: int,
         feature_dim: int,
         feature_enc: Optional[FeatureEncoder],
     ):
         """Initialize common fields."""
         super(BaseSupervisedModel, self).__init__(
-            feature_type=feature_type,
+            dtype=dtype,
             feature_idx=feature_idx,
             feature_dim=feature_dim,
             feature_enc=feature_enc,
@@ -172,14 +172,14 @@ class BaseUnsupervisedModel(BaseModel):
 
     def __init__(
         self,
-        feature_type: np.dtype,
+        dtype: np.dtype,
         feature_idx: int,
         feature_dim: int,
         feature_enc: Optional[FeatureEncoder],
     ):
         """Initialize common fields."""
         super(BaseUnsupervisedModel, self).__init__(
-            feature_type=feature_type,
+            dtype=dtype,
             feature_idx=feature_idx,
             feature_dim=feature_dim,
             feature_enc=feature_enc,
