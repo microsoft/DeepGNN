@@ -154,7 +154,7 @@ We copy the GAT model from [DeepGNN's examples directory](https://github.com/mic
 
 >>> @dataclass
 ... class GATQueryParameter:
-...     neighbor_edge_types: np.array
+...     neighbor_edge_types: np.ndarray
 ...     feature_idx: int
 ...     feature_dim: int
 ...     label_idx: int

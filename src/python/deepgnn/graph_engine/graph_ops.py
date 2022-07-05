@@ -7,11 +7,11 @@ from deepgnn.graph_engine import Graph, FeatureType
 
 def sample_out_edges(
     graph: Graph,
-    nodes: np.array,
-    edge_types: np.array,
+    nodes: np.ndarray,
+    edge_types: np.ndarray,
     count: int,
     sampling_strategy: str = "byweight",
-    edge_feature_meta: np.array = None,
+    edge_feature_meta: np.ndarray = None,
     edge_feature_type: FeatureType = FeatureType.FLOAT,
 ):
     """
@@ -92,8 +92,8 @@ def gen_skipgrams(paths: np.ndarray, left_win_size: int, right_win_size: int):
 
 def sub_graph(
     graph: Graph,
-    src_nodes: np.array,
-    edge_types: np.array,
+    src_nodes: np.ndarray,
+    edge_types: np.ndarray,
     num_hops: int = 1,
     self_loop: bool = True,
     undirected: bool = True,

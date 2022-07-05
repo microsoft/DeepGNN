@@ -67,7 +67,7 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         elist = torch.cat([src, dst], dim=0)
         return elist
 
-    def query(self, graph: Graph, inputs: np.array):
+    def query(self, graph: Graph, inputs: np.ndarray):
         """Query graph for training data."""
         context = {"inputs": inputs}
         context["label"] = graph.node_features(

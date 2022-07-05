@@ -80,7 +80,7 @@ class PPI(Client):
         other_neighbors: Dict = {nid: [] for nid in nodes}
 
         # edges
-        train_mask = np.zeros(len(nodes), np.bool)
+        train_mask = np.zeros(len(nodes), np.bool8)
         train_mask[train_nodes] = True
         for i, e in enumerate(g["links"]):
             src = id_map[e["source"]]
