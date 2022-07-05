@@ -56,14 +56,6 @@ def prepare_connected_caveman_graph(working_dir):
                 }
                 for neighbor_id in nx.neighbors(g, node_id)
             ],
-            "neighbor": {
-                "0": dict(
-                    [
-                        (str(neighbor_id), 1.0)
-                        for neighbor_id in nx.neighbors(g, node_id)
-                    ]
-                )
-            },
         }
         data += json.dumps(node) + "\n"
         nodes.append(node)

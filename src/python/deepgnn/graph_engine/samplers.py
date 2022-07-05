@@ -110,10 +110,10 @@ class _GEIterator:
     def __init__(
         self,
         batch_size: int,
-        item_type: np.array,
+        item_type: np.ndarray,
         count: int,
         strategy: SamplingStrategy,
-        func: Callable[[int, int], np.array],
+        func: Callable[[int, int], np.ndarray],
     ):
         self.batch_size = batch_size
         self.item_type = item_type
@@ -373,7 +373,7 @@ class _NumpyIterator:
 
     def __init__(
         self,
-        data: List[np.array],
+        data: List[np.ndarray],
         batch_size,
         epochs=1,
         shuffle=False,

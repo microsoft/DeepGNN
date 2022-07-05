@@ -11,7 +11,6 @@ import fsspec
 from deepgnn import get_logger
 from deepgnn.graph_engine._adl_reader import TextFileIterator
 from deepgnn.graph_engine._base import get_fs
-from deepgnn.graph_engine.snark.converter.process import converter_process
 from deepgnn.graph_engine.snark.decoders import (
     DecoderType,
 )
@@ -85,19 +84,21 @@ class MultiWorkersConverter:
             self.partition_count = partition_count - self.partition_offset
 
         if self.dispatcher is None:
+            # when converting data in HDFS make sure to turn it off: https://hdfs3.readthedocs.io/en/latest/limitations.html
+            use_threads = True
+            if hasattr(fsspec.implementations, "hdfs") and isinstance(
+                self.fs, fsspec.implementations.hdfs.PyArrowHDFS
+            ):
+                use_threads = False
             self.dispatcher = PipeDispatcher(
                 self.output_dir,
                 self.partition_count,
                 meta_path_local,
                 self.decoder,
-                converter_process,
-                self.partition_offset,
-                False
-                if hasattr(fsspec.implementations, "hdfs")
-                and isinstance(self.fs, fsspec.implementations.hdfs.PyArrowHDFS)
-                else True,  # when converting data in HDFS make sure to turn it off: https://hdfs3.readthedocs.io/en/latest/limitations.html
-                skip_node_sampler,
-                skip_edge_sampler,
+                partition_offset=self.partition_offset,
+                use_threads=use_threads,
+                skip_node_sampler=skip_node_sampler,
+                skip_edge_sampler=skip_edge_sampler,
             )
 
     def convert(self):

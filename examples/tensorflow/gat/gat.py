@@ -16,7 +16,7 @@ from deepgnn.graph_engine import Graph, FeatureType, graph_ops
 class GATQueryParameter:
     """Parameters for graph query."""
 
-    neighbor_edge_types: np.array
+    neighbor_edge_types: np.ndarray
     feature_idx: int
     feature_dim: int
     label_idx: int
@@ -36,7 +36,7 @@ class GATQuery:
         self.feat_meta = np.array([[param.feature_idx, param.feature_dim]], np.int32)
 
     def query_training(
-        self, graph: Graph, inputs: np.array, return_shape: bool = False
+        self, graph: Graph, inputs: np.ndarray, return_shape: bool = False
     ):
         """Query to fetch training data."""
         nodes, edges, src_idx = graph_ops.sub_graph(

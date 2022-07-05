@@ -80,7 +80,7 @@ class PPI(Client):
         other_neighbors: Dict = {nid: [] for nid in nodes}
 
         # edges
-        train_mask = np.zeros(len(nodes), np.bool)
+        train_mask = np.zeros(len(nodes), np.bool8)
         train_mask[train_nodes] = True
         for i, e in enumerate(g["links"]):
             src = id_map[e["source"]]
@@ -193,8 +193,6 @@ class PPI(Client):
         train_neighbor: List[int],
         train_removed_neighbor: List[int],
     ):
-        nb0 = {str(nb): 1.0 for nb in train_neighbor}
-        nb1 = {str(nb): 1.0 for nb in train_removed_neighbor}
         edges = []
         for nb in train_neighbor:
             e = {"src_id": node_id, "dst_id": nb, "edge_type": 0, "weight": 1.0}
@@ -210,7 +208,6 @@ class PPI(Client):
             "node_weight": 1.0,
             "float_feature": {"0": label, "1": feat},
             "edge": edges,
-            "neighbor": {"0": nb0, "1": nb1},
         }
 
         return json.dumps(node)

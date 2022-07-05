@@ -10,13 +10,13 @@ import deepgnn.graph_engine.snark.client as client
 from deepgnn.graph_engine._base import FeatureType, Graph, SamplingStrategy
 from deepgnn import get_logger
 
-_feature_type_map = {
-    FeatureType.BINARY: np.uint8,
-    FeatureType.FLOAT: np.float32,
-    FeatureType.INT64: np.int64,
+_feature_type_map: Dict[FeatureType, np.dtype] = {
+    FeatureType.BINARY: np.dtype(np.uint8),
+    FeatureType.FLOAT: np.dtype(np.float32),
+    FeatureType.INT64: np.dtype(np.int64),
 }
 
-_sampling_map = {
+_sampling_map: Dict[SamplingStrategy, str] = {
     SamplingStrategy.Weighted: "weighted",
     SamplingStrategy.Random: "uniform",
     SamplingStrategy.RandomWithoutReplacement: "withoutreplacement",
@@ -54,14 +54,14 @@ class Client(Graph):
 
     def __check_types(self, types: Union[int, np.ndarray]) -> List[int]:
         if type(types) == int:
-            return [types]
+            return [types]  # type: ignore
         else:
             assert isinstance(types, np.ndarray)
             return types.flatten().tolist()
 
     def sample_nodes(
-        self, size: int, node_types: Union[int, np.array], strategy: SamplingStrategy
-    ) -> np.array:
+        self, size: int, node_types: Union[int, np.ndarray], strategy: SamplingStrategy
+    ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
         """Return an array of nodes with a specified type."""
         assert size > 0
 
@@ -79,8 +79,8 @@ class Client(Graph):
         return (nodes, types)
 
     def sample_edges(
-        self, size: int, edge_types: Union[int, np.array], strategy: SamplingStrategy
-    ) -> np.array:
+        self, size: int, edge_types: Union[int, np.ndarray], strategy: SamplingStrategy
+    ) -> np.ndarray:
         """Return an array of edges with a specified type."""
         assert size > 0
 
@@ -97,14 +97,14 @@ class Client(Graph):
 
     def sample_neighbors(
         self,
-        nodes: np.array,
-        edge_types: Union[int, np.array],
+        nodes: np.ndarray,
+        edge_types: Union[int, np.ndarray],
         count: int = 10,
         strategy: str = "byweight",
         default_node: int = -1,
         default_weight: float = 0.0,
         default_node_type: int = -1,
-    ) -> Tuple[np.array, np.array, np.array, np.array]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Sample node neighbors."""
         if strategy == "byweight":
             result = self.graph.weighted_sample_neighbors(  # type: ignore
@@ -136,8 +136,8 @@ class Client(Graph):
         raise NotImplementedError(f"Unknown strategy type {strategy}")
 
     def node_features(
-        self, nodes: np.array, features: np.array, feature_type: FeatureType
-    ) -> np.array:
+        self, nodes: np.ndarray, features: np.ndarray, feature_type: FeatureType
+    ) -> np.ndarray:
         """Fetch node features."""
         assert len(features.shape) == 2
         assert features.shape[-1] == 2
@@ -153,13 +153,13 @@ class Client(Graph):
 
     def random_walk(
         self,
-        node_ids: np.array,
-        metapath: np.array,
+        node_ids: np.ndarray,
+        metapath: np.ndarray,
         walk_len: int,
         p: float,
         q: float,
         default_node: int = -1,
-    ) -> np.array:
+    ) -> np.ndarray:
         """
         Sample nodes via random walk.
 
@@ -181,18 +181,18 @@ class Client(Graph):
         )
 
     def neighbors(
-        self, nodes: np.array, edge_types: Union[int, np.array]
-    ) -> Tuple[np.array, np.array, np.array, np.array]:
+        self, nodes: np.ndarray, edge_types: Union[int, np.ndarray]
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Fetch full information about node neighbors."""
         return self.graph.neighbors(nodes, self.__check_types(edge_types))
 
-    def node_types(self, nodes: np.array) -> np.array:
+    def node_types(self, nodes: np.ndarray) -> np.ndarray:
         """Fetch node types."""
         return self.graph.node_types(nodes, -1)
 
     def edge_features(
-        self, edges: np.array, features: np.array, feature_type: FeatureType
-    ) -> np.array:
+        self, edges: np.ndarray, features: np.ndarray, feature_type: FeatureType
+    ) -> np.ndarray:
         """Fetch edge features."""
         edges = np.array(edges, dtype=np.int64)
         features = np.array(features, dtype=np.int32)
@@ -212,14 +212,14 @@ class Client(Graph):
             _feature_type_map[feature_type],
         )
 
-    def node_count(self, types: Union[int, np.array]) -> int:
+    def node_count(self, types: Union[int, np.ndarray]) -> int:
         """Return node count."""
         if isinstance(types, int):
             return self.graph.get_node_type_count([types])
 
         return self.graph.get_node_type_count(types.tolist())
 
-    def edge_count(self, types: Union[int, np.array]) -> int:
+    def edge_count(self, types: Union[int, np.ndarray]) -> int:
         """Return edge count."""
         if isinstance(types, int):
             return self.graph.get_edge_type_count([types])

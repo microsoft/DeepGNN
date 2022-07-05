@@ -9,8 +9,8 @@ from deepgnn.graph_engine._base import Graph
 
 def _sample_neighbors(
     graph: Graph,
-    nodes: np.array,
-    edge_types: np.array,
+    nodes: np.ndarray,
+    edge_types: np.ndarray,
     count: int,
     sampling_strategy: str,
     default_node: int,
@@ -24,7 +24,7 @@ def _sample_neighbors(
 
 def sample_fanout(
     graph: Graph,
-    nodes: np.array,
+    nodes: np.ndarray,
     metapath: list,
     fanouts: list,
     default_node: int,
@@ -68,7 +68,7 @@ def sample_fanout(
     return neighbors_list, weights_list, types_list
 
 
-def _full_neighbor(graph: Graph, nodes: np.array, hop_edge_types: np.array):
+def _full_neighbor(graph: Graph, nodes: np.ndarray, hop_edge_types: np.ndarray):
     if len(nodes) == 0:
         return (
             np.array([], dtype=np.int64),
@@ -82,7 +82,7 @@ def _full_neighbor(graph: Graph, nodes: np.array, hop_edge_types: np.array):
     # Create neighbors indices in the form [node_idx, neighbor_idx]
     for x, i in np.nditer([counts, np.arange(len(counts))]):
         blocks.append(
-            np.block([np.full([x], i).reshape(-1, 1), np.arange(x).reshape(-1, 1)])
+            np.block([np.full([x], i).reshape(-1, 1), np.arange(x).reshape(-1, 1)])  # type: ignore
         )
     return (
         nbs.astype(np.int64, copy=False),
@@ -92,7 +92,7 @@ def _full_neighbor(graph: Graph, nodes: np.array, hop_edge_types: np.array):
 
 
 def get_neighbor(
-    graph: Graph, nodes: np.array, edge_types: np.array, max_neighbors_per_node
+    graph: Graph, nodes: np.ndarray, edge_types: np.ndarray, max_neighbors_per_node
 ) -> Tuple[list, list]:
     """
     Get multi-hop neighbors with adjacent matrix.

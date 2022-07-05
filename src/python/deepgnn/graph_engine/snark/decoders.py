@@ -30,7 +30,6 @@ class JsonDecoder(Decoder):
             "node_id": 0,
             "node_type": 1,
             "node_weight": 1,
-            "neighbor": {"0": {}, "1": {"5": 1}},
             "uint64_feature": {},
             "float_feature": {"0": [1], "1": [-0.03, -0.04]},
             "binary_feature": {},
@@ -145,7 +144,6 @@ class TsvDecoder(Decoder):
         feature_map = self._parse_feature_string(columns[3])
         node.update(feature_map)
 
-        node["neighbor"] = dict()
         node["edge"] = []
         if columns[4]:
             neighbors = columns[4].split("|")
@@ -162,11 +160,6 @@ class TsvDecoder(Decoder):
 
                 dst_type = int(neighbor_columns[1]) if neighbor_columns[1] else 0
                 dst_weight = float(neighbor_columns[2]) if neighbor_columns[2] else 0.0
-
-                if dst_type not in node["neighbor"]:
-                    node["neighbor"][str(dst_type)] = dict()
-
-                node["neighbor"][str(dst_type)][str(dst_id)] = dst_weight
 
                 edge_info = dict()
                 edge_info["src_id"] = node["node_id"]

@@ -72,14 +72,6 @@ Full json format, [here](~/advanced/data_spec.md).
 ...             }
 ...             for neighbor_id in nx.neighbors(g, node_id)
 ...         ],
-...         "neighbor": {
-...             "0": dict(
-...                 [
-...                     (str(neighbor_id), 1.0)
-...                     for neighbor_id in nx.neighbors(g, node_id)
-...                 ]
-...             )
-...         },  # {"edge type": {"neighbor id": "weight", "...": "..."}, "...": "..."}
 ...     }
 ...     data += json.dumps(node) + "\n"
 ...     nodes.append(node)
@@ -162,7 +154,7 @@ We copy the GAT model from [DeepGNN's examples directory](https://github.com/mic
 
 >>> @dataclass
 ... class GATQueryParameter:
-...     neighbor_edge_types: np.array
+...     neighbor_edge_types: np.ndarray
 ...     feature_idx: int
 ...     feature_dim: int
 ...     label_idx: int
