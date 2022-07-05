@@ -22,6 +22,9 @@ from deepgnn.graph_engine.snark.converter.process import (
     PROCESS_PRINT_INTERVAL,
 )
 from deepgnn.graph_engine.snark.decoders import DecoderType
+import deepgnn.graph_engine.snark.meta as meta
+from deepgnn.graph_engine._base import get_fs
+from deepgnn.graph_engine.snark.meta import _Element
 
 
 class Dispatcher(ABC):
@@ -90,6 +93,7 @@ class PipeDispatcher(Dispatcher):
         """
         super().__init__()
 
+        self.folder = str(folder)
         process = process or converter_process
         parallel_func = mp.Process  # type: ignore
         if use_threads:
@@ -159,6 +163,40 @@ class PipeDispatcher(Dispatcher):
             assert flag == FLAG_WORKER_FINISHED_PROCESSING
         self.q_out.close()
 
+        for p in self.partitions:
+            real_node_type_num = len(p["node_type_count"])
+            if real_node_type_num < self.node_type_num:
+                p["node_type_count"].extend(
+                    [0] * (self.node_type_num - real_node_type_num)
+                )
+                p["node_weight"].extend(
+                    [0.0] * (self.node_type_num - real_node_type_num)
+                )
+            real_edge_type_num = len(p["edge_type_count"])
+            if real_edge_type_num < self.edge_type_num:
+                p["edge_type_count"].extend(
+                    [0] * (self.edge_type_num - real_edge_type_num)
+                )
+                p["edge_weight"].extend([0] * (self.edge_type_num - real_edge_type_num))
+
+            fs, _ = get_fs(self.folder)
+            for tp in range(real_node_type_num, self.node_type_num):
+                with fs.open(
+                    meta._get_element_alias_path(
+                        _Element.NODE, self.folder, tp, p["id"]
+                    ),
+                    "wb",
+                ):
+                    pass
+            for tp in range(real_edge_type_num, self.edge_type_num):
+                with fs.open(
+                    meta._get_element_alias_path(
+                        _Element.EDGE, self.folder, tp, p["id"]
+                    ),
+                    "wb",
+                ):
+                    pass
+
     def prop(self, name: str) -> typing.Any:
         """Properties relevant for conversion.
 
@@ -218,6 +256,7 @@ class QueueDispatcher(Dispatcher):
         """
         super().__init__()
 
+        self.folder = str(folder)
         process = process or converter_process
         parallel_func = mp.Process  # type: ignore
         if use_threads:
@@ -294,6 +333,40 @@ class QueueDispatcher(Dispatcher):
 
             assert flag == FLAG_WORKER_FINISHED_PROCESSING
         self.q_out.close()
+
+        for p in self.partitions:
+            real_node_type_num = len(p["node_type_count"])
+            if real_node_type_num < self.node_type_num:
+                p["node_type_count"].extend(
+                    [0] * (self.node_type_num - real_node_type_num)
+                )
+                p["node_weight"].extend(
+                    [0.0] * (self.node_type_num - real_node_type_num)
+                )
+            real_edge_type_num = len(p["edge_type_count"])
+            if real_edge_type_num < self.edge_type_num:
+                p["edge_type_count"].extend(
+                    [0] * (self.edge_type_num - real_edge_type_num)
+                )
+                p["edge_weight"].extend([0] * (self.edge_type_num - real_edge_type_num))
+
+            fs, _ = get_fs(self.folder)
+            for tp in range(real_node_type_num, self.node_type_num):
+                with fs.open(
+                    meta._get_element_alias_path(
+                        _Element.NODE, self.folder, tp, p["id"]
+                    ),
+                    "wb",
+                ):
+                    pass
+            for tp in range(real_edge_type_num, self.edge_type_num):
+                with fs.open(
+                    meta._get_element_alias_path(
+                        _Element.EDGE, self.folder, tp, p["id"]
+                    ),
+                    "wb",
+                ):
+                    pass
 
         for p in self.processes:
             p.terminate()

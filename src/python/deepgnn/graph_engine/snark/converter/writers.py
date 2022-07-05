@@ -106,6 +106,8 @@ class BinaryWriter:
 
     def close(self):
         """Close output binary files."""
+        self.node_feature_num = self.node_writer.feature_writer.node_feature_num
+        self.edge_feature_num = self.edge_writer.feature_writer.edge_feature_num
         self.node_writer.close()
         self.edge_writer.close()
         self.node_alias.close()
@@ -200,11 +202,14 @@ class NodeFeatureWriter:
             features (list): ordered list of feature vectors as ndarrays - or None for an empty vector.
         """
         self.ni.write(ctypes.c_uint64(self.nfi.tell() // 8))  # type: ignore
-        for k in convert_features(features):
+        i = -1
+        for i, k in enumerate(convert_features(features)):
             # Fill the gaps between features
             self.nfi.write(ctypes.c_uint64(self.nfd_pos))  # type: ignore
             if k is not None:
                 self.nfd_pos += self.nfd.write(k)
+        if i + 1 > self.node_feature_num:
+            self.node_feature_num = i + 1
 
     def close(self):
         """Close output binary files."""
@@ -320,6 +325,7 @@ class EdgeFeatureWriter:
             "wb",
         )
         self.efd_pos = self.efd.tell()
+        self.edge_feature_num = 0
 
     def add(self, features: list):
         """Add edge features the binary output.
@@ -328,10 +334,13 @@ class EdgeFeatureWriter:
             features (list): ordered list of feature vectors as ndarrays - or None for an empty vector.
         """
         features_written = 0
-        for k in convert_features(features):
+        i = -1
+        for i, k in enumerate(convert_features(features)):
             features_written += self.efi.write(ctypes.c_uint64(self.efd_pos))  # type: ignore
             if k is not None:
                 self.efd_pos += self.efd.write(k)
+        if i + 1 > self.edge_feature_num:
+            self.edge_feature_num = i + 1
         return features_written
 
     def tell(self) -> int:
