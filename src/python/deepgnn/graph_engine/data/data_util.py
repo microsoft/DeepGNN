@@ -49,11 +49,24 @@ def get_json_node(
         "node_weight": 1.0,
         "float_feature": {"0": flt_feat, "1": [label]},
         "binary_feature": None,
-        "edge": [],
-        "neighbor": {
-            "0": dict([(str(nb), 1.0) for nb in train_neighbors]),
-            "1": dict([(str(nb), 1.0) for nb in test_neighbors]),
-        },
+        "edge": [
+            {
+                "src_id": node_id,
+                "dst_id": nb,
+                "edge_type": 0,
+                "weight": 1.0,
+            }
+            for nb in train_neighbors
+        ]
+        + [
+            {
+                "src_id": node_id,
+                "dst_id": nb,
+                "edge_type": 1,
+                "weight": 1.0,
+            }
+            for nb in test_neighbors
+        ],
     }
     return json.dumps(node)
 

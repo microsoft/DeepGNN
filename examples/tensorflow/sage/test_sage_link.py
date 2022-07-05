@@ -127,12 +127,6 @@ def prepare_user_teams_graph(working_dir):
             "float_feature": None,
             "binary_feature": None,
             "edge": edge_list,
-            "neighbor": {
-                "0": dict(
-                    [(str(neigh_id), 1.0) for neigh_id in nx.neighbors(g, node_id)]
-                ),
-                "1": all_team_dict,
-            },
         }
 
         data += json.dumps(node) + "\n"
@@ -175,7 +169,6 @@ def prepare_user_teams_graph(working_dir):
             "float_feature": None,
             "binary_feature": None,
             "edge": edge_list,
-            "neighbor": {"0": dict([(str(u_id), 1.0) for u_id in all_uids])},
         }
 
         data += json.dumps(node) + "\n"

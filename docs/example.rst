@@ -45,7 +45,6 @@ to use random integers and node ids as values for a 2 dimensional feature vector
     ...     "binary_feature": {},
     ...     "edge": [{"src_id": node_id, "dst_id": nb, "edge_type": 0, "weight": 1., "uint64_feature": {}, "float_feature": {}, "binary_feature": {}}
     ...       for nb in nx.neighbors(g, node_id)],
-    ...     "neighbor": {"0": nbs},
     ...   }
     ...   data += json.dumps(node) + "\n"
     ...   nodes.append(node)
