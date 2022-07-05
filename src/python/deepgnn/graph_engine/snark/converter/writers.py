@@ -79,26 +79,26 @@ class BinaryWriter:
         """
         for src, dst, typ, weight, features in data:
             if src == -1:
-                self.node_writer.add(dst, typ, features)
-                self.edge_writer.add_node()
                 if typ > self.node_type_num:
                     for _ in range(typ - self.node_type_num):
                         self.node_alias.add_type()
                         self.node_weight.append(0)
                         self.node_type_count.append(0)
                     self.node_type_num = typ
+                self.node_writer.add(dst, typ, features)
+                self.edge_writer.add_node()
                 self.node_alias.add(dst, typ, weight)
                 self.node_weight[typ] += float(weight)
                 self.node_type_count[typ] += 1
                 self.node_count += 1
             else:
-                self.edge_writer.add(dst, typ, weight, features)
                 if typ > self.edge_type_num:
                     for _ in range(typ - self.edge_type_num):
                         self.edge_alias.add_type()
                         self.edge_weight.append(0)
                         self.edge_type_count.append(0)
                     self.edge_type_num = typ
+                self.edge_writer.add(dst, typ, weight, features)
                 self.edge_alias.add(src, dst, typ, weight)
                 self.edge_weight[typ] += weight
                 self.edge_type_count[typ] += 1
@@ -418,7 +418,7 @@ class NodeAliasWriter:
 
     def close(self):
         """Convert temporary files to the final alias tables."""
-        for tp in range(self.node_type_count):
+        for tp in range(len(self.nodes)):
             wts = np.fromfile(
                 self.weights[tp],
                 dtype=np.float32,
@@ -440,7 +440,7 @@ class NodeAliasWriter:
                     right = a.elements[a.alias[index]] if a.prob[index] < 1.0 else 0
                     nw.write(struct.pack("=qqf", left, right, a.prob[index]))
 
-        for tp in range(self.node_type_count):
+        for tp in range(len(self.nodes)):
             self.weights[tp].close()
             os.remove(self.weights[tp].name)
             self.nodes[tp].close()
