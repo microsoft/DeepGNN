@@ -105,7 +105,7 @@ class JsonDecoder(Decoder):
         Yield format is (-1/src, node_id/dst, type, weight, features).
         Features being a list of dense features as ndarrays and sparse features as 2 tuples, coordinates and values.
         """
-        data = json.loads(line) if isinstance(line, str) else line
+        data = json.loads(line)
         yield -1, data["node_id"], data["node_type"], data[
             "node_weight"
         ], self._pull_features(data)
