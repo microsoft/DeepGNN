@@ -12,7 +12,6 @@ import torch
 
 from deepgnn import get_logger
 from deepgnn.graph_engine import (
-    FeatureType,
     GraphType,
     BackendType,
     BackendOptions,
@@ -59,12 +58,10 @@ pytestmark = pytest.mark.skipif(not IS_ADL_CONFIG_VALID, reason="Invalid adl con
 
 
 def get_source_dest_vec(params, config, graph):
-    feature_enc = MultiTypeFeatureEncoder(
-        FeatureType.INT64, config, ["q", "k", "s"], False
-    )
+    feature_enc = MultiTypeFeatureEncoder(np.int64, config, ["q", "k", "s"], False)
 
     lp = LinkPredictionModel(
-        args=params, feature_type=FeatureType.INT64, feature_enc=feature_enc
+        args=params, feature_type=np.int64, feature_enc=feature_enc
     )
 
     args = argparse.Namespace(

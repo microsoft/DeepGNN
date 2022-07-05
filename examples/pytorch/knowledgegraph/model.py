@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as fn
 
-from deepgnn.graph_engine import Graph, FeatureType
+from deepgnn.graph_engine import Graph
 from deepgnn.pytorch.modeling.base_model import BaseModel, BaseMetric
 from deepgnn.pytorch.common.metrics import MRR
 
@@ -41,7 +41,7 @@ class KGEModel(BaseModel):
         super(KGEModel, self).__init__(
             feature_dim=0,
             feature_idx=0,
-            feature_type=FeatureType.INT64,
+            feature_type=np.int64,
             feature_enc=None,
         )
         self.model_args = model_args
@@ -125,7 +125,7 @@ class KGEModel(BaseModel):
         context = {"inputs": inputs}
 
         features = graph.edge_features(
-            inputs, np.array([[0, 2]], dtype=np.int32), FeatureType.INT64
+            inputs, np.array([[0, 2]], dtype=np.int32), np.int64
         )
         # features[:,0] is relation type for embedding index.
         inputs[:, 2] = features[:, 0].astype("int64")

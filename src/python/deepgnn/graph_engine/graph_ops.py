@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 """Useful functions to work with graph that are not part of it's API."""
 import numpy as np
-from deepgnn.graph_engine import Graph, FeatureType
+from deepgnn.graph_engine import Graph
 
 
 def sample_out_edges(
@@ -12,7 +12,7 @@ def sample_out_edges(
     count: int,
     sampling_strategy: str = "byweight",
     edge_feature_meta: np.ndarray = None,
-    edge_feature_type: FeatureType = FeatureType.FLOAT,
+    edge_feature_type: np.dtype = np.dtype(np.float32),
 ):
     """
     Get out edges for each nodes and edge features.
@@ -29,7 +29,7 @@ def sample_out_edges(
         For example, `edge_feature_meta = np.array([[0, 2], [1, 3]], dtype=np.int32)`
         - feature index = 0, feature dimension = 2
         - feature index = 1, feature dimension = 3
-      * edge_feature_type: feauture value type: [FeatureType.FLOAT|BINARY|INT64]
+      * edge_feature_type: feauture value type: [np.float32|BINARY|INT64]
 
     Return:
       * edges: out edges of `nodes`, `edges.shape == (len(nodes) * count, 3)`.

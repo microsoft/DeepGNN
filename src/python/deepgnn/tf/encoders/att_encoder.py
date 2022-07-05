@@ -4,7 +4,7 @@
 import numpy as np
 import tensorflow as tf
 
-from deepgnn.graph_engine import Graph, FeatureType
+from deepgnn.graph_engine import Graph
 from deepgnn.tf import layers
 
 
@@ -46,10 +46,10 @@ class AttEncoder(layers.Layer):
             context["inputs"], self.edge_type, self.nb_num
         )[0]
         node_feats = graph.node_features(
-            context["inputs"], self.features_metadata, FeatureType.FLOAT
+            context["inputs"], self.features_metadata, np.float32
         )
         neighbor_feats = graph.node_features(
-            np.reshape(neighbors, [-1]), self.features_metadata, FeatureType.FLOAT
+            np.reshape(neighbors, [-1]), self.features_metadata, np.float32
         )
         context["node_feats"] = np.reshape(node_feats, [-1, 1, self.feature_dim])
         context["neighbor_feats"] = np.reshape(  # type: ignore

@@ -10,7 +10,6 @@ import os
 
 from deepgnn import get_logger
 from .twinbert import TwinBERTEncoder, TriLetterTokenizer, StdBertTokenizer
-from deepgnn.graph_engine import FeatureType
 from deepgnn.pytorch.common.consts import (
     DOWNSCALE,
     MAX_SEQ_LEN,
@@ -34,7 +33,7 @@ from deepgnn.pytorch.common.utils import get_feature_type
 class FeatureEncoder(torch.nn.Module):
     """Encoder for raw feature of graph nodes."""
 
-    def __init__(self, feature_type: FeatureType, feature_dim: int, embed_dim: int):
+    def __init__(self, feature_type: np.dtype, feature_dim: int, embed_dim: int):
         """Initialize feature encoder.
 
         Args:
@@ -64,7 +63,7 @@ class FeatureEncoder(torch.nn.Module):
 class TwinBERTFeatureEncoder(FeatureEncoder):
     """Wrapper for TwinBERTEncoder."""
 
-    def __init__(self, feature_type: FeatureType, config: dict, pooler_count: int = 1):
+    def __init__(self, feature_type: np.dtype, config: dict, pooler_count: int = 1):
         """Initialize TwinBERT encoder.
 
         Args:
@@ -96,12 +95,12 @@ class TwinBERTFeatureEncoder(FeatureEncoder):
         self.tokenize_func = tokenizer.extract_from_sentence
 
     @classmethod
-    def get_feature_dim(cls, feature_type: FeatureType, config: dict):
+    def get_feature_dim(cls, feature_type: np.dtype, config: dict):
         """Extract feature dimensions."""
         max_seq_len = config[MAX_SEQ_LEN]
-        if feature_type == FeatureType.BINARY:
+        if feature_type == np.bool8:
             return config[MAX_SENT_CHARS]
-        if feature_type == FeatureType.INT64:
+        if feature_type == np.int64:
             if config[EMBEDDING_TYPE] == TRILETTER:
                 return max_seq_len * (config[TRILETTER_MAX_LETTERS_IN_WORD] + 1)
             else:
@@ -186,9 +185,9 @@ class TwinBERTFeatureEncoder(FeatureEncoder):
 
     def transform(self, context: dict):
         """Transform binary or int64 features."""
-        if self.feature_type == FeatureType.BINARY:
+        if self.feature_type == np.bool8:
             self._tokenize(context)
-        elif self.feature_type == FeatureType.INT64:
+        elif self.feature_type == np.int64:
             self._extract_sequence_id_and_mask(context)
         else:
             raise RuntimeError(
@@ -236,7 +235,7 @@ class MultiTypeFeatureEncoder(FeatureEncoder):
 
     def __init__(
         self,
-        feature_type: FeatureType,
+        feature_type: np.dtype,
         config: dict,
         encoder_types: list,
         share_encoder=False,

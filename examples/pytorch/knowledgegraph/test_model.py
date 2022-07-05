@@ -15,7 +15,7 @@ import tempfile
 
 from torch.utils.data import IterableDataset
 
-from deepgnn.graph_engine import Graph, FeatureType, SamplingStrategy
+from deepgnn.graph_engine import Graph, SamplingStrategy
 from model import KGEModel
 
 
@@ -55,7 +55,7 @@ class MockGraph(Graph):
         return self.edge_array[indexes]
 
     def edge_features(
-        self, edges: np.ndarray, features: np.ndarray, feature_type: FeatureType
+        self, edges: np.ndarray, features: np.ndarray, feature_type: np.dtype
     ) -> np.ndarray:
         features = []
 

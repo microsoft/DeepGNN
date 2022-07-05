@@ -143,7 +143,7 @@ We copy the GAT model from [DeepGNN's examples directory](https://github.com/mic
 >>> from deepgnn.pytorch.modeling.base_model import BaseModel
 >>> from deepgnn.pytorch.nn.gat_conv import GATConv
 
->>> from deepgnn.graph_engine import Graph, FeatureType, graph_ops
+>>> from deepgnn.graph_engine import Graph, graph_ops
 
 >>> from deepgnn import str2list_int
 >>> from deepgnn.pytorch.common.utils import set_seed
@@ -159,8 +159,8 @@ We copy the GAT model from [DeepGNN's examples directory](https://github.com/mic
 ...     feature_dim: int
 ...     label_idx: int
 ...     label_dim: int
-...     feature_type: FeatureType = FeatureType.FLOAT
-...     label_type: FeatureType = FeatureType.FLOAT
+...     feature_type: np.dtype = np.float32
+...     label_type: np.dtype = np.float32
 ...     num_hops: int = 2
 
 >>> class GATQuery:
@@ -204,7 +204,7 @@ We copy the GAT model from [DeepGNN's examples directory](https://github.com/mic
 ...         q_param: GATQueryParameter = None,
 ...     ):
 ...         self.q = GATQuery(q_param)
-...         super().__init__(FeatureType.FLOAT, 0, 0, None)
+...         super().__init__(np.float32, 0, 0, None)
 ...         self.num_classes = num_classes
 ...
 ...         self.out_dim = num_classes

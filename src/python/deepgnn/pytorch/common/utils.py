@@ -13,18 +13,17 @@ from urllib.parse import urlparse
 
 from deepgnn import get_logger
 from deepgnn.pytorch.common.consts import PREFIX_CHECKPOINT
-from deepgnn.graph_engine import FeatureType
 
 
 def get_feature_type(feature_type_str: str):
     """Convert string to feature type Enum."""
     feature_type_str = feature_type_str.lower()
     if feature_type_str == "float":
-        return FeatureType.FLOAT
+        return np.float32
     if feature_type_str == "uint64":
-        return FeatureType.INT64
+        return np.int64
     if feature_type_str == "binary":
-        return FeatureType.BINARY
+        return np.bool8
     raise RuntimeError(f"Unknown feature type:{feature_type_str}")
 
 
