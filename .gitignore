@@ -24,3 +24,6 @@ src/python/build/*
 
 # compiler toolchain
 .dt11*
+
+# ansible artifacts
+examples/distributed/ansible/artifacts

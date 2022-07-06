@@ -1,0 +1,24 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+all:
+  children:
+    linux:
+      hosts:
+        azure-linux-vm01: # add you custom linux hosts here.
+          ansible_host: x.x.x.x
+      vars:
+        ansible_connection: paramiko
+        ansible_user: azureuser
+        ansible_ssh_pass: "password"
+    windows:
+      hosts:
+        azure-win-vm02: # add you custom linux hosts here.
+          ansible_host: x.x.x.x
+      vars:
+        ansible_connection: psrp
+        ansible_psrp_protocol: http
+        ansible_port: 5985
+        ansible_user: azureuser
+        ansible_password: "password"
+        ansible_python_interpreter: python
