@@ -179,7 +179,7 @@ def prepare_user_teams_graph(working_dir):
              "edge_binary_feature_num": 0, \
              "edge_type_num": 3, \
              "edge_float_feature_num": 1, \
-             "node_type_num": 2, \
+             "node_type_num": 3, \
              "node_uint64_feature_num": 0, \
              "node_binary_feature_num": 0, \
              "edge_uint64_feature_num": 0}'
