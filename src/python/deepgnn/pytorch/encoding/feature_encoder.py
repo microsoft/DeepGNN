@@ -98,7 +98,7 @@ class TwinBERTFeatureEncoder(FeatureEncoder):
     def get_feature_dim(cls, dtype: np.dtype, config: dict):
         """Extract feature dimensions."""
         max_seq_len = config[MAX_SEQ_LEN]
-        if dtype == np.bool8:
+        if dtype == np.uint8:
             return config[MAX_SENT_CHARS]
         if dtype == np.int64:
             if config[EMBEDDING_TYPE] == TRILETTER:
@@ -185,7 +185,7 @@ class TwinBERTFeatureEncoder(FeatureEncoder):
 
     def transform(self, context: dict):
         """Transform binary or int64 features."""
-        if self.dtype == np.bool8:
+        if self.dtype == np.uint8:
             self._tokenize(context)
         elif self.dtype == np.int64:
             self._extract_sequence_id_and_mask(context)

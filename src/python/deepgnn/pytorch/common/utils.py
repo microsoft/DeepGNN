@@ -23,7 +23,7 @@ def get_dtype(dtype_str: str):
     if dtype_str == "uint64":
         return np.int64
     if dtype_str == "binary":
-        return np.bool8
+        return np.uint8
     raise RuntimeError(f"Unknown feature type:{dtype_str}")
 
 

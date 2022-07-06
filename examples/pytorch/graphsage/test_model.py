@@ -429,7 +429,7 @@ def tiny_graph():
     graph_dir.cleanup()
 
 
-def get_twinbert_encoder(test_rootdir, config_file, dtype=np.bool8):
+def get_twinbert_encoder(test_rootdir, config_file, dtype=np.uint8):
     torch.manual_seed(0)
     config_file = os.path.join(test_rootdir, "twinbert", config_file)
     config = TwinBERTEncoder.init_config_from_file(config_file)
@@ -445,7 +445,7 @@ def train_unsupervised_graphsage_with_feature_encoder(tiny_graph):
         num_classes=7,
         metric=MRR(),
         num_negs=1,
-        dtype=np.bool8,
+        dtype=np.uint8,
         feature_dim=0,
         feature_idx=0,
         edge_type=0,
@@ -524,7 +524,7 @@ def test_unsupervised_graphsage_with_feature_encoder(
         num_classes=7,
         metric=MRR(),
         num_negs=1,
-        dtype=np.bool8,
+        dtype=np.uint8,
         feature_dim=0,
         feature_idx=0,
         edge_type=0,
