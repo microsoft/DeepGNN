@@ -86,7 +86,6 @@ class BinaryWriter:
                         self.node_type_count.append(0)
                     self.node_type_num = typ
                 self.node_writer.add(dst, typ, features)
-                self.edge_writer.add_node()
                 self.node_alias.add(dst, typ, weight)
                 self.node_weight[typ] += float(weight)
                 self.node_type_count[typ] += 1
@@ -98,7 +97,7 @@ class BinaryWriter:
                         self.edge_weight.append(0)
                         self.edge_type_count.append(0)
                     self.edge_type_num = typ
-                self.edge_writer.add(dst, typ, weight, features)
+                self.edge_writer.add(src, dst, typ, weight, features)
                 self.edge_alias.add(src, dst, typ, weight)
                 self.edge_weight[typ] += weight
                 self.edge_type_count[typ] += 1
@@ -251,6 +250,7 @@ class EdgeWriter:
             "wb",
         )
         self.efi_pos = self.efi.tell()
+        self.prev_src = -1
 
         self.feature_writer = EdgeFeatureWriter(folder, partition, self.efi)
 
@@ -260,15 +260,20 @@ class EdgeWriter:
             ctypes.c_uint64(self.ei.tell() // (4 + 8 + 8 + 4))
         )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
 
-    def add(self, dst: int, tp: int, weight: float, features: list):
+    def add(self, src: int, dst: int, tp: int, weight: float, features: list):
         """Append edges starting at node to the output.
 
         Args:
+            src: int
             dst: int
             tp: int
             weight: float
             features: list[ndarray]
         """
+        if src != self.prev_src:
+            self.add_node()
+            self.prev_src = src
+
         # Record order is important for C++ reader: order fields by size for faster load.
         self.ei.write(
             struct.pack(
