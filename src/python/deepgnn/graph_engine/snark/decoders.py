@@ -71,26 +71,27 @@ class LinearDecoder(Decoder):
         1 0 0 .5 uint8 2,3 0 4 1 1 1
         ```
 
-    Metadata:
-        The following headers can be added to the metadata json file.
-        "node_default_type": int Type of all nodes, if set do not add node type to any nodes.
-        "node_default_weight": int Weight of all nodes, if set do not add node weight to any nodes.
-        "node_default_features": "dtype_name length ..." Feature vectors dtype and length.
-            Any value can be "none" which will require it to be specified for each node.
-            There can be more feature vectors than specified.
-        "edge_default_type": int Same as node except for all edges.
-        "edge_default_weight": int Same as node except for all edges.
-        "edge_default_features": "dtype_name length ..." Same as node except for all edges.
-        e.g. the same graph as above with meta.json fully filled in
+    Init Parameters:
+        he following keyword arguments can be added when creating the decoder.
+        default_node_type: int Type of all nodes, if set do not add node type to any nodes.
+        default_node_weight: int Weight of all nodes, if set do not add node weight to any nodes.
+        default_node_feature_types: ["dtype" or None, ...] Dtype of each feature vector.
+        default_node_feature_lens: [[int, ...] or None, ...] Length value for each feature vector.
+        default_edge_type: int Same as node except for all edges.
+        default_edge_weight: int Same as node except for all edges.
+        default_edge_feature_types: ["dtype" or None, ...] Dtype of each feature vector.
+        default_edge_feature_lens: [[int, ...] or None, ...] Length value for each feature vector.
         ```
-        {
-            "node_default_type": 1,
-            "node_default_weight": .5,
-            "node_default_features": "int32 3 float32 2",
-            "edge_default_type": 0,
-            "edge_default_weight": .5,
-            "edge_default_features": "uint8 2,3",
-        }
+        LinearDecoder(
+            default_node_type=1,
+            default_node_weight=.5,
+            default_node_feature_types=["int32", "float32"],
+            default_node_feature_lens=[[3],[2]],
+            default_edge_type=0,
+            default_edge_weight=.5,
+            default_edge_feature_types=["uint8"],
+            default_edge_feature_lens=[[2, 3]],
+        )
         ```
         graph.linear
         ```
@@ -142,7 +143,7 @@ class LinearDecoder(Decoder):
         data = line.split()
 
         idx = 0
-        src, dst = int(data[idx]), int(data[idx+1])
+        src, dst = int(data[idx]), int(data[idx + 1])
         if src == -1:
             typ, weight = self.node_type, self.node_weight
             item_feature_types, item_feature_lens, default_feature_len = (
@@ -201,13 +202,11 @@ class LinearDecoder(Decoder):
                     value = None
                 else:
                     value = (
+                        np.array(data[idx:coordinates_offset], dtype=np.int64).reshape(
+                            coordinates_len
+                        ),
                         np.array(
-                            data[idx:coordinates_offset], dtype=np.int64
-                        ).reshape(coordinates_len),
-                        np.array(
-                            data[
-                                coordinates_offset : coordinates_offset + values_len
-                            ],
+                            data[coordinates_offset : coordinates_offset + values_len],
                             dtype=key,
                         ),
                     )
