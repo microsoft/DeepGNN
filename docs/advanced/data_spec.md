@@ -42,8 +42,10 @@ feature vectors [1, 1, 1] dtype=int32 and [1.1, 1.1] dtype=float32.
 Edges: {0 -> 1, 1 -> 0} both with type = 0, weight = .5 and a sparse feature
 vector (coords=[0, 4], values=[1, 1, 1] dtype=uint8).
 ```
--1 0 1 .5 int32 3 1 1 1 float32 2 1.1 1.1 0 1 0 .5 uint8 2,3 0 4 1 1 1
--1 1 1 .5 int32 3 1 1 1 float32 2 1.1 1.1 1 0 0 .5 uint8 2,3 0 4 1 1 1
+-1 0 1 .5 int32 3 1 1 1 float32 2 1.1 1.1
+0 1 0 .5 uint8 2,3 0 4 1 1 1
+-1 1 1 .5 int32 3 1 1 1 float32 2 1.1 1.1
+1 0 0 .5 uint8 2,3 0 4 1 1 1
 ```
 
 ### Optional Graph Metadata
@@ -74,8 +76,10 @@ e.g. the same graph as above with meta.json fully filled in
 graph.linear
 
 ```
--1 0 1 1 1 1.1 1.1 0 1 0 4 1 1 1
--1 1 1 1 1 1.1 1.1 1 0 0 4 1 1 1
+-1 0 1 1 1 1.1 1.1
+0 1 0 4 1 1 1
+-1 1 1 1 1 1.1 1.1
+1 0 0 4 1 1 1
 ```
 
 ## JSON Format

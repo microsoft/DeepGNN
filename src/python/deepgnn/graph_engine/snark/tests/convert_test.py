@@ -772,9 +772,9 @@ def test_linear_header():
 
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "-1 0 0 0 0 1 0 2\n",
-        "-1 1 0 0 1 0 1 2\n",
-        "-1 2 0 0 2 0 2 1\n",
+        "-1 0 0 0\n0 1\n0 2\n",
+        "-1 1 0 0\n1 0\n1 2\n",
+        "-1 2 0 0\n2 0\n2 1\n",
     ]
     meta_data = {"default_edge_type": 0, "default_edge_weight": 200}
     _gen_linear(output, data_data, meta_data)
@@ -834,9 +834,9 @@ def test_linear_header():
 
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "-1 0 0 0 0 1 0 1.5 1 2 1.1 2.2\n",
-        "-1 1 0 0 1 0 0 1.5 3 4 3.3 4.4\n",
-        "-1 2 0 0 2 0 0 1.5 5 6 5.5 6.6\n",
+        "-1 0 0 0\n0 1 0 1.5 1 2 1.1 2.2\n",
+        "-1 1 0 0\n1 0 0 1.5 3 4 3.3 4.4\n",
+        "-1 2 0 0\n2 0 0 1.5 5 6 5.5 6.6\n",
     ]
     meta_data = {
         "default_edge_feature_types": ["uint64", "float32"],
@@ -919,7 +919,7 @@ def test_linear_error_checking():
     decoder = LinearDecoder()
     with pytest.raises(StopIteration):
         next(decoder.decode(""))
-    with pytest.raises(IndexError):
+    with pytest.raises(ValueError):
         next(decoder.decode("-1 x"))
     with pytest.raises(IndexError):
         next(decoder.decode("-1 0"))
@@ -938,15 +938,12 @@ def test_linear_error_checking():
     next(decoder.decode("-1 0 4 1 binary_feature 1 test"))
     next(decoder.decode("-1 0 4 1 float32 0"))
     with pytest.raises(IndexError):
-        gen = decoder.decode("-1 0 4 1 float32 0 0 1")
-        next(gen)
+        gen = decoder.decode("0 1")
         next(gen)
     with pytest.raises(IndexError):
-        gen = decoder.decode("-1 0 4 1 float32 0 0 1 4")
+        gen = decoder.decode("0 1 4")
         next(gen)
-        next(gen)
-    gen = decoder.decode("-1 0 4 1 float32 0 0 1 4 1")
-    next(gen)
+    gen = decoder.decode("0 1 4 1")
     next(gen)
 
 

@@ -65,10 +65,6 @@ def json_node_to_linear(node, buffer=None):
     node = next(gen)[1:]
     edges = [edge for edge in gen]
     output = linear_encode(*node, edges, buffer)
-    if buffer is None:
-        output += "\n"
-    else:
-        buffer.write("\n")
     return output
 
 

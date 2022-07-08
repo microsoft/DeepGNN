@@ -47,7 +47,10 @@ class LinearDecoder(Decoder):
 
     Linear Format:
         ```
-        <node info> <edge_1_info> <edge_2_info> ...
+        <node info>
+        <edge_1_info>
+        <edge_2_info>
+        ...
         ```
         node_info: -1 node_id node_type node_weight <features>
         edge_info: src dst edge_type edge_weight <features>
@@ -55,15 +58,19 @@ class LinearDecoder(Decoder):
         features[sparse]: dtype_name coords.size,values.size c1 c2 ... v1 v2 ...
         features[sparse]: dtype_name coords.shape[0],coords.shape[1],values.size c1 c2 ... v1 v2
         * Nodes must be sorted by node_id, edges sorted by src and then dst.
+
     Linear Format Example
         A graph with 2 nodes {0, 1} each with type = 1, weight = .5 and
         feature vectors [1, 1, 1] dtype=int32 and [1.1, 1.1] dtype=float32.
         Edges: {0 -> 1, 1 -> 0} both with type = 0, weight = .5 and a sparse feature
         vector (coords=[0, 4], values=[1, 1, 1] dtype=uint8).
         ```
-        -1 0 1 .5 int32 3 1 1 1 float32 2 1.1 1.1 0 1 0 .5 uint8 2,3 0 4 1 1 1
-        -1 1 1 .5 int32 3 1 1 1 float32 2 1.1 1.1 1 0 0 .5 uint8 2,3 0 4 1 1 1
+        -1 0 1 .5 int32 3 1 1 1 float32 2 1.1 1.1
+        0 1 0 .5 uint8 2,3 0 4 1 1 1
+        -1 1 1 .5 int32 3 1 1 1 float32 2 1.1 1.1
+        1 0 0 .5 uint8 2,3 0 4 1 1 1
         ```
+
     Metadata:
         The following headers can be added to the metadata json file.
         "node_default_type": int Type of all nodes, if set do not add node type to any nodes.
@@ -87,8 +94,10 @@ class LinearDecoder(Decoder):
         ```
         graph.linear
         ```
-        -1 0 1 1 1 1.1 1.1 0 1 0 4 1 1 1
-        -1 1 1 1 1 1.1 1.1 1 0 0 4 1 1 1
+        -1 0 1 1 1 1.1 1.1
+        0 1 0 4 1 1 1
+        -1 1 1 1 1 1.1 1.1
+        1 0 0 4 1 1 1
         ```
     """
 
@@ -127,97 +136,96 @@ class LinearDecoder(Decoder):
 
     def decode(self, line: str) -> Iterator[Tuple[int, int, int, float, list]]:
         """Convert text line into node object."""
+        if line == "":
+            return []
+
         data = line.split()
 
         idx = 0
+        src, dst = int(data[idx]), int(data[idx+1])
+        if src == -1:
+            typ, weight = self.node_type, self.node_weight
+            item_feature_types, item_feature_lens, default_feature_len = (
+                self.node_feature_types,
+                self.node_feature_lens,
+                self.n_node_feature,
+            )
+        else:
+            typ, weight = self.edge_type, self.edge_weight
+            item_feature_types, item_feature_lens, default_feature_len = (
+                self.edge_feature_types,
+                self.edge_feature_lens,
+                self.n_edge_feature,
+            )
+        idx += 2
+        if typ is None:
+            typ = data[idx]
+            idx += 1
+        if weight is None:
+            weight = data[idx]
+            idx += 1
+
+        features = []
+        n_features = 0
         while True:
+            if default_feature_len > n_features:
+                key = item_feature_types[n_features]
+                length = item_feature_lens[n_features]
+            else:
+                key, length = None, None
+
             try:
-                src, dst = data[idx : idx + 2]
-                if idx == 0:
-                    typ, weight = self.node_type, self.node_weight
-                    item_feature_types, item_feature_lens, default_feature_len = (
-                        self.node_feature_types,
-                        self.node_feature_lens,
-                        self.n_node_feature,
-                    )
-                else:
-                    typ, weight = self.edge_type, self.edge_weight
-                    item_feature_types, item_feature_lens, default_feature_len = (
-                        self.edge_feature_types,
-                        self.edge_feature_lens,
-                        self.n_edge_feature,
-                    )
-                idx += 2
-                if typ is None:
-                    typ = data[idx]
+                if key is None:
+                    key = data[idx]
+                    try:
+                        int(key)
+                        break
+                    except ValueError:
+                        pass
                     idx += 1
-                if weight is None:
-                    weight = data[idx]
+                if length is None:
+                    length = list(map(int, data[idx].split(",")))
                     idx += 1
-            except ValueError:
+            except IndexError:
                 break
 
-            features = []
-            n_features = 0
-            while True:
-                if default_feature_len > n_features:
-                    key = item_feature_types[n_features]
-                    length = item_feature_lens[n_features]
+            if len(length) > 1:
+                coordinates_len = length[:-1]
+                coordinates_len_total = 1
+                for v in coordinates_len:
+                    coordinates_len_total *= v
+                values_len = length[-1]
+                coordinates_offset = idx + coordinates_len_total
+
+                if not coordinates_len:
+                    value = None
                 else:
-                    key, length = None, None
-
-                try:
-                    if key is None:
-                        key = data[idx]
-                        try:
-                            int(key)
-                            break
-                        except ValueError:
-                            pass
-                        idx += 1
-                    if length is None:
-                        length = list(map(int, data[idx].split(",")))
-                        idx += 1
-                except IndexError:
-                    break
-
-                if len(length) > 1:
-                    coordinates_len = length[:-1]
-                    coordinates_len_total = 1
-                    for v in coordinates_len:
-                        coordinates_len_total *= v
-                    values_len = length[-1]
-                    coordinates_offset = idx + coordinates_len_total
-
-                    if not coordinates_len:
-                        value = None
-                    else:
-                        value = (
-                            np.array(
-                                data[idx:coordinates_offset], dtype=np.int64
-                            ).reshape(coordinates_len),
-                            np.array(
-                                data[
-                                    coordinates_offset : coordinates_offset + values_len
-                                ],
-                                dtype=key,
-                            ),
-                        )
-                    idx += coordinates_len_total + values_len
+                    value = (
+                        np.array(
+                            data[idx:coordinates_offset], dtype=np.int64
+                        ).reshape(coordinates_len),
+                        np.array(
+                            data[
+                                coordinates_offset : coordinates_offset + values_len
+                            ],
+                            dtype=key,
+                        ),
+                    )
+                idx += coordinates_len_total + values_len
+            else:
+                length = length[0]
+                if not length:
+                    value = None
+                elif length == 1 and key == "binary_feature":
+                    value = data[idx]  # type: ignore
                 else:
-                    length = length[0]
-                    if not length:
-                        value = None
-                    elif length == 1 and key == "binary_feature":
-                        value = data[idx]  # type: ignore
-                    else:
-                        value = np.array(data[idx : idx + length], dtype=key)  # type: ignore
-                    idx += length
+                    value = np.array(data[idx : idx + length], dtype=key)  # type: ignore
+                idx += length
 
-                features.append(value)
-                n_features += 1
+            features.append(value)
+            n_features += 1
 
-            yield int(src), int(dst), int(typ), float(weight), features
+        yield src, dst, int(typ), float(weight), features
 
 
 class JsonDecoder(Decoder):
