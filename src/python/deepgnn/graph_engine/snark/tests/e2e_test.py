@@ -24,6 +24,7 @@ import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.dispatcher as dispatcher
 import deepgnn.graph_engine.snark._lib as lib
+from deepgnn.graph_engine.snark.converter.writers import BinaryWriter
 
 
 def triangle_graph_json(folder):
@@ -1415,6 +1416,48 @@ def test_health_check(no_features_graph):
     response = stub.Check(health_pb2.HealthCheckRequest(service=""))
     assert str(response) == "status: SERVING\n"
     s.reset()
+
+
+def test_edges_different_partition():
+    # Node not given at first before outgoing edges
+    output = tempfile.TemporaryDirectory()
+    partitions = [0, 1]
+    writer = BinaryWriter(output.name, partitions[0], False, False)
+    writer.add([(0, 1, 0, 1.0, [])])
+    writer.close()
+    writer = BinaryWriter(output.name, partitions[1], False, False)
+    writer.add([(-1, 0, 0, 1.0, []), (-1, 1, 0, 1.0, [])])
+    writer.close()
+    meta = open(os.path.join(output.name, "meta.txt"), "w+")
+    meta.write("2\n1\n1\n1\n0\n0\n2\n0\n0\n1\n1\n2\n0\n2\n1\n")
+    meta.close()
+
+    cl = client.MemoryGraph(output.name, partitions, client.PartitionStorageType.memory)
+    node_ids, weights, edge_types, result_counts = cl.neighbors(
+        np.array([0], dtype=np.int64), 0
+    )
+    assert result_counts[0] == 1
+    assert node_ids[0] == 1
+
+    # Second node not given before its outgoing edges
+    output = tempfile.TemporaryDirectory()
+    partitions = [0, 1]
+    writer = BinaryWriter(output.name, partitions[0], False, False)
+    writer.add([(-1, 0, 0, 1.0, []), (0, 1, 0, 1.0, []), (1, 0, 0, 1.0, [])])
+    writer.close()
+    writer = BinaryWriter(output.name, partitions[1], False, False)
+    writer.add([(-1, 1, 0, 1.0, [])])
+    writer.close()
+    meta = open(os.path.join(output.name, "meta.txt"), "w+")
+    meta.write("2\n1\n1\n1\n0\n0\n2\n0\n0\n1\n1\n2\n0\n2\n1\n")
+    meta.close()
+
+    cl = client.MemoryGraph(output.name, partitions, client.PartitionStorageType.memory)
+    node_ids, weights, edge_types, result_counts = cl.neighbors(
+        np.array([1], dtype=np.int64), 0
+    )
+    assert result_counts[0] == 1
+    assert node_ids[0] == 0
 
 
 if __name__ == "__main__":
