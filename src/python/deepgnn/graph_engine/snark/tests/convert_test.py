@@ -13,8 +13,10 @@ import numpy as np
 import numpy.testing as npt
 
 import deepgnn.graph_engine.snark.convert as convert
-from deepgnn.graph_engine.snark.decoders import JsonDecoder, TsvDecoder
+from deepgnn.graph_engine.snark.decoders import JsonDecoder, LinearDecoder, TsvDecoder
 from deepgnn.graph_engine.snark.dispatcher import QueueDispatcher
+
+from util import json_to_linear
 
 
 def triangle_graph_json(folder):
@@ -101,6 +103,10 @@ def triangle_graph(request):
     workdir = tempfile.TemporaryDirectory()
     if request.param == JsonDecoder:
         data_name = triangle_graph_json(workdir.name)
+    elif request.param == LinearDecoder:
+        json_name = triangle_graph_json(workdir.name)
+        data_name = os.path.join(workdir.name, "graph.linear")
+        json_to_linear(json_name, data_name)
     elif request.param == TsvDecoder:
         data_name = triangle_graph_tsv(workdir.name)
     else:
@@ -110,7 +116,7 @@ def triangle_graph(request):
     workdir.cleanup()
 
 
-param = [JsonDecoder, TsvDecoder]
+param = [JsonDecoder, LinearDecoder, TsvDecoder]
 
 
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
@@ -532,6 +538,10 @@ def graph_with_sparse_features(request):
     workdir = tempfile.TemporaryDirectory()
     if request.param == JsonDecoder:
         data_name = graph_with_sparse_features_json(workdir.name)
+    elif request.param == LinearDecoder:
+        json_name = graph_with_sparse_features_json(workdir.name)
+        data_name = os.path.join(workdir.name, "graph.linear")
+        json_to_linear(json_name, data_name)
     else:
         raise ValueError("Unsupported format.")
 
@@ -539,7 +549,10 @@ def graph_with_sparse_features(request):
     workdir.cleanup()
 
 
-@pytest.mark.parametrize("graph_with_sparse_features", [JsonDecoder], indirect=True)
+param_sparse = [JsonDecoder, LinearDecoder]
+
+
+@pytest.mark.parametrize("graph_with_sparse_features", param_sparse, indirect=True)
 def test_sanity_node_sparse_features_index(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
     data_name, decoder = graph_with_sparse_features
@@ -560,7 +573,7 @@ def test_sanity_node_sparse_features_index(graph_with_sparse_features):
         assert actual[6:11] == [60, 96, 96, 96, 128]
 
 
-@pytest.mark.parametrize("graph_with_sparse_features", [JsonDecoder], indirect=True)
+@pytest.mark.parametrize("graph_with_sparse_features", param_sparse, indirect=True)
 def test_sanity_node_sparse_features_data(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
     data_name, decoder = graph_with_sparse_features
@@ -604,7 +617,7 @@ def test_sanity_node_sparse_features_data(graph_with_sparse_features):
         )
 
 
-@pytest.mark.parametrize("graph_with_sparse_features", [JsonDecoder], indirect=True)
+@pytest.mark.parametrize("graph_with_sparse_features", param_sparse, indirect=True)
 def test_sanity_edge_sparse_features_index(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
     data_name, decoder = graph_with_sparse_features
@@ -626,7 +639,7 @@ def test_sanity_edge_sparse_features_index(graph_with_sparse_features):
         assert actual[16:19] == [362, 362, 394]
 
 
-@pytest.mark.parametrize("graph_with_sparse_features", [JsonDecoder], indirect=True)
+@pytest.mark.parametrize("graph_with_sparse_features", param_sparse, indirect=True)
 def test_sanity_edge_sparse_features_data(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
     data_name, decoder = graph_with_sparse_features
@@ -718,6 +731,223 @@ def test_sanity_edge_sparse_features_data(graph_with_sparse_features):
         npt.assert_allclose(
             np.frombuffer(result[386:expected_size], dtype=np.float32), [5.5, 6.7]
         )
+
+
+def _gen_linear(output, data_data, kwargs={}, partitions=1):
+    data = open(os.path.join(output.name, "graph.linear"), "w+")
+    for v in data_data:
+        data.write(v)
+    data.flush()
+    data.close()
+    convert.MultiWorkersConverter(
+        graph_path=data.name,
+        partition_count=partitions,
+        output_dir=output.name,
+        decoder=LinearDecoder(**kwargs),
+    ).convert()
+
+
+def test_linear_header():
+    output = tempfile.TemporaryDirectory()
+    data_data = [
+        "-1 0\n",
+        "-1 1\n",
+        "-1 2\n",
+    ]
+    meta_data = {"default_node_type": 0, "default_node_weight": 1.5}
+    _gen_linear(output, data_data, meta_data)
+    with open("{}/node_{}_{}.map".format(output.name, 0, 0), "rb") as nm:
+        expected_size = 3 * (2 * 8 + 4)
+        result = nm.read(expected_size + 8)
+        assert len(result) == expected_size
+        assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:20] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[20:28] == (1).to_bytes(8, byteorder=sys.byteorder)
+        assert result[28:36] == (1).to_bytes(8, byteorder=sys.byteorder)
+        assert result[36:40] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[40:48] == (2).to_bytes(8, byteorder=sys.byteorder)
+        assert result[48:56] == (2).to_bytes(8, byteorder=sys.byteorder)
+        assert result[56:60] == (0).to_bytes(4, byteorder=sys.byteorder)
+
+    output = tempfile.TemporaryDirectory()
+    data_data = [
+        "-1 0 0 0 0 1 0 2\n",
+        "-1 1 0 0 1 0 1 2\n",
+        "-1 2 0 0 2 0 2 1\n",
+    ]
+    meta_data = {"default_edge_type": 0, "default_edge_weight": 200}
+    _gen_linear(output, data_data, meta_data)
+    with open("{}/edge_{}_{}.index".format(output.name, 0, 0), "rb") as ei:
+        expected_size = 7 * 24
+        result = ei.read(expected_size + 100)
+        assert len(result) == expected_size
+        assert result[0:8] == (1).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:20] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[20:24] == struct.pack("f", 200)
+
+        assert result[24:32] == (2).to_bytes(8, byteorder=sys.byteorder)
+        assert result[32:40] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[40:44] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[44:48] == struct.pack("f", 200)
+
+        assert result[48:56] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[56:64] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[64:68] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[68:72] == struct.pack("f", 200)
+
+        assert result[72:80] == (2).to_bytes(8, byteorder=sys.byteorder)
+        assert result[80:88] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[88:92] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[92:96] == struct.pack("f", 200)
+
+    output = tempfile.TemporaryDirectory()
+    data_data = [
+        "-1 0 1 2 1.1 2.2\n",
+        "-1 1 3 4 3.3 4.4\n",
+        "-1 2 5 6 5.5 6.6\n",
+    ]
+    meta_data = {
+        "default_node_type": 0,
+        "default_node_weight": 1.5,
+        "default_node_feature_types": ["uint64", "float32"],
+        "default_node_feature_lens": [[2], [2]],
+    }
+    _gen_linear(output, data_data, meta_data)
+    with open("{}/node_features_{}_{}.data".format(output.name, 0, 0), "rb") as nfd:
+        expected_size = 72
+        result = nfd.read(expected_size + 1)
+        assert len(result) == expected_size
+        npt.assert_equal(np.frombuffer(result[0:16], dtype=np.uint64), [1, 2])
+        npt.assert_almost_equal(
+            np.frombuffer(result[16:24], dtype=np.float32), [1.1, 2.2]
+        )
+        npt.assert_equal(np.frombuffer(result[24:40], dtype=np.uint64), [3, 4])
+        npt.assert_almost_equal(
+            np.frombuffer(result[40:48], dtype=np.float32), [3.3, 4.4]
+        )
+        npt.assert_equal(np.frombuffer(result[48:64], dtype=np.uint64), [5, 6])
+        npt.assert_almost_equal(
+            np.frombuffer(result[64:72], dtype=np.float32), [5.5, 6.6]
+        )
+
+    output = tempfile.TemporaryDirectory()
+    data_data = [
+        "-1 0 0 0 0 1 0 1.5 1 2 1.1 2.2\n",
+        "-1 1 0 0 1 0 0 1.5 3 4 3.3 4.4\n",
+        "-1 2 0 0 2 0 0 1.5 5 6 5.5 6.6\n",
+    ]
+    meta_data = {
+        "default_edge_feature_types": ["uint64", "float32"],
+        "default_edge_feature_lens": [[2], [2]],
+    }
+    _gen_linear(output, data_data, meta_data)
+    with open("{}/edge_features_{}_{}.data".format(output.name, 0, 0), "rb") as nfd:
+        expected_size = 72
+        result = nfd.read(expected_size + 1)
+        assert len(result) == expected_size
+        npt.assert_equal(np.frombuffer(result[0:16], dtype=np.uint64), [1, 2])
+        npt.assert_almost_equal(
+            np.frombuffer(result[16:24], dtype=np.float32), [1.1, 2.2]
+        )
+        npt.assert_equal(np.frombuffer(result[24:40], dtype=np.uint64), [3, 4])
+        npt.assert_almost_equal(
+            np.frombuffer(result[40:48], dtype=np.float32), [3.3, 4.4]
+        )
+        npt.assert_equal(np.frombuffer(result[48:64], dtype=np.uint64), [5, 6])
+        npt.assert_almost_equal(
+            np.frombuffer(result[64:72], dtype=np.float32), [5.5, 6.6]
+        )
+
+    output = tempfile.TemporaryDirectory()
+    data_data = [
+        "-1 0 uint64 2 1 2 1.1 2.2 int32 2 1 2\n",
+        "-1 1 uint64 2 3 4 3.3 4.4 int32 2 3 4\n",
+        "-1 2 uint64 2 5 6 5.5 6.6 int32 2 5 6\n",
+    ]
+    meta_data = {
+        "default_node_type": 0,
+        "default_node_weight": 1.5,
+        "default_node_feature_types": [None, "float32"],
+        "default_node_feature_lens": [None, [2]],
+    }
+    _gen_linear(output, data_data, meta_data)
+    with open("{}/node_features_{}_{}.data".format(output.name, 0, 0), "rb") as nfd:
+        expected_size = 96
+        result = nfd.read(expected_size + 1)
+        assert len(result) == expected_size
+        npt.assert_equal(np.frombuffer(result[0:16], dtype=np.uint64), [1, 2])
+        npt.assert_almost_equal(
+            np.frombuffer(result[16:24], dtype=np.float32), [1.1, 2.2]
+        )
+        npt.assert_equal(np.frombuffer(result[24:32], dtype=np.int32), [1, 2])
+        npt.assert_equal(np.frombuffer(result[32:48], dtype=np.uint64), [3, 4])
+        npt.assert_almost_equal(
+            np.frombuffer(result[48:56], dtype=np.float32), [3.3, 4.4]
+        )
+        npt.assert_equal(np.frombuffer(result[56:64], dtype=np.int32), [3, 4])
+        npt.assert_equal(np.frombuffer(result[64:80], dtype=np.uint64), [5, 6])
+        npt.assert_almost_equal(
+            np.frombuffer(result[80:88], dtype=np.float32), [5.5, 6.6]
+        )
+        npt.assert_equal(np.frombuffer(result[88:96], dtype=np.int32), [5, 6])
+
+
+def test_linear_header_multiple_partitions():
+    output = tempfile.TemporaryDirectory()
+    data_data = [
+        "-1 0\n",
+        "-1 1\n",
+        "-1 2\n",
+    ]
+    meta_data = {"default_node_type": 0, "default_node_weight": 1.5}
+    _gen_linear(output, data_data, meta_data, partitions=2)
+    with open("{}/node_{}_{}.map".format(output.name, 0, 0), "rb") as nm:
+        expected_size = 2 * (2 * 8 + 4)
+        result = nm.read(expected_size + 8)
+        assert len(result) == expected_size
+        assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:20] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[20:28] == (2).to_bytes(8, byteorder=sys.byteorder)
+        assert result[28:36] == (1).to_bytes(8, byteorder=sys.byteorder)
+        assert result[36:40] == (0).to_bytes(4, byteorder=sys.byteorder)
+
+
+def test_linear_error_checking():
+    decoder = LinearDecoder()
+    with pytest.raises(StopIteration):
+        next(decoder.decode(""))
+    with pytest.raises(IndexError):
+        next(decoder.decode("-1 x"))
+    with pytest.raises(IndexError):
+        next(decoder.decode("-1 0"))
+    with pytest.raises(IndexError):
+        next(decoder.decode("-1 0 4"))
+    with pytest.raises(ValueError):
+        next(decoder.decode("-1 0 4 x"))
+    # ignores feature vector if fails to read
+    next(decoder.decode("-1 0 4 1 bad_key"))
+    next(decoder.decode("-1 0 4 1 float32"))
+    next(decoder.decode("-1 0 4 1 float32 2"))
+    next(decoder.decode("-1 0 4 1 float32 2 1"))
+    with pytest.raises(ValueError):
+        next(decoder.decode("-1 0 4 1 float32 2 1 x"))
+    next(decoder.decode("-1 0 4 1 float32 2 1 1"))
+    next(decoder.decode("-1 0 4 1 binary_feature 1 test"))
+    next(decoder.decode("-1 0 4 1 float32 0"))
+    with pytest.raises(IndexError):
+        gen = decoder.decode("-1 0 4 1 float32 0 0 1")
+        next(gen)
+        next(gen)
+    with pytest.raises(IndexError):
+        gen = decoder.decode("-1 0 4 1 float32 0 0 1 4")
+        next(gen)
+        next(gen)
+    gen = decoder.decode("-1 0 4 1 float32 0 0 1 4 1")
+    next(gen)
+    next(gen)
 
 
 if __name__ == "__main__":
