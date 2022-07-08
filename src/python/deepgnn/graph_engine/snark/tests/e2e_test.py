@@ -1439,6 +1439,10 @@ def test_edges_different_partition():
     assert result_counts[0] == 1
     assert node_ids[0] == 1
 
+    es = client.EdgeSampler(cl, partitions)
+    v1 = es.sample(size=1, seed=1)
+    assert v1[0] == 1
+
     # Second node not given before its outgoing edges
     output = tempfile.TemporaryDirectory()
     partitions = [0, 1]
@@ -1458,6 +1462,10 @@ def test_edges_different_partition():
     )
     assert result_counts[0] == 1
     assert node_ids[0] == 0
+
+    es = client.EdgeSampler(cl, partitions)
+    v1 = es.sample(size=1, seed=1)
+    assert v1[0] == 1
 
 
 if __name__ == "__main__":
