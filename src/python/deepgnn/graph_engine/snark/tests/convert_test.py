@@ -16,7 +16,7 @@ import deepgnn.graph_engine.snark.convert as convert
 from deepgnn.graph_engine.snark.decoders import JsonDecoder, LinearDecoder, TsvDecoder
 from deepgnn.graph_engine.snark.dispatcher import QueueDispatcher
 
-from util import json_to_linear
+from util_test import json_to_linear
 
 
 def triangle_graph_json(folder):

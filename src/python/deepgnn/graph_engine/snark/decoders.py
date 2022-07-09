@@ -108,10 +108,10 @@ class LinearDecoder(Decoder):
         default_edge_type: Optional[int] = None,
         default_node_weight: Optional[float] = None,
         default_edge_weight: Optional[float] = None,
-        default_node_feature_types: Optional[List[int]] = None,
-        default_edge_feature_types: Optional[List[int]] = None,
-        default_node_feature_lens: Optional[List[int]] = None,
-        default_edge_feature_lens: Optional[List[int]] = None,
+        default_node_feature_types: Optional[List[Optional[str]]] = None,
+        default_edge_feature_types: Optional[List[Optional[str]]] = None,
+        default_node_feature_lens: Optional[List[Optional[List[int]]]] = None,
+        default_edge_feature_lens: Optional[List[Optional[List[int]]]] = None,
     ):
         """Initialize the Decoder."""
         super().__init__()
@@ -160,10 +160,10 @@ class LinearDecoder(Decoder):
             )
         idx += 2
         if typ is None:
-            typ = data[idx]
+            typ = int(data[idx])
             idx += 1
         if weight is None:
-            weight = data[idx]
+            weight = float(data[idx])
             idx += 1
 
         features = []
@@ -173,7 +173,7 @@ class LinearDecoder(Decoder):
                 key = item_feature_types[n_features]
                 length = item_feature_lens[n_features]
             else:
-                key, length = None, None
+                key, length = None, None  # type: ignore
 
             try:
                 if key is None:
@@ -208,23 +208,23 @@ class LinearDecoder(Decoder):
                         np.array(
                             data[coordinates_offset : coordinates_offset + values_len],
                             dtype=key,
-                        ),
+                        ),  # type: ignore
                     )
                 idx += coordinates_len_total + values_len
             else:
-                length = length[0]
-                if not length:
+                length_single = length[0]
+                if not length_single:
                     value = None
-                elif length == 1 and key == "binary_feature":
+                elif length_single == 1 and key == "binary_feature":
                     value = data[idx]  # type: ignore
                 else:
-                    value = np.array(data[idx : idx + length], dtype=key)  # type: ignore
-                idx += length
+                    value = np.array(data[idx : idx + length_single], dtype=key)  # type: ignore
+                idx += length_single
 
             features.append(value)
             n_features += 1
 
-        yield src, dst, int(typ), float(weight), features
+        yield src, dst, typ, weight, features
 
 
 class JsonDecoder(Decoder):
