@@ -8,7 +8,7 @@ from deepgnn import TrainMode, setup_default_logging_config
 from deepgnn import get_logger
 from deepgnn.pytorch.common import F1Score
 from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
-from deepgnn.pytorch.common.utils import get_feature_type, set_seed
+from deepgnn.pytorch.common.utils import get_dtype, set_seed
 from deepgnn.pytorch.encoding import get_feature_encoder
 from deepgnn.pytorch.modeling import BaseModel
 from deepgnn.pytorch.training import run_dist
@@ -46,7 +46,7 @@ def create_model(args: argparse.Namespace):
             label_dim=args.label_dim,
             feature_dim=args.feature_dim,
             feature_idx=args.feature_idx,
-            feature_type=get_feature_type(args.feature_type),
+            dtype=get_dtype(args.dtype),
             edge_type=args.node_type,
             fanouts=args.fanouts,
             feature_enc=feature_enc,

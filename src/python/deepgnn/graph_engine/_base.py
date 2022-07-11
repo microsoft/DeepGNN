@@ -6,16 +6,8 @@
 import fsspec
 import numpy as np
 from typing import Tuple, Union
-from enum import Enum, IntEnum
+from enum import IntEnum
 from fsspec.utils import infer_storage_options
-
-
-class FeatureType(Enum):
-    """Feature types to fetch from a graph engine."""
-
-    FLOAT = 1
-    INT64 = 2
-    BINARY = 3
 
 
 class SamplingStrategy(IntEnum):
@@ -146,13 +138,13 @@ class Graph:
         raise NotImplementedError
 
     def node_features(
-        self, nodes: np.ndarray, features: np.ndarray, feature_type: FeatureType
+        self, nodes: np.ndarray, features: np.ndarray, dtype: np.dtype
     ) -> np.ndarray:
         """Fetch node features.
 
         nodes -- array of nodes to fetch features from.
         features -- two dimensional int array where each row is [feature_id, feature_dim].
-        feature_type -- type of the features to extract.
+        dtype -- type of the features to extract.
 
         Returns a blob array with feature values per node. The shape of the array is
         [len(nodes), sum(map(lambda f: f[1], features)))].
@@ -160,13 +152,13 @@ class Graph:
         raise NotImplementedError
 
     def edge_features(
-        self, edges: np.ndarray, features: np.ndarray, feature_type: FeatureType
+        self, edges: np.ndarray, features: np.ndarray, dtype: np.dtype
     ) -> np.ndarray:
         """Fetch edge features.
 
         edges -- array of triples [src, dst, type].
         features -- array of pairs describing features: [feature_id, feature_dim].
-        feature_type -- type of features to extract.
+        dtype -- type of features to extract.
         """
         raise NotImplementedError
 

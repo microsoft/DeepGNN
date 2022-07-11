@@ -76,9 +76,7 @@ class UnsupervisedQuery(SAGEQuery):
         if self.param.identity_feature:
             graph_tensor = [all_nodes, src_idx, pos_idx, neg_idx]
         else:
-            feat = graph.node_features(
-                all_nodes, self.feat_meta, self.param.feature_type
-            )
+            feat = graph.node_features(all_nodes, self.feat_meta, self.param.dtype)
             graph_tensor = [all_nodes, feat, src_idx, pos_idx, neg_idx]
 
         graph_tensor.extend(neighbor_list_idx)

@@ -9,7 +9,7 @@ from typing import List
 
 from deepgnn.tf.nn import sage_conv
 
-from deepgnn.graph_engine import Graph, FeatureType
+from deepgnn.graph_engine import Graph
 
 
 @dataclass
@@ -30,8 +30,8 @@ class SAGEQueryParameter:
     feature_dim: int
     label_idx: int
     label_dim: int
-    feature_type: FeatureType = FeatureType.FLOAT
-    label_type: FeatureType = FeatureType.FLOAT
+    dtype: np.dtype = np.float32
+    label_type: np.dtype = np.float32
     identity_feature: bool = False
 
 
@@ -102,7 +102,7 @@ class SAGEQuery:
         if self.param.identity_feature:
             graph_tensor = [all_nodes, label]
         else:
-            feat = graph.node_features(all_nodes, self.feat_meta, self.param.feature_type)
+            feat = graph.node_features(all_nodes, self.feat_meta, self.param.dtype)
             graph_tensor = [all_nodes, feat, label]
 
         graph_tensor.extend(neighbor_list_idx)

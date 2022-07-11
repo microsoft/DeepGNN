@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 import sys
 
-from deepgnn.graph_engine._base import FeatureType, SamplingStrategy
+from deepgnn.graph_engine._base import SamplingStrategy
 from deepgnn.graph_engine.data.cora import CoraFull
 from deepgnn.graph_engine.data.citeseer import CiteseerFull
 from deepgnn.graph_engine.data.citation import CitationGraph, Cora
@@ -24,7 +24,7 @@ def verify_nodes(g):
         assert (nodes > 0).all() and (nodes <= g.NUM_NODES).all()
 
         feat = g.node_features(
-            nodes, np.array([[0, g.FEATURE_DIM]], dtype=np.int32), FeatureType.FLOAT
+            nodes, np.array([[0, g.FEATURE_DIM]], dtype=np.int32), np.float32
         )
         assert feat.shape == (batch_size, g.FEATURE_DIM)
         np.testing.assert_array_equal(np.sum(feat, 1) > 0, [True] * batch_size)
@@ -144,7 +144,7 @@ def test_citation_graph():
             )
 
             feat = g.node_features(
-                nodes, np.array([[0, g.FEATURE_DIM]], dtype=np.int32), FeatureType.FLOAT
+                nodes, np.array([[0, g.FEATURE_DIM]], dtype=np.int32), np.float32
             )
             assert feat.shape == (batch_size, g.FEATURE_DIM)
             np.testing.assert_array_equal(np.sum(feat, 1) > 0, [True] * batch_size)
@@ -164,9 +164,7 @@ def test_citation_graph_random_split():
     nodes = g.sample_nodes(
         train_cnt, node_types=0, strategy=SamplingStrategy.RandomWithoutReplacement
     )
-    labels = g.node_features(
-        nodes, np.array([[1, 1]], dtype=np.int32), FeatureType.FLOAT
-    )
+    labels = g.node_features(nodes, np.array([[1, 1]], dtype=np.int32), np.float32)
     for c in range(g.NUM_CLASSES):
         # each class has 20 training nodes
         np.testing.assert_equal(np.sum(labels == c), 20)
@@ -187,7 +185,7 @@ def test_ppi():
     def check_feat():
         feat_meta = np.array([[1, 50]], np.int32)
         nodes = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], np.int64)
-        x = g.node_features(nodes, feat_meta, FeatureType.FLOAT)
+        x = g.node_features(nodes, feat_meta, np.float32)
         x_row = x.sum(1)
         desired = [-6.3767824, -6.3767824, -6.3767824, -6.3767824, 3.6452491,
                    -6.3767824, 24.129421, -6.3767824, -6.3767824, -0.32132643]
@@ -196,7 +194,7 @@ def test_ppi():
     def check_label():
         label_meta = np.array([[0, 121]], np.int32)
         nodes = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], np.int64)
-        x = g.node_features(nodes, label_meta, FeatureType.FLOAT)
+        x = g.node_features(nodes, label_meta, np.float32)
         x_row = x.sum(1)
         desired = [34, 83, 33, 41, 72, 60, 60, 40, 31, 76]
         np.testing.assert_almost_equal(x_row, desired)
