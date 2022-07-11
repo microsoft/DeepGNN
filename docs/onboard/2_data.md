@@ -27,7 +27,7 @@ The caveman graph consists of M clusters each with N nodes, every cluster has a 
 
 ### Save
 
-Then we save the graph in [json format](~/advanced/data_spec.md) which includes the file `graph.json`. `graph.json` contains all feature and connectivity information.
+Then we save the graph in [json format](~/advanced/data_spec.md) in the file `graph.json` that contains all feature and connectivity information.
 
 Full json format, [here](~/advanced/data_spec.md).
 

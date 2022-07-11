@@ -169,9 +169,7 @@ class PipeDispatcher(Dispatcher):
                 p["node_type_count"].extend(
                     [0] * (self.node_type_num - real_node_type_num)
                 )
-                p["node_weight"].extend(
-                    [0.0] * (self.node_type_num - real_node_type_num)
-                )
+                p["node_weight"].extend([0] * (self.node_type_num - real_node_type_num))
             real_edge_type_num = len(p["edge_type_count"])
             if real_edge_type_num < self.edge_type_num:
                 p["edge_type_count"].extend(
@@ -340,9 +338,7 @@ class QueueDispatcher(Dispatcher):
                 p["node_type_count"].extend(
                     [0] * (self.node_type_num - real_node_type_num)
                 )
-                p["node_weight"].extend(
-                    [0.0] * (self.node_type_num - real_node_type_num)
-                )
+                p["node_weight"].extend([0] * (self.node_type_num - real_node_type_num))
             real_edge_type_num = len(p["edge_type_count"])
             if real_edge_type_num < self.edge_type_num:
                 p["edge_type_count"].extend(

@@ -14,9 +14,7 @@ DeepGNN supports two file formats: JSON and TSV. Users can generate a graph in e
 
 ## JSON Format
 
-Here is the graph data JSON format. The format requires the file graph.json.
-
-### Graph Data
+Here is the graph data JSON format for the file graph.json as follows,
 
 `graph.json` layout
 
@@ -79,7 +77,7 @@ Here is a concrete example,
 
 Currently TSV format ONLY support homogenous graphs.
 
-The format requires the file graph.tsv. The graph.tsv format is as follows,
+The format requires the file graph.tsv as follows,
 
 ```tsv
 | node_id | node_type | node_weight | node_features                | neighbors                                  |
