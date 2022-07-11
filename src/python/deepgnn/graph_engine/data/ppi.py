@@ -122,7 +122,7 @@ class PPI(Client):
         self.FEATURE_DIM = feats.shape[1]
         self.NUM_CLASSES = len(class_map[0])
 
-        graph_file = os.path.join(data_dir, "graph.json")
+        graph_file = os.path.join(data_dir, "graph.linear")
         with open(graph_file, "w") as fout:
             for i in range(len(nodes)):
                 nid = nodes[i]
@@ -131,7 +131,7 @@ class PPI(Client):
                 label = class_map[nid]
                 assert type(nfeat) == list and type(nfeat[0]) == float
                 assert type(label) == list
-                tmp = self._to_json_node(
+                tmp = self._to_linear_node(
                     nid,
                     ntype,
                     nfeat,
@@ -143,12 +143,12 @@ class PPI(Client):
                 fout.write("\n")
 
         self._write_node_files(data_dir, nodes, nodes_type)
-        # convert graph: JSON -> Binary
+        # convert graph: Linear -> Binary
         convert.MultiWorkersConverter(
             graph_path=graph_file,
             partition_count=1,
             output_dir=data_dir,
-            decoder=decoders.JsonDecoder(),
+            decoder=decoders.LinearDecoder(),
         ).convert()
 
         return data_dir
@@ -168,7 +168,7 @@ class PPI(Client):
                 elif ntype == 2:
                     fout_test.write(str(nid) + "\n")
 
-    def _to_json_node(
+    def _to_linear_node(
         self,
         node_id: int,
         node_type: int,
@@ -177,24 +177,13 @@ class PPI(Client):
         train_neighbor: List[int],
         train_removed_neighbor: List[int],
     ):
-        edges = []
+        output = ""
+        output += f"-1 {node_id} {node_type} 1.0 float32 {len(label)} {' '.join([str(v) for v in label])} float32 {len(feat)} {' '.join([str(v) for v in feat])}\n"
         for nb in train_neighbor:
-            e = {"src_id": node_id, "dst_id": nb, "edge_type": 0, "weight": 1.0}
-            edges.append(e)
-
+            output += f"{node_id} {nb} 0 1.0\n"
         for nb in train_removed_neighbor:
-            e = {"src_id": node_id, "dst_id": nb, "edge_type": 1, "weight": 1.0}
-            edges.append(e)
-
-        node = {
-            "node_id": node_id,
-            "node_type": node_type,
-            "node_weight": 1.0,
-            "float_feature": {"0": label, "1": feat},
-            "edge": edges,
-        }
-
-        return json.dumps(node)
+            output += f"{node_id} {nb} 1 1.0\n"
+        return output
 
 
 if __name__ == "__main__":
