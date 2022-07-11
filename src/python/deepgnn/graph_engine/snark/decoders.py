@@ -140,10 +140,9 @@ class LinearDecoder(Decoder):
         if line == "":
             return []
 
-        data = line.split()
+        data = iter(line.split())
 
-        idx = 0
-        src, dst = int(data[idx]), int(data[idx + 1])
+        src, dst = int(next(data)), int(next(data))
         if src == -1:
             typ, weight = self.node_type, self.node_weight
             item_feature_types, item_feature_lens, default_feature_len = (
@@ -158,13 +157,10 @@ class LinearDecoder(Decoder):
                 self.edge_feature_lens,
                 self.n_edge_feature,
             )
-        idx += 2
         if typ is None:
-            typ = int(data[idx])
-            idx += 1
+            typ = int(next(data))
         if weight is None:
-            weight = float(data[idx])
-            idx += 1
+            weight = float(next(data))
 
         features = []
         n_features = 0
@@ -177,17 +173,15 @@ class LinearDecoder(Decoder):
 
             try:
                 if key is None:
-                    key = data[idx]
+                    key = next(data)
                     try:
                         int(key)
-                        break
+                        raise ValueError("Expected feature vector key is str.")
                     except ValueError:
                         pass
-                    idx += 1
                 if length is None:
-                    length = list(map(int, data[idx].split(",")))
-                    idx += 1
-            except IndexError:
+                    length = list(map(int, next(data).split(",")))
+            except StopIteration:
                 break
 
             if len(length) > 1:
@@ -196,30 +190,28 @@ class LinearDecoder(Decoder):
                 for v in coordinates_len:
                     coordinates_len_total *= v
                 values_len = length[-1]
-                coordinates_offset = idx + coordinates_len_total
 
                 if not coordinates_len:
                     value = None
                 else:
                     value = (
-                        np.array(data[idx:coordinates_offset], dtype=np.int64).reshape(
-                            coordinates_len
-                        ),
-                        np.array(
-                            data[coordinates_offset : coordinates_offset + values_len],
+                        np.fromiter(
+                            data, count=coordinates_len_total, dtype=np.int64
+                        ).reshape(coordinates_len),
+                        np.fromiter(
+                            data,
+                            count=values_len,
                             dtype=key,
-                        ),  # type: ignore
+                        ),
                     )
-                idx += coordinates_len_total + values_len
             else:
                 length_single = length[0]
                 if not length_single:
                     value = None
                 elif length_single == 1 and key == "binary_feature":
-                    value = data[idx]  # type: ignore
+                    value = next(data)  # type: ignore
                 else:
-                    value = np.array(data[idx : idx + length_single], dtype=key)  # type: ignore
-                idx += length_single
+                    value = np.fromiter(data, count=length_single, dtype=key)  # type: ignore
 
             features.append(value)
             n_features += 1

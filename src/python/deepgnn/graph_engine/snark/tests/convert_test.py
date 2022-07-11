@@ -921,26 +921,28 @@ def test_linear_error_checking():
         next(decoder.decode(""))
     with pytest.raises(ValueError):
         next(decoder.decode("-1 x"))
-    with pytest.raises(IndexError):
+    with pytest.raises(RuntimeError):
         next(decoder.decode("-1 0"))
-    with pytest.raises(IndexError):
+    with pytest.raises(RuntimeError):
         next(decoder.decode("-1 0 4"))
     with pytest.raises(ValueError):
         next(decoder.decode("-1 0 4 x"))
     # ignores feature vector if fails to read
     next(decoder.decode("-1 0 4 1 bad_key"))
     next(decoder.decode("-1 0 4 1 float32"))
-    next(decoder.decode("-1 0 4 1 float32 2"))
-    next(decoder.decode("-1 0 4 1 float32 2 1"))
+    with pytest.raises(ValueError):
+        next(decoder.decode("-1 0 4 1 float32 2"))
+    with pytest.raises(ValueError):
+        next(decoder.decode("-1 0 4 1 float32 2 1"))
     with pytest.raises(ValueError):
         next(decoder.decode("-1 0 4 1 float32 2 1 x"))
     next(decoder.decode("-1 0 4 1 float32 2 1 1"))
     next(decoder.decode("-1 0 4 1 binary_feature 1 test"))
     next(decoder.decode("-1 0 4 1 float32 0"))
-    with pytest.raises(IndexError):
+    with pytest.raises(RuntimeError):
         gen = decoder.decode("0 1")
         next(gen)
-    with pytest.raises(IndexError):
+    with pytest.raises(RuntimeError):
         gen = decoder.decode("0 1 4")
         next(gen)
     gen = decoder.decode("0 1 4 1")
