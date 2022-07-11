@@ -94,6 +94,8 @@ class PipeDispatcher(Dispatcher):
         super().__init__()
 
         self.folder = str(folder)
+        self.skip_node_sampler = skip_node_sampler
+        self.skip_edge_sampler = skip_edge_sampler
         process = process or converter_process
         parallel_func = mp.Process  # type: ignore
         if use_threads:
@@ -112,8 +114,8 @@ class PipeDispatcher(Dispatcher):
                     folder,
                     i + partition_offset,
                     decoder,
-                    skip_node_sampler,
-                    skip_edge_sampler,
+                    self.skip_node_sampler,
+                    self.skip_edge_sampler,
                 ),
             )
             for i in range(parallel)
@@ -178,22 +180,24 @@ class PipeDispatcher(Dispatcher):
                 p["edge_weight"].extend([0] * (self.edge_type_num - real_edge_type_num))
 
             fs, _ = get_fs(self.folder)
-            for tp in range(real_node_type_num, self.node_type_num):
-                with fs.open(
-                    meta._get_element_alias_path(
-                        _Element.NODE, self.folder, tp, p["id"]
-                    ),
-                    "wb",
-                ):
-                    pass
-            for tp in range(real_edge_type_num, self.edge_type_num):
-                with fs.open(
-                    meta._get_element_alias_path(
-                        _Element.EDGE, self.folder, tp, p["id"]
-                    ),
-                    "wb",
-                ):
-                    pass
+            if self.skip_node_sampler:
+                for tp in range(real_node_type_num, self.node_type_num):
+                    with fs.open(
+                        meta._get_element_alias_path(
+                            _Element.NODE, self.folder, tp, p["id"]
+                        ),
+                        "wb",
+                    ):
+                        pass
+            if self.skip_edge_sampler:
+                for tp in range(real_edge_type_num, self.edge_type_num):
+                    with fs.open(
+                        meta._get_element_alias_path(
+                            _Element.EDGE, self.folder, tp, p["id"]
+                        ),
+                        "wb",
+                    ):
+                        pass
 
     def prop(self, name: str) -> typing.Any:
         """Properties relevant for conversion.
@@ -255,6 +259,8 @@ class QueueDispatcher(Dispatcher):
         super().__init__()
 
         self.folder = str(folder)
+        self.skip_node_sampler = skip_node_sampler
+        self.skip_edge_sampler = skip_edge_sampler
         process = process or converter_process
         parallel_func = mp.Process  # type: ignore
         if use_threads:
@@ -277,8 +283,8 @@ class QueueDispatcher(Dispatcher):
                     folder,
                     i + partition_offset,
                     decoder,
-                    skip_node_sampler,
-                    skip_edge_sampler,
+                    self.skip_node_sampler,
+                    self.skip_edge_sampler,
                 ),
             )
             for i in range(num_partitions)
@@ -347,22 +353,24 @@ class QueueDispatcher(Dispatcher):
                 p["edge_weight"].extend([0] * (self.edge_type_num - real_edge_type_num))
 
             fs, _ = get_fs(self.folder)
-            for tp in range(real_node_type_num, self.node_type_num):
-                with fs.open(
-                    meta._get_element_alias_path(
-                        _Element.NODE, self.folder, tp, p["id"]
-                    ),
-                    "wb",
-                ):
-                    pass
-            for tp in range(real_edge_type_num, self.edge_type_num):
-                with fs.open(
-                    meta._get_element_alias_path(
-                        _Element.EDGE, self.folder, tp, p["id"]
-                    ),
-                    "wb",
-                ):
-                    pass
+            if self.skip_node_sampler:
+                for tp in range(real_node_type_num, self.node_type_num):
+                    with fs.open(
+                        meta._get_element_alias_path(
+                            _Element.NODE, self.folder, tp, p["id"]
+                        ),
+                        "wb",
+                    ):
+                        pass
+            if self.skip_edge_sampler:
+                for tp in range(real_edge_type_num, self.edge_type_num):
+                    with fs.open(
+                        meta._get_element_alias_path(
+                            _Element.EDGE, self.folder, tp, p["id"]
+                        ),
+                        "wb",
+                    ):
+                        pass
 
         for p in self.processes:
             p.terminate()
