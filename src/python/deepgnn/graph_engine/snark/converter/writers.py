@@ -79,13 +79,13 @@ class BinaryWriter:
         args:
             data: Iterable[(int, int, int, float, list)] Data for a node first, then all of
                 its edges in order of dst. Each entry for a node/edge is,
-                (-1/src, node_id/dst, type, weight, [ndarray for each feature vector or None in order of feature index]).
+                (node_id/src, -1/dst, type, weight, [ndarray for each feature vector or None in order of feature index]).
         """
         for src, dst, typ, weight, features in data:
-            if src == -1:
-                self.node_writer.add(dst, typ, features)
+            if dst == -1:
+                self.node_writer.add(src, typ, features)
                 self.edge_writer.add_node()
-                self.node_alias.add(dst, typ, weight)
+                self.node_alias.add(src, typ, weight)
                 self.node_weight[typ] += float(weight)
                 self.node_type_count[typ] += 1
                 self.node_count += 1
