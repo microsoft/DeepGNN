@@ -180,7 +180,7 @@ class PipeDispatcher(Dispatcher):
                 p["edge_weight"].extend([0] * (self.edge_type_num - real_edge_type_num))
 
             fs, _ = get_fs(self.folder)
-            if self.skip_node_sampler:
+            if not self.skip_node_sampler:
                 for tp in range(real_node_type_num, self.node_type_num):
                     with fs.open(
                         meta._get_element_alias_path(
@@ -189,7 +189,7 @@ class PipeDispatcher(Dispatcher):
                         "wb",
                     ):
                         pass
-            if self.skip_edge_sampler:
+            if not self.skip_edge_sampler:
                 for tp in range(real_edge_type_num, self.edge_type_num):
                     with fs.open(
                         meta._get_element_alias_path(
@@ -353,7 +353,7 @@ class QueueDispatcher(Dispatcher):
                 p["edge_weight"].extend([0] * (self.edge_type_num - real_edge_type_num))
 
             fs, _ = get_fs(self.folder)
-            if self.skip_node_sampler:
+            if not self.skip_node_sampler:
                 for tp in range(real_node_type_num, self.node_type_num):
                     with fs.open(
                         meta._get_element_alias_path(
@@ -362,7 +362,7 @@ class QueueDispatcher(Dispatcher):
                         "wb",
                     ):
                         pass
-            if self.skip_edge_sampler:
+            if not self.skip_edge_sampler:
                 for tp in range(real_edge_type_num, self.edge_type_num):
                     with fs.open(
                         meta._get_element_alias_path(
