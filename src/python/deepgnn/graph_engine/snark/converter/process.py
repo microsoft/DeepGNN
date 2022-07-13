@@ -40,6 +40,8 @@ def converter_process(
         skip_node_sampler(bool): skip generation of node alias tables
         skip_edge_sampler(bool): skip generation of edge alias tables
     """
+    if isinstance(decoder, type):
+        decoder = decoder()
     if decoder is None:
         decoder = JsonDecoder()  # type: ignore
 

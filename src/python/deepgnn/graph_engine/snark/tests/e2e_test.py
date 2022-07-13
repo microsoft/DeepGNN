@@ -256,6 +256,8 @@ def test_memory_graph_metadata(multi_partition_graph_data, storage_type):
     assert cl.meta.edge_count == 3
     assert cl.meta.node_type_count == 3
     assert cl.meta.edge_type_count == 2
+    assert cl.meta._node_feature_count == 14
+    assert cl.meta._edge_feature_count == 14
 
 
 @pytest.mark.parametrize(
@@ -662,6 +664,8 @@ def test_distributed_graph_metadata(multi_partition_graph_data, storage_type):
     assert cl.meta.edge_count == 3
     assert cl.meta.node_type_count == 3
     assert cl.meta.edge_type_count == 2
+    assert cl.meta._node_feature_count == 14
+    assert cl.meta._edge_feature_count == 14
     s1.reset()
     s2.reset()
 
