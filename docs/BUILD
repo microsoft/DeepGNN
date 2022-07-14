@@ -21,6 +21,9 @@ py_test(
         requirement("numpy"),
         requirement("grpcio"),
         requirement("grpcio-tools"),
+        requirement("opencensus"),
+        requirement("opencensus-context"),
+        requirement("opencensus-ext-azure"),
     ],
 )
 
@@ -39,6 +42,9 @@ py_test(
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         requirement("numpy"),
         requirement("networkx"),
+        requirement("opencensus"),
+        requirement("opencensus-context"),
+        requirement("opencensus-ext-azure"),
     ],
 )
 
@@ -56,6 +62,9 @@ py_test(
     deps = [
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         requirement("numpy"),
+        requirement("opencensus"),
+        requirement("opencensus-context"),
+        requirement("opencensus-ext-azure"),
         requirement("pyspark"),
     ],
 )
@@ -82,6 +91,9 @@ py_test(
         "//src/python/deepgnn/pytorch/training:deepgnn_pytorch_training",
         requirement("numpy"),
         requirement("networkx"),
+        requirement("opencensus"),
+        requirement("opencensus-context"),
+        requirement("opencensus-ext-azure"),
     ],
 )
 
@@ -107,6 +119,9 @@ py_test(
         "//src/python/deepgnn/pytorch/training:deepgnn_pytorch_training",
         requirement("numpy"),
         requirement("networkx"),
+        requirement("opencensus"),
+        requirement("opencensus-context"),
+        requirement("opencensus-ext-azure"),
     ],
 )
 
@@ -130,6 +145,9 @@ py_test(
         "//src/python/deepgnn/tf/nn:deepgnn_tf_nn",
         requirement("numpy"),
         requirement("networkx"),
+        requirement("opencensus"),
+        requirement("opencensus-context"),
+        requirement("opencensus-ext-azure"),
     ],
 )
 
@@ -152,6 +170,9 @@ py_test(
         "//src/python/deepgnn/tf/common:deepgnn_tf_common",
         requirement("numpy"),
         requirement("networkx"),
+        requirement("opencensus"),
+        requirement("opencensus-context"),
+        requirement("opencensus-ext-azure"),
     ],
 )
 
