@@ -7,16 +7,19 @@ DeepGNN supports both homogeneous and heterogeneous graphs. Nodes and Edges supp
 
 ## Graph Data Format
 
-DeepGNN supports two file formats: JSON and TSV. Users can generate a graph in either format then our pipeline will convert it into binary for training and inference.
+DeepGNN supports two file formats: JSON and TSV.
+Users can generate a graph in either format then our pipeline will convert it into binary for training and inference.
+DeepGNN also supports writing custom decoders, see [the decoders file](https://github.com/microsoft/DeepGNN/blob/main/src/python/deepgnn/graph_engine/snark/decoders.py).
+Just inheret the base class Decoder, overwrite the decode function and pass the new decoder as an argument to the converter or dispatcher.
 
 1. [JSON](#json-format): Heterogeneous or homegeneous graph.
 2. [TSV](#tsv-format): Homogeneous graph only.
 
 ## JSON Format
 
-Here is the graph data JSON format for the file graph.json as follows,
+The JSON format supports heterogeneous and homegeneous graphs.
 
-`graph.json` layout
+`graph.json` layout,
 
 ```JSON
 {
