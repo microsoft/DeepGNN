@@ -310,7 +310,7 @@ Arguments
 
 .. code-block:: python
 
-	>>> from deepgnn import str2list_int 
+	>>> from deepgnn import str2list_int
 	>>> def init_args(parser):
 	...     parser.add_argument("--hidden_dim", type=int, default=8, help="hidden layer dimension.")
 	...     parser.add_argument("--head_num", type=str2list_int, default="8,1", help="the number of attention headers.")

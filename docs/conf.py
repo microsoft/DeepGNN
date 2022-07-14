@@ -1,3 +1,7 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+"""Configuration for the Sphinx documentation builder."""
 project = "DeepGNN"
 copyright = "2022, Microsoft"
 author = "DeepGNN team"

@@ -50,7 +50,7 @@ Here are the descriptions of the functions that are part of the API:
   feature with *id 0* and dimension **64**, multiply by some matrix with dim **64x32** (so the result is
   **1x32** vector) and then do some aggregation via a dot product on a feature vector with *id 1* and dimension
   **32**, so the result is a single number per node.
-    
+
   .. code-block:: python
 
       >>> nodes = graph.sample_nodes(10, 0)
