@@ -103,8 +103,9 @@ py_test(
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
         requirement("scikit-learn"),
-        requirement("torch"),
         requirement("tensorflow"),
+        requirement("torch"),
+        requirement("transformers"),
     ],
 )
 
@@ -138,6 +139,7 @@ py_test(
         requirement("scikit-learn"),
         requirement("tensorflow"),
         requirement("torch"),
+        requirement("transformers"),
     ],
 )
 
@@ -190,6 +192,7 @@ py_test(
         "//src/python/deepgnn/tf/common:deepgnn_tf_common",
         requirement("azure-datalake-store"),
         requirement("fsspec"),
+        requirement("matplotlib"),
         requirement("networkx"),
         requirement("numpy"),
         requirement("opencensus"),
