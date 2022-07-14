@@ -1,10 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-load("@rules_python//python:defs.bzl", "py_test")
-load("//config:variables.bzl", "PLATFORM_DEFINES")
 load("@rules_python//python:defs.bzl", "py_library")
-load("@pip_deps//:requirements.bzl", "requirement")
 
 py_library(
     name = "graph_engine_snark",

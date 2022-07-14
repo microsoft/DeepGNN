@@ -1,0 +1,200 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+load("@rules_python//python:defs.bzl", "py_binary", "py_test")
+load("@pip_deps//:requirements.bzl", "requirement")
+
+py_test(
+    name = "sql_shard",
+    srcs = ["doctest_template.py"],
+    args = ["advanced/sql_shard.rst"],
+    data = [
+        "advanced/sql_shard.rst",
+        "//src/cc/lib/distributed:service_proto",
+    ],
+    imports = ["../src/python/"],
+    main = "doctest_template.py",
+    python_version = "PY3",
+    srcs_version = "PY3",
+    deps = [
+        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
+        requirement("numpy"),
+        requirement("grpcio"),
+        requirement("grpcio-tools"),
+    ],
+)
+
+py_test(
+    name = "from_networkx",
+    srcs = ["doctest_template.py"],
+    args = ["graph_engine/from_networkx.rst"],
+    data = [
+        "graph_engine/from_networkx.rst",
+    ],
+    imports = ["../src/python/"],
+    main = "doctest_template.py",
+    python_version = "PY3",
+    srcs_version = "PY3",
+    deps = [
+        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
+        requirement("numpy"),
+        requirement("networkx"),
+    ],
+)
+
+py_test(
+    name = "spark_converter",
+    srcs = ["doctest_template.py"],
+    args = ["graph_engine/spark_converter.rst"],
+    data = [
+        "graph_engine/spark_converter.rst",
+    ],
+    imports = ["../src/python/"],
+    main = "doctest_template.py",
+    python_version = "PY3",
+    srcs_version = "PY3",
+    deps = [
+        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
+        requirement("numpy"),
+        requirement("pyspark"),
+    ],
+)
+
+py_test(
+    name = "torch_quickstart",
+    srcs = ["doctest_template.py"],
+    args = ["torch/quickstart.rst"],
+    data = [
+        "torch/quickstart.rst",
+    ],
+    imports = ["../src/python/"],
+    main = "doctest_template.py",
+    python_version = "PY3",
+    srcs_version = "PY3",
+    deps = [
+        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
+        "//src/python/deepgnn/graph_engine/data:graph_engine_data",
+        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
+        "//src/python/deepgnn/pytorch:deepgnn_pytorch",
+        "//src/python/deepgnn/pytorch/common:deepgnn_pytorch_common",
+        "//src/python/deepgnn/pytorch/modeling:deepgnn_pytorch_modeling",
+        "//src/python/deepgnn/pytorch/nn:deepgnn_pytorch_nn",
+        "//src/python/deepgnn/pytorch/training:deepgnn_pytorch_training",
+        requirement("numpy"),
+        requirement("networkx"),
+    ],
+)
+
+py_test(
+    name = "torch_link_prediction",
+    srcs = ["doctest_template.py"],
+    args = ["torch/link_pred.rst"],
+    data = [
+        "torch/link_pred.rst",
+    ],
+    imports = ["../src/python/"],
+    main = "doctest_template.py",
+    python_version = "PY3",
+    srcs_version = "PY3",
+    deps = [
+        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
+        "//src/python/deepgnn/graph_engine/data:graph_engine_data",
+        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
+        "//src/python/deepgnn/pytorch:deepgnn_pytorch",
+        "//src/python/deepgnn/pytorch/common:deepgnn_pytorch_common",
+        "//src/python/deepgnn/pytorch/modeling:deepgnn_pytorch_modeling",
+        "//src/python/deepgnn/pytorch/nn:deepgnn_pytorch_nn",
+        "//src/python/deepgnn/pytorch/training:deepgnn_pytorch_training",
+        requirement("numpy"),
+        requirement("networkx"),
+    ],
+)
+
+py_test(
+    name = "tf_node_class",
+    srcs = ["doctest_template.py"],
+    args = ["tf/node_class.rst"],
+    data = [
+        "tf/node_class.rst",
+    ],
+    imports = ["../src/python/"],
+    main = "doctest_template.py",
+    python_version = "PY3",
+    srcs_version = "PY3",
+    deps = [
+        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
+        "//src/python/deepgnn/graph_engine/data:graph_engine_data",
+        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
+        "//src/python/deepgnn/tf:deepgnn_tf",
+        "//src/python/deepgnn/tf/common:deepgnn_tf_common",
+        "//src/python/deepgnn/tf/nn:deepgnn_tf_nn",
+        requirement("numpy"),
+        requirement("networkx"),
+    ],
+)
+
+py_test(
+    name = "tf_link_prediction",
+    srcs = ["doctest_template.py"],
+    args = ["tf/link_pred.rst"],
+    data = [
+        "tf/link_pred.rst",
+    ],
+    imports = ["../src/python/"],
+    main = "doctest_template.py",
+    python_version = "PY3",
+    srcs_version = "PY3",
+    deps = [
+        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
+        "//src/python/deepgnn/graph_engine/data:graph_engine_data",
+        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
+        "//src/python/deepgnn/tf:deepgnn_tf",
+        "//src/python/deepgnn/tf/common:deepgnn_tf_common",
+        requirement("numpy"),
+        requirement("networkx"),
+    ],
+)
+
+py_binary(
+    name = "make_docs",
+    srcs = [
+        "make_docs.py",
+    ],
+    data = [
+        "advanced/hdfs.rst",
+        "advanced/index.rst",
+        "advanced/sql_shard.rst",
+        "conf.py",
+        "graph_engine/data_spec.rst",
+        "graph_engine/from_networkx.rst",
+        "graph_engine/index.rst",
+        "graph_engine/overview.rst",
+        "graph_engine/spark_converter.rst",
+        "index.rst",
+        "tf/index.rst",
+        "tf/link_pred.rst",
+        "tf/node_class.rst",
+        "torch/index.rst",
+        "torch/link_pred.rst",
+        "torch/quickstart.rst",
+    ],
+    deps = [
+        requirement("sphinx"),
+        requirement("docutils"),
+        requirement("imagesize"),
+        requirement("sphinxcontrib-websupport"),
+        requirement("sphinxcontrib-serializinghtml"),
+        requirement("sphinxcontrib-applehelp"),
+        requirement("sphinxcontrib-devhelp"),
+        requirement("sphinxcontrib-jsmath"),
+        requirement("sphinxcontrib-htmlhelp"),
+        requirement("sphinxcontrib-qthelp"),
+        requirement("Jinja2"),
+        requirement("Pygments"),
+        requirement("snowballstemmer"),
+        requirement("requests"),
+        requirement("packaging"),
+        requirement("importlib-metadata"),
+        requirement("alabaster"),
+    ],
+)
