@@ -21,19 +21,9 @@ class GINEncoder(nn.Module):
         intermediate_dim: int,
         embed_dim: int = 256,
         edge_type: int = 0,
-        activation_fn: Callable = F.relu,
         base_model=None,
     ):
         """Initialize GINEncoder.
-
-        Args:
-            features: callback used to generate node feature embedding.
-            query_func: query funtion used to fetch data from graph engine.
-            feature_dim: used to specify dimension of features when fetch data from graph engine.
-            intermediate_dim: used to define the trainable weight metric. if there is a feature
-                encoder, intermeidate_dim means the dimension of output of specific feature encoder,
-                or it will be the same as feature_dim.
-            embed_dim: output embedding dimension of GINEncoder.
         """
         super(GINEncoder, self).__init__()
 

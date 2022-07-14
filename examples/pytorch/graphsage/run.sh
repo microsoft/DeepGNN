@@ -15,7 +15,7 @@ DIR_NAME=$(dirname "$0")
 GRAPH=/tmp/cora
 rm -fr $GRAPH
 
-python -m deepgnn.graph_engine.data.citation --data_dir $GRAPH
+python3 -m deepgnn.graph_engine.data.citation --data_dir $GRAPH
 
 MODEL_DIR=/tmp/model_fix
 rm -rf $MODEL_DIR
@@ -26,7 +26,7 @@ then
 fi
 
 ### ===== training =======
-python ${DIR_NAME}/main.py  \
+python3 ${DIR_NAME}/main.py  \
 --data_dir $GRAPH --mode train --seed 123 \
 --backend snark --graph_type local --converter skip \
 --batch_size 140 --learning_rate 0.005 --num_epochs 100 \
@@ -35,7 +35,7 @@ python ${DIR_NAME}/main.py  \
 --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 121 --algo $ALGO \
 --log_by_steps 1 --use_per_step_metrics $PLATFORM_DEVICE --storage_type $STORAGE_TYPE
 
-python ${DIR_NAME}/main.py  \
+python3 ${DIR_NAME}/main.py  \
 --data_dir $GRAPH --mode evaluate \
 --backend snark --graph_type local --converter skip \
 --batch_size 1000 \
@@ -45,7 +45,7 @@ python ${DIR_NAME}/main.py  \
 --log_by_steps 1 --use_per_step_metrics $PLATFORM_DEVICE
 
 if [[ "$ADL_UPLOADER" == "no" ]]; then
-    python ${DIR_NAME}/main.py  \
+    python3 ${DIR_NAME}/main.py  \
     --data_dir $GRAPH --mode inference \
     --backend snark --graph_type local --converter skip \
     --batch_size 1000 \
@@ -54,7 +54,7 @@ if [[ "$ADL_UPLOADER" == "no" ]]; then
     --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
     --log_by_steps 1 --use_per_step_metrics $PLATFORM_DEVICE
 else
-    python ${DIR_NAME}/main.py  \
+    python3 ${DIR_NAME}/main.py  \
     --data_dir $GRAPH --mode inference \
     --backend snark --graph_type local --converter skip \
     --batch_size 1000 \
@@ -73,7 +73,7 @@ if [[ "$USE_HADOOP" == "yes" ]]; then
     else
         . ../../hdfs_setup.sh
     fi
-    python ${DIR_NAME}/main.py  \
+    python3 ${DIR_NAME}/main.py  \
     --data_dir file://$GRAPH --mode train --seed 123 \
     --backend snark --graph_type local --converter skip \
     --batch_size 140 --learning_rate 0.005 --num_epochs 100 \
