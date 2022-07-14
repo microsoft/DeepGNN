@@ -17,9 +17,9 @@ Just inheret the base class Decoder, overwrite the decode function and pass the 
 
 ## JSON Format
 
-Here is the graph data JSON format for the file graph.json as follows,
+The JSON format supports heterogeneous and homegeneous graphs.
 
-`graph.json` layout
+`graph.json` layout,
 
 ```JSON
 {
