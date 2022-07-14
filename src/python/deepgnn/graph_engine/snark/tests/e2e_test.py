@@ -257,6 +257,8 @@ def test_memory_graph_metadata(multi_partition_graph_data, storage_type):
     assert cl.meta.edge_count == 3
     assert cl.meta.node_type_count == 3
     assert cl.meta.edge_type_count == 2
+    assert cl.meta._node_feature_count == 14
+    assert cl.meta._edge_feature_count == 14
 
 
 @pytest.mark.parametrize(
@@ -663,6 +665,8 @@ def test_distributed_graph_metadata(multi_partition_graph_data, storage_type):
     assert cl.meta.edge_count == 3
     assert cl.meta.node_type_count == 3
     assert cl.meta.edge_type_count == 2
+    assert cl.meta._node_feature_count == 14
+    assert cl.meta._edge_feature_count == 14
     s1.reset()
     s2.reset()
 
@@ -1466,6 +1470,66 @@ def test_edges_different_partition():
     es = client.EdgeSampler(cl, partitions)
     v1 = es.sample(size=1, seed=1)
     assert v1[0] == 1
+
+
+def test_multi_partition_metadata():
+    folder = tempfile.TemporaryDirectory()
+    data = open(os.path.join(folder.name, "graph.json"), "w+")
+    graph = [
+        {
+            "node_id": 0,
+            "node_type": 0,
+            "node_weight": 1,
+            "float_feature": {},
+            "edge": [
+                {
+                    "src_id": 0,
+                    "dst_id": 1,
+                    "edge_type": 0,
+                    "weight": 0.5,
+                    "float_feature": {},
+                }
+            ],
+        },
+        {
+            "node_id": 1,
+            "node_type": 1,
+            "node_weight": 1,
+            "uint64_feature": {},
+            "float_feature": {"0": [1], "1": [-0.03, -0.04]},
+            "edge": [
+                {
+                    "src_id": 1,
+                    "dst_id": 0,
+                    "edge_type": 1,
+                    "weight": 1,
+                    "float_feature": {"0": [1], "1": [-0.03, -0.04]},
+                }
+            ],
+        },
+    ]
+    for el in graph:
+        json.dump(el, data)
+        data.write("\n")
+    data.flush()
+    data.close()
+    data_name = data.name
+    output = tempfile.TemporaryDirectory()
+    d = dispatcher.QueueDispatcher(Path(output.name), 2, Counter(), JsonDecoder())
+    convert.MultiWorkersConverter(
+        graph_path=data_name,
+        partition_count=2,
+        output_dir=output.name,
+        decoder=JsonDecoder(),
+        dispatcher=d,
+    ).convert()
+    cl = client.MemoryGraph(output.name, [0, 1], client.PartitionStorageType.memory)
+    assert cl.meta.node_count == 2
+    assert cl.meta.edge_count == 2
+    assert cl.meta.node_type_count == 2  # p0 only type 0, p1 only type 1
+    assert cl.meta.edge_type_count == 2
+    assert cl.meta._node_feature_count == 2  # p0 0 features, p1 2 features
+    assert cl.meta._edge_feature_count == 2
 
 
 if __name__ == "__main__":
