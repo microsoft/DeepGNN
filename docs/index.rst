@@ -2,9 +2,10 @@ Welcome to DeepGNN's documentation!
 ===================================
 DeepGNN is a package for training/evaluating ML models on graph data. It is a Python library that provides:
 
-* a graph engine object to fetch data about nodes/edges and an assortment of routines for sampling neighbors/nodes/edges.
-* various aggregators, encoders and decoders to pass graph data to neural nets.
-* basic NN layers for training: convolution, attention and bindings to pytorch-geometric library.
+* A graph engine object designed for ML tasks with an assortment of routines for sampling nodes, edges and neighbors as well as feature fetching.
+* Various aggregators, encoders and decoders to pass graph data to neural nets.
+* Basic NN layers for training: convolution, attention and bindings to pytorch-geometric library.
+* A collection of trainers to work with models in local and distributed environments.
 
 Documentation
 -------------
