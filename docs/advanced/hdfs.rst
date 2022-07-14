@@ -40,7 +40,7 @@ Only enter if building from source or you manually download java jdk
 
 .. code-block:: bash
 
-	export LD*LIBRARY*PATH="$LD*LIBRARY*PATH:$JAVA_HOME/jre/lib/amd64/server/"
+	export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$JAVA_HOME/jre/lib/amd64/server/"
 
 
 If CLASSPATH is not already set, it will be set automatically with config_path at the top.
@@ -54,7 +54,7 @@ You can test core-site files with
 
 .. code-block:: bash
 
-	echo 'export HADOOP*CLASSPATH=$HADOOP*HOME/share/hadoop/tools/lib/*' >> etc/hadoop/hadoop-env.sh
+	echo 'export HADOOP_CLASSPATH=$HADOOP_HOME/share/hadoop/tools/lib/*' >> etc/hadoop/hadoop-env.sh
 	sudo bin/hdfs dfs --conf core-site.xml -ls <HDFS_PATH>
 
 
@@ -125,4 +125,4 @@ HDFS Localhost Example
 Graph Engine Usage
 ==================
 
-Leverage this feature by setting --data*dir to an hdfs or adl link, adding --stream and --config*path path/to/core-site.xml.
+Leverage this feature by setting --data_dir to an hdfs or adl link, adding --stream and --config_path path/to/core-site.xml.

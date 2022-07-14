@@ -1,9 +1,8 @@
 Example of using SQL database to work with graphs.
 ==================================================
 
-Sometimes there might be a need to run inference on data that is updated at real time, for example a new entity is added to the graph and we want to generate embeddings for it.
-One way of doing this is to combine the original graph with a SQL database for realtime data. Python graph client interacts with servers through gRPC and we can implement graph engine
-service functionality with python.
+For inference scenarios with data updated in real time, best practice is to combine original graph with an SQL database.
+Python graph client interacts with servers through gRPC and we can implement graph engine service functionality with python.
 
 First import ``grpc_tools`` and other relevant modules:
 

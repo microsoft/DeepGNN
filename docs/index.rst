@@ -12,8 +12,6 @@ Documentation
    :maxdepth: 2
    :titlesonly:
 
-   Quick start <torch/quickstart>
-
    graph_engine/index
 
    torch/index

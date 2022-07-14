@@ -18,7 +18,9 @@ py_test(
     srcs_version = "PY3",
     deps = [
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
+        requirement("azure-datalake-store"),
         requirement("numpy"),
+        requirement("fsspec"),
         requirement("grpcio"),
         requirement("grpcio-tools"),
         requirement("opencensus"),
@@ -40,8 +42,10 @@ py_test(
     srcs_version = "PY3",
     deps = [
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
+        requirement("azure-datalake-store"),
         requirement("numpy"),
         requirement("networkx"),
+        requirement("fsspec"),
         requirement("opencensus"),
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
@@ -61,6 +65,8 @@ py_test(
     srcs_version = "PY3",
     deps = [
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
+        requirement("azure-datalake-store"),
+        requirement("fsspec"),
         requirement("numpy"),
         requirement("opencensus"),
         requirement("opencensus-context"),
@@ -70,11 +76,11 @@ py_test(
 )
 
 py_test(
-    name = "torch_quickstart",
+    name = "torch_node_class",
     srcs = ["doctest_template.py"],
-    args = ["torch/quickstart.rst"],
+    args = ["torch/node_class.rst"],
     data = [
-        "torch/quickstart.rst",
+        "torch/node_class.rst",
     ],
     imports = ["../src/python/"],
     main = "doctest_template.py",
@@ -89,11 +95,16 @@ py_test(
         "//src/python/deepgnn/pytorch/modeling:deepgnn_pytorch_modeling",
         "//src/python/deepgnn/pytorch/nn:deepgnn_pytorch_nn",
         "//src/python/deepgnn/pytorch/training:deepgnn_pytorch_training",
+        requirement("azure-datalake-store"),
+        requirement("fsspec"),
         requirement("numpy"),
         requirement("networkx"),
         requirement("opencensus"),
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
+        requirement("scikit-learn"),
+        requirement("torch"),
+        requirement("tensorflow"),
     ],
 )
 
@@ -117,11 +128,16 @@ py_test(
         "//src/python/deepgnn/pytorch/modeling:deepgnn_pytorch_modeling",
         "//src/python/deepgnn/pytorch/nn:deepgnn_pytorch_nn",
         "//src/python/deepgnn/pytorch/training:deepgnn_pytorch_training",
+        requirement("azure-datalake-store"),
+        requirement("fsspec"),
         requirement("numpy"),
         requirement("networkx"),
         requirement("opencensus"),
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
+        requirement("scikit-learn"),
+        requirement("tensorflow"),
+        requirement("torch"),
     ],
 )
 
@@ -143,11 +159,15 @@ py_test(
         "//src/python/deepgnn/tf:deepgnn_tf",
         "//src/python/deepgnn/tf/common:deepgnn_tf_common",
         "//src/python/deepgnn/tf/nn:deepgnn_tf_nn",
+        requirement("azure-datalake-store"),
+        requirement("fsspec"),
         requirement("numpy"),
         requirement("networkx"),
         requirement("opencensus"),
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
+        requirement("scikit-learn"),
+        requirement("tensorflow"),
     ],
 )
 
@@ -168,11 +188,15 @@ py_test(
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/tf:deepgnn_tf",
         "//src/python/deepgnn/tf/common:deepgnn_tf_common",
-        requirement("numpy"),
+        requirement("azure-datalake-store"),
+        requirement("fsspec"),
         requirement("networkx"),
+        requirement("numpy"),
         requirement("opencensus"),
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
+        requirement("scikit-learn"),
+        requirement("tensorflow"),
     ],
 )
 
@@ -197,9 +221,10 @@ py_binary(
         "tf/node_class.rst",
         "torch/index.rst",
         "torch/link_pred.rst",
-        "torch/quickstart.rst",
+        "torch/node_class.rst",
     ],
     deps = [
+        requirement("alabaster"),
         requirement("sphinx"),
         requirement("docutils"),
         requirement("imagesize"),
@@ -210,12 +235,12 @@ py_binary(
         requirement("sphinxcontrib-jsmath"),
         requirement("sphinxcontrib-htmlhelp"),
         requirement("sphinxcontrib-qthelp"),
+        requirement("sphinx-copybutton"),
         requirement("Jinja2"),
         requirement("Pygments"),
         requirement("snowballstemmer"),
         requirement("requests"),
         requirement("packaging"),
         requirement("importlib-metadata"),
-        requirement("alabaster"),
     ],
 )

@@ -6,3 +6,4 @@ Pytorch
    :maxdepth: 2
 
    link_pred
+   node_class

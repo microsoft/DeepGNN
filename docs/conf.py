@@ -16,6 +16,7 @@ extensions = [
     "sphinx.ext.doctest",
     "sphinx.ext.todo",
     "sphinx.ext.coverage",
+    "sphinx_copybutton",
 ]
 
 templates_path = ["_templates"]
@@ -29,5 +30,8 @@ html_theme = "alabaster"
 html_static_path = ["../_build/_static"]
 htmlhelp_basename = "DeepGNNdoc"
 man_pages = [(master_doc, "deepgnn", "DeepGNN Documentation", [author], 1)]
+
+copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: "
+copybutton_prompt_is_regexp = True
 
 todo_include_todos = False

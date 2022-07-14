@@ -121,7 +121,3 @@ Edge samplers are very similar to the node ones:
 	(array([292,  53]), array([298,  54]), array([0, 0], dtype=int32))
 
 The returned result is a triple of lists with source nodes, destination nodes and edge types.
-
-.. todo::
-
-	alsamylk: add distributed example once we have more user friendly conversions from networkx graph.
