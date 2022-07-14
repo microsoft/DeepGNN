@@ -87,7 +87,7 @@ class SageEncoder(nn.Module):
         if isinstance(neigh_feats_unique, dict):
             context["neighbor_feats"] = {
                 "node_feats": neigh_feats_unique["node_feats"][idx],
-                "neighbor_feats": neigh_feats_unique["neighbor_feats"][idx],
+                "neighbor_feats": neigh_feats_unique["neighbor_feats"],
                 "node_count": idx.size,
             }
         else:
