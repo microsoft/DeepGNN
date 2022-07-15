@@ -270,7 +270,7 @@ def test_supervised_graphsage_model(mock_graph):  # noqa: F811
     # is deterministic.
     nodes = torch.as_tensor([2700])
     expected = np.array(
-        [[0.094184, -0.06748, -0.000671, 0.00233, -0.010543, -0.058825, 0.038054]],
+        [[0.074278, -0.069181, 0.003444, -0.008916, -0.013685, -0.036867, 0.042985]],
         dtype=np.float32,
     )
     graphsage = SupervisedGraphSage(
@@ -329,7 +329,7 @@ def test_supervised_graphsage_loss_value(mock_graph):  # noqa: F811
     loss, _, _ = graphsage(it.next())
     loss.backward()
     optimizer.step()
-    npt.assert_allclose(loss.detach().numpy(), np.array([1.923]), rtol=1e-3)
+    npt.assert_allclose(loss.detach().numpy(), np.array([1.930]), rtol=1e-3)
 
 
 # test the correctness of the unsupervised graphsage's model.
@@ -346,7 +346,7 @@ def test_unsupervised_graphsage_model(mock_graph):  # noqa: F811
     # is deterministic.
     nodes = torch.as_tensor([2700])
     expected = np.array(
-        [[0.094184, -0.06748, -0.000671, 0.00233, -0.010543, -0.058825, 0.038054]],
+        [[0.074278, -0.069181, 0.003444, -0.008916, -0.013685, -0.036867, 0.042985]],
         dtype=np.float32,
     )
     graphsage = UnSupervisedGraphSage(
