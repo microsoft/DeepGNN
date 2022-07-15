@@ -645,7 +645,6 @@ int32_t NeighborCount(PyGraph *py_graph, NodeID *in_node_ids, size_t in_node_ids
             std::span(reinterpret_cast<snark::NodeId *>(in_node_ids), in_node_ids_size),
             std::span(reinterpret_cast<snark::Type *>(in_edge_types), in_edge_types_size),
             std::span(out_neighbor_counts, in_node_ids_size));
-
         return 0;
     }
     catch (const std::exception &e)
