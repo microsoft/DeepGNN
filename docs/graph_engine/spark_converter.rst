@@ -111,7 +111,7 @@ Spark task is very straitforward: deserialize node from json and pass it to both
 .. code-block:: python
 
     >>> from pyspark import TaskContext
-    >>> from deepgnn.graph_engine.snark.converter.json_converter import NodeWriter
+    >>> from deepgnn.graph_engine.snark.converter.writers import NodeWriter
     >>> class SparkTask:
     ...     def __init__(self, binary_dir: str):
     ...         self.binary_dir = binary_dir
