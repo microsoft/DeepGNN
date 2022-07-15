@@ -104,8 +104,8 @@ py_test(
         requirement("opencensus-ext-azure"),
         requirement("scikit-learn"),
         requirement("tensorflow"),
-        requirement("torch"),
         requirement("transformers"),
+        requirement("torch"),
     ],
 )
 
@@ -138,8 +138,8 @@ py_test(
         requirement("opencensus-ext-azure"),
         requirement("scikit-learn"),
         requirement("tensorflow"),
-        requirement("torch"),
         requirement("transformers"),
+        requirement("torch"),
     ],
 )
 
@@ -190,6 +190,7 @@ py_test(
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/tf:deepgnn_tf",
         "//src/python/deepgnn/tf/common:deepgnn_tf_common",
+        "//src/python/deepgnn/tf/nn:deepgnn_tf_nn",
         requirement("azure-datalake-store"),
         requirement("fsspec"),
         requirement("matplotlib"),
