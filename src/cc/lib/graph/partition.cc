@@ -442,7 +442,9 @@ void Partition::GetNodeStringFeature(uint64_t internal_node_id, std::span<const 
 }
 
 template <class F>
-size_t Partition::FetchNeighborInfo(uint64_t internal_id, std::span<const Type> edge_types, F func) const
+size_t NeighborIndexIterator(uint64_t internal_id, std::span<const Type> edge_types, F func,
+                             std::vector<uint64_t> m_neighbors_index, std::vector<Type> m_edge_types,
+                             std::vector<uint64_t> m_edge_type_offset)
 
 {
     const auto offset = m_neighbors_index[internal_id];
@@ -485,16 +487,16 @@ size_t Partition::FetchNeighborInfo(uint64_t internal_id, std::span<const Type> 
 
 size_t Partition::NeighborCount(uint64_t internal_id, std::span<const Type> edge_types) const
 {
-    auto lambda = [&](auto start, auto last, int i) { return last - start; };
+    auto lambda = [](auto start, auto last, int i) { return last - start; };
 
-    return FetchNeighborInfo(internal_id, edge_types, lambda);
+    return NeighborIndexIterator(internal_id, edge_types, lambda, m_neighbors_index, m_edge_types, m_edge_type_offset);
 }
 
 size_t Partition::FullNeighbor(uint64_t internal_id, std::span<const Type> edge_types,
                                std::vector<NodeId> &out_neighbors_ids, std::vector<Type> &out_edge_types,
                                std::vector<float> &out_edge_weights) const
 {
-    auto lambda = [&](auto start, auto last, int i) {
+    auto lambda = [&out_neighbors_ids, &out_edge_types, &out_edge_weights, this](auto start, auto last, int i) {
         // m_edge_destination[last-1]+1 - take the last element and then advance the pointer
         // to imitate std::end, otherwise we'll have an out of range exception.
         out_neighbors_ids.insert(std::end(out_neighbors_ids), &m_edge_destination[start],
@@ -511,7 +513,7 @@ size_t Partition::FullNeighbor(uint64_t internal_id, std::span<const Type> edge_
         return last - start;
     };
 
-    return FetchNeighborInfo(internal_id, edge_types, lambda);
+    return NeighborIndexIterator(internal_id, edge_types, lambda, m_neighbors_index, m_edge_types, m_edge_type_offset);
 }
 
 bool Partition::GetEdgeFeature(uint64_t internal_src_node_id, NodeId input_edge_dst, Type input_edge_type,

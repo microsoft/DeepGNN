@@ -615,8 +615,8 @@ class MemoryGraph:
         return py_cb.values, dimensions // py_cb.values.itemsize
 
     def neighbor_counts(
-        self, nodes: np.array, edge_types: Union[List[int], int]
-    ) -> np.array:
+        self, nodes: np.ndarray, edge_types: Union[int, np.ndarray]
+    ) -> np.ndarray:
         """Retrieve degree of node with satisfying edge types.
 
         Args:

@@ -187,8 +187,8 @@ class Client(Graph):
         return self.graph.neighbors(nodes, self.__check_types(edge_types))
 
     def neighbor_count(
-        self, nodes: np.array, edge_types: Union[List[int], int]
-    ) -> np.array:
+        self, nodes: np.ndarray, edge_types: Union[int, np.ndarray]
+    ) -> np.ndarray:
         """Fetch node degrees."""
         return self.graph.neighbor_counts(nodes, self.__check_types(edge_types))
 

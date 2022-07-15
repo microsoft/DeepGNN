@@ -48,8 +48,6 @@ struct Partition
                               std::span<const snark::FeatureId> features, std::span<int64_t> out_dimensions,
                               std::vector<uint8_t> &out_values) const;
 
-    template <class F> size_t FetchNeighborInfo(uint64_t internal_id, std::span<const Type> edge_types, F func) const;
-
     // Retrieve total number of neighbors with specified edge types and returns the total number
     // of such neighbors.
     size_t NeighborCount(uint64_t internal_node_id, std::span<const Type> edge_types) const;
