@@ -3,7 +3,6 @@
 
 """Orchestrate multiple converters."""
 import json
-from typing import Optional
 import multiprocessing as mp
 import threading
 import platform
@@ -60,7 +59,7 @@ class PipeDispatcher(Dispatcher):
         folder: str,
         parallel: int,
         meta: str,
-        decoder: Optional[DecoderType],
+        decoder: DecoderType,
         process: typing.Callable[
             [
                 typing.Union[mp.Queue, Connection],
@@ -191,7 +190,7 @@ class QueueDispatcher(Dispatcher):
         num_partitions: int,
         meta: str,
         partion_func: typing.Callable[[str], int],
-        decoder: Optional[DecoderType],
+        decoder: DecoderType,
         process: typing.Callable[
             [
                 typing.Union[mp.Queue, Connection],

@@ -11,9 +11,7 @@ import fsspec
 from deepgnn import get_logger
 from deepgnn.graph_engine._adl_reader import TextFileIterator
 from deepgnn.graph_engine._base import get_fs
-from deepgnn.graph_engine.snark.decoders import (
-    DecoderType,
-)
+from deepgnn.graph_engine.snark.decoders import DecoderType, JsonDecoder
 from deepgnn.graph_engine.snark.dispatcher import (
     PipeDispatcher,
     Dispatcher,
@@ -59,6 +57,8 @@ class MultiWorkersConverter:
             skip_node_sampler(bool): skip generation of node alias tables.
             skip_edge_sampler(bool): skip generation of edge alias tables.
         """
+        if decoder is None:
+            decoder = JsonDecoder()  # type: ignore
         self.graph_path = graph_path
         self.meta_path = meta_path
         self.worker_index = worker_index
@@ -94,7 +94,7 @@ class MultiWorkersConverter:
                 self.output_dir,
                 self.partition_count,
                 meta_path_local,
-                self.decoder,
+                self.decoder,  # type: ignore
                 partition_offset=self.partition_offset,
                 use_threads=use_threads,
                 skip_node_sampler=skip_node_sampler,

@@ -12,7 +12,7 @@ else:
     from multiprocessing.connection import Connection  # type: ignore
 
 import deepgnn.graph_engine.snark.converter.writers as writers
-from deepgnn.graph_engine.snark.decoders import DecoderType, JsonDecoder
+from deepgnn.graph_engine.snark.decoders import DecoderType
 
 
 FLAG_ALL_DONE = b"WORK_FINISHED"
@@ -27,7 +27,7 @@ def converter_process(
     suffix: int,
     node_type_num: int,
     edge_type_num: int,
-    decoder: typing.Optional[DecoderType],
+    decoder: DecoderType,
     skip_node_sampler: bool,
     skip_edge_sampler: bool,
 ) -> None:
@@ -46,8 +46,6 @@ def converter_process(
     """
     if isinstance(decoder, type):
         decoder = decoder()
-    if decoder is None:
-        decoder = JsonDecoder()  # type: ignore
 
     binary_writer = writers.BinaryWriter(
         str(folder),
