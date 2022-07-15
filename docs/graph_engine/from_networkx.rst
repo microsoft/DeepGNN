@@ -61,27 +61,11 @@ We can inspect values of node features:
 	>>> nodes[1]["float_feature"]["0"]
 	[1, 0.516676816253458]
 
-In order to use this graph we need to create a file with metadata to convert json to the binary data format:
-
-.. code-block:: python
-
-	>>> meta = '''{"node_float_feature_num": 1,
-	...         "edge_binary_feature_num": 0,
-	...         "edge_type_num": 1,
-	...         "edge_float_feature_num": 0,
-	...         "node_type_num": 1,
-	...         "node_uint64_feature_num": 0,
-	...         "node_binary_feature_num": 0,
-	...         "edge_uint64_feature_num": 0}'''
 	>>> working_dir = tempfile.TemporaryDirectory()
 	>>> raw_file = working_dir.name + "/data.json"
 	>>> with open(raw_file, "w+") as f:
 	...     f.write(data)
 	287274
-	>>> meta_file = working_dir.name + "/meta.json"
-	>>> with open(meta_file, "w+") as f:
-	...     f.write(meta)
-	274
 
 Now we can convert graph to binary data:
 
@@ -89,7 +73,6 @@ Now we can convert graph to binary data:
 
 	>>> convert.MultiWorkersConverter(
 	...    graph_path=raw_file,
-	...    meta_path=meta_file,
 	...    partition_count=1,
 	...    output_dir=working_dir.name,
 	...    decoder_type=JsonDecoder,

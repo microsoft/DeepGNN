@@ -86,20 +86,6 @@ Labels will be stored in the logit(one hot encoded) format as float feature with
     >>> print(nodes[49])
     {'node_weight': 1, 'node_id': 49, 'node_type': 0, 'uint64_feature': None, 'float_feature': {'0': [1.0023727889837524, 0.34556286809360803], '1': [0, 0, 0, 0, 1]}, 'binary_feature': None, 'edge': [], 'neighbor': {'0': {'40': 1.0, '41': 1.0, '42': 1.0, '43': 1.0, '44': 1.0, '45': 1.0, '46': 1.0, '47': 1.0, '48': 1.0, '0': 1.0}}}
 
-In order to start graph engine we need to create a file with metadata describing graph as a whole.
-
-Convert json to binary format:
-
-.. code-block:: python
-
-    >>> meta = '{"node_float_feature_num": 2, \
-    ...     "edge_binary_feature_num": 0, \
-    ...     "edge_type_num": 1, \
-    ...     "edge_float_feature_num": 0, \
-    ...     "node_type_num": 1, \
-    ...     "node_uint64_feature_num": 0, \
-    ...     "node_binary_feature_num": 0, \
-    ...     "edge_uint64_feature_num": 0}'
     >>> working_dir = "./graphdata"
     >>> os.makedirs(working_dir, exist_ok=True)
     >>>
@@ -107,12 +93,6 @@ Convert json to binary format:
     >>> with open(data_filename, "w+") as f:
     ...     f.write(data)
     15865
-
-    >>> meta_filename = os.path.join(working_dir, "meta.json")
-    >>> with open(meta_filename, "w+") as f:
-    ...     f.write(meta)
-    246
-
 
 .. code-block:: python
 
@@ -123,7 +103,6 @@ Convert json to binary format:
 
     >>> convert.MultiWorkersConverter(
     ...    graph_path=data_filename,
-    ...    meta_path=meta_filename,
     ...    partition_count=partitions,
     ...    output_dir=working_dir,
     ...    decoder_type=JsonDecoder,
