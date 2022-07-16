@@ -126,7 +126,7 @@ Convert json to binary format:
     ...    meta_path=meta_filename,
     ...    partition_count=partitions,
     ...    output_dir=working_dir,
-    ...    decoder_type=JsonDecoder,
+    ...    decoder=JsonDecoder,
     ... ).convert()
 
 Now we can initialize the graph engine in local mode:
