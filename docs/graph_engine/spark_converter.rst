@@ -112,6 +112,7 @@ Spark task is very straitforward: deserialize node from json and pass it to both
 
     >>> from pyspark import TaskContext
     >>> from deepgnn.graph_engine.snark.converter.writers import BinaryWriter
+    >>> from deepgnn.graph_engine.snark.decoders import JsonDecoder
     >>> class SparkTask:
     ...     def __init__(self, binary_dir: str):
     ...         self.binary_dir = binary_dir
@@ -119,13 +120,13 @@ Spark task is very straitforward: deserialize node from json and pass it to both
     ...     def __call__(self, iterator):
     ...         tc = TaskContext()
     ...         id = tc.partitionId()
-    ...         nw = BinaryWriter(self.binary_dir, id)
+    ...         decoder = JsonDecoder()
+    ...         writer = BinaryWriter(self.binary_dir, id)
     ...         pm = PartitionMeta(id)
     ...         for n in iterator:
-    ...             node = json.loads(n)
-    ...             nw.add(node)
-    ...             pm.add(node)
-    ...         nw.close()
+    ...             writer.add(decoder.decode(n))
+    ...             pm.add(json.loads(n))
+    ...         writer.close()
     ...         pm.close(self.binary_dir)
 
 We can now run the job and split it across `NUM_PARTITIONS`:
