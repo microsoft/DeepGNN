@@ -31,8 +31,8 @@ class BinaryWriter:
         suffix: int,
         node_type_num: int,
         edge_type_num: int,
-        skip_node_sampler: bool,
-        skip_edge_sampler: bool,
+        skip_node_sampler: bool = False,
+        skip_edge_sampler: bool = False,
     ):
         """Initialize writer and create binary files.
 
