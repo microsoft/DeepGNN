@@ -75,7 +75,7 @@ Now we can convert graph to binary data:
 	...    graph_path=raw_file,
 	...    partition_count=1,
 	...    output_dir=working_dir.name,
-	...    decoder_type=JsonDecoder,
+	...    decoder=JsonDecoder,
 	... ).convert()
 
 Create a client to use from the temp folder:

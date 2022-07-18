@@ -91,7 +91,7 @@ We generate this dataset with networkx, save it to json format and use snark to 
 	...     graph_path=data_filename,
 	...     partition_count=partitions,
 	...     output_dir=working_dir,
-	...     decoder_type=JsonDecoder,
+	...     decoder=JsonDecoder,
 	... ).convert()
 
 
