@@ -2,7 +2,6 @@
 # Licensed under the MIT License.
 
 """Orchestrate multiple converters."""
-from typing import Optional
 import multiprocessing as mp
 import threading
 import platform
@@ -61,7 +60,7 @@ class PipeDispatcher(Dispatcher):
         self,
         folder: str,
         parallel: int,
-        decoder: Optional[DecoderType],
+        decoder: DecoderType,
         process: typing.Callable[
             [
                 typing.Union[mp.Queue, Connection],
@@ -225,7 +224,7 @@ class QueueDispatcher(Dispatcher):
         folder: str,
         num_partitions: int,
         partion_func: typing.Callable[[str], int],
-        decoder: Optional[DecoderType],
+        decoder: DecoderType,
         process: typing.Callable[
             [
                 typing.Union[mp.Queue, Connection],

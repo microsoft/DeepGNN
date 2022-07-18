@@ -29,8 +29,8 @@ class BinaryWriter:
         self,
         folder: str,
         suffix: int,
-        skip_node_sampler: bool,
-        skip_edge_sampler: bool,
+        skip_node_sampler: bool = False,
+        skip_edge_sampler: bool = False,
     ):
         """Initialize writer and create binary files.
 
