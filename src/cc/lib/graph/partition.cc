@@ -443,8 +443,8 @@ void Partition::GetNodeStringFeature(uint64_t internal_node_id, std::span<const 
 
 template <class F>
 size_t NeighborIndexIterator(uint64_t internal_id, std::span<const Type> edge_types, F func,
-                             std::vector<uint64_t> m_neighbors_index, std::vector<Type> m_edge_types,
-                             std::vector<uint64_t> m_edge_type_offset)
+                               const std::vector<uint64_t>& m_neighbors_index,  const std::vector<Type>& m_edge_types,
+                               const std::vector<uint64_t>& m_edge_type_offset)
 
 {
     const auto offset = m_neighbors_index[internal_id];

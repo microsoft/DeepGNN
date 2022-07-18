@@ -454,14 +454,14 @@ TEST(DistributedTest, NeighborCountMultipleServers)
 
 TEST(DistributedTest, NeighborCountMultipleTypesMultipleServers)
 {
-    auto environment = CreateMultiServerEnvironment("FullNeighborsMultipleServers");
+    auto environment = CreateMultiServerEnvironment("NeighborCountMultipleTypesMultipleServers");
     auto &c = *environment.second;
 
-    std::vector<snark::NodeId> input_nodes = {0, 55};
+    std::vector<snark::NodeId> input_nodes = {0, 55, 100};
     std::vector<snark::Type> input_types = {0};
     std::vector<uint64_t> output_counts(input_nodes.size());
     c.NeighborCount(std::span(input_nodes), std::span(input_types), std::span(output_counts));
-    EXPECT_EQ(output_counts, std::vector<uint64_t>({4, 4}));
+    EXPECT_EQ(output_counts, std::vector<uint64_t>({4, 4, 0}));
 }
 
 TEST(DistributedTest, FullNeighborsMultipleTypesMultipleServers)

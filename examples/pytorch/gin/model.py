@@ -157,26 +157,15 @@ class GIN(nn.Module):
     
     def next_layer(self, h, layer, context):
 
-        # neighbors = context["neighbors"]
-        # get_logger().info(f"-"+str(neighbors.shape))
+
+        pooled = context['features']
 
 
-        pooled = sum(context['features'])
-
-        # Sum Pooling
-        # feature_matrix = torch.cat([context["features"]], 0).to(self.device)
-        # edge_matrix = torch.cat([context["neighbors"]], 0).to(self.device)
-        # pooled = torch.spmm(feature_matrix, edge_matrix)
-
+        # Average Pooling
         if self.neighbor_pooling_type == "average":
             degree = sum(context['label'])
             pooled = pooled / degree
-
-        # Average Pooling
-        # if self.neighbor_pooling_type == "average":
-            #degree = torch.cat([context["label"]], 0).to(self.device)
-            #pooled = pooled/degree
-
+            
         #representation of neighboring and center nodes 
         pooled_rep = self.mlps[layer](pooled)
         h = self.batch_norms[layer](pooled_rep)

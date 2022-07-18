@@ -653,10 +653,6 @@ void GRPCClient::NeighborCount(std::span<const NodeId> node_ids, std::span<const
                 {
                     const auto &reply = replies[reply_index];
                     const auto count = reply.neighbor_counts(curr_node);
-                    if (count == 0)
-                    {
-                        continue;
-                    }
                     output_neighbor_counts[curr_node] += count;
                 }
             }

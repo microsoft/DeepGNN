@@ -43,6 +43,7 @@ py_test(
         requirement("opencensus"),
         requirement("grpcio"),
         requirement("grpcio-health-checking"),
+        requirement("fsspec"),
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
         requirement("azure-datalake-store"),

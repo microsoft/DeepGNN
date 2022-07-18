@@ -649,7 +649,7 @@ int32_t NeighborCount(PyGraph *py_graph, NodeID *in_node_ids, size_t in_node_ids
     }
     catch (const std::exception &e)
     {
-        RAW_LOG_ERROR("Exception while sampling neighbors: %s", e.what());
+        RAW_LOG_ERROR("Exception while fetching neighbor count: %s", e.what());
         return 1;
     }
 
