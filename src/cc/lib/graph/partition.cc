@@ -480,6 +480,7 @@ size_t NeighborIndexIterator(uint64_t internal_id, std::span<const Type> edge_ty
             const auto last = m_edge_type_offset[i + 1];
 
             result += func(start, last, i);
+            // func(start, last, i);
         }
     }
     return result;

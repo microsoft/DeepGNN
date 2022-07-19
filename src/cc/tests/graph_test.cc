@@ -1058,21 +1058,21 @@ TEST(GraphTest, GetNeigborCountSinglePartition)
 
     // Check for different singe edge type filter
     types = {1};
-    std::fill_n(output_neighbors_count.begin(), 2, 0);
+    std::fill_n(output_neighbors_count.begin(), 2, -1);
 
     g.NeighborCount(std::span(nodes), std::span(types), output_neighbors_count);
     EXPECT_EQ(std::vector<uint64_t>({0, 1}), output_neighbors_count);
 
     // Check for both edge types
     types = {0, 1};
-    std::fill_n(output_neighbors_count.begin(), 2, 0);
+    std::fill_n(output_neighbors_count.begin(), 2, -1);
 
     g.NeighborCount(std::span(nodes), std::span(types), output_neighbors_count);
     EXPECT_EQ(std::vector<uint64_t>({2, 3}), output_neighbors_count);
 
     // Check returns 0 for unsatisfying edge types
     types = {-1, 100};
-    std::fill_n(output_neighbors_count.begin(), 2, 0);
+    std::fill_n(output_neighbors_count.begin(), 2, -1);
 
     g.NeighborCount(std::span(nodes), std::span(types), output_neighbors_count);
     EXPECT_EQ(std::vector<uint64_t>({0, 0}), output_neighbors_count);
@@ -1080,7 +1080,7 @@ TEST(GraphTest, GetNeigborCountSinglePartition)
     // Invalid node ids
     nodes = {99, 100};
     types = {0, 1};
-    std::fill_n(output_neighbors_count.begin(), 2, 0);
+    std::fill_n(output_neighbors_count.begin(), 2, -1);
 
     g.NeighborCount(std::span(nodes), std::span(types), output_neighbors_count);
     EXPECT_EQ(std::vector<uint64_t>({0, 0}), output_neighbors_count);
@@ -1155,14 +1155,14 @@ TEST(GraphTest, GetNeigborCountMultiplePartitions)
 
     // Check for multiple edge types
     types = {0, 1};
-    std::fill_n(output_neighbors_count.begin(), 2, 0);
+    std::fill_n(output_neighbors_count.begin(), 2, -1);
 
     g.NeighborCount(std::span(nodes), std::span(types), output_neighbors_count);
     EXPECT_EQ(std::vector<uint64_t>({2, 5}), output_neighbors_count);
 
     // Check non-existent edge types functionality
     types = {-1, 100};
-    std::fill_n(output_neighbors_count.begin(), 2, 0);
+    std::fill_n(output_neighbors_count.begin(), 2, -1);
 
     g.NeighborCount(std::span(nodes), std::span(types), output_neighbors_count);
     EXPECT_EQ(std::vector<uint64_t>({0, 0}), output_neighbors_count);
@@ -1170,7 +1170,7 @@ TEST(GraphTest, GetNeigborCountMultiplePartitions)
     // Check invalid node ids handling
     nodes = {99, 100};
     types = {0, 1};
-    std::fill_n(output_neighbors_count.begin(), 2, 0);
+    std::fill_n(output_neighbors_count.begin(), 2, -1);
 
     g.NeighborCount(std::span(nodes), std::span(types), output_neighbors_count);
     EXPECT_EQ(std::vector<uint64_t>({0, 0}), output_neighbors_count);
