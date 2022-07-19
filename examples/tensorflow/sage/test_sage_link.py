@@ -175,25 +175,12 @@ def prepare_user_teams_graph(working_dir):
         nodes.append(node)
         # {"0":dict([(str(u_id),1.0) for u_id in all_uids])}
 
-    meta = '{"node_float_feature_num": 0, \
-             "edge_binary_feature_num": 0, \
-             "edge_type_num": 3, \
-             "edge_float_feature_num": 1, \
-             "node_type_num": 2, \
-             "node_uint64_feature_num": 0, \
-             "node_binary_feature_num": 0, \
-             "edge_uint64_feature_num": 0}'
-
     raw_file = working_dir + "/data.json"
     with open(raw_file, "w+") as f:
         f.write(data)
-    meta_file = working_dir + "/meta.json"
-    with open(meta_file, "w+") as f:
-        f.write(meta)
 
     convert.MultiWorkersConverter(
         graph_path=raw_file,
-        meta_path=meta_file,
         partition_count=1,
         output_dir=working_dir,
         decoder=decoders.JsonDecoder(),

@@ -420,7 +420,6 @@ def tiny_graph():
 
     convert.MultiWorkersConverter(
         graph_path=os.path.join(graph_dir.name, "twinbert/tiny_graph.json"),
-        meta_path=os.path.join(graph_dir.name, "twinbert/tiny_meta.json"),
         partition_count=1,
         output_dir=graph_dir.name,
         decoder=JsonDecoder(),

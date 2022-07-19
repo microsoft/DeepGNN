@@ -2,7 +2,6 @@
 # Licensed under the MIT License.
 
 """Conversion functions to internal binary format."""
-import tempfile
 from typing import Optional
 import multiprocessing as mp
 import math
@@ -16,7 +15,6 @@ from deepgnn.graph_engine.snark.dispatcher import (
     PipeDispatcher,
     Dispatcher,
 )
-import deepgnn.graph_engine.snark.meta as mt
 
 
 class MultiWorkersConverter:
@@ -25,7 +23,6 @@ class MultiWorkersConverter:
     def __init__(
         self,
         graph_path: str,
-        meta_path: str,
         output_dir: str,
         decoder: Optional[DecoderType] = None,
         partition_count: int = 1,
@@ -43,7 +40,6 @@ class MultiWorkersConverter:
 
         Args:
             graph_path: the raw graph file folder.
-            meta_path: the path of the meta.json.
             output_dir: the output directory to put the generated graph binary files.
             decoder (Decoder): Decoder object which is used to parse the raw graph data file.
             partition_count: how many partitions will be generated.
@@ -60,7 +56,6 @@ class MultiWorkersConverter:
         if decoder is None:
             decoder = JsonDecoder()  # type: ignore
         self.graph_path = graph_path
-        self.meta_path = meta_path
         self.worker_index = worker_index
         self.worker_count = worker_count
         self.output_dir = output_dir
@@ -72,10 +67,6 @@ class MultiWorkersConverter:
         self.dispatcher = dispatcher
 
         self.fs, _ = get_fs(graph_path)
-        # download the meta.json to local folder for dispatcher.
-        tmp_folder = tempfile.TemporaryDirectory()
-        meta_path_local = mt._get_meta_path(tmp_folder.name)
-        self.fs.get_file(meta_path, meta_path_local)
 
         # calculate the partition offset and count of this worker.
         self.partition_count = int(math.ceil(partition_count / worker_count))
@@ -93,7 +84,6 @@ class MultiWorkersConverter:
             self.dispatcher = PipeDispatcher(
                 self.output_dir,
                 self.partition_count,
-                meta_path_local,
                 self.decoder,  # type: ignore
                 partition_offset=self.partition_offset,
                 use_threads=use_threads,
@@ -123,9 +113,11 @@ class MultiWorkersConverter:
             num_workers=self.worker_count,
         )
 
-        for _, data in enumerate(dataset):
-            for line in data:
-                d.dispatch(line)
+        for data in dataset:
+            data_len = len(data)
+            split_len = data_len // self.thread_count + 1
+            for i in range(0, data_len, split_len):
+                d.dispatch(data[i : i + split_len])
 
         d.join()
 
@@ -147,17 +139,9 @@ class MultiWorkersConverter:
                     "\n",
                     str(d.prop("edge_type_num")),
                     "\n",
-                    str(
-                        int(d.prop("node_float_feature_num"))
-                        + int(d.prop("node_binary_feature_num"))
-                        + int(d.prop("node_uint64_feature_num"))
-                    ),
+                    str(d.prop("node_feature_num")),
                     "\n",
-                    str(
-                        int(d.prop("edge_float_feature_num"))
-                        + int(d.prop("edge_binary_feature_num"))
-                        + int(d.prop("edge_uint64_feature_num"))
-                    ),
+                    str(d.prop("edge_feature_num")),
                     "\n",
                     str(len(d.prop("partitions"))),
                     "\n",
@@ -206,9 +190,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "-n", "--worker_count", type=int, default=1, help="Number of workers"
     )
-    parser.add_argument(
-        "-m", "--meta", help="Metadata about graph: number of node, types, etc"
-    )
     parser.add_argument("-o", "--out", help="Output folder to store binary data")
     parser.add_argument(
         "-t",
@@ -237,7 +218,6 @@ if __name__ == "__main__":
 
     c = MultiWorkersConverter(
         graph_path=args.data,
-        meta_path=args.meta,
         partition_count=args.partitions,
         output_dir=args.out,
         worker_index=args.worker_index,
