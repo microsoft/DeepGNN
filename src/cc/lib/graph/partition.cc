@@ -176,6 +176,7 @@ void Partition::ReadEdgeIndex(std::filesystem::path path, std::string suffix)
 
     // Extra padding to simplify edge type count calculations.
     m_neighbors_index.back() = m_edge_types.size();
+    m_neighbors_index.push_back(m_edge_types.size());  // Fix for 0 edges in partition
     m_edge_types.push_back(edge.m_type);
     m_edge_type_offset.push_back(m_edge_destination.size());
     m_edge_destination.push_back(edge.m_dst);
