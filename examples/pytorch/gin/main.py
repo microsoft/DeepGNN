@@ -48,9 +48,10 @@ def create_model(args: argparse.Namespace):
     if args.algo == "supervised":
         get_logger().info(f"Creating GIN model with seed:{args.seed}.")
         return GIN(
-            num_layers=5, 
+            metric=F1Score(),
+            num_layers=1, 
             num_mlp_layers=2, 
-            input_dim=121,
+            input_dim=140,
             hidden_dim=140, 
             output_dim=64, 
             final_dropout=0.5, 
