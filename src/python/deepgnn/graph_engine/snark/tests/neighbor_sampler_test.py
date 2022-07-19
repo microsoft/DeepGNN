@@ -105,25 +105,15 @@ def triangle_graph_json(folder):
         json.dump(el, data)
         data.write("\n")
     data.flush()
-
-    meta = open(os.path.join(folder, "meta.txt"), "w+")
-    meta.write(
-        '{"node_type_num": 3, "edge_type_num": 2, \
-        "node_uint64_feature_num": 1, "node_float_feature_num": 2, \
-        "node_binary_feature_num": 1, "edge_uint64_feature_num": 1, \
-        "edge_float_feature_num": 1, "edge_binary_feature_num": 1}'
-    )
-    meta.flush()
     data.close()
-    meta.close()
-    return data.name, meta.name
+    return data.name
 
 
 @pytest.fixture(scope="module")
 def triangle_graph_data():
     workdir = tempfile.TemporaryDirectory()
-    data_name, meta_name = triangle_graph_json(workdir.name)
-    yield data_name, meta_name
+    data_name = triangle_graph_json(workdir.name)
+    yield data_name
     workdir.cleanup()
 
 
@@ -141,10 +131,9 @@ def setup_module():
 @pytest.fixture(scope="module")
 def default_triangle_graph():
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name = triangle_graph_data(output.name)
+    data_name = triangle_graph_data(output.name)
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
     ).convert()
@@ -164,13 +153,10 @@ class Counter:
 @pytest.fixture(scope="module")
 def multi_partition_graph_data():
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name = triangle_graph_json(output.name)
-    d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, meta_name, Counter(), JsonDecoder()
-    )
+    data_name = triangle_graph_json(output.name)
+    d = dispatcher.QueueDispatcher(Path(output.name), 2, Counter(), JsonDecoder())
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
         decoder=JsonDecoder(),
@@ -374,31 +360,17 @@ def karate_club_json(folder):
         json.dump(el, data)
         data.write("\n")
     data.flush()
-
-    meta = open(os.path.join(folder, "meta.txt"), "w+")
-    meta.write(
-        '{"node_type_num": 1, "edge_type_num": 1, \
-        "node_uint64_feature_num": 0, "node_float_feature_num": 0, \
-        "node_binary_feature_num": 0, "edge_uint64_feature_num": 0, \
-        "edge_float_feature_num": 0, "edge_binary_feature_num": 0}'
-    )
-    meta.flush()
     data.close()
-    meta.close()
-
-    return data.name, meta.name
+    return data.name
 
 
 @pytest.fixture(scope="module")
 def karate_club_graph():
     with tempfile.TemporaryDirectory() as workdir:
-        data_name, meta_name = karate_club_json(workdir)
-        d = dispatcher.QueueDispatcher(
-            Path(workdir), 2, meta_name, Counter(), JsonDecoder()
-        )
+        data_name = karate_club_json(workdir)
+        d = dispatcher.QueueDispatcher(Path(workdir), 2, Counter(), JsonDecoder())
         convert.MultiWorkersConverter(
             graph_path=data_name,
-            meta_path=meta_name,
             partition_count=2,
             output_dir=workdir,
             decoder=JsonDecoder(),

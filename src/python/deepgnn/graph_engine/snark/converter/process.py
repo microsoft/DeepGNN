@@ -25,8 +25,6 @@ def converter_process(
     q_out: mp.Queue,
     folder: str,
     suffix: int,
-    node_type_num: int,
-    edge_type_num: int,
     decoder: DecoderType,
     skip_node_sampler: bool,
     skip_edge_sampler: bool,
@@ -38,8 +36,6 @@ def converter_process(
         q_out (mp.Queue): signal processing is done
         folder (str): where to save binaries
         suffix (int): file suffix in the name of binary files
-        node_type_num (int): number of node types in the graph
-        edge_type_num (int): number of edge types in the graph
         decoder (Decoder): Decoder object which is used to parse the raw graph data file.
         skip_node_sampler(bool): skip generation of node alias tables
         skip_edge_sampler(bool): skip generation of edge alias tables
@@ -50,22 +46,20 @@ def converter_process(
     binary_writer = writers.BinaryWriter(
         str(folder),
         suffix,
-        node_type_num,
-        edge_type_num,
         skip_node_sampler,
         skip_edge_sampler,
     )
-
     while True:
         if type(q_in) == Connection:
-            line = q_in.recv()  # type: ignore
+            lines = q_in.recv()  # type: ignore
         else:
-            line = q_in.get()  # type: ignore
+            lines = q_in.get()  # type: ignore
 
-        if line == FLAG_ALL_DONE:
+        if lines == FLAG_ALL_DONE:
             break
 
-        binary_writer.add(decoder.decode(line))  # type: ignore
+        for line in lines:
+            binary_writer.add(decoder.decode(line))  # type: ignore
 
     binary_writer.close()
     q_out.put(
@@ -74,6 +68,10 @@ def converter_process(
             {
                 "node_count": binary_writer.node_count,
                 "edge_count": binary_writer.edge_count,
+                "node_type_num": binary_writer.node_type_num,
+                "edge_type_num": binary_writer.edge_type_num,
+                "node_feature_num": binary_writer.node_feature_num,
+                "edge_feature_num": binary_writer.edge_feature_num,
                 "partition": {
                     "id": suffix,
                     "node_weight": binary_writer.node_weight,

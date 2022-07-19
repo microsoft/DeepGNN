@@ -121,7 +121,7 @@ Spark task is very straitforward: deserialize node from json and pass it to both
     ...         tc = TaskContext()
     ...         id = tc.partitionId()
     ...         decoder = JsonDecoder()
-    ...         writer = BinaryWriter(self.binary_dir, id, 10, 10)
+    ...         writer = BinaryWriter(self.binary_dir, id)
     ...         pm = PartitionMeta(id)
     ...         for n in iterator:
     ...             writer.add(decoder.decode(n))

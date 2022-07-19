@@ -9,3 +9,5 @@
 * Make Decoder.decode a generator that yields a node then its outgoing edges in order. The yield format for nodes/edges is (node_id/src, -1/dst, type, weight, features), with features being a list of dense features as ndarrays and sparse features as 2 tuples, coordinates and values.
 
 * Add BinaryWriter as new entry point for NodeWriter, EdgeWriter and alias writers.
+
+* Meta.json files are no longer needed by the converter. Remove meta path argument from MultiWorkerConverter and Dispatchers.
