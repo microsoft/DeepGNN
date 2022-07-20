@@ -447,7 +447,9 @@ TEST(DistributedTest, NeighborCountMultipleServers)
     snark::GRPCClient c(std::move(channels), 1, 1);
     std::vector<snark::NodeId> input_nodes = {0};
     std::vector<snark::Type> input_types = {0, 1};
-    std::vector<uint64_t> output_counts(input_nodes.size());
+    size_t size = input_nodes.size();
+    std::vector<uint64_t> output_counts(size);
+    std::fill_n(std::begin(output_counts), size, -1); // Fill with -1 to check update
     c.NeighborCount(std::span(input_nodes), std::span(input_types), std::span(output_counts));
     EXPECT_EQ(output_counts, std::vector<uint64_t>({3}));
 }

@@ -286,10 +286,12 @@ void Graph::NeighborCount(std::span<const NodeId> input_node_ids, std::span<cons
                           std::span<uint64_t> output_neighbors_counts) const
 
 {
-    for (size_t idx = 0; idx < input_node_ids.size(); ++idx)
+    size_t num_nodes = input_node_ids.size();
+    std::fill_n(std::begin(output_neighbors_counts), num_nodes, 0);
+
+    for (size_t idx = 0; idx < num_nodes; ++idx)
     {
         auto internal_id = m_node_map.find(input_node_ids[idx]);
-        output_neighbors_counts[idx] = 0;
 
         if (internal_id == std::end(m_node_map))
         {
