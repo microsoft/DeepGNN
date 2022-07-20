@@ -96,22 +96,8 @@ class BinaryWriter:
                 self.node_count += 1
             else:
                 if src != prev_node_id:
-                    node_typ = 0
-                    node_weight = 0
-                    node_type_num_value = node_typ + 1
-                    if node_type_num_value > self.node_type_num:
-                        for _ in range(node_type_num_value - self.node_type_num):
-                            # self.node_alias.add_type()
-                            self.node_weight.append(0)
-                            self.node_type_count.append(0)
-                        self.node_type_num = node_type_num_value
-                    self.node_writer.add(src, 0, [])
+                    self.node_writer.add(src, -1, [])
                     self.edge_writer.add_node()
-                    # self.node_alias.add(src, node_typ, node_weight)
-                    self.node_weight[node_typ] += float(node_weight)
-                    self.node_type_count[node_typ] += 1
-                    self.node_count += 1
-
                     prev_node_id = src
                 if type_num_value > self.edge_type_num:
                     for _ in range(type_num_value - self.edge_type_num):

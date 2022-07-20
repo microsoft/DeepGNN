@@ -1484,15 +1484,7 @@ def test_multi_partition_metadata():
 
 def test_edges_different_partition():
     # Node not given at first before outgoing edges
-    output = type("Fake", (object,), {"name": "/tmp/edge_test"})()
-    import shutil
-
-    for filename in os.listdir(output.name):
-        filepath = os.path.join(output.name, filename)
-        try:
-            shutil.rmtree(filepath)
-        except OSError:
-            os.remove(filepath)
+    output = tempfile.TemporaryDirectory()
 
     partitions = [0, 1]
     writer = BinaryWriter(output.name, partitions[0])
@@ -1521,18 +1513,7 @@ def test_edges_different_partition():
     assert v1[2][0] == 0
 
     # Second node not given before its outgoing edges
-    # output = tempfile.TemporaryDirectory()
-    output = type(
-        "Fake", (object,), {"name": "/tmp/edge_test"}
-    )()  # tempfile.TemporaryDirectory()
-    import shutil
-
-    for filename in os.listdir(output.name):
-        filepath = os.path.join(output.name, filename)
-        try:
-            shutil.rmtree(filepath)
-        except OSError:
-            os.remove(filepath)
+    output = tempfile.TemporaryDirectory()
 
     partitions = [0, 1]
     writer = BinaryWriter(output.name, partitions[0], False, False)
