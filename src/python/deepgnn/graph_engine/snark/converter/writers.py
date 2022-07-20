@@ -77,9 +77,11 @@ class BinaryWriter:
                 its edges in order of dst. Each entry for a node/edge is,
                 (node_id/src, -1/dst, type, weight, [ndarray for each feature vector or None in order of feature index]).
         """
+        prev_node_id = -1
         for src, dst, typ, weight, features in data:
             type_num_value = typ + 1
             if dst == -1:
+                prev_node_id = src
                 if type_num_value > self.node_type_num:
                     for _ in range(type_num_value - self.node_type_num):
                         self.node_alias.add_type()
@@ -87,11 +89,30 @@ class BinaryWriter:
                         self.node_type_count.append(0)
                     self.node_type_num = type_num_value
                 self.node_writer.add(src, typ, features)
+                self.edge_writer.add_node()  # neighbor index
                 self.node_alias.add(src, typ, weight)
                 self.node_weight[typ] += float(weight)
                 self.node_type_count[typ] += 1
                 self.node_count += 1
             else:
+                if src != prev_node_id:
+                    node_typ = 0
+                    node_weight = 0
+                    node_type_num_value = node_typ + 1
+                    if node_type_num_value > self.node_type_num:
+                        for _ in range(node_type_num_value - self.node_type_num):
+                            # self.node_alias.add_type()
+                            self.node_weight.append(0)
+                            self.node_type_count.append(0)
+                        self.node_type_num = node_type_num_value
+                    self.node_writer.add(src, 0, [])
+                    self.edge_writer.add_node()
+                    # self.node_alias.add(src, node_typ, node_weight)
+                    self.node_weight[node_typ] += float(node_weight)
+                    self.node_type_count[node_typ] += 1
+                    self.node_count += 1
+
+                    prev_node_id = src
                 if type_num_value > self.edge_type_num:
                     for _ in range(type_num_value - self.edge_type_num):
                         self.edge_alias.add_type()
@@ -251,7 +272,6 @@ class EdgeWriter:
             "wb",
         )
         self.efi_pos = self.efi.tell()
-        self.prev_src = -1
 
         self.feature_writer = EdgeFeatureWriter(folder, partition, self.efi)
 
@@ -271,10 +291,6 @@ class EdgeWriter:
             weight: float
             features: list[ndarray]
         """
-        if src != self.prev_src:
-            self.add_node()
-            self.prev_src = src
-
         # Record order is important for C++ reader: order fields by size for faster load.
         self.ei.write(
             struct.pack(
@@ -591,7 +607,7 @@ def convert_features(features: list):
             if values.dtype == np.float16:
                 values_buf = np.array(values, dtype=np.float16).tobytes()
             else:
-                values_buf = (np.ctypeslib.as_ctypes_type(values.dtype) * len(values))()
+                values_buf = (np.ctypeslib.as_ctypes_type(values.dtype) * len(values))()  # type: ignore
                 values_buf[:] = values  # type: ignore
 
             # For matrices the number of values might be different than number of coordinates

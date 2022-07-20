@@ -1422,56 +1422,6 @@ def test_health_check(no_features_graph):
     s.reset()
 
 
-def test_edges_different_partition():
-    # Node not given at first before outgoing edges
-    output = tempfile.TemporaryDirectory()
-    partitions = [0, 1]
-    writer = BinaryWriter(output.name, partitions[0], False, False)
-    writer.add([(0, 1, 0, 1.0, [])])
-    writer.close()
-    writer = BinaryWriter(output.name, partitions[1], False, False)
-    writer.add([(-1, 0, 0, 1.0, []), (-1, 1, 0, 1.0, [])])
-    writer.close()
-    meta = open(os.path.join(output.name, "meta.txt"), "w+")
-    meta.write("2\n1\n1\n1\n0\n0\n2\n0\n0\n1\n1\n2\n0\n2\n1\n")
-    meta.close()
-
-    cl = client.MemoryGraph(output.name, partitions, client.PartitionStorageType.memory)
-    node_ids, weights, edge_types, result_counts = cl.neighbors(
-        np.array([0], dtype=np.int64), 0
-    )
-    assert result_counts[0] == 1
-    assert node_ids[0] == 1
-
-    es = client.EdgeSampler(cl, partitions)
-    v1 = es.sample(size=1, seed=1)
-    assert v1[0] == 1
-
-    # Second node not given before its outgoing edges
-    output = tempfile.TemporaryDirectory()
-    partitions = [0, 1]
-    writer = BinaryWriter(output.name, partitions[0], False, False)
-    writer.add([(-1, 0, 0, 1.0, []), (0, 1, 0, 1.0, []), (1, 0, 0, 1.0, [])])
-    writer.close()
-    writer = BinaryWriter(output.name, partitions[1], False, False)
-    writer.add([(-1, 1, 0, 1.0, [])])
-    writer.close()
-    meta = open(os.path.join(output.name, "meta.txt"), "w+")
-    meta.write("2\n1\n1\n1\n0\n0\n2\n0\n0\n1\n1\n2\n0\n2\n1\n")
-    meta.close()
-
-    cl = client.MemoryGraph(output.name, partitions, client.PartitionStorageType.memory)
-    node_ids, weights, edge_types, result_counts = cl.neighbors(
-        np.array([1], dtype=np.int64), 0
-    )
-    assert result_counts[0] == 1
-    assert node_ids[0] == 0
-
-    es = client.EdgeSampler(cl, partitions)
-    v1 = es.sample(size=1, seed=1)
-    assert v1[0] == 1
-
-
 def test_multi_partition_metadata():
     folder = tempfile.TemporaryDirectory()
     data = open(os.path.join(folder.name, "graph.json"), "w+")
@@ -1530,6 +1480,83 @@ def test_multi_partition_metadata():
     assert cl.meta.edge_type_count == 2
     assert cl.meta._node_feature_count == 2  # p0 0 features, p1 2 features
     assert cl.meta._edge_feature_count == 2
+
+
+def test_edges_different_partition():
+    # Node not given at first before outgoing edges
+    output = type("Fake", (object,), {"name": "/tmp/edge_test"})()
+    import shutil
+
+    for filename in os.listdir(output.name):
+        filepath = os.path.join(output.name, filename)
+        try:
+            shutil.rmtree(filepath)
+        except OSError:
+            os.remove(filepath)
+
+    partitions = [0, 1]
+    writer = BinaryWriter(output.name, partitions[0])
+    writer.add([(0, 1, 0, 1.0, [])])
+    writer.close()
+    writer = BinaryWriter(output.name, partitions[1])
+    writer.add([(0, -1, 0, 1.0, []), (1, -1, 0, 1.0, []), (1, 0, 0, 1.0, [])])
+    writer.close()
+    meta = open(os.path.join(output.name, "meta.txt"), "w+")
+    meta.write("2\n1\n1\n1\n0\n0\n2\n0\n0\n1\n1\n2\n0\n2\n1\n")
+    meta.close()
+
+    cl = client.MemoryGraph(output.name, partitions, client.PartitionStorageType.memory)
+    node_ids, weights, edge_types, result_counts = cl.neighbors(
+        np.array([0], dtype=np.int64), 0
+    )
+
+    assert result_counts[0] == 1
+    assert node_ids[0] == 1
+
+    es = client.EdgeSampler(cl, partitions[0])
+    v1 = es.sample(size=1, seed=1)
+    assert v1[0].size == 1
+    assert v1[0][0] == 0
+    assert v1[1][0] == 1
+    assert v1[2][0] == 0
+
+    # Second node not given before its outgoing edges
+    # output = tempfile.TemporaryDirectory()
+    output = type(
+        "Fake", (object,), {"name": "/tmp/edge_test"}
+    )()  # tempfile.TemporaryDirectory()
+    import shutil
+
+    for filename in os.listdir(output.name):
+        filepath = os.path.join(output.name, filename)
+        try:
+            shutil.rmtree(filepath)
+        except OSError:
+            os.remove(filepath)
+
+    partitions = [0, 1]
+    writer = BinaryWriter(output.name, partitions[0], False, False)
+    writer.add([(0, -1, 0, 1.0, []), (0, 1, 0, 1.0, []), (1, 0, 0, 1.0, [])])
+    writer.close()
+    writer = BinaryWriter(output.name, partitions[1], False, False)
+    writer.add([(1, -1, 0, 1.0, []), (2, -1, 0, 1.0, []), (1, 2, 0, 1.0, [])])
+    writer.close()
+    meta = open(os.path.join(output.name, "meta.txt"), "w+")
+    meta.write("2\n1\n1\n1\n0\n0\n2\n0\n0\n1\n1\n2\n0\n2\n1\n")
+    meta.close()
+
+    cl = client.MemoryGraph(output.name, partitions, client.PartitionStorageType.memory)
+    node_ids, weights, edge_types, result_counts = cl.neighbors(
+        np.array([0, 1, 2], dtype=np.int64), 0
+    )
+    npt.assert_equal(result_counts, np.array([1, 2, 0]))
+    npt.assert_equal(node_ids, np.array([1, 0, 2]))
+
+    es = client.EdgeSampler(cl, partitions)
+    src, dst, types = es.sample(size=3, seed=1)
+    npt.assert_equal(src, np.array([0, 1, 1]))
+    npt.assert_equal(dst, np.array([1, 0, 0]))
+    npt.assert_equal(types, np.array([0, 0, 0]))
 
 
 if __name__ == "__main__":
