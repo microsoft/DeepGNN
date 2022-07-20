@@ -51,15 +51,14 @@ def converter_process(
     )
     while True:
         if type(q_in) == Connection:
-            lines = q_in.recv()  # type: ignore
+            line = q_in.recv()  # type: ignore
         else:
-            lines = q_in.get()  # type: ignore
+            line = q_in.get()  # type: ignore
 
-        if lines == FLAG_ALL_DONE:
+        if line == FLAG_ALL_DONE:
             break
 
-        for line in lines:
-            binary_writer.add(decoder.decode(line))  # type: ignore
+        binary_writer.add(decoder.decode(line))  # type: ignore
 
     binary_writer.close()
     q_out.put(

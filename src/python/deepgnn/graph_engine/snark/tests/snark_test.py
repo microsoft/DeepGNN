@@ -110,15 +110,15 @@ def test_snark_backend_local_graph_sample_nodes(memory_graph):
         5, np.array([0], dtype=np.int32), SamplingStrategy.Weighted
     )
 
-    npt.assert_equal([109, 42, 338, 245, 138], result)
-    npt.assert_equal([18, 279, 11, 86, 328], nodes)
+    npt.assert_equal([122, 82, 210, 317, 219], result)
+    npt.assert_equal([36, 276, 83, 295, 259], nodes)
     npt.assert_equal([0] * 5, types)
 
 
 def test_snark_backend_local_graph_sample_edges(memory_graph):
     random.seed(42)
     values = memory_graph.sample_edges(2, 0, SamplingStrategy.Weighted)
-    npt.assert_equal([[134, 143, 0], [155, 147, 0]], values)
+    npt.assert_equal([[174, 168, 0], [129, 128, 0]], values)
 
 
 @pytest.mark.xfail
@@ -128,7 +128,7 @@ def test_snark_backend_local_graph_sample_neighbors(memory_graph):
     nbs, wt, tp, _ = memory_graph.sample_neighbors(
         np.array([1, 3], dtype=np.int64), 0, 3
     )
-    npt.assert_equal([[2, 10, 11], [7, 10, 4]], nbs)
+    npt.assert_equal([[11, 6, 9], [5, 2, 11]], nbs)
     npt.assert_equal([[1, 1, 1], [1, 1, 1]], wt)
     npt.assert_equal([[0, 0, 0], [0, 0, 0]], tp)
 
@@ -170,15 +170,15 @@ def test_snark_backend_distributed_graph_sample_nodes(distributed_graph):
         5, np.array([0], dtype=np.int32), SamplingStrategy.Weighted
     )
 
-    npt.assert_equal([27, 153, 245, 242, 72], result)
-    npt.assert_equal([103, 123, 255, 56, 153], nodes)
+    npt.assert_equal([52, 146, 30, 238, 125], result)
+    npt.assert_equal([110, 150, 36, 241, 21], nodes)
     npt.assert_equal([0] * 5, types)
 
 
 def test_snark_backend_distributed_graph_sample_edges(distributed_graph):
     random.seed(42)
     values = distributed_graph.sample_edges(2, 0, SamplingStrategy.Weighted)
-    npt.assert_equal([[285, 283, 0], [3, 2, 0]], values)
+    npt.assert_equal([[237, 238, 0], [21, 13, 0]], values)
 
 
 @pytest.mark.parametrize("distributed_graph", [(2, 1), (2, 2)], indirect=True)
@@ -188,10 +188,7 @@ def test_snark_backend_distributed_graph_sample_neighbors(distributed_graph):
         np.array([1, 3], dtype=np.int64), 0, 3
     )
 
-    try:
-        npt.assert_equal([[4, 9, 4], [1, 8, 11]], nbs)
-    except Exception:
-        npt.assert_equal([[2, 10, 11], [7, 10, 4]], nbs)
+    npt.assert_equal([[4, 9, 4], [1, 8, 11]], nbs)
     npt.assert_equal([[1, 1, 1], [1, 1, 1]], wt)
     npt.assert_equal([[0, 0, 0], [0, 0, 0]], tp)
 
