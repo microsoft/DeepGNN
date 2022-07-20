@@ -17,7 +17,7 @@ import numpy.testing as npt
 import pytest
 
 import deepgnn.graph_engine.snark.client as client
-from deepgnn.graph_engine.snark.decoders import JsonDecoder
+from deepgnn.graph_engine.snark.decoders import DecoderType
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.dispatcher as dispatcher
@@ -128,19 +128,30 @@ def graph_with_sparse_features_json(folder):
         json.dump(el, data)
         data.write("\n")
     data.flush()
+
+    meta = open(os.path.join(folder, "meta.json"), "w+")
+    meta.write(
+        '{"node_type_num": 3, "edge_type_num": 2, \
+        "node_uint64_feature_num": 0, "node_float_feature_num": 1, \
+        "node_binary_feature_num": 0, "edge_uint64_feature_num": 0, \
+        "edge_float_feature_num": 1, "edge_binary_feature_num": 1}'
+    )
+    meta.flush()
     data.close()
-    return data.name
+    meta.close()
+    return data.name, meta.name
 
 
 @pytest.fixture(scope="module")
 def graph_with_sparse_features(request):
     workdir = tempfile.TemporaryDirectory()
-    data_name = graph_with_sparse_features_json(workdir.name)
+    data_name, meta_name = graph_with_sparse_features_json(workdir.name)
     convert.MultiWorkersConverter(
         graph_path=data_name,
+        meta_path=meta_name,
         partition_count=request.param,
         output_dir=workdir.name,
-        decoder=JsonDecoder(),
+        decoder_type=DecoderType.JSON,
         skip_edge_sampler=True,
         skip_node_sampler=True,
     ).convert()
@@ -194,12 +205,13 @@ def test_multiple_edges_sparse_features(graph_with_sparse_features):
 @pytest.fixture(scope="module")
 def multi_server_sparse_features_graph():
     workdir = tempfile.TemporaryDirectory()
-    data_name = graph_with_sparse_features_json(workdir.name)
+    data_name, meta_name = graph_with_sparse_features_json(workdir.name)
     convert.MultiWorkersConverter(
         graph_path=data_name,
+        meta_path=meta_name,
         partition_count=2,
         output_dir=workdir.name,
-        decoder=JsonDecoder(),
+        decoder_type=DecoderType.JSON,
         skip_edge_sampler=True,
         skip_node_sampler=True,
     ).convert()

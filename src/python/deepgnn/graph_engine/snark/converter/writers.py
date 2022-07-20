@@ -1,11 +1,12 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-"""Set of writers to convert graph from decoded format to binary."""
+"""Set of writers to convert graph from json format to binary."""
 import ctypes
 import os
 import tempfile
 import struct
+import sys
 import typing
 
 import numpy as np
@@ -16,107 +17,15 @@ from deepgnn.graph_engine._base import get_fs
 from deepgnn.graph_engine.snark.meta import _Element
 
 
-class BinaryWriter:
-    """BinaryWriter is an entry point for conversion from input files to binary files.
+class NodeWriter:
+    """
+    NodeWriter is an entry point for conversion from euler json files to DeepGNN files.
 
     Every record is parsed one by one and passed to the relevant writers below. These writers
     put data in files with the partition suffix: `node_{partition}...`. We reserve one more
     suffix to follow after partition to split large files into smaller ones, so files will have names
     like this: `node_{partition}_{iteration}...`.
     """
-
-    def __init__(
-        self,
-        folder: str,
-        suffix: int,
-        skip_node_sampler: bool = False,
-        skip_edge_sampler: bool = False,
-    ):
-        """Initialize writer and create binary files.
-
-        Args:
-            folder (str): where to save binaries
-            suffix (int): file suffix in the name of binary files
-            skip_node_sampler(bool): skip generation of node alias tables
-            skip_edge_sampler(bool): skip generation of edge alias tables
-        """
-        self.folder = folder
-        self.suffix = suffix
-        self.skip_node_sampler = skip_node_sampler
-        self.skip_edge_sampler = skip_edge_sampler
-
-        self.node_writer = NodeWriter(self.folder, self.suffix)
-        self.edge_writer = EdgeWriter(self.folder, self.suffix)
-
-        self.node_alias: typing.Union[NodeAliasWriter, _NoOpWriter] = (
-            _NoOpWriter()
-            if skip_node_sampler
-            else NodeAliasWriter(self.folder, self.suffix)
-        )
-        self.edge_alias: typing.Union[EdgeAliasWriter, _NoOpWriter] = (
-            _NoOpWriter()
-            if skip_edge_sampler
-            else EdgeAliasWriter(self.folder, self.suffix)
-        )
-
-        self.node_count: int = 0
-        self.edge_count: int = 0
-        self.node_type_num: int = 0
-        self.edge_type_num: int = 0
-        self.node_weight: typing.List[float] = []
-        self.node_type_count: typing.List[int] = []
-        self.edge_weight: typing.List[float] = []
-        self.edge_type_count: typing.List[int] = []
-
-    def add(self, data: typing.Iterator[typing.Tuple[int, int, int, float, list]]):
-        """
-        Write binary for a node and all of its edges.
-
-        args:
-            data: Iterable[(int, int, int, float, list)] Data for a node first, then all of
-                its edges in order of dst. Each entry for a node/edge is,
-                (node_id/src, -1/dst, type, weight, [ndarray for each feature vector or None in order of feature index]).
-        """
-        for src, dst, typ, weight, features in data:
-            type_num_value = typ + 1
-            if dst == -1:
-                if type_num_value > self.node_type_num:
-                    for _ in range(type_num_value - self.node_type_num):
-                        self.node_alias.add_type()
-                        self.node_weight.append(0)
-                        self.node_type_count.append(0)
-                    self.node_type_num = type_num_value
-                self.node_writer.add(src, typ, features)
-                self.edge_writer.add_node()
-                self.node_alias.add(src, typ, weight)
-                self.node_weight[typ] += float(weight)
-                self.node_type_count[typ] += 1
-                self.node_count += 1
-            else:
-                if type_num_value > self.edge_type_num:
-                    for _ in range(type_num_value - self.edge_type_num):
-                        self.edge_alias.add_type()
-                        self.edge_weight.append(0)
-                        self.edge_type_count.append(0)
-                    self.edge_type_num = type_num_value
-                self.edge_writer.add(dst, typ, weight, features)
-                self.edge_alias.add(src, dst, typ, weight)
-                self.edge_weight[typ] += weight
-                self.edge_type_count[typ] += 1
-                self.edge_count += 1
-
-    def close(self):
-        """Close output binary files."""
-        self.node_feature_num = self.node_writer.feature_writer.node_feature_num
-        self.edge_feature_num = self.edge_writer.feature_writer.edge_feature_num
-        self.node_writer.close()
-        self.edge_writer.close()
-        self.node_alias.close()
-        self.edge_alias.close()
-
-
-class NodeWriter:
-    """NodeWriter records information about nodes and adds node features to a NodeFeatureWriter."""
 
     def __init__(self, folder: str, partition: int):
         """Initialize writer and create binary files.
@@ -134,30 +43,26 @@ class NodeWriter:
         )
         self.count = 0
         self.feature_writer = NodeFeatureWriter(folder, partition)
+        self.edge_writer = EdgeWriter(folder, partition)
 
-    def add(self, node_id: int, node_type: int, features: list):
+    def add(self, node: typing.Any):
         """Write node features and data about edges from this node to binary.
 
         Args:
-            node_id: int
-            node_type: int
-            features: list[ndarray]
+            node (typing.Any): dictionary with information about
         """
-        self.nm.write(
-            struct.pack(
-                "=QQi",
-                node_id,
-                self.count,
-                node_type,
-            )
-        )
-        self.feature_writer.add(features)
+        self.nm.write(ctypes.c_uint64(node["node_id"]))  # type: ignore
+        self.nm.write(ctypes.c_uint64(self.count))  # type: ignore
+        self.nm.write(ctypes.c_int32(node["node_type"]))  # type: ignore
+        self.feature_writer.add(node)
+        self.edge_writer.add(node)
         self.count += 1
 
     def close(self):
         """Close output binary files."""
         self.nm.close()
         self.feature_writer.close()
+        self.edge_writer.close()
 
 
 class NodeFeatureWriter:
@@ -192,31 +97,25 @@ class NodeFeatureWriter:
             ),
             "wb",
         )
-        self.nfd_pos = self.nfd.tell()
 
-        self.node_feature_num = 0
-
-    def add(self, features: list):
+    def add(self, node: typing.Any):
         """Add node to binary output.
 
         Args:
-            features (list): ordered list of feature vectors as ndarrays - or None for an empty vector.
+            node (typing.Any): graph node with all node features and edges from it.
         """
         self.ni.write(ctypes.c_uint64(self.nfi.tell() // 8))  # type: ignore
-        i = -1
-        for i, k in enumerate(convert_features(features)):
+        for k in convert_features(node):
             # Fill the gaps between features
-            self.nfi.write(ctypes.c_uint64(self.nfd_pos))  # type: ignore
+            self.nfi.write(ctypes.c_uint64(self.nfd.tell()))  # type: ignore
             if k is not None:
-                self.nfd_pos += self.nfd.write(k)
-        if i + 1 > self.node_feature_num:
-            self.node_feature_num = i + 1
+                self.nfd.write(k)
 
     def close(self):
         """Close output binary files."""
         self.ni.write(ctypes.c_uint64(self.nfi.tell() // 8))
         self.ni.close()
-        self.nfi.write(ctypes.c_uint64(self.nfd_pos))
+        self.nfi.write(ctypes.c_uint64(self.nfd.tell()))
         self.nfi.close()
         self.nfd.close()
 
@@ -251,36 +150,28 @@ class EdgeWriter:
             ),
             "wb",
         )
-        self.efi_pos = self.efi.tell()
 
         self.feature_writer = EdgeFeatureWriter(folder, partition, self.efi)
 
-    def add_node(self):
-        """Add node."""
-        self.nbi.write(  # type: ignore
-            ctypes.c_uint64(self.ei.tell() // (4 + 8 + 8 + 4))
-        )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
-
-    def add(self, dst: int, tp: int, weight: float, features: list):
+    def add(self, node: typing.Any):
         """Append edges starting at node to the output.
 
         Args:
-            dst: int
-            tp: int
-            weight: float
-            features: list[ndarray]
+            node (typing.Any): node with edges data
         """
-        # Record order is important for C++ reader: order fields by size for faster load.
-        self.ei.write(
-            struct.pack(
-                "=QQif",
-                dst,
-                self.efi_pos // 8,
-                tp,
-                weight,
-            )
+        self.nbi.write(  # type: ignore
+            ctypes.c_uint64(self.ei.tell() // (4 + 8 + 8 + 4))
+        )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
+        edge_list = sorted(
+            node["edge"], key=lambda x: (int(x["edge_type"]), int(x["dst_id"]))
         )
-        self.efi_pos += self.feature_writer.add(features)
+        for item in edge_list:
+            # Record order is important for C++ reader: order fields by size for faster load.
+            self.ei.write(ctypes.c_uint64(item["dst_id"]))  # type: ignore
+            self.ei.write(ctypes.c_uint64(self.efi.tell() // 8))  # type: ignore
+            self.ei.write(ctypes.c_int32(item["edge_type"]))  # type: ignore
+            self.ei.write(ctypes.c_float(item["weight"]))  # type: ignore
+            self.feature_writer.add(item)
 
     def close(self):
         """Close output binary files."""
@@ -288,15 +179,13 @@ class EdgeWriter:
             ctypes.c_uint64(self.ei.tell() // (4 + 8 + 8 + 4))
         )  # type: ignore
         self.nbi.close()
-        self.ei.write(
-            struct.pack(
-                "=QQif",
-                0,
-                self.efi_pos // 8,
-                0,
-                -1,
-            )
-        )
+
+        self.ei.write(ctypes.c_uint64(0))  # type: ignore
+        self.ei.write(ctypes.c_uint64(self.efi.tell() // (8)))  # type: ignore
+
+        self.ei.write(ctypes.c_int32(0))  # type: ignore
+        self.ei.write(ctypes.c_float(-1))  # type: ignore
+
         self.ei.close()
         self.efi.write(ctypes.c_uint64(self.feature_writer.tell()))  # type: ignore
         self.efi.close()
@@ -317,7 +206,6 @@ class EdgeFeatureWriter:
         self.fs, _ = get_fs(folder)
         self.folder = folder
         self.partition = partition
-        self.efi = efi
         self.iteration = 0
         self.efd = self.fs.open(
             meta._get_element_features_data_path(
@@ -325,24 +213,18 @@ class EdgeFeatureWriter:
             ),
             "wb",
         )
-        self.efd_pos = self.efd.tell()
-        self.edge_feature_num = 0
+        self.efi = efi
 
-    def add(self, features: list):
+    def add(self, head: typing.Any):
         """Add edge features the binary output.
 
         Args:
-            features (list): ordered list of feature vectors as ndarrays - or None for an empty vector.
+            head (typing.Dict): collection of float/uint64/binary features.
         """
-        features_written = 0
-        i = -1
-        for i, k in enumerate(convert_features(features)):
-            features_written += self.efi.write(ctypes.c_uint64(self.efd_pos))  # type: ignore
+        for k in convert_features(head):
+            self.efi.write(ctypes.c_uint64(self.efd.tell()))  # type: ignore
             if k is not None:
-                self.efd_pos += self.efd.write(k)
-        if i + 1 > self.edge_feature_num:
-            self.edge_feature_num = i + 1
-        return features_written
+                self.efd.write(k)
 
     def tell(self) -> int:
         """Tell start position for the next feature data.
@@ -350,26 +232,16 @@ class EdgeFeatureWriter:
         Returns:
             [int]: Last position in data file.
         """
-        return self.efd_pos
+        return self.efd.tell()
 
     def close(self):
         """Close output files."""
         self.efd.close()
 
 
-class _NoOpWriter:
-    def add(self, *_: typing.Any):
-        return
-
-    def add_type(self):
-        return
-
-    def close(self):
-        return
-
-
 class NodeAliasWriter:
-    """NodeAliasWriter creates alias tables for weighted node sampling.
+    """
+    NodeAliasWriter creates alias tables for weighted node sampling.
 
     To avoid using lots of memory it utilizes temp files to store all nodes added to
     it and creates alias tables from them when the writer is closed.
@@ -377,58 +249,55 @@ class NodeAliasWriter:
     and probability to pick node [4 bytes] over alias node.
     """
 
-    def __init__(self, folder: str, partition: int):
+    def __init__(self, folder: str, partition: int, node_type_count: int):
         """Initialize alias tables.
 
         Args:
             folder (str): where to store files
             partition (int): suffix identifier for alias tables created with this writer.
+            node_type_count (int): number of node types in the graph
         """
         self.fs, _ = get_fs(folder)
         self.folder = folder
         self.partition = partition
+        self.node_type_count = node_type_count
 
         # generate temp alias file in local and then write final
         # results to destination. Hold the temp folder reference
         # to avoid deleting.
         self.meta_tmp_folder = tempfile.TemporaryDirectory()
-        self.nodes: typing.List[object] = []
-        self.weights: typing.List[object] = []
-
-    def add_type(self):
-        """Add type to alias."""
-        tp = len(self.nodes)
-        self.nodes.append(
+        self.nodes = [
             open(
                 "{}/tmp_alias_node_{}_{}.ids".format(
-                    self.meta_tmp_folder.name, tp, self.partition
+                    self.meta_tmp_folder.name, tp, partition
                 ),
                 "wb+",
             )
-        )
-        self.weights.append(
+            for tp in range(node_type_count)
+        ]
+        self.weights = [
             open(
                 "{}/tmp_alias_node_{}_{}.weights".format(
-                    self.meta_tmp_folder.name, tp, self.partition
+                    self.meta_tmp_folder.name, tp, partition
                 ),
                 "wb+",
             )
-        )
+            for tp in range(node_type_count)
+        ]
 
-    def add(self, node_id: int, tp: int, weight: float):
+    def add(self, node: typing.Any):
         """Record node information.
 
         Args:
-            node_id: int
-            tp: int
-            weight: float
+            node (typing.Any): Node with information about it's id, type and weight
         """
-        self.nodes[tp].write(ctypes.c_uint64(node_id))  # type: ignore
-        self.weights[tp].write(ctypes.c_float(weight))  # type: ignore
+        tp = node["node_type"]
+        self.nodes[tp].write(ctypes.c_uint64(node["node_id"]))
+        self.weights[tp].write(ctypes.c_float(node["node_weight"]))
 
     def close(self):
         """Convert temporary files to the final alias tables."""
-        for tp in range(len(self.nodes)):
+        for tp in range(self.node_type_count):
             wts = np.fromfile(
                 self.weights[tp],
                 dtype=np.float32,
@@ -450,7 +319,7 @@ class NodeAliasWriter:
                     right = a.elements[a.alias[index]] if a.prob[index] < 1.0 else 0
                     nw.write(struct.pack("=qqf", left, right, a.prob[index]))
 
-        for tp in range(len(self.nodes)):
+        for tp in range(self.node_type_count):
             self.weights[tp].close()
             os.remove(self.weights[tp].name)
             self.nodes[tp].close()
@@ -460,7 +329,8 @@ class NodeAliasWriter:
 
 
 class EdgeAliasWriter:
-    """EdgeAliasWriter creates alias tables for edges.
+    """
+    EdgeAliasWriter creates alias tables for edges.
 
     These tables can be used for weighted edge sampling with the same pattern
     as NodeAliasWriter. Final files have a fixed record format with following contents:
@@ -469,60 +339,56 @@ class EdgeAliasWriter:
      probability [4 bytes] to select edge over an alias element).
     """
 
-    def __init__(self, folder: str, partition: int):
+    def __init__(self, folder: str, partition: int, edge_type_count: int):
         """Initialize alias tables.
 
         Args:
             folder (str): where to store files
             partition (int): suffix identifier for alias tables created with this writer.
+            edge_type_count (int): number of edge types in the graph
         """
         self.fs, _ = get_fs(folder)
         self.folder = folder
         self.partition = partition
+        self.edge_type_count = edge_type_count
 
         # generate temp alias file in local and then write final
         # results to destination. Hold the temp folder reference
         # to avoid deleting.
         self.meta_tmp_folder = tempfile.TemporaryDirectory()
-        self.pairs: typing.List[object] = []
-        self.weights: typing.List[object] = []
-
-    def add_type(self):
-        """Add type to alias."""
-        tp = len(self.pairs)
-        self.pairs.append(
+        self.pairs = [
             open(
                 "{}/tmp_alias_edge_{}_{}.ids".format(
-                    self.meta_tmp_folder.name, tp, self.partition
+                    self.meta_tmp_folder.name, tp, partition
                 ),
                 "wb+",
             )
-        )
-        self.weights.append(
+            for tp in range(edge_type_count)
+        ]
+        self.weights = [
             open(
                 "{}/tmp_alias_edge_{}_{}.weights".format(
-                    self.meta_tmp_folder.name, tp, self.partition
+                    self.meta_tmp_folder.name, tp, partition
                 ),
                 "wb+",
             )
-        )
+            for tp in range(edge_type_count)
+        ]
 
-    def add(self, src: int, dst: int, tp: int, weight: float):
+    def add(self, edge: typing.Dict):
         """Add edge to the alias tables.
 
         Args:
-            src: int
-            dst: int
-            tp: int
-            weight: float
+            edge (typing.Dict): Edge with information about it's source/destination ids, type and weight
         """
-        self.pairs[tp].write(ctypes.c_uint64(src))  # type: ignore
-        self.pairs[tp].write(ctypes.c_uint64(dst))  # type: ignore
-        self.weights[tp].write(ctypes.c_float(weight))  # type: ignore
+        tp = edge["edge_type"]
+        self.pairs[tp].write(ctypes.c_uint64(edge["src_id"]))  # type: ignore
+        self.pairs[tp].write(ctypes.c_uint64(edge["dst_id"]))  # type: ignore
+        self.weights[tp].write(ctypes.c_float(edge["weight"]))  # type: ignore
 
     def close(self):
         """Convert temporary files to the final alias tables."""
-        for tp in range(len(self.pairs)):
+        for tp in range(self.edge_type_count):
             wts = np.fromfile(
                 self.weights[tp], dtype=np.float32, offset=-self.weights[tp].tell()
             )
@@ -552,7 +418,7 @@ class EdgeAliasWriter:
                         )
                     )
 
-        for tp in range(len(self.pairs)):
+        for tp in range(self.edge_type_count):
             self.weights[tp].close()
             os.remove(self.weights[tp].name)
             self.pairs[tp].close()
@@ -561,16 +427,81 @@ class EdgeAliasWriter:
         self.meta_tmp_folder.cleanup()
 
 
-def convert_features(features: list):
+def __add_sparse(node, feature, tp, container):
+    if feature not in node or node[feature] is None:
+        return
+    for k in node[feature]:
+        values = node[feature][k]["values"]
+        values_buf = (tp * len(values))()
+        values_buf[:] = values
+
+        coordinates = np.array(node[feature][k]["coordinates"], dtype=np.int64)
+        assert int(k) not in container, "Duplicate feature ids found for a node"
+        assert (
+            coordinates.shape[0] == len(values)
+            if len(values) > 1
+            else len(coordinates.shape) == 1
+            or coordinates.shape[0]
+            == 1  # relax input requirements for single values, both [[a,b]] and [a,b] are ok.
+        ), f"Coordinates {coordinates} and values {values} dimensions don't match"
+
+        # For matrices the number of values might be different than number of coordinates
+        # Pack data in the following format: number of coordinates as uint32, then coordinates, and actual values in the end
+        final_buf = (
+            bytes(ctypes.c_uint32(coordinates.size))
+            + bytes(
+                ctypes.c_uint32(coordinates.shape[-1] if coordinates.ndim > 1 else 1)
+            )
+            + bytes(coordinates.data)
+            + values_buf
+        )
+        container[int(k)] = final_buf
+
+
+def __add_dense(node, feature, tp, container):
+    if feature not in node or node[feature] is None:
+        return
+    for k in node[feature]:
+        values = node[feature][k]
+        buf = (tp * len(values))()
+        buf[:] = values
+        assert int(k) not in container, "Duplicate feature ids found for a node"
+        container[int(k)] = buf
+
+
+def __add(node, feature, tp, container):
+    __add_dense(node, feature, tp, container)
+    __add_sparse(node, f"sparse_{feature}", tp, container)
+
+
+def convert_features(node: typing.Any):
     """Convert the node's feature into bytes sorted by index."""
     # Use a single container for all node features to make sure there are unique feature_ids
     # and gaps between feature ids are processed correctly.
-    output = []  # type: ignore
-    for feature in features:
-        if feature is None:
-            output.append(feature)
-        elif isinstance(feature, tuple):
-            coordinates, values = feature
+    container: typing.Dict[int, typing.Any] = {}
+    __add(node, "float_feature", ctypes.c_float, container)
+    __add(node, "double_feature", ctypes.c_double, container)
+    __add(node, "uint64_feature", ctypes.c_uint64, container)
+    __add(node, "int64_feature", ctypes.c_int64, container)
+    __add(node, "uint32_feature", ctypes.c_uint32, container)
+    __add(node, "int32_feature", ctypes.c_int32, container)
+    __add(node, "uint16_feature", ctypes.c_uint16, container)
+    __add(node, "int16_feature", ctypes.c_int16, container)
+    __add(node, "uint8_feature", ctypes.c_uint8, container)
+    __add(node, "int8_feature", ctypes.c_int8, container)
+
+    if "float16_feature" in node and node["float16_feature"] is not None:
+        for k in node["float16_feature"]:
+            container[int(k)] = np.array(
+                node["float16_feature"][k], dtype=np.float16
+            ).tobytes()
+
+    if "sparse_float16_feature" in node and node["sparse_float16_feature"] is not None:
+        for k in node["sparse_float16_feature"]:
+            coordinates = np.array(
+                node["sparse_float16_feature"][k]["coordinates"], dtype=np.int64
+            )
+            values = node["sparse_float16_feature"][k]["values"]
             assert (
                 coordinates.shape[0] == len(values)
                 if len(values) > 1
@@ -579,27 +510,33 @@ def convert_features(features: list):
                 == 1  # relax input requirements for single values, both [[a,b]] and [a,b] are ok.
             ), f"Coordinates {coordinates} and values {values} dimensions don't match"
 
-            coordinates_meta = bytes(
-                ctypes.c_uint32(coordinates.shape[-1] if coordinates.ndim > 1 else 1)  # type: ignore
-            )
-
-            if values.dtype == np.float16:
-                values_buf = np.array(values, dtype=np.float16).tobytes()
-            else:
-                values_buf = (np.ctypeslib.as_ctypes_type(values.dtype) * len(values))()
-                values_buf[:] = values  # type: ignore
-
-            # For matrices the number of values might be different than number of coordinates
-            # Pack data in the following format: number of coordinates as uint32, then coordinates, and actual values in the end
-            output.append(
-                bytes(ctypes.c_uint32(coordinates.size))  # type: ignore
-                + coordinates_meta
+            container[int(k)] = (
+                int.to_bytes(
+                    len(coordinates), length=4, signed=True, byteorder=sys.byteorder
+                )
+                + bytes(
+                    struct.pack(
+                        "=I",
+                        ctypes.c_uint32(
+                            coordinates.shape[-1] if coordinates.ndim > 1 else 1
+                        ).value,
+                    )
+                )
                 + bytes(coordinates.data)
-                + values_buf
+                + np.array(values, dtype=np.float16).tobytes()
             )
-        elif isinstance(feature, np.ndarray):
-            output.append(feature.tobytes())
-        else:
-            output.append(bytes(feature, "utf-8"))
 
-    return output
+    if "binary_feature" in node and node["binary_feature"] is not None:
+        for k in node["binary_feature"]:
+            container[int(k)] = bytes(node["binary_feature"][k], "utf-8")
+
+    ret_list = []  # type: ignore
+    curr = 0
+    for k in sorted(container.keys()):
+        while curr < k:
+            ret_list.append(None)
+            curr += 1
+        ret_list.append(container[k])
+        curr += 1
+
+    return ret_list

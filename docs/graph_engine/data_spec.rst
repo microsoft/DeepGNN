@@ -12,10 +12,7 @@ DeepGNN supports both homogeneous and heterogeneous graphs. Nodes and Edges supp
 Graph Data Format
 *****************
 
-DeepGNN supports two file formats: JSON and TSV.
-Users can generate a graph in either format then our pipeline will convert it into binary for training and inference.
-DeepGNN also supports writing custom decoders, see [the decoders file](https://github.com/microsoft/DeepGNN/blob/main/src/python/deepgnn/graph_engine/snark/decoders.py).
-Just inheret the base class Decoder, overwrite the decode function and pass the new decoder as an argument to the converter or dispatcher.
+DeepGNN supports two file formats: JSON and TSV. Users can generate a graph in either format then our pipeline will convert it into binary for training and inference.
 
 1. `JSON <#json-format>`_: Heterogeneous or homegeneous graph.
 
@@ -24,7 +21,10 @@ Just inheret the base class Decoder, overwrite the decode function and pass the 
 JSON Format
 ===========
 
-The JSON format supports heterogeneous and homegeneous graphs.
+Here is the graph data JSON format. The format requires two files: graph.json and meta.json.
+
+Graph Data
+----------
 
 `graph.json` layout:
 
@@ -85,12 +85,37 @@ Here is a concrete example:
 	],
 	}
 
+
+Graph Metadata
+--------------
+
+The metadata describes the number of node/edge types and the number of three attributes of the nodes/edges in the graph.
+
+Here is a concrete `meta.json` example,
+
+.. code-block:: json
+
+	{
+		"node_type_num": 1,
+		"edge_type_num": 1,
+		"node_uint64_feature_num": 1,
+		"node_float_feature_num": 1,
+		"node_binary_feature_num": 1,
+		"edge_uint64_feature_num": 0,
+		"edge_float_feature_num": 2,
+		"edge_binary_feature_num": 1
+	}
+
+
+In this example `node_uint64_feature_num` field represents both dense and sparse features.
+
+
 TSV Format
 ==========
 
 Currently TSV format ONLY support homogenous graphs.
 
-The format requires the file graph.tsv as follows,
+The format requires two files: graph.tsv and meta.tsv. The graph.tsv format is as follows,
 
 .. code-block:: text
 
@@ -111,9 +136,6 @@ node_weight: float, Node weight.
 node_features: *|type1:v1 v2;type2:v1 v2|*, Node feature vectors, type can be one of the following: {f: float, b: binary, i: integer}. There can be any number of values for each feature. There can only be a single vector for each feature type.
 
 neighbors: *| int, int, float, int, features |*, src_id, dst_id, edge_weight, edge_type and a feature vector in the same form as node_features.
-
-Generated meta.txt Format
-==========
 
 Graph `meta.txt` is as follows with all pieces of text replaced by integers,
 
