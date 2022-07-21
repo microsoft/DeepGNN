@@ -323,7 +323,7 @@ def multi_partition_graph_data(request):
     yield output.name
 
 
-param = ["nodes_p0"]# ["original", "nodes_p0", "nodes_p1", "mix0", "mix1"]
+param = ["nodes_p1"] #["original", "nodes_p0"]#, "nodes_p1"]#, "mix0", "mix1"]
 
 
 @pytest.mark.parametrize(
