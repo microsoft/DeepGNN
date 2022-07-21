@@ -2,143 +2,19 @@
 # Licensed under the MIT License.
 
 """Conversion functions to internal binary format."""
-import tempfile
-import multiprocessing as mp
-import typing
-import math
-import platform
-from operator import add
 from typing import Optional
-
-if platform.system() == "Windows":
-    from multiprocessing.connection import PipeConnection as Connection  # type: ignore
-else:
-    from multiprocessing.connection import Connection  # type: ignore
-
+import multiprocessing as mp
+import math
+from operator import add
 import fsspec
-
 from deepgnn import get_logger
 from deepgnn.graph_engine._adl_reader import TextFileIterator
 from deepgnn.graph_engine._base import get_fs
-import deepgnn.graph_engine.snark.converter.json_converter as json_converter
-from deepgnn.graph_engine.snark.decoders import (
-    Decoder,
-    DecoderType,
-    JsonDecoder,
-    TsvDecoder,
-)
+from deepgnn.graph_engine.snark.decoders import DecoderType, JsonDecoder
 from deepgnn.graph_engine.snark.dispatcher import (
     PipeDispatcher,
     Dispatcher,
-    FLAG_ALL_DONE,
-    FLAG_WORKER_FINISHED_PROCESSING,
 )
-import deepgnn.graph_engine.snark.meta as mt
-
-
-class _NoOpWriter:
-    def add(self, _: typing.Any):
-        return
-
-    def close(self):
-        return
-
-
-def output(
-    q_in: typing.Union[mp.Queue, Connection],
-    q_out: mp.Queue,
-    folder: str,
-    suffix: int,
-    node_type_num: int,
-    edge_type_num: int,
-    decoder_type: DecoderType,
-    skip_node_sampler: bool,
-    skip_edge_sampler: bool,
-) -> None:
-    """Process graph nodes from a queue to binary files.
-
-    Args:
-        q_in (typing.Union[mp.Queue, Connection]): input nodes
-        q_out (mp.Queue): signal processing is done
-        folder (str): where to save binaries
-        suffix (int): file suffix in the name of binary files
-        node_type_num (int): number of node types in the graph
-        edge_type_num (int): number of edge types in the graph
-        decoder_type (DecoderType): Decoder which is used to parse the raw graph data file, Supported: json/tsv
-        skip_node_sampler(bool): skip generation of node alias tables
-        skip_edge_sampler(bool): skip generation of edge alias tables
-    """
-    decoder: Optional[Decoder] = None
-    if decoder_type == DecoderType.JSON:
-        decoder = JsonDecoder()
-    elif decoder_type == DecoderType.TSV:
-        decoder = TsvDecoder()
-    else:
-        raise ValueError("Unsupported decoder type.")
-
-    assert decoder is not None
-
-    node_count = 0
-    edge_count = 0
-    node_weight = [0] * node_type_num
-    node_type_count = [0] * node_type_num
-    edge_weight = [0] * edge_type_num
-    edge_type_count = [0] * edge_type_num
-    writer = json_converter.NodeWriter(str(folder), suffix)
-    node_alias: typing.Union[json_converter.NodeAliasWriter, _NoOpWriter] = (
-        _NoOpWriter()
-        if skip_node_sampler
-        else json_converter.NodeAliasWriter(str(folder), suffix, node_type_num)
-    )
-    edge_alias: typing.Union[json_converter.EdgeAliasWriter, _NoOpWriter] = (
-        _NoOpWriter()
-        if skip_edge_sampler
-        else json_converter.EdgeAliasWriter(str(folder), suffix, edge_type_num)
-    )
-    count = 0
-    while True:
-        count += 1
-        if type(q_in) == Connection:
-            line = q_in.recv()  # type: ignore
-        else:
-            line = q_in.get()  # type: ignore
-
-        if line == FLAG_ALL_DONE:
-            break
-
-        node = decoder.decode(line)
-        writer.add(node)
-        node_alias.add(node)
-
-        for eet in node["edge"]:
-            edge_alias.add(eet)
-            edge_weight[eet["edge_type"]] += eet["weight"]
-            edge_type_count[eet["edge_type"]] += 1
-
-        edge_count += len(node["edge"])
-        node_count += 1
-        node_weight[node["node_type"]] += float(node["node_weight"])
-        node_type_count[node["node_type"]] += 1
-
-    writer.close()
-    node_alias.close()
-    edge_alias.close()
-    q_out.put(
-        (
-            FLAG_WORKER_FINISHED_PROCESSING,
-            {
-                "node_count": node_count,
-                "edge_count": edge_count,
-                "partition": {
-                    "id": suffix,
-                    "node_weight": node_weight,
-                    "node_type_count": node_type_count,
-                    "edge_weight": edge_weight,
-                    "edge_type_count": edge_type_count,
-                },
-            },
-        )
-    )
 
 
 class MultiWorkersConverter:
@@ -147,9 +23,8 @@ class MultiWorkersConverter:
     def __init__(
         self,
         graph_path: str,
-        meta_path: str,
         output_dir: str,
-        decoder_type: DecoderType = DecoderType.JSON,
+        decoder: Optional[DecoderType] = None,
         partition_count: int = 1,
         worker_index: int = 0,
         worker_count: int = 1,
@@ -165,9 +40,8 @@ class MultiWorkersConverter:
 
         Args:
             graph_path: the raw graph file folder.
-            meta_path: the path of the meta.json.
             output_dir: the output directory to put the generated graph binary files.
-            decoder_type: decoder type.
+            decoder (Decoder): Decoder object which is used to parse the raw graph data file.
             partition_count: how many partitions will be generated.
             worker_index: the work index when running in multi worker mode.
             worker_count: how many workers will be started to convert the data.
@@ -179,12 +53,13 @@ class MultiWorkersConverter:
             skip_node_sampler(bool): skip generation of node alias tables.
             skip_edge_sampler(bool): skip generation of edge alias tables.
         """
+        if decoder is None:
+            decoder = JsonDecoder()  # type: ignore
         self.graph_path = graph_path
-        self.meta_path = meta_path
         self.worker_index = worker_index
         self.worker_count = worker_count
         self.output_dir = output_dir
-        self.decoder_type = decoder_type
+        self.decoder = decoder
         self.record_per_step = record_per_step
         self.read_block_in_M = buffer_size
         self.buffer_queue_size = queue_size
@@ -192,10 +67,6 @@ class MultiWorkersConverter:
         self.dispatcher = dispatcher
 
         self.fs, _ = get_fs(graph_path)
-        # download the meta.json to local folder for dispatcher.
-        tmp_folder = tempfile.TemporaryDirectory()
-        meta_path_local = mt._get_meta_path(tmp_folder.name)
-        self.fs.get_file(meta_path, meta_path_local)
 
         # calculate the partition offset and count of this worker.
         self.partition_count = int(math.ceil(partition_count / worker_count))
@@ -204,19 +75,20 @@ class MultiWorkersConverter:
             self.partition_count = partition_count - self.partition_offset
 
         if self.dispatcher is None:
+            # when converting data in HDFS make sure to turn it off: https://hdfs3.readthedocs.io/en/latest/limitations.html
+            use_threads = True
+            if hasattr(fsspec.implementations, "hdfs") and isinstance(
+                self.fs, fsspec.implementations.hdfs.PyArrowHDFS
+            ):
+                use_threads = False
             self.dispatcher = PipeDispatcher(
                 self.output_dir,
                 self.partition_count,
-                meta_path_local,
-                output,
-                self.decoder_type,
-                self.partition_offset,
-                False
-                if hasattr(fsspec.implementations, "hdfs")
-                and isinstance(self.fs, fsspec.implementations.hdfs.PyArrowHDFS)
-                else True,  # when converting data in HDFS make sure to turn it off: https://hdfs3.readthedocs.io/en/latest/limitations.html
-                skip_node_sampler,
-                skip_edge_sampler,
+                self.decoder,  # type: ignore
+                partition_offset=self.partition_offset,
+                use_threads=use_threads,
+                skip_node_sampler=skip_node_sampler,
+                skip_edge_sampler=skip_edge_sampler,
             )
 
     def convert(self):
@@ -265,17 +137,9 @@ class MultiWorkersConverter:
                     "\n",
                     str(d.prop("edge_type_num")),
                     "\n",
-                    str(
-                        int(d.prop("node_float_feature_num"))
-                        + int(d.prop("node_binary_feature_num"))
-                        + int(d.prop("node_uint64_feature_num"))
-                    ),
+                    str(d.prop("node_feature_num")),
                     "\n",
-                    str(
-                        int(d.prop("edge_float_feature_num"))
-                        + int(d.prop("edge_binary_feature_num"))
-                        + int(d.prop("edge_uint64_feature_num"))
-                    ),
+                    str(d.prop("edge_feature_num")),
                     "\n",
                     str(len(d.prop("partitions"))),
                     "\n",
@@ -307,6 +171,7 @@ class MultiWorkersConverter:
 if __name__ == "__main__":
     # import here for special usage of the module.
     import argparse
+    import deepgnn.graph_engine.snark.decoders as decoders
 
     parser = argparse.ArgumentParser(
         description="Convert graph from euler json format to the deepgnn binary."
@@ -323,16 +188,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "-n", "--worker_count", type=int, default=1, help="Number of workers"
     )
-    parser.add_argument(
-        "-m", "--meta", help="Metadata about graph: number of node, types, etc"
-    )
     parser.add_argument("-o", "--out", help="Output folder to store binary data")
     parser.add_argument(
         "-t",
         "--type",
-        type=DecoderType,
-        default=DecoderType.JSON,
-        help="Type of the graph data file. Supported: json, tsv",
+        type=str,
+        default="json",
+        help="Type of decoder object which is used to parse the raw graph data file. Supported: json, tsv",
     )
     parser.add_argument(
         "--skip_node_sampler",
@@ -348,14 +210,17 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    decoder = getattr(decoders, f"{args.type.capitalize()}Decoder")()
+    if decoder is None:
+        raise ValueError("Unsupported decoder type.")
+
     c = MultiWorkersConverter(
         graph_path=args.data,
-        meta_path=args.meta,
         partition_count=args.partitions,
         output_dir=args.out,
         worker_index=args.worker_index,
         worker_count=args.worker_count,
-        decoder_type=args.type,
+        decoder=decoder,
         skip_node_sampler=args.skip_node_sampler,
         skip_edge_sampler=args.skip_edge_sampler,
     )
