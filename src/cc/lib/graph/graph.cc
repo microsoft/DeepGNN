@@ -125,9 +125,13 @@ void Graph::GetNodeFeature(std::span<const NodeId> node_ids, std::span<snark::Fe
         }
         else
         {
-            const auto index = internal_id->second;
-            m_partitions[m_partitions_indices[index]].GetNodeFeature(m_internal_indices[index], features,
-                                                                     output.subspan(feature_offset, feature_size));
+            auto index = internal_id->second;
+            size_t partition_count = m_counts[index];
+            for (size_t partition = 0; partition < partition_count; ++partition, ++index)
+            {
+                m_partitions[m_partitions_indices[index]].GetNodeFeature(m_internal_indices[index], features,
+                                                                        output.subspan(feature_offset, feature_size));
+            }
         }
         feature_offset += feature_size;
     }
@@ -150,9 +154,13 @@ void Graph::GetNodeSparseFeature(std::span<const NodeId> node_ids, std::span<con
             continue;
         }
 
-        const auto partition_index = internal_id->second;
-        m_partitions[m_partitions_indices[partition_index]].GetNodeSparseFeature(
-            m_internal_indices[partition_index], features, node_index, out_dimensions, out_indices, out_data);
+        auto index = internal_id->second;
+        size_t partition_count = m_counts[index];
+        for (size_t partition = 0; partition < partition_count; ++partition, ++index)
+        {
+            m_partitions[m_partitions_indices[index]].GetNodeSparseFeature(
+                m_internal_indices[index], features, node_index, out_dimensions, out_indices, out_data);
+        }
     }
 }
 
@@ -171,10 +179,14 @@ void Graph::GetNodeStringFeature(std::span<const NodeId> node_ids, std::span<con
             continue;
         }
 
-        const auto partition_index = internal_id->second;
-        m_partitions[m_partitions_indices[partition_index]].GetNodeStringFeature(
-            m_internal_indices[partition_index], features,
-            out_dimensions.subspan(features_size * node_index, features_size), out_data);
+        auto index = internal_id->second;
+        size_t partition_count = m_counts[index];
+        for (size_t partition = 0; partition < partition_count; ++partition, ++index)
+        {
+            m_partitions[m_partitions_indices[index]].GetNodeStringFeature(
+                m_internal_indices[index], features,
+                out_dimensions.subspan(features_size * node_index, features_size), out_data);
+        }
     }
 }
 
