@@ -15,7 +15,7 @@ import numpy.testing as npt
 import pytest
 
 import deepgnn.graph_engine.snark.client as client
-from deepgnn.graph_engine.snark.decoders import DecoderType
+from deepgnn.graph_engine.snark.decoders import JsonDecoder
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.dispatcher as dispatcher
@@ -40,7 +40,6 @@ def small_graph_json(folder):
             "node_id": 0,
             "node_type": 0,
             "node_weight": 1,
-            "neighbor": {"0": {"1": 0.5}},
             "uint64_feature": {"0": [1, 2]},
             "edge": [
                 {
@@ -58,7 +57,6 @@ def small_graph_json(folder):
             "node_id": 1,
             "node_type": 1,
             "node_weight": 1,
-            "neighbor": {"0": {"1": 1}},
             "uint64_feature": {"0": [3, 4]},
             "float_feature": {},
             "binary_feature": {},
@@ -79,18 +77,8 @@ def small_graph_json(folder):
         json.dump(el, data)
         data.write("\n")
     data.flush()
-
-    meta = open(os.path.join(folder, "meta.txt"), "w+")
-    meta.write(
-        '{"node_type_num": 2, "edge_type_num": 2, \
-        "node_uint64_feature_num": 1, "node_float_feature_num": 0, \
-        "node_binary_feature_num": 0, "edge_uint64_feature_num": 0, \
-        "edge_float_feature_num": 0, "edge_binary_feature_num": 0}'
-    )
-    meta.flush()
     data.close()
-    meta.close()
-    return data.name, meta.name
+    return data.name
 
 
 # We'll use this class for deterministic partitioning
@@ -108,16 +96,13 @@ class Counter:
 )
 def multi_partition_graph_data(request):
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name = small_graph_json(output.name)
-    d = dispatcher.QueueDispatcher(
-        Path(output.name), 2, meta_name, convert.output, Counter(), DecoderType.JSON
-    )
+    data_name = small_graph_json(output.name)
+    d = dispatcher.QueueDispatcher(Path(output.name), 2, Counter(), JsonDecoder())
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=2,
         output_dir=output.name,
-        decoder_type=DecoderType.JSON,
+        decoder=JsonDecoder(),
         dispatcher=d,
         skip_node_sampler=request.param[0],
         skip_edge_sampler=request.param[1],

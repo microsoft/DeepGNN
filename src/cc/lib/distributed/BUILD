@@ -7,6 +7,7 @@ load("//config:variables.bzl", "CXX_OPTS")
 proto_library(
     name = "service_proto",
     srcs = ["service.proto"],
+    visibility = ["//visibility:public"],
 )
 
 cc_proto_library(

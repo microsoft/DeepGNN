@@ -11,7 +11,7 @@ import numpy as np
 class Vose:
     """Generate alias tables with Vose method."""
 
-    def __init__(self, elements: typing.List, weights: np.array):
+    def __init__(self, elements: typing.List, weights: np.ndarray):
         """Create alias tables for weight sampling.
 
         Args:
@@ -24,7 +24,7 @@ class Vose:
         self.prob = np.empty(len(elements), dtype=np.float32)
         self._generate_table(weights)
 
-    def _generate_table(self, weights: np.array):
+    def _generate_table(self, weights: np.ndarray):
         small = []
         large = []
         for i, w in enumerate(weights):

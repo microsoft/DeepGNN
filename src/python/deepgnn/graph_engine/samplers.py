@@ -110,10 +110,10 @@ class _GEIterator:
     def __init__(
         self,
         batch_size: int,
-        item_type: np.array,
+        item_type: np.ndarray,
         count: int,
         strategy: SamplingStrategy,
-        func: Callable[[int, int], np.array],
+        func: Callable[[int, int], np.ndarray],
     ):
         self.batch_size = batch_size
         self.item_type = item_type
@@ -373,7 +373,7 @@ class _NumpyIterator:
 
     def __init__(
         self,
-        data: List[np.array],
+        data: List[np.ndarray],
         batch_size,
         epochs=1,
         shuffle=False,
@@ -485,7 +485,7 @@ class FileNodeSampler(BaseSampler):
         self.backfill_id = backfill_id
         filelist = get_files(sample_files, worker_index, num_workers)
         self.logger.info("Node Sample files: {0}".format(", ".join(filelist)))
-        self.nodes = np.concatenate(
+        self.nodes: np.ndarray = np.concatenate(
             [np.fromfile(f, dtype=np.int64, sep="\n") for f in filelist]
         )
 
@@ -711,7 +711,7 @@ class CSVNodeSampler(BaseSampler):
                 if len(d) != 0:
                     node_list.append([int(col) for col in d])
 
-        self.node_list = np.array(node_list)
+        self.node_list: np.ndarray = np.array(node_list)
         self.cur_batch = 0
         self.count = (
             (len(node_list) + self.batch_size - 1)

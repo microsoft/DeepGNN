@@ -15,7 +15,7 @@ import tensorflow as tf
 
 
 class ModelQuery:
-    def query(self, graph: Graph, inputs: np.array, return_shape: bool = False):
+    def query(self, graph: Graph, inputs: np.ndarray, return_shape: bool = False):
         if isinstance(inputs, list):
             inputs = np.array(inputs, dtype=np.int64)
 

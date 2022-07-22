@@ -54,45 +54,23 @@ def prepare_connected_caveman_graph(working_dir):
                 }
                 for neighbor_id in nx.neighbors(g, node_id)
             ],
-            "neighbor": {
-                "0": dict(
-                    [
-                        (str(neighbor_id), 1.0)
-                        for neighbor_id in nx.neighbors(g, node_id)
-                    ]
-                )
-            },
         }
         data += json.dumps(node) + "\n"
         nodes.append(node)
 
-    meta = '{"node_type_num": 1, \
-             "node_float_feature_num": 1, \
-             "node_binary_feature_num": 0, \
-             "node_uint64_feature_num": 0, \
-             "edge_type_num": 1, \
-             "edge_float_feature_num": 0, \
-             "edge_binary_feature_num": 0, \
-             "edge_uint64_feature_num": 0}'
-
     raw_file = working_dir + "/data.json"
     with open(raw_file, "w+") as f:
         f.write(data)
-    meta_file = working_dir + "/meta.json"
-    with open(meta_file, "w+") as f:
-        f.write(meta)
 
     convert.MultiWorkersConverter(
         graph_path=raw_file,
-        meta_path=meta_file,
         partition_count=1,
         output_dir=working_dir,
-        decoder_type=decoders.DecoderType.JSON,
+        decoder=decoders.JsonDecoder(),
     ).convert()
 
     logger.info(working_dir)
     logger.info(raw_file)
-    logger.info(meta_file)
 
 
 def run_commands(commands):

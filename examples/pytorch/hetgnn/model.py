@@ -190,9 +190,9 @@ class HetGnnModel(BaseUnsupervisedModel):
 
     def cross_entropy_loss(
         self,
-        c_embed_batch: np.array,
-        pos_embed_batch: np.array,
-        neg_embed_batch: np.array,
+        c_embed_batch: np.ndarray,
+        pos_embed_batch: np.ndarray,
+        neg_embed_batch: np.ndarray,
         embed_d: int,
     ):
         """Evaluate mean loss for all node types."""
