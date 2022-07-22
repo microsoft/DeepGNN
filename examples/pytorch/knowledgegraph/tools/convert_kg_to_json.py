@@ -107,13 +107,9 @@ def main(root_path: str):
                     "binary_feature": {},
                 }
                 edge["uint64_feature"] = {"0": []}
-                if edge_type not in neighbors:
-                    neighbors[edge_type] = {}
-                neighbors[edge_type][entity[1]] = 1
                 edges.append(edge)
 
         node["edge"] = edges
-        node["neighbor"] = neighbors
         nodes.append(node)
 
     output_json = root_path + "/graph.json"

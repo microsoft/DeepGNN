@@ -18,7 +18,7 @@ from deepgnn.graph_engine import Graph, FeatureType, graph_ops
 class GATQueryParameter:
     """Graph query configuration for GAT model."""
 
-    neighbor_edge_types: np.array
+    neighbor_edge_types: np.ndarray
     feature_idx: int
     feature_dim: int
     label_idx: int

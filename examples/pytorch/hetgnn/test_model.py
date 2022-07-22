@@ -97,7 +97,7 @@ class MockGraph(Graph):
         size: int,
         node_type: int,
         strategy: SamplingStrategy = SamplingStrategy.Random,
-    ) -> np.array:
+    ) -> np.ndarray:
         return np.random.randint(
             self.type_ranges[node_type][0], self.type_ranges[node_type][1], size
         )
@@ -112,14 +112,14 @@ class MockGraph(Graph):
 
     def sample_neighbors(
         self,
-        nodes: np.array,
-        edge_types: np.array,
+        nodes: np.ndarray,
+        edge_types: np.ndarray,
         count: int = 10,
         strategy: str = "byweight",
         default_node: int = -1,
         default_weight: float = 0.0,
         default_node_type: int = -1,
-    ) -> Tuple[np.array, np.array, np.array, np.array]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         res = np.empty((len(nodes), count), dtype=np.int64)
         res_types = np.full((len(nodes), count), -1, dtype=np.int32)
         res_count = np.empty((len(nodes)), dtype=np.int64)
@@ -153,8 +153,8 @@ class MockGraph(Graph):
         )
 
     def node_features(
-        self, nodes: np.array, features: np.array, feature_type: FeatureType
-    ) -> np.array:
+        self, nodes: np.ndarray, features: np.ndarray, feature_type: FeatureType
+    ) -> np.ndarray:
         node_features = np.zeros((len(nodes), features[0][1]), dtype=np.float32)
         for i in range(len(nodes)):
             node_id = nodes[i]

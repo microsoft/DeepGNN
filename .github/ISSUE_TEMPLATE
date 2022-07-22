@@ -1,0 +1,17 @@
+- [ ] Issue is labeled using the label menu on the right side.
+
+Environment
+-----------
+* Python version: (python -V)
+* deepgnn-ge Version: (python -m pip show deepgnn-ge)
+* deepgnn-torch Version: (python -m pip show deepgnn-torch)
+* deepgnn-tf Version: (python -m pip show deepgnn-tf)
+* OS: (Windows, Linux, ...)
+
+Issue Details
+-----------
+* What you did - code sample or commands run
+
+* Expected behavior
+
+* Actual behavior

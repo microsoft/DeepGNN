@@ -17,7 +17,7 @@ import numpy.testing as npt
 import pytest
 
 import deepgnn.graph_engine.snark.client as client
-from deepgnn.graph_engine.snark.decoders import DecoderType
+from deepgnn.graph_engine.snark.decoders import JsonDecoder
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.dispatcher as dispatcher
@@ -31,7 +31,6 @@ def graph_with_sparse_features_json(folder):
             "node_id": 9,
             "node_type": 0,
             "node_weight": 1,
-            "neighbor": {"0": {"0": 0.5}, "1": {}},
             "float_feature": {"0": [0, 1], "3": [-0.01, -0.02]},
             "sparse_float_feature": {
                 "2": {"coordinates": [5, 13], "values": [1.0, 2.13]}
@@ -85,7 +84,6 @@ def graph_with_sparse_features_json(folder):
             "node_id": 0,
             "node_type": 1,
             "node_weight": 1,
-            "neighbor": {"0": {}, "1": {"5": 1}},
             "float_feature": {"0": [1], "1": [-0.03, -0.04]},
             "sparse_float_feature": {
                 "2": {"coordinates": [1, 3, 7], "values": [5.5, 6.5, 7.5]}
@@ -110,7 +108,6 @@ def graph_with_sparse_features_json(folder):
             "node_id": 5,
             "node_type": 2,
             "node_weight": 1,
-            "neighbor": {"0": {}, "1": {"9": 0.7}},
             "sparse_float_feature": {
                 "2": {"coordinates": [4, 6], "values": [5.5, 6.89]}
             },
@@ -131,30 +128,19 @@ def graph_with_sparse_features_json(folder):
         json.dump(el, data)
         data.write("\n")
     data.flush()
-
-    meta = open(os.path.join(folder, "meta.json"), "w+")
-    meta.write(
-        '{"node_type_num": 3, "edge_type_num": 2, \
-        "node_uint64_feature_num": 0, "node_float_feature_num": 1, \
-        "node_binary_feature_num": 0, "edge_uint64_feature_num": 0, \
-        "edge_float_feature_num": 1, "edge_binary_feature_num": 1}'
-    )
-    meta.flush()
     data.close()
-    meta.close()
-    return data.name, meta.name
+    return data.name
 
 
 @pytest.fixture(scope="module")
 def graph_with_sparse_features(request):
     workdir = tempfile.TemporaryDirectory()
-    data_name, meta_name = graph_with_sparse_features_json(workdir.name)
+    data_name = graph_with_sparse_features_json(workdir.name)
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=request.param,
         output_dir=workdir.name,
-        decoder_type=DecoderType.JSON,
+        decoder=JsonDecoder(),
         skip_edge_sampler=True,
         skip_node_sampler=True,
     ).convert()
@@ -208,13 +194,12 @@ def test_multiple_edges_sparse_features(graph_with_sparse_features):
 @pytest.fixture(scope="module")
 def multi_server_sparse_features_graph():
     workdir = tempfile.TemporaryDirectory()
-    data_name, meta_name = graph_with_sparse_features_json(workdir.name)
+    data_name = graph_with_sparse_features_json(workdir.name)
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=2,
         output_dir=workdir.name,
-        decoder_type=DecoderType.JSON,
+        decoder=JsonDecoder(),
         skip_edge_sampler=True,
         skip_node_sampler=True,
     ).convert()
