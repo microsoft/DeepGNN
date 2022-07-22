@@ -5,7 +5,7 @@
 
 import fsspec
 import numpy as np
-from typing import Tuple, Union
+from typing import Tuple, Union, List
 from enum import Enum, IntEnum
 from fsspec.utils import infer_storage_options
 

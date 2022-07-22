@@ -29,7 +29,7 @@ fi
 python3 ${DIR_NAME}/main.py  \
 --data_dir $GRAPH --mode train --seed 123 \
 --backend snark --graph_type local --converter skip \
---batch_size 140 --learning_rate 0.005 --num_epochs 100 \
+--batch_size 64 --learning_rate 0.005 --num_epochs 100 \
 --node_type 0 --max_id -1 \
 --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
 --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 121 --algo $ALGO \

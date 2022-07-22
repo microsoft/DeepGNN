@@ -12,6 +12,7 @@ from deepgnn.graph_engine import Graph, FeatureType
 from deepgnn.pytorch.common import MeanAggregator, BaseMetric, MRR
 from deepgnn.pytorch.modeling import BaseSupervisedModel, BaseUnsupervisedModel
 from deepgnn.pytorch.encoding import FeatureEncoder, SageEncoder
+from deepgnn import get_logger
 
 
 class SupervisedGraphSage(BaseSupervisedModel):
@@ -107,7 +108,8 @@ class SupervisedGraphSage(BaseSupervisedModel):
         self.encode_feature(context)
         embeds = self.enc(context["encoder"])
         scores = torch.matmul(embeds, self.weight)
-
+        get_logger().info("Scores: " + str(scores))
+        get_logger().info("Scores dim: " + str(scores.shape))
         return scores
 
     def metric_name(self):
@@ -265,6 +267,11 @@ class UnSupervisedGraphSage(BaseUnsupervisedModel):
         labels = torch.cat(
             (torch.zeros_like(neg_logits), torch.ones_like(logits)), dim=2
         )
+
+        get_logger().info("Loss Type: " + str(type(loss)))
+        get_logger().info("Scores Type: " + str(type(scores)))
+        get_logger().info("Labels Type: " + str(type(labels)))
+
 
         return loss, scores, labels
 

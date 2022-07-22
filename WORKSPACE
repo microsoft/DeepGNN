@@ -26,7 +26,7 @@ load("@rules_python//python:pip.bzl", "pip_parse")
 
 pip_parse(
     name = "pip_deps",
-    python_interpreter = "python",
+    python_interpreter = "python3",
     requirements_lock = "//:requirements.txt",
 )
 

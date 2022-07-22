@@ -47,10 +47,7 @@ class MLP(nn.Module):
                 self.batch_norms.append(nn.BatchNorm1d((hidden_dim)))
 
     def forward(self, x):
-        get_logger().info("inside mlp forward call!")
         if self.num_layers == 1:
-            get_logger().info("inside solo layer")
-            get_logger().info("x: " + str(x))
             return self.linear(x)
         else:
             h = x
@@ -141,58 +138,17 @@ class GIN(BaseSupervisedModel):
                 self.linears_prediction.append(nn.Linear(input_dim, output_dim))
             else:
                 self.linears_prediction.append(nn.Linear(hidden_dim, output_dim))
-
-    def graphpool(self, batch_graph, context):
-        """"Build sum/average pooling matrix over all nodes."""
-
-        start_idx = [0]
-
-        #compute the padded neighbor list
-        for i, graph in enumerate(batch_graph):
-            # get_logger().info(str(context['features']))
-            get_logger().info(str(len(context['features'][0])))
-            num_neighbors = 1
-            # get_logger().info("Spec: " + str(context['features'][0][graph]))
-            # get_logger().info('Num Neighbors: ' + str(num_neighbors))
-            start_idx.append(start_idx[i] + num_neighbors)
-
-        idx = []
-        elem = []
-        for i, graph in enumerate(batch_graph):
-            ###average pooling
-            if self.graph_pooling_type == "average":
-                elem.extend([1./num_neighbors]*num_neighbors)
-            
-            else:
-            ###sum pooling
-                # print("len of graph g: " + str(num_neighbors))
-                elem.extend([1]*num_neighbors)
-
-            idx.extend([[i, j] for j in range(start_idx[i], start_idx[i+1], 1)])
-        elem = torch.FloatTensor(elem)
-        idx = torch.LongTensor(idx).transpose(0,1)
-        graph_pool = torch.sparse.FloatTensor(idx, elem, torch.Size([len(batch_graph), start_idx[-1]]))
-        
-        return graph_pool.to(self.device)
     
     def next_layer(self, h, layer, context):
-        
-
-        get_logger().info("inside next layer func call.")
-
-
-        get_logger().info("Neighbors: " + str(context['neighbors']))
-        get_logger().info("Features: " + str(context['features']))
 
         # Sum Pooling
         # for i in range(len())
-        pooled = torch.sum(context['counts'])
+        
 
-        get_logger().info("*********************************************")
-        get_logger().info("Pooled: " + str(pooled))
-        get_logger().info("Pooled Shape: " + str(pooled.shape))
-        get_logger().info("*********************************************")
-
+        pooled = torch.zeros(0)
+        for i in range(len(context['nb_counts'][0])):
+            num_neighbors = context['nb_counts'][0][i].int()
+            sum_features = torch.sum(context['features'][0][num_neighbors])
 
         # Average Pooling
         if self.neighbor_pooling_type == "average":
@@ -202,122 +158,82 @@ class GIN(BaseSupervisedModel):
 
         #representation of neighboring and center nodes 
         pooled_rep = self.mlps[layer](pooled)
-        get_logger().info("*********************************************")
-        get_logger().info("Pooled Rep: " + str(pooled))
-        get_logger().info("Pooled Rep Shape: " + str(pooled.shape))
-        get_logger().info("*********************************************")
         h = self.batch_norms[layer](pooled_rep)
         h = F.relu(h)
-        get_logger().info(str(h.shape))
-        get_logger().info("finish next layer call")
         return h
 
-    def forward(self, context):
-        get_logger().info(f"inside forward.")
+    def get_score(self, context: dict):
+        num_nodes = len(context['nb_counts'][0])
+        offset = 0
+
+        # Read from context, condense vector
+        nb_counts = context["nb_counts"].squeeze()
+        features = context["features"].squeeze()
+
+        # Allocate memory for pooling matrix 
+        pooled_h = torch.zeros(num_nodes, self.feature_dim)
+
+        # Loop across all nodes in mini-batch
+        for node_id in range(num_nodes):
+            # Fetch number of neighbors for current node
+            num_neighbors = nb_counts[node_id].int().item()
+
+            # Fetch and sum feature values for neighbors
+            neighbor_features = features[offset: offset + num_neighbors]
+            # get_logger().info("Nb features shape: " + str(neighbor_features.shape))
+            sum_features = neighbor_features.sum(0)
+            # get_logger().info("sum features shape: " + str(sum_features.shape))
+
+
+
+            # Move offset forward to read next set of nb features
+            offset += (num_neighbors + 1)
+
+            # Write to pooled matrix
+            pooled_h[node_id] = sum_features
         
-        X_concat = torch.cat([context["features"]], 0).to(self.device)
-        nodes = context["inputs"].squeeze()
-        batch_size = len(nodes)
 
-        get_logger().info("Batch Size: " + str(batch_size))
+        # get_logger().info("Pooled h: " + str(pooled_h))
+        # get_logger().info("Pooled h SHAPE: " + str(pooled_h.shape))
 
-        graph_pool = self.graphpool(nodes, context)
+        score = 0
+        for layer in range(self.num_layers):
+            score += F.dropout(self.linears_prediction[layer](pooled_h), self.final_dropout, training = self.training)
 
-        get_logger().info("finish building graphpool.")
+        # get_logger().info("Predictions: " + str(pooled_h))
+        # get_logger().info('Score shape:  ' + str(pooled_h.shape))
+        return score
 
-        # list of hidden representation at each layer (including input)
-        hidden_rep = [X_concat]
-        h = X_concat
-
-        get_logger().info("h: " + str(h))
-        get_logger().info("h shape: " + str(h.shape))
-
-        for layer in range(self.num_layers - 1):
-            get_logger().info(f"inside layer loop")
-            h = self.next_layer(h, layer, context)
-            hidden_rep.append(h)
-
-        score_over_layer = 0
-
-       # get_logger().info("hidden rep shape- " + str(hidden_rep.shape))
-
-        # perform pooling over all nodes in each graph in every layer
-        for layer, h in enumerate(hidden_rep):
-            # get_logger().info("Graph Pool Shape: " + str(graph_pool.shape))
-            # get_logger().info("h Shape: " + str(h.shape))
-
-            pooled_h = torch.zeros(64, 140)
-            # get_logger().info("len of nb_count: " + str(len(context['nb_counts'][0])))
-            for i in range(len(context['nb_counts'][0])):
-                num_neighbors = context['nb_counts'][0][i]
-                sum_features = torch.sum(context['features'][0:num_neighbors])
-
-                # torch.cat((pooled_h, torch.sum(context['features'][0:num_neighbors])), 0)
-
-            # pooled_h = torch.spmm(graph_pool, h)
-            score_over_layer += F.dropout(self.linears_prediction[layer](pooled_h), self.final_dropout, training = self.training)
-
-
-        get_logger().info("Score Over Layer: " + str(score_over_layer))
-        criterion = nn.CrossEntropyLoss()
-
-        labels = context['nb_counts'][0]
-
-        loss = criterion(score_over_layer, labels)
-        return loss, score_over_layer, labels
-    
     def metric_name(self):
         """Metric used for model evaluation."""
         return self.metric.name()
-
-    def compute_metric(self, preds, labels):
-        """Stub for metric evaluation."""
-        if self.metric is not None:
-            preds = torch.unsqueeze(torch.cat(preds, 0), 1)
-            labels = torch.unsqueeze(torch.cat(labels, 0), 1).type(preds.dtype)
-            return self.metric.compute(preds, labels)
-        return torch.tensor(0.0)
 
     def query(self, graph: Graph, inputs: np.array):
         """Fetch training data from graph."""
         context = {"inputs": inputs}
 
-        get_logger().info("Finished fetching inputs in query!")
-
-        # context["label"] = graph.neighbor_count(
-        #     nodes = context["inputs"],
-        #     edge_types = np.ndarray(0),
-        # )
-
-
-
         context['neighbors'] = graph.neighbors(
             nodes = context['inputs'],
             edge_types = np.array(0),
-        )[0]
+        )[0].astype(int)
 
-        get_logger().info(str(type(context['neighbors'][0])))
+        context["label"] =  graph.node_features(
+            context["inputs"],
+            np.array([[self.label_idx, self.label_dim]]),
+            FeatureType.FLOAT,
+        )
 
         context['nb_counts'] = graph.neighbors(
             nodes = context['inputs'],
             edge_types = np.array(0),
-        )[3].astype(int)
+        )[3].astype(float)
 
-        get_logger().info(str(type(context['nb_counts'][0])))
-
-
-
-        get_logger().info("Finished fetching neighbors in query!")
 
         context["features"] = graph.node_features(
             context["neighbors"],
             np.array([[self.label_idx, self.label_dim]]),
-            FeatureType.INT64,
+            FeatureType.FLOAT,
         )
-
-        get_logger().info("finished fetching node features in query!")
-
-        get_logger().info('Context: ' + str(context))
         return context
 
     

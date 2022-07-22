@@ -5,7 +5,7 @@ import numpy as np
 import random
 from deepgnn import TrainMode, setup_default_logging_config
 from deepgnn import get_logger
-from deepgnn.pytorch.common import MRR, F1Score
+from deepgnn.pytorch.common import MRR, Accuracy
 from deepgnn.pytorch.common.utils import get_feature_type, set_seed
 from deepgnn.pytorch.encoding import get_feature_encoder
 from deepgnn.pytorch.modeling import BaseModel
@@ -48,12 +48,12 @@ def create_model(args: argparse.Namespace):
     if args.algo == "supervised":
         get_logger().info(f"Creating GIN model with seed:{args.seed}.")
         return GIN(
-            metric=F1Score(),
+            metric=Accuracy(),
             num_layers=1, 
             num_mlp_layers=2, 
-            input_dim=140,
-            hidden_dim=140, 
-            output_dim=64, 
+            input_dim=1433,
+            hidden_dim=12, 
+            output_dim=7, 
             final_dropout=0.5, 
             learn_eps=False, 
             edge_type=args.edge_type,
