@@ -396,14 +396,14 @@ def test_multithreaded_calls(multi_partition_graph_data, storage_type):
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_node_features_graph_multiple_partitions(
     multi_partition_graph_data, storage_type
 ):
     cl = client.MemoryGraph(multi_partition_graph_data, [0], storage_type)
     sampler = client.NodeSampler(cl, np.array([2]))
     nodes = sampler.sample(3, 42)
-    npt.assert_equal(nodes, [5, 5, 5])
+    npt.assert_equal(nodes[0], [5, 5, 5])
 
 
 @pytest.mark.parametrize(
@@ -557,9 +557,8 @@ def test_edge_extra_features_graph_multiple_partitions(
         values = list(map(lambda x: x + 10, values))
         feature_id += 1
 
-'''
 
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_node_sampling_graph_multiple_partitions(multi_partition_graph_data):
     g = client.MemoryGraph(multi_partition_graph_data, [0, 1])
     ns = client.NodeSampler(g, [0, 2])
@@ -575,7 +574,7 @@ def test_node_sampling_graph_with_only_missing_type(multi_partition_graph_data):
         client.NodeSampler(g, [4])
 
 
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_node_sampling_graph_ok_with_extra_missing_type(multi_partition_graph_data):
     g = client.MemoryGraph(multi_partition_graph_data, [0, 1])
     ns = client.NodeSampler(g, [0, 4])
@@ -584,7 +583,7 @@ def test_node_sampling_graph_ok_with_extra_missing_type(multi_partition_graph_da
     npt.assert_array_equal(t, [0, 0, 0])
 
 
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_edge_sampling_non_repeating_defaults(multi_partition_graph_data):
     g = client.MemoryGraph(multi_partition_graph_data, [0, 1])
     es = client.EdgeSampler(g, [0, 1])
@@ -597,7 +596,7 @@ def test_edge_sampling_non_repeating_defaults(multi_partition_graph_data):
     )
 
 
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_edge_sampling_graph_multiple_partitions(multi_partition_graph_data):
     g = client.MemoryGraph(multi_partition_graph_data, [0, 1])
     es = client.EdgeSampler(g, [0, 1])
@@ -607,7 +606,7 @@ def test_edge_sampling_graph_multiple_partitions(multi_partition_graph_data):
     npt.assert_array_equal(t, [0, 1, 1, 1, 1])
 
 
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_edge_sampling_without_replacement_graph_multiple_partitions(
     multi_partition_graph_data,
 ):
@@ -619,7 +618,7 @@ def test_edge_sampling_without_replacement_graph_multiple_partitions(
     npt.assert_array_equal(t, [0, 1, 1, 1, 1])
 
 
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_uniform_edge_sampling_graph_multiple_partitions(multi_partition_graph_data):
     g = client.MemoryGraph(multi_partition_graph_data, [0, 1])
     es = client.EdgeSampler(g, [0, 1], "uniform")
@@ -690,7 +689,7 @@ def test_node_sampler_creation(multi_partition_graph_data):
         client.NodeSampler(cl, [0])
 
 
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_edge_sampler_reset(multi_partition_graph_data):
     cl = client.MemoryGraph(multi_partition_graph_data, [0])
     es = client.EdgeSampler(cl, [0])
@@ -699,7 +698,7 @@ def test_edge_sampler_reset(multi_partition_graph_data):
         es.sample(5)
 
 
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_node_sampler_reset(multi_partition_graph_data):
     cl = client.MemoryGraph(multi_partition_graph_data, [0])
     ns = client.NodeSampler(cl, [0])
@@ -712,7 +711,7 @@ def test_node_sampler_reset(multi_partition_graph_data):
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_remote_client_node_features_single_server(
     multi_partition_graph_data, storage_type
 ):
@@ -766,7 +765,7 @@ def test_distributed_graph_metadata(multi_partition_graph_data, storage_type):
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
-@pytest.mark.parametrize("multi_partition_graph_data", ["original], indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_distributed_graph_type_counts(multi_partition_graph_data, storage_type):
     address = ["localhost:12234", "localhost:12235"]
     if platform.system() != "Darwin":
@@ -797,7 +796,7 @@ def test_distributed_graph_type_counts(multi_partition_graph_data, storage_type)
     s1.reset()
     s2.reset()
 
-'''
+
 @pytest.mark.parametrize(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
@@ -1086,12 +1085,12 @@ def test_remote_client_node_features_multiple_servers_connection_loss(
         )
     s1.reset()
 
-'''
+
 @pytest.mark.parametrize(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_node_sampling_distributed_graph_multiple_partitions(
     multi_partition_graph_data, storage_type
 ):
@@ -1115,7 +1114,7 @@ def test_node_sampling_distributed_graph_multiple_partitions(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_node_sampling_distributed_graph_multiple_partitions_raises_empty_types(
     multi_partition_graph_data, storage_type
 ):
@@ -1136,7 +1135,7 @@ def test_node_sampling_distributed_graph_multiple_partitions_raises_empty_types(
     s2.reset()
 
 
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_edge_sampling_distributed_graph_multiple_partitions(
     multi_partition_graph_data,
 ):
@@ -1155,7 +1154,7 @@ def test_edge_sampling_distributed_graph_multiple_partitions(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_edge_sampling_distributed_graph_multiple_partitions_raises_empty_types(
     multi_partition_graph_data, storage_type
 ):
@@ -1180,7 +1179,7 @@ def test_edge_sampling_distributed_graph_multiple_partitions_raises_empty_types(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_node_sampling_distributed_graph_multiple_partitions_server_down(
     multi_partition_graph_data, storage_type
 ):
@@ -1208,7 +1207,7 @@ def test_node_sampling_distributed_graph_multiple_partitions_server_down(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_edge_sampling_distributed_graph_multiple_partitions_server_down(
     multi_partition_graph_data, storage_type
 ):
@@ -1229,7 +1228,6 @@ def test_edge_sampling_distributed_graph_multiple_partitions_server_down(
     with pytest.raises(Exception, match="Failed to sample edges"):
         es.sample(size=5, seed=2)
     s1.reset()
-'''
 
 
 class _TrainingWorker:
