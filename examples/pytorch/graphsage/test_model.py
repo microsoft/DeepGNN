@@ -34,7 +34,7 @@ from deepgnn.graph_engine import (
     create_backend,
 )
 import deepgnn.graph_engine.snark.convert as convert
-from deepgnn.graph_engine.snark.decoders import DecoderType
+from deepgnn.graph_engine.snark.decoders import JsonDecoder
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
 from model import SupervisedGraphSage, UnSupervisedGraphSage
 
@@ -293,6 +293,44 @@ def test_supervised_graphsage_model(mock_graph):  # noqa: F811
     npt.assert_allclose(output.detach().numpy(), expected, rtol=1e-3)
 
 
+# test if computational graph is connected.
+def test_supervised_graphsage_computational_graph(mock_graph):  # noqa: F811
+    np.random.seed(0)
+    torch.manual_seed(0)
+
+    num_classes = 7
+    label_dim = 7
+    label_idx = 1
+    feature_dim = 1433
+    feature_idx = 0
+    edge_type = 0
+
+    graphsage = SupervisedGraphSage(
+        num_classes=num_classes,
+        metric=F1Score(),
+        label_idx=label_idx,
+        label_dim=label_dim,
+        feature_type=FeatureType.FLOAT,
+        feature_idx=feature_idx,
+        feature_dim=feature_dim,
+        edge_type=edge_type,
+        fanouts=[5, 5],
+    )
+
+    # use one batch to verify if computational graph is connected.
+    trainloader = torch.utils.data.DataLoader(
+        MockSimpleDataLoader(batch_size=256, query_fn=graphsage.query, graph=mock_graph)
+    )
+    it = iter(trainloader)
+    context = it.next()
+
+    # here we are using feature tensor as a proxy for node ids
+    assert torch.equal(
+        context["encoder"]["node_feats"]["neighbor_feats"],
+        context["encoder"]["neighbor_feats"]["node_feats"],
+    )
+
+
 # test the correctness of the loss function.
 def test_supervised_graphsage_loss_value(mock_graph):  # noqa: F811
     np.random.seed(0)
@@ -420,10 +458,9 @@ def tiny_graph():
 
     convert.MultiWorkersConverter(
         graph_path=os.path.join(graph_dir.name, "twinbert/tiny_graph.json"),
-        meta_path=os.path.join(graph_dir.name, "twinbert/tiny_meta.json"),
         partition_count=1,
         output_dir=graph_dir.name,
-        decoder_type=DecoderType.JSON,
+        decoder=JsonDecoder(),
     ).convert()
 
     yield graph_dir.name

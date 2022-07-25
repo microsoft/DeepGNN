@@ -106,12 +106,13 @@ increment relevant counters for each node and edge for each processed node. When
     ...                 self.edge_count_per_type))))
     ...             f.write(contents)
 
-Spark task is very straitforward: deserialize node from json and pass it to both `NodeWriter` to generate binary data and `PartitionMeta` to update metadata.
+Spark task is very straitforward: deserialize node from json and pass it to both `BinaryWriter` to generate binary data and `PartitionMeta` to update metadata.
 
 .. code-block:: python
 
     >>> from pyspark import TaskContext
-    >>> from deepgnn.graph_engine.snark.converter.json_converter import NodeWriter
+    >>> from deepgnn.graph_engine.snark.converter.writers import BinaryWriter
+    >>> from deepgnn.graph_engine.snark.decoders import JsonDecoder
     >>> class SparkTask:
     ...     def __init__(self, binary_dir: str):
     ...         self.binary_dir = binary_dir
@@ -119,13 +120,13 @@ Spark task is very straitforward: deserialize node from json and pass it to both
     ...     def __call__(self, iterator):
     ...         tc = TaskContext()
     ...         id = tc.partitionId()
-    ...         nw = NodeWriter(self.binary_dir, id)
+    ...         decoder = JsonDecoder()
+    ...         writer = BinaryWriter(self.binary_dir, id)
     ...         pm = PartitionMeta(id)
     ...         for n in iterator:
-    ...             node = json.loads(n)
-    ...             nw.add(node)
-    ...             pm.add(node)
-    ...         nw.close()
+    ...             writer.add(decoder.decode(n))
+    ...             pm.add(json.loads(n))
+    ...         writer.close()
     ...         pm.close(self.binary_dir)
 
 We can now run the job and split it across `NUM_PARTITIONS`:
