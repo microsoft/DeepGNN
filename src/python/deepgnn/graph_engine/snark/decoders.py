@@ -34,7 +34,7 @@ class Decoder(abc.ABC):
         """Decode the line of text.
 
         This is a generator that yields a node then its outgoing edges in order.
-        Yield format is (-1/src, node_id/dst, type, weight, features).
+        Yield format is (node_id/src, -1/dst, type, weight, features).
         Features being a list of dense features as ndarrays and sparse features as 2 tuples, coordinates and values.
         """
 
@@ -72,7 +72,7 @@ class LinearDecoder(Decoder):
         ```
 
     Init Parameters:
-        he following keyword arguments can be added when creating the decoder.
+        the following keyword arguments can be added when creating the decoder.
         default_node_type: int Type of all nodes, if set do not add node type to any nodes.
         default_node_weight: int Weight of all nodes, if set do not add node weight to any nodes.
         default_node_feature_types: ["dtype" or None, ...] Dtype of each feature vector.
@@ -279,11 +279,11 @@ class JsonDecoder(Decoder):
         """Use json package to convert the json text line into a node and edge iterator.
 
         This is a generator that yields a node then its outgoing edges in order.
-        Yield format is (-1/src, node_id/dst, type, weight, features).
+        Yield format is (node_id/src, -1/dst, type, weight, features).
         Features being a list of dense features as ndarrays and sparse features as 2 tuples, coordinates and values.
         """
         data = json.loads(line)
-        yield -1, data["node_id"], data["node_type"], data[
+        yield data["node_id"], -1, data["node_type"], data[
             "node_weight"
         ], self._pull_features(data)
         for edge in data["edge"]:
@@ -356,7 +356,7 @@ class TsvDecoder(Decoder):
         """Decode tsv based text line into a node and edge iterator.
 
         This is a generator that yields a node then its outgoing edges in order.
-        Yield format is (-1/src, node_id/dst, type, weight, features).
+        Yield format is (node_id/src, -1/dst, type, weight, features).
         Features being a list of dense features as ndarrays and sparse features as 2 tuples, coordinates and values.
         """
         assert line is not None and len(line) > 0
@@ -373,7 +373,7 @@ class TsvDecoder(Decoder):
         node_id = int(columns[0])
         node_type = int(columns[1]) if columns[1] else 0
         node_weight = float(columns[2]) if columns[2] else 0.0
-        yield -1, node_id, node_type, node_weight, self._parse_feature_string(
+        yield node_id, -1, node_type, node_weight, self._parse_feature_string(
             columns[3]
         )
 

@@ -77,7 +77,7 @@ def _full_neighbor(graph: Graph, nodes: np.ndarray, hop_edge_types: np.ndarray):
         )
 
     nbs, weights, _, counts = graph.neighbors(nodes, hop_edge_types)
-    blocks = []
+    blocks: list = []
 
     # Create neighbors indices in the form [node_idx, neighbor_idx]
     for x, i in np.nditer([counts, np.arange(len(counts))]):

@@ -12,7 +12,7 @@ else:
     from multiprocessing.connection import Connection  # type: ignore
 
 import deepgnn.graph_engine.snark.converter.writers as writers
-from deepgnn.graph_engine.snark.decoders import DecoderType, JsonDecoder
+from deepgnn.graph_engine.snark.decoders import DecoderType
 
 
 FLAG_ALL_DONE = b"WORK_FINISHED"
@@ -25,7 +25,7 @@ def converter_process(
     q_out: mp.Queue,
     folder: str,
     suffix: int,
-    decoder: typing.Optional[DecoderType],
+    decoder: DecoderType,
     skip_node_sampler: bool,
     skip_edge_sampler: bool,
 ) -> None:
@@ -40,8 +40,8 @@ def converter_process(
         skip_node_sampler(bool): skip generation of node alias tables
         skip_edge_sampler(bool): skip generation of edge alias tables
     """
-    if decoder is None:
-        decoder = JsonDecoder()  # type: ignore
+    if isinstance(decoder, type):
+        decoder = decoder()
 
     binary_writer = writers.BinaryWriter(
         str(folder),
@@ -67,8 +67,8 @@ def converter_process(
             {
                 "node_count": binary_writer.node_count,
                 "edge_count": binary_writer.edge_count,
-                "node_type_num": binary_writer.node_type_num + 1,
-                "edge_type_num": binary_writer.edge_type_num + 1,
+                "node_type_num": binary_writer.node_type_num,
+                "edge_type_num": binary_writer.edge_type_num,
                 "node_feature_num": binary_writer.node_feature_num,
                 "edge_feature_num": binary_writer.edge_feature_num,
                 "partition": {

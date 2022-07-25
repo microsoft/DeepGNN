@@ -79,7 +79,7 @@ def load_data(
     x, y, tx, ty, allx, ally, graph = tuple(objects)
     fname = os.path.join(data_dir, "ind.{}.test.index".format(dataset_str))
     test_idx_reorder = parse_index_file(fname)
-    test_idx_range = np.sort(test_idx_reorder)
+    test_idx_range: np.ndarray = np.sort(test_idx_reorder)
 
     if dataset_str == "citeseer":
         # Fix citeseer dataset (there are some isolated nodes in the graph)

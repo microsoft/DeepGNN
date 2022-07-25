@@ -29,8 +29,8 @@ class BinaryWriter:
         self,
         folder: str,
         suffix: int,
-        skip_node_sampler: bool,
-        skip_edge_sampler: bool,
+        skip_node_sampler: bool = False,
+        skip_edge_sampler: bool = False,
     ):
         """Initialize writer and create binary files.
 
@@ -61,8 +61,8 @@ class BinaryWriter:
 
         self.node_count: int = 0
         self.edge_count: int = 0
-        self.node_type_num: int = -1
-        self.edge_type_num: int = -1
+        self.node_type_num: int = 0
+        self.edge_type_num: int = 0
         self.node_weight: typing.List[float] = []
         self.node_type_count: typing.List[int] = []
         self.edge_weight: typing.List[float] = []
@@ -75,28 +75,36 @@ class BinaryWriter:
         args:
             data: Iterable[(int, int, int, float, list)] Data for a node first, then all of
                 its edges in order of dst. Each entry for a node/edge is,
-                (-1/src, node_id/dst, type, weight, [ndarray for each feature vector or None in order of feature index]).
+                (node_id/src, -1/dst, type, weight, [ndarray for each feature vector or None in order of feature index]).
         """
+        prev_node_id = -1
         for src, dst, typ, weight, features in data:
-            if src == -1:
-                if typ > self.node_type_num:
-                    for _ in range(typ - self.node_type_num):
+            type_num_value = typ + 1
+            if dst == -1:
+                prev_node_id = src
+                if type_num_value > self.node_type_num:
+                    for _ in range(type_num_value - self.node_type_num):
                         self.node_alias.add_type()
                         self.node_weight.append(0)
                         self.node_type_count.append(0)
-                    self.node_type_num = typ
-                self.node_writer.add(dst, typ, features)
-                self.node_alias.add(dst, typ, weight)
+                    self.node_type_num = type_num_value
+                self.node_writer.add(src, typ, features)
+                self.edge_writer.add_node()
+                self.node_alias.add(src, typ, weight)
                 self.node_weight[typ] += float(weight)
                 self.node_type_count[typ] += 1
                 self.node_count += 1
             else:
-                if typ > self.edge_type_num:
-                    for _ in range(typ - self.edge_type_num):
+                if src != prev_node_id:
+                    self.node_writer.add(src, -1, [])
+                    self.edge_writer.add_node()
+                    prev_node_id = src
+                if type_num_value > self.edge_type_num:
+                    for _ in range(type_num_value - self.edge_type_num):
                         self.edge_alias.add_type()
                         self.edge_weight.append(0)
                         self.edge_type_count.append(0)
-                    self.edge_type_num = typ
+                    self.edge_type_num = type_num_value
                 self.edge_writer.add(src, dst, typ, weight, features)
                 self.edge_alias.add(src, dst, typ, weight)
                 self.edge_weight[typ] += weight
@@ -250,7 +258,6 @@ class EdgeWriter:
             "wb",
         )
         self.efi_pos = self.efi.tell()
-        self.prev_src = -1
 
         self.feature_writer = EdgeFeatureWriter(folder, partition, self.efi)
 
@@ -270,10 +277,6 @@ class EdgeWriter:
             weight: float
             features: list[ndarray]
         """
-        if src != self.prev_src:
-            self.add_node()
-            self.prev_src = src
-
         # Record order is important for C++ reader: order fields by size for faster load.
         self.ei.write(
             struct.pack(
@@ -590,7 +593,7 @@ def convert_features(features: list):
             if values.dtype == np.float16:
                 values_buf = np.array(values, dtype=np.float16).tobytes()
             else:
-                values_buf = (np.ctypeslib.as_ctypes_type(values.dtype) * len(values))()
+                values_buf = (np.ctypeslib.as_ctypes_type(values.dtype) * len(values))()  # type: ignore
                 values_buf[:] = values  # type: ignore
 
             # For matrices the number of values might be different than number of coordinates
