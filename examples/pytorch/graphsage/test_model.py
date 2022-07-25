@@ -293,6 +293,45 @@ def test_supervised_graphsage_model(mock_graph):  # noqa: F811
     npt.assert_allclose(output.detach().numpy(), expected, rtol=1e-3)
 
 
+# test if computational graph is connected.
+def test_supervised_graphsage_computational_graph(mock_graph):  # noqa: F811
+    np.random.seed(0)
+    torch.manual_seed(0)
+
+    num_classes = 7
+    label_dim = 7
+    label_idx = 1
+    feature_dim = 1433
+    feature_idx = 0
+    edge_type = 0
+
+    graphsage = SupervisedGraphSage(
+        num_classes=num_classes,
+        metric=F1Score(),
+        label_idx=label_idx,
+        label_dim=label_dim,
+        feature_type=FeatureType.FLOAT,
+        feature_idx=feature_idx,
+        feature_dim=feature_dim,
+        edge_type=edge_type,
+        fanouts=[5, 5],
+    )
+
+    # use one batch to verify if computational graph is connected.
+    simpler = MockSimpleDataLoader(
+        batch_size=256, query_fn=graphsage.query, graph=mock_graph
+    )
+
+    it = iter(simpler)
+    context = it.next()
+
+    # here we are using feature tensor as a proxy for node ids
+    assert np.array_equal(
+        context["encoder"]["node_feats"]["neighbor_feats"],
+        context["encoder"]["neighbor_feats"]["node_feats"],
+    )
+
+
 # test the correctness of the loss function.
 def test_supervised_graphsage_loss_value(mock_graph):  # noqa: F811
     np.random.seed(0)

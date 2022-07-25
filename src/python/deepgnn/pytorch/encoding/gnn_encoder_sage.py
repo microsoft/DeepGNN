@@ -73,13 +73,18 @@ class SageEncoder(nn.Module):
         """Query graph for training data."""
         context = {}
         if neigh_nodes is None:
-            neigh_nodes = graph.sample_neighbors(nodes, self.edge_types, self.num_sample)[
-                0
-            ].flatten()
+            neigh_nodes = graph.sample_neighbors(
+                nodes, self.edge_types, self.num_sample
+            )[0].flatten()
         neigh_nodes_unique, idx = np.unique(neigh_nodes, return_inverse=True)
 
         context["node_feats"] = self.query_func(
-            nodes, graph, feature_type, feature_idx, feature_dim, neigh_nodes=neigh_nodes,
+            nodes,
+            graph,
+            feature_type,
+            feature_idx,
+            feature_dim,
+            neigh_nodes=neigh_nodes,
         )
 
         neigh_feats_unique = self.query_func(
