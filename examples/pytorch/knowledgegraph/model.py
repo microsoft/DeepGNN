@@ -120,7 +120,7 @@ class KGEModel(BaseModel):
         )
         self.step = 0
 
-    def query(self, graph: Graph, inputs: np.array):
+    def query(self, graph: Graph, inputs: np.ndarray):
         """Fetch data from graph for training."""
         context = {"inputs": inputs}
 
@@ -174,7 +174,7 @@ class KGEModel(BaseModel):
         context["negs"] = np.array(all_negative_list)
         return context
 
-    def query_eval(self, graph: Graph, inputs: np.array):
+    def query_eval(self, graph: Graph, inputs: np.ndarray):
         """Fetch data from graph for evaluation."""
         context = {}
         inputs[0][:, 2] = inputs[1][:, 0].astype("int64")

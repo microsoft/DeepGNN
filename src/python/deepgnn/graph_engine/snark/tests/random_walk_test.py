@@ -16,7 +16,7 @@ import pytest
 import networkx as nx
 
 import deepgnn.graph_engine.snark.client as client
-from deepgnn.graph_engine.snark.decoders import DecoderType
+from deepgnn.graph_engine.snark.decoders import JsonDecoder
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.dispatcher as dispatcher
@@ -33,12 +33,10 @@ def karate_club_json(folder):
             "node_id": node_id,
             "node_type": 0,
             "node_weight": 1,
-            "neighbor": {"0": {}},
             "edge": [],
         }
         for nb in raw.neighbors(nx_node):
             nb_index = nb + 1
-            node["neighbor"]["0"][str(nb_index)] = 1
             node["edge"].append(
                 {"src_id": node_id, "dst_id": nb_index, "edge_type": 0, "weight": 1}
             )
@@ -48,18 +46,8 @@ def karate_club_json(folder):
         json.dump(el, data)
         data.write("\n")
     data.flush()
-
-    meta = open(os.path.join(folder, "meta.txt"), "w+")
-    meta.write(
-        '{"node_type_num": 1, "edge_type_num": 1, \
-        "node_uint64_feature_num": 0, "node_float_feature_num": 0, \
-        "node_binary_feature_num": 0, "edge_uint64_feature_num": 0, \
-        "edge_float_feature_num": 0, "edge_binary_feature_num": 0}'
-    )
-    meta.flush()
     data.close()
-    meta.close()
-    return data.name, meta.name
+    return data.name
 
 
 def get_lib_name():
@@ -86,17 +74,14 @@ class Counter:
 @pytest.fixture(scope="module")
 def binary_karate_club_data():
     with tempfile.TemporaryDirectory() as workdir:
-        data_name, meta_name = karate_club_json(workdir)
-        d = dispatcher.QueueDispatcher(
-            Path(workdir), 2, meta_name, convert.output, Counter(), DecoderType.JSON
-        )
+        data_name = karate_club_json(workdir)
+        d = dispatcher.QueueDispatcher(Path(workdir), 2, Counter(), JsonDecoder())
 
         convert.MultiWorkersConverter(
             graph_path=data_name,
-            meta_path=meta_name,
             partition_count=2,
             output_dir=workdir,
-            decoder_type=DecoderType.JSON,
+            decoder=JsonDecoder(),
             dispatcher=d,
         ).convert()
         yield workdir

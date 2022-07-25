@@ -34,7 +34,7 @@ from deepgnn.graph_engine import (
     create_backend,
 )
 import deepgnn.graph_engine.snark.convert as convert
-from deepgnn.graph_engine.snark.decoders import DecoderType
+from deepgnn.graph_engine.snark.decoders import JsonDecoder
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
 from model import SupervisedGraphSage, UnSupervisedGraphSage
 
@@ -270,7 +270,7 @@ def test_supervised_graphsage_model(mock_graph):  # noqa: F811
     # is deterministic.
     nodes = torch.as_tensor([2700])
     expected = np.array(
-        [[0.094184, -0.06748, -0.000671, 0.00233, -0.010543, -0.058825, 0.038054]],
+        [[0.074278, -0.069181, 0.003444, -0.008916, -0.013685, -0.036867, 0.042985]],
         dtype=np.float32,
     )
     graphsage = SupervisedGraphSage(
@@ -329,7 +329,7 @@ def test_supervised_graphsage_loss_value(mock_graph):  # noqa: F811
     loss, _, _ = graphsage(it.next())
     loss.backward()
     optimizer.step()
-    npt.assert_allclose(loss.detach().numpy(), np.array([1.923]), rtol=1e-3)
+    npt.assert_allclose(loss.detach().numpy(), np.array([1.930]), rtol=1e-3)
 
 
 # test the correctness of the unsupervised graphsage's model.
@@ -346,7 +346,7 @@ def test_unsupervised_graphsage_model(mock_graph):  # noqa: F811
     # is deterministic.
     nodes = torch.as_tensor([2700])
     expected = np.array(
-        [[0.094184, -0.06748, -0.000671, 0.00233, -0.010543, -0.058825, 0.038054]],
+        [[0.074278, -0.069181, 0.003444, -0.008916, -0.013685, -0.036867, 0.042985]],
         dtype=np.float32,
     )
     graphsage = UnSupervisedGraphSage(
@@ -420,10 +420,9 @@ def tiny_graph():
 
     convert.MultiWorkersConverter(
         graph_path=os.path.join(graph_dir.name, "twinbert/tiny_graph.json"),
-        meta_path=os.path.join(graph_dir.name, "twinbert/tiny_meta.json"),
         partition_count=1,
         output_dir=graph_dir.name,
-        decoder_type=DecoderType.JSON,
+        decoder=JsonDecoder(),
     ).convert()
 
     yield graph_dir.name

@@ -380,8 +380,8 @@ class MemoryGraph:
         )
 
     def node_features(
-        self, nodes: np.array, features: np.array, dtype: np.dtype
-    ) -> np.array:
+        self, nodes: np.ndarray, features: np.ndarray, dtype: np.dtype
+    ) -> np.ndarray:
         """Retrieve node features.
 
         Args:
@@ -412,8 +412,8 @@ class MemoryGraph:
         return result
 
     def node_sparse_features(
-        self, nodes: np.array, features: np.array, dtype: np.dtype
-    ) -> np.array:
+        self, nodes: np.ndarray, features: np.ndarray, dtype: np.dtype
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Retrieve node sparse features.
 
         Args:
@@ -422,8 +422,8 @@ class MemoryGraph:
             dtype (np.dtype): feature types to extract
 
         Returns:
-            List[np.array]: List of coordinates for sparse features, with node index as first coordinate. Each list element represents coordinates of a corresponding feature.
-            List[np.array]: List of numpy arrays of sparse features values. List items ordered by feature ids passed as input.
+            List[np.ndarray]: List of coordinates for sparse features, with node index as first coordinate. Each list element represents coordinates of a corresponding feature.
+            List[np.ndarray]: List of numpy arrays of sparse features values. List items ordered by feature ids passed as input.
             np.array: dimensions of returned sparse features.
 
         """
@@ -444,8 +444,8 @@ class MemoryGraph:
         return py_cb.indices, py_cb.values, py_cb.dimensions
 
     def node_string_features(
-        self, nodes: np.array, features: np.array, dtype: np.dtype
-    ) -> np.array:
+        self, nodes: np.ndarray, features: np.ndarray, dtype: np.dtype
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Retrieve node string features, i.e. each feature has variable length.
 
         Args:
@@ -477,12 +477,12 @@ class MemoryGraph:
 
     def edge_features(
         self,
-        edge_src: np.array,
-        edge_dst: np.array,
-        edge_tp: np.array,
-        features: np.array,
+        edge_src: np.ndarray,
+        edge_dst: np.ndarray,
+        edge_tp: np.ndarray,
+        features: np.ndarray,
         dtype: np.dtype,
-    ) -> np.array:
+    ) -> np.ndarray:
         """Retrieve edge features.
 
         Args:
@@ -524,12 +524,12 @@ class MemoryGraph:
 
     def edge_sparse_features(
         self,
-        edge_src: np.array,
-        edge_dst: np.array,
-        edge_tp: np.array,
-        features: np.array,
+        edge_src: np.ndarray,
+        edge_dst: np.ndarray,
+        edge_tp: np.ndarray,
+        features: np.ndarray,
         dtype: np.dtype,
-    ) -> np.array:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Retrieve edge sparse features.
 
         Args:
@@ -540,8 +540,8 @@ class MemoryGraph:
             dtype (np.dtype): Feature type as numpy array type.
 
         Returns:
-            List[np.array]: List of coordinates for sparse features, with edge index as first coordinate. Each list element represents coordinates of a corresponding feature.
-            List[np.array]: List of numpy arrays of sparse features values. List items ordered by feature ids passed as input.
+            List[np.ndarray]: List of coordinates for sparse features, with edge index as first coordinate. Each list element represents coordinates of a corresponding feature.
+            List[np.ndarray]: List of numpy arrays of sparse features values. List items ordered by feature ids passed as input.
             np.array: dimensions of returned sparse features.
         """
         assert len(edge_src) == len(edge_dst)
@@ -569,12 +569,12 @@ class MemoryGraph:
 
     def edge_string_features(
         self,
-        edge_src: np.array,
-        edge_dst: np.array,
-        edge_tp: np.array,
-        features: np.array,
+        edge_src: np.ndarray,
+        edge_dst: np.ndarray,
+        edge_tp: np.ndarray,
+        features: np.ndarray,
         dtype: np.dtype,
-    ) -> np.array:
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Retrieve edge string features.
 
         Args:
@@ -644,8 +644,8 @@ class MemoryGraph:
         return counts
 
     def neighbors(
-        self, nodes: np.array, edge_types: Union[List[int], int]
-    ) -> Tuple[np.array, np.array, np.array, np.array]:
+        self, nodes: np.ndarray, edge_types: Union[List[int], int]
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Full list of node neighbors.
 
@@ -681,14 +681,14 @@ class MemoryGraph:
 
     def weighted_sample_neighbors(
         self,
-        nodes: np.array,
+        nodes: np.ndarray,
         edge_types: Union[List[int], int],
         count: int = 10,
         default_node: int = -1,
         default_weight: float = 0.0,
         default_edge_type: int = -1,
         seed: Optional[int] = None,
-    ) -> Tuple[np.array, np.array, np.array]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Randomly sample neighbor nodes based on their weights(edge connecting 2 nodes).
 
         Args:
@@ -700,7 +700,7 @@ class MemoryGraph:
             seed (int, optional): Seed value for random samplers. Defaults to random.getrandbits(64).
 
         Returns:
-            Tuple[np.array, np.array, np.array]: a tuple of neighbor nodes, edge weights and types connecting them.
+            Tuple[np.ndarray, np.ndarray, np.ndarray]: a tuple of neighbor nodes, edge weights and types connecting them.
         """
         nodes = np.array(nodes, dtype=np.int64)
         edge_types = _make_sorted_list(edge_types)
@@ -729,13 +729,13 @@ class MemoryGraph:
     def uniform_sample_neighbors(
         self,
         without_replacement: bool,
-        nodes: np.array,
+        nodes: np.ndarray,
         edge_types: Union[List[int], int],
         count: int = 10,
         default_node: int = -1,
         default_type: int = -1,
         seed: Optional[int] = None,
-    ) -> Tuple[np.array, np.array]:
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Randomly sample neighbor nodes irrespectively of their weights.
 
         Args:
@@ -748,7 +748,7 @@ class MemoryGraph:
             seed (int, optional): Seed value for random samplers. Defaults to random.getrandbits(64).
 
         Returns:
-            Tuple[np.array, np.array]: a tuple of neighbor nodes and types connecting them.
+            Tuple[np.ndarray, np.ndarray]: a tuple of neighbor nodes and types connecting them.
         """
         nodes = np.array(nodes, dtype=np.int64)
         edge_types = _make_sorted_list(edge_types)
@@ -799,14 +799,14 @@ class MemoryGraph:
 
     def random_walk(
         self,
-        node_ids: np.array,
+        node_ids: np.ndarray,
         edge_types: Union[List[int], int],
         walk_len: int,
         p: float,
         q: float,
         default_node: int = -1,
         seed: Optional[int] = None,
-    ) -> np.array:
+    ) -> np.ndarray:
         """
         Sample nodes via random walk.
 
@@ -842,7 +842,7 @@ class MemoryGraph:
 
         return result_nodes
 
-    def node_types(self, nodes: np.array, default_type: int) -> np.array:
+    def node_types(self, nodes: np.ndarray, default_type: int) -> np.ndarray:
         """Retrieve node types.
 
         Args:
@@ -1011,7 +1011,7 @@ class NodeSampler:
 
     def sample(
         self, size: int, seed: Optional[int] = None
-    ) -> Tuple[np.array, np.array]:
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Perform sampling.
 
         Args:
@@ -1019,7 +1019,7 @@ class NodeSampler:
             seed (int, optional): seed value to use for sampling. Defaults to random.getrandbits(64).
 
         Returns:
-            Tuple[np.array, np.array]: a tuple of nodes and their corresponding types.
+            Tuple[np.ndarray, np.ndarray]: a tuple of nodes and their corresponding types.
         """
         result_nodes = np.empty(size, dtype=np.int64)
         result_types = np.empty(size, dtype=np.int32)
@@ -1120,7 +1120,7 @@ class EdgeSampler:
 
     def sample(
         self, size: int, seed: Optional[int] = None
-    ) -> Tuple[np.array, np.array, np.array]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Perform sampling.
 
         Args:
@@ -1128,7 +1128,7 @@ class EdgeSampler:
             seed (int, optional): seed value to use for sampling. Defaults to random.getrandbits(64).
 
         Returns:
-            Tuple[np.array, np.array]: a tuple of source, destination nodes for edges and their corresponding types.
+            Tuple[np.ndarray, np.ndarray]: a tuple of source, destination nodes for edges and their corresponding types.
         """
         result_src = np.empty(size, dtype=np.int64)
         result_dst = np.empty(size, dtype=np.int64)

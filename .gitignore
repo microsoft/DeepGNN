@@ -8,8 +8,8 @@ bazel-DeepGNN*
 bazel-testlogs*
 
 # Python package artifacts
-dist/*
-build/*
+src/python/dist/*
+src/python/build/*
 *.egg-info
 
 #Python cache files

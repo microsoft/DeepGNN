@@ -38,9 +38,14 @@ runs:
     - run: |
         bazel test -c dbg //examples/pytorch/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
         bazel test -c dbg //examples/tensorflow/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
-        bazel test -c dbg //docs/tutorials:notebook_test --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
       shell: bash
       name: run python tests in examples folder
+      if: runner.os == 'Linux'
+    - run: |
+        bazel test -c dbg //docs:* --test_output=all --config=linux --disk_cache=~/bazel-cache
+        bazel run -c dbg //docs:make_docs --config=linux
+      shell: bash
+      name: run doctest and build documentation
       if: runner.os == 'Linux'
     - run: bazel build -c dbg src/cc/lib/benchmark:* --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
       shell: bash

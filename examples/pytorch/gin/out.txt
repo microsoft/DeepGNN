@@ -1,0 +1,443 @@
+2022-07-22 16:45:52,395] {trainer.py:237} INFO - [1,0] epoch: 11; step: 00001; loss: 344.7343; Accuracy: 0.2188; time: 0.0064s
+[2022-07-22 16:45:52,403] {trainer.py:237} INFO - [1,0] epoch: 11; step: 00002; loss: 263.7653; Accuracy: 0.1562; time: 0.0084s
+[2022-07-22 16:45:52,409] {trainer.py:237} INFO - [1,0] epoch: 11; step: 00003; loss: 315.9679; Accuracy: 0.1719; time: 0.0056s
+[2022-07-22 16:45:52,410] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-012-000000.pt.
+[2022-07-22 16:45:52,410] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:52,414] {trainer.py:237} INFO - [1,0] epoch: 12; step: 00001; loss: 178.6427; Accuracy: 0.1406; time: 0.0053s
+[2022-07-22 16:45:52,424] {trainer.py:237} INFO - [1,0] epoch: 12; step: 00002; loss: 244.8022; Accuracy: 0.1406; time: 0.0100s
+[2022-07-22 16:45:52,428] {trainer.py:237} INFO - [1,0] epoch: 12; step: 00003; loss: 308.9345; Accuracy: 0.1562; time: 0.0042s
+[2022-07-22 16:45:52,429] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-013-000000.pt.
+[2022-07-22 16:45:52,429] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:52,438] {trainer.py:237} INFO - [1,0] epoch: 13; step: 00001; loss: 397.8680; Accuracy: 0.1250; time: 0.0097s
+[2022-07-22 16:45:52,445] {trainer.py:237} INFO - [1,0] epoch: 13; step: 00002; loss: 392.2538; Accuracy: 0.1094; time: 0.0072s
+[2022-07-22 16:45:52,451] {trainer.py:237} INFO - [1,0] epoch: 13; step: 00003; loss: 228.1066; Accuracy: 0.1875; time: 0.0052s
+[2022-07-22 16:45:52,454] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-014-000000.pt.
+[2022-07-22 16:45:52,455] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:52,461] {trainer.py:237} INFO - [1,0] epoch: 14; step: 00001; loss: 460.6169; Accuracy: 0.1719; time: 0.0102s
+[2022-07-22 16:45:52,467] {trainer.py:237} INFO - [1,0] epoch: 14; step: 00002; loss: 102.6959; Accuracy: 0.2031; time: 0.0057s
+[2022-07-22 16:45:52,497] {trainer.py:237} INFO - [1,0] epoch: 14; step: 00003; loss: 165.4132; Accuracy: 0.0938; time: 0.0305s
+[2022-07-22 16:45:52,498] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-015-000000.pt.
+[2022-07-22 16:45:52,499] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:52,532] {trainer.py:237} INFO - [1,0] epoch: 15; step: 00001; loss: 405.3339; Accuracy: 0.1406; time: 0.0287s
+[2022-07-22 16:45:52,537] {trainer.py:237} INFO - [1,0] epoch: 15; step: 00002; loss: 135.9322; Accuracy: 0.1719; time: 0.0111s
+[2022-07-22 16:45:52,540] {trainer.py:237} INFO - [1,0] epoch: 15; step: 00003; loss: 424.3425; Accuracy: 0.1406; time: 0.0034s
+[2022-07-22 16:45:52,541] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-016-000000.pt.
+[2022-07-22 16:45:52,541] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:52,548] {trainer.py:237} INFO - [1,0] epoch: 16; step: 00001; loss: 318.5094; Accuracy: 0.1719; time: 0.0073s
+[2022-07-22 16:45:52,555] {trainer.py:237} INFO - [1,0] epoch: 16; step: 00002; loss: 285.0154; Accuracy: 0.2031; time: 0.0076s
+[2022-07-22 16:45:52,562] {trainer.py:237} INFO - [1,0] epoch: 16; step: 00003; loss: 354.5879; Accuracy: 0.1250; time: 0.0069s
+[2022-07-22 16:45:52,569] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-017-000000.pt.
+[2022-07-22 16:45:52,570] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:52,584] {trainer.py:237} INFO - [1,0] epoch: 17; step: 00001; loss: 262.3933; Accuracy: 0.1250; time: 0.0218s
+[2022-07-22 16:45:52,590] {trainer.py:237} INFO - [1,0] epoch: 17; step: 00002; loss: 447.2692; Accuracy: 0.0625; time: 0.0064s
+[2022-07-22 16:45:52,596] {trainer.py:237} INFO - [1,0] epoch: 17; step: 00003; loss: 468.6899; Accuracy: 0.0938; time: 0.0058s
+[2022-07-22 16:45:52,598] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-018-000000.pt.
+[2022-07-22 16:45:52,600] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:52,606] {trainer.py:237} INFO - [1,0] epoch: 18; step: 00001; loss: 225.4542; Accuracy: 0.1094; time: 0.0104s
+[2022-07-22 16:45:52,612] {trainer.py:237} INFO - [1,0] epoch: 18; step: 00002; loss: 548.0662; Accuracy: 0.1406; time: 0.0058s
+[2022-07-22 16:45:52,621] {trainer.py:237} INFO - [1,0] epoch: 18; step: 00003; loss: 242.3658; Accuracy: 0.2344; time: 0.0088s
+[2022-07-22 16:45:52,625] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-019-000000.pt.
+[2022-07-22 16:45:52,626] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:52,630] {trainer.py:237} INFO - [1,0] epoch: 19; step: 00001; loss: 374.0142; Accuracy: 0.1562; time: 0.0092s
+[2022-07-22 16:45:52,638] {trainer.py:237} INFO - [1,0] epoch: 19; step: 00002; loss: 460.1451; Accuracy: 0.2344; time: 0.0078s
+[2022-07-22 16:45:52,644] {trainer.py:237} INFO - [1,0] epoch: 19; step: 00003; loss: 393.2054; Accuracy: 0.1875; time: 0.0058s
+[2022-07-22 16:45:52,645] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-020-000000.pt.
+[2022-07-22 16:45:52,645] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:52,694] {trainer.py:237} INFO - [1,0] epoch: 20; step: 00001; loss: 595.7752; Accuracy: 0.1562; time: 0.0502s
+[2022-07-22 16:45:52,704] {trainer.py:237} INFO - [1,0] epoch: 20; step: 00002; loss: 264.2234; Accuracy: 0.1250; time: 0.0093s
+[2022-07-22 16:45:52,722] {trainer.py:237} INFO - [1,0] epoch: 20; step: 00003; loss: 228.9177; Accuracy: 0.1406; time: 0.0186s
+[2022-07-22 16:45:52,723] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-021-000000.pt.
+[2022-07-22 16:45:52,723] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:52,730] {trainer.py:237} INFO - [1,0] epoch: 21; step: 00001; loss: 215.4193; Accuracy: 0.0781; time: 0.0075s
+[2022-07-22 16:45:52,738] {trainer.py:237} INFO - [1,0] epoch: 21; step: 00002; loss: 355.9082; Accuracy: 0.1562; time: 0.0083s
+[2022-07-22 16:45:52,745] {trainer.py:237} INFO - [1,0] epoch: 21; step: 00003; loss: 140.6907; Accuracy: 0.1250; time: 0.0073s
+[2022-07-22 16:45:52,746] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-022-000000.pt.
+[2022-07-22 16:45:52,747] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:52,754] {trainer.py:237} INFO - [1,0] epoch: 22; step: 00001; loss: 336.8743; Accuracy: 0.0781; time: 0.0087s
+[2022-07-22 16:45:52,760] {trainer.py:237} INFO - [1,0] epoch: 22; step: 00002; loss: 301.7213; Accuracy: 0.1094; time: 0.0061s
+[2022-07-22 16:45:52,763] {trainer.py:237} INFO - [1,0] epoch: 22; step: 00003; loss: 387.3151; Accuracy: 0.2344; time: 0.0036s
+[2022-07-22 16:45:52,765] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-023-000000.pt.
+[2022-07-22 16:45:52,766] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:52,780] {trainer.py:237} INFO - [1,0] epoch: 23; step: 00001; loss: 218.4615; Accuracy: 0.2188; time: 0.0167s
+[2022-07-22 16:45:52,807] {trainer.py:237} INFO - [1,0] epoch: 23; step: 00002; loss: 295.3210; Accuracy: 0.1562; time: 0.0269s
+[2022-07-22 16:45:52,822] {trainer.py:237} INFO - [1,0] epoch: 23; step: 00003; loss: 272.7050; Accuracy: 0.1562; time: 0.0152s
+[2022-07-22 16:45:52,823] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-024-000000.pt.
+[2022-07-22 16:45:52,824] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:52,829] {trainer.py:237} INFO - [1,0] epoch: 24; step: 00001; loss: 346.6530; Accuracy: 0.1406; time: 0.0069s
+[2022-07-22 16:45:52,837] {trainer.py:237} INFO - [1,0] epoch: 24; step: 00002; loss: 637.8160; Accuracy: 0.1406; time: 0.0079s
+[2022-07-22 16:45:52,845] {trainer.py:237} INFO - [1,0] epoch: 24; step: 00003; loss: 399.3450; Accuracy: 0.1875; time: 0.0071s
+[2022-07-22 16:45:52,847] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-025-000000.pt.
+[2022-07-22 16:45:52,849] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:52,860] {trainer.py:237} INFO - [1,0] epoch: 25; step: 00001; loss: 556.2437; Accuracy: 0.0781; time: 0.0151s
+[2022-07-22 16:45:52,864] {trainer.py:237} INFO - [1,0] epoch: 25; step: 00002; loss: 125.1152; Accuracy: 0.0469; time: 0.0050s
+[2022-07-22 16:45:52,872] {trainer.py:237} INFO - [1,0] epoch: 25; step: 00003; loss: 273.9232; Accuracy: 0.1875; time: 0.0075s
+[2022-07-22 16:45:52,874] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-026-000000.pt.
+[2022-07-22 16:45:52,875] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:52,881] {trainer.py:237} INFO - [1,0] epoch: 26; step: 00001; loss: 230.9292; Accuracy: 0.0938; time: 0.0092s
+[2022-07-22 16:45:52,887] {trainer.py:237} INFO - [1,0] epoch: 26; step: 00002; loss: 361.7399; Accuracy: 0.0781; time: 0.0059s
+[2022-07-22 16:45:52,893] {trainer.py:237} INFO - [1,0] epoch: 26; step: 00003; loss: 379.0976; Accuracy: 0.1094; time: 0.0057s
+[2022-07-22 16:45:52,894] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-027-000000.pt.
+[2022-07-22 16:45:52,894] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:52,898] {trainer.py:237} INFO - [1,0] epoch: 27; step: 00001; loss: 228.1055; Accuracy: 0.0938; time: 0.0048s
+[2022-07-22 16:45:52,909] {trainer.py:237} INFO - [1,0] epoch: 27; step: 00002; loss: 190.5515; Accuracy: 0.2188; time: 0.0111s
+[2022-07-22 16:45:52,913] {trainer.py:237} INFO - [1,0] epoch: 27; step: 00003; loss: 396.8174; Accuracy: 0.1719; time: 0.0046s
+[2022-07-22 16:45:52,915] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-028-000000.pt.
+[2022-07-22 16:45:52,916] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:52,924] {trainer.py:237} INFO - [1,0] epoch: 28; step: 00001; loss: 369.6288; Accuracy: 0.1406; time: 0.0099s
+[2022-07-22 16:45:52,929] {trainer.py:237} INFO - [1,0] epoch: 28; step: 00002; loss: 208.5779; Accuracy: 0.0938; time: 0.0058s
+[2022-07-22 16:45:52,937] {trainer.py:237} INFO - [1,0] epoch: 28; step: 00003; loss: 224.9673; Accuracy: 0.2969; time: 0.0078s
+[2022-07-22 16:45:52,938] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-029-000000.pt.
+[2022-07-22 16:45:52,939] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:52,945] {trainer.py:237} INFO - [1,0] epoch: 29; step: 00001; loss: 390.8517; Accuracy: 0.0938; time: 0.0083s
+[2022-07-22 16:45:52,952] {trainer.py:237} INFO - [1,0] epoch: 29; step: 00002; loss: 204.7788; Accuracy: 0.1875; time: 0.0071s
+[2022-07-22 16:45:52,958] {trainer.py:237} INFO - [1,0] epoch: 29; step: 00003; loss: 268.5234; Accuracy: 0.1250; time: 0.0058s
+[2022-07-22 16:45:52,960] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-030-000000.pt.
+[2022-07-22 16:45:52,960] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:52,966] {trainer.py:237} INFO - [1,0] epoch: 30; step: 00001; loss: 213.7407; Accuracy: 0.1250; time: 0.0080s
+[2022-07-22 16:45:52,973] {trainer.py:237} INFO - [1,0] epoch: 30; step: 00002; loss: 497.3677; Accuracy: 0.1562; time: 0.0073s
+[2022-07-22 16:45:52,979] {trainer.py:237} INFO - [1,0] epoch: 30; step: 00003; loss: 301.0004; Accuracy: 0.2031; time: 0.0061s
+[2022-07-22 16:45:52,981] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-031-000000.pt.
+[2022-07-22 16:45:52,983] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:52,989] {trainer.py:237} INFO - [1,0] epoch: 31; step: 00001; loss: 304.3845; Accuracy: 0.1719; time: 0.0099s
+[2022-07-22 16:45:52,995] {trainer.py:237} INFO - [1,0] epoch: 31; step: 00002; loss: 94.9084; Accuracy: 0.1250; time: 0.0056s
+[2022-07-22 16:45:53,002] {trainer.py:237} INFO - [1,0] epoch: 31; step: 00003; loss: 255.4796; Accuracy: 0.1406; time: 0.0073s
+[2022-07-22 16:45:53,004] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-032-000000.pt.
+[2022-07-22 16:45:53,005] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,010] {trainer.py:237} INFO - [1,0] epoch: 32; step: 00001; loss: 210.0463; Accuracy: 0.1250; time: 0.0079s
+[2022-07-22 16:45:53,015] {trainer.py:237} INFO - [1,0] epoch: 32; step: 00002; loss: 579.8279; Accuracy: 0.1562; time: 0.0049s
+[2022-07-22 16:45:53,022] {trainer.py:237} INFO - [1,0] epoch: 32; step: 00003; loss: 341.4901; Accuracy: 0.1562; time: 0.0074s
+[2022-07-22 16:45:53,024] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-033-000000.pt.
+[2022-07-22 16:45:53,025] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,030] {trainer.py:237} INFO - [1,0] epoch: 33; step: 00001; loss: 638.8790; Accuracy: 0.1719; time: 0.0071s
+[2022-07-22 16:45:53,037] {trainer.py:237} INFO - [1,0] epoch: 33; step: 00002; loss: 290.9412; Accuracy: 0.0938; time: 0.0073s
+[2022-07-22 16:45:53,044] {trainer.py:237} INFO - [1,0] epoch: 33; step: 00003; loss: 482.4762; Accuracy: 0.2031; time: 0.0066s
+[2022-07-22 16:45:53,045] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-034-000000.pt.
+[2022-07-22 16:45:53,045] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,050] {trainer.py:237} INFO - [1,0] epoch: 34; step: 00001; loss: 226.1487; Accuracy: 0.1094; time: 0.0067s
+[2022-07-22 16:45:53,080] {trainer.py:237} INFO - [1,0] epoch: 34; step: 00002; loss: 444.8564; Accuracy: 0.1250; time: 0.0298s
+[2022-07-22 16:45:53,090] {trainer.py:237} INFO - [1,0] epoch: 34; step: 00003; loss: 241.9766; Accuracy: 0.1250; time: 0.0099s
+[2022-07-22 16:45:53,099] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-035-000000.pt.
+[2022-07-22 16:45:53,102] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,111] {trainer.py:237} INFO - [1,0] epoch: 35; step: 00001; loss: 336.4324; Accuracy: 0.1250; time: 0.0211s
+[2022-07-22 16:45:53,118] {trainer.py:237} INFO - [1,0] epoch: 35; step: 00002; loss: 423.7626; Accuracy: 0.0938; time: 0.0071s
+[2022-07-22 16:45:53,122] {trainer.py:237} INFO - [1,0] epoch: 35; step: 00003; loss: 362.7079; Accuracy: 0.1562; time: 0.0040s
+[2022-07-22 16:45:53,123] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-036-000000.pt.
+[2022-07-22 16:45:53,124] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,128] {trainer.py:237} INFO - [1,0] epoch: 36; step: 00001; loss: 376.8673; Accuracy: 0.0938; time: 0.0058s
+[2022-07-22 16:45:53,135] {trainer.py:237} INFO - [1,0] epoch: 36; step: 00002; loss: 417.6146; Accuracy: 0.1875; time: 0.0074s
+[2022-07-22 16:45:53,141] {trainer.py:237} INFO - [1,0] epoch: 36; step: 00003; loss: 185.9003; Accuracy: 0.2188; time: 0.0059s
+[2022-07-22 16:45:53,142] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-037-000000.pt.
+[2022-07-22 16:45:53,143] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,153] {trainer.py:237} INFO - [1,0] epoch: 37; step: 00001; loss: 172.4070; Accuracy: 0.2031; time: 0.0116s
+[2022-07-22 16:45:53,164] {trainer.py:237} INFO - [1,0] epoch: 37; step: 00002; loss: 501.6175; Accuracy: 0.1562; time: 0.0113s
+[2022-07-22 16:45:53,170] {trainer.py:237} INFO - [1,0] epoch: 37; step: 00003; loss: 301.8519; Accuracy: 0.1562; time: 0.0053s
+[2022-07-22 16:45:53,171] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-038-000000.pt.
+[2022-07-22 16:45:53,172] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,179] {trainer.py:237} INFO - [1,0] epoch: 38; step: 00001; loss: 191.2729; Accuracy: 0.1406; time: 0.0094s
+[2022-07-22 16:45:53,187] {trainer.py:237} INFO - [1,0] epoch: 38; step: 00002; loss: 323.1113; Accuracy: 0.1094; time: 0.0081s
+[2022-07-22 16:45:53,193] {trainer.py:237} INFO - [1,0] epoch: 38; step: 00003; loss: 144.0152; Accuracy: 0.1406; time: 0.0056s
+[2022-07-22 16:45:53,194] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-039-000000.pt.
+[2022-07-22 16:45:53,194] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,201] {trainer.py:237} INFO - [1,0] epoch: 39; step: 00001; loss: 406.3942; Accuracy: 0.1562; time: 0.0077s
+[2022-07-22 16:45:53,206] {trainer.py:237} INFO - [1,0] epoch: 39; step: 00002; loss: 335.8580; Accuracy: 0.1406; time: 0.0059s
+[2022-07-22 16:45:53,213] {trainer.py:237} INFO - [1,0] epoch: 39; step: 00003; loss: 283.6465; Accuracy: 0.1562; time: 0.0066s
+[2022-07-22 16:45:53,215] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-040-000000.pt.
+[2022-07-22 16:45:53,216] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,222] {trainer.py:237} INFO - [1,0] epoch: 40; step: 00001; loss: 325.1730; Accuracy: 0.1406; time: 0.0093s
+[2022-07-22 16:45:53,227] {trainer.py:237} INFO - [1,0] epoch: 40; step: 00002; loss: 294.7383; Accuracy: 0.1250; time: 0.0051s
+[2022-07-22 16:45:53,233] {trainer.py:237} INFO - [1,0] epoch: 40; step: 00003; loss: 304.2002; Accuracy: 0.1406; time: 0.0054s
+[2022-07-22 16:45:53,237] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-041-000000.pt.
+[2022-07-22 16:45:53,238] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,242] {trainer.py:237} INFO - [1,0] epoch: 41; step: 00001; loss: 366.9579; Accuracy: 0.1250; time: 0.0095s
+[2022-07-22 16:45:53,248] {trainer.py:237} INFO - [1,0] epoch: 41; step: 00002; loss: 237.7572; Accuracy: 0.1406; time: 0.0055s
+[2022-07-22 16:45:53,259] {trainer.py:237} INFO - [1,0] epoch: 41; step: 00003; loss: 231.3332; Accuracy: 0.1406; time: 0.0109s
+[2022-07-22 16:45:53,260] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-042-000000.pt.
+[2022-07-22 16:45:53,260] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,266] {trainer.py:237} INFO - [1,0] epoch: 42; step: 00001; loss: 275.0922; Accuracy: 0.1875; time: 0.0073s
+[2022-07-22 16:45:53,275] {trainer.py:237} INFO - [1,0] epoch: 42; step: 00002; loss: 99.1607; Accuracy: 0.1875; time: 0.0092s
+[2022-07-22 16:45:53,279] {trainer.py:237} INFO - [1,0] epoch: 42; step: 00003; loss: 270.2938; Accuracy: 0.1875; time: 0.0044s
+[2022-07-22 16:45:53,281] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-043-000000.pt.
+[2022-07-22 16:45:53,281] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,288] {trainer.py:237} INFO - [1,0] epoch: 43; step: 00001; loss: 345.4110; Accuracy: 0.0781; time: 0.0084s
+[2022-07-22 16:45:53,294] {trainer.py:237} INFO - [1,0] epoch: 43; step: 00002; loss: 247.7614; Accuracy: 0.1719; time: 0.0062s
+[2022-07-22 16:45:53,300] {trainer.py:237} INFO - [1,0] epoch: 43; step: 00003; loss: 438.4552; Accuracy: 0.1562; time: 0.0057s
+[2022-07-22 16:45:53,302] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-044-000000.pt.
+[2022-07-22 16:45:53,303] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,310] {trainer.py:237} INFO - [1,0] epoch: 44; step: 00001; loss: 141.4462; Accuracy: 0.1094; time: 0.0101s
+[2022-07-22 16:45:53,315] {trainer.py:237} INFO - [1,0] epoch: 44; step: 00002; loss: 283.4490; Accuracy: 0.1250; time: 0.0054s
+[2022-07-22 16:45:53,323] {trainer.py:237} INFO - [1,0] epoch: 44; step: 00003; loss: 319.0001; Accuracy: 0.1250; time: 0.0074s
+[2022-07-22 16:45:53,324] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-045-000000.pt.
+[2022-07-22 16:45:53,326] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,330] {trainer.py:237} INFO - [1,0] epoch: 45; step: 00001; loss: 433.2199; Accuracy: 0.1250; time: 0.0075s
+[2022-07-22 16:45:53,338] {trainer.py:237} INFO - [1,0] epoch: 45; step: 00002; loss: 164.7952; Accuracy: 0.1719; time: 0.0077s
+[2022-07-22 16:45:53,345] {trainer.py:237} INFO - [1,0] epoch: 45; step: 00003; loss: 122.4824; Accuracy: 0.2031; time: 0.0066s
+[2022-07-22 16:45:53,346] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-046-000000.pt.
+[2022-07-22 16:45:53,346] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,354] {trainer.py:237} INFO - [1,0] epoch: 46; step: 00001; loss: 314.6094; Accuracy: 0.0938; time: 0.0095s
+[2022-07-22 16:45:53,380] {trainer.py:237} INFO - [1,0] epoch: 46; step: 00002; loss: 339.4230; Accuracy: 0.0938; time: 0.0262s
+[2022-07-22 16:45:53,407] {trainer.py:237} INFO - [1,0] epoch: 46; step: 00003; loss: 426.7486; Accuracy: 0.1094; time: 0.0264s
+[2022-07-22 16:45:53,408] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-047-000000.pt.
+[2022-07-22 16:45:53,408] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,415] {trainer.py:237} INFO - [1,0] epoch: 47; step: 00001; loss: 354.8990; Accuracy: 0.1250; time: 0.0082s
+[2022-07-22 16:45:53,426] {trainer.py:237} INFO - [1,0] epoch: 47; step: 00002; loss: 141.4458; Accuracy: 0.1406; time: 0.0112s
+[2022-07-22 16:45:53,432] {trainer.py:237} INFO - [1,0] epoch: 47; step: 00003; loss: 382.4897; Accuracy: 0.1094; time: 0.0063s
+[2022-07-22 16:45:53,440] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-048-000000.pt.
+[2022-07-22 16:45:53,444] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,450] {trainer.py:237} INFO - [1,0] epoch: 48; step: 00001; loss: 381.0046; Accuracy: 0.1562; time: 0.0177s
+[2022-07-22 16:45:53,459] {trainer.py:237} INFO - [1,0] epoch: 48; step: 00002; loss: 173.7796; Accuracy: 0.1875; time: 0.0090s
+[2022-07-22 16:45:53,463] {trainer.py:237} INFO - [1,0] epoch: 48; step: 00003; loss: 483.2667; Accuracy: 0.1406; time: 0.0039s
+[2022-07-22 16:45:53,464] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-049-000000.pt.
+[2022-07-22 16:45:53,465] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,472] {trainer.py:237} INFO - [1,0] epoch: 49; step: 00001; loss: 489.2025; Accuracy: 0.1719; time: 0.0094s
+[2022-07-22 16:45:53,478] {trainer.py:237} INFO - [1,0] epoch: 49; step: 00002; loss: 460.2441; Accuracy: 0.1875; time: 0.0058s
+[2022-07-22 16:45:53,486] {trainer.py:237} INFO - [1,0] epoch: 49; step: 00003; loss: 370.0852; Accuracy: 0.1250; time: 0.0057s
+[2022-07-22 16:45:53,487] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-050-000000.pt.
+[2022-07-22 16:45:53,488] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,494] {trainer.py:237} INFO - [1,0] epoch: 50; step: 00001; loss: 145.7149; Accuracy: 0.0938; time: 0.0097s
+[2022-07-22 16:45:53,498] {trainer.py:237} INFO - [1,0] epoch: 50; step: 00002; loss: 141.7270; Accuracy: 0.1875; time: 0.0041s
+[2022-07-22 16:45:53,507] {trainer.py:237} INFO - [1,0] epoch: 50; step: 00003; loss: 246.2778; Accuracy: 0.1250; time: 0.0090s
+[2022-07-22 16:45:53,509] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-051-000000.pt.
+[2022-07-22 16:45:53,509] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,512] {trainer.py:237} INFO - [1,0] epoch: 51; step: 00001; loss: 128.9689; Accuracy: 0.1719; time: 0.0058s
+[2022-07-22 16:45:53,521] {trainer.py:237} INFO - [1,0] epoch: 51; step: 00002; loss: 401.9588; Accuracy: 0.1406; time: 0.0085s
+[2022-07-22 16:45:53,527] {trainer.py:237} INFO - [1,0] epoch: 51; step: 00003; loss: 228.8827; Accuracy: 0.0938; time: 0.0065s
+[2022-07-22 16:45:53,528] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-052-000000.pt.
+[2022-07-22 16:45:53,529] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,537] {trainer.py:237} INFO - [1,0] epoch: 52; step: 00001; loss: 215.8362; Accuracy: 0.1875; time: 0.0094s
+[2022-07-22 16:45:53,543] {trainer.py:237} INFO - [1,0] epoch: 52; step: 00002; loss: 178.1107; Accuracy: 0.0938; time: 0.0059s
+[2022-07-22 16:45:53,546] {trainer.py:237} INFO - [1,0] epoch: 52; step: 00003; loss: 180.3894; Accuracy: 0.1094; time: 0.0033s
+[2022-07-22 16:45:53,547] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-053-000000.pt.
+[2022-07-22 16:45:53,549] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,555] {trainer.py:237} INFO - [1,0] epoch: 53; step: 00001; loss: 246.0727; Accuracy: 0.1406; time: 0.0089s
+[2022-07-22 16:45:53,561] {trainer.py:237} INFO - [1,0] epoch: 53; step: 00002; loss: 417.8390; Accuracy: 0.0938; time: 0.0058s
+[2022-07-22 16:45:53,567] {trainer.py:237} INFO - [1,0] epoch: 53; step: 00003; loss: 443.9455; Accuracy: 0.0781; time: 0.0057s
+[2022-07-22 16:45:53,569] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-054-000000.pt.
+[2022-07-22 16:45:53,570] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,576] {trainer.py:237} INFO - [1,0] epoch: 54; step: 00001; loss: 210.0724; Accuracy: 0.1875; time: 0.0098s
+[2022-07-22 16:45:53,581] {trainer.py:237} INFO - [1,0] epoch: 54; step: 00002; loss: 377.1735; Accuracy: 0.1406; time: 0.0045s
+[2022-07-22 16:45:53,588] {trainer.py:237} INFO - [1,0] epoch: 54; step: 00003; loss: 357.2632; Accuracy: 0.1094; time: 0.0072s
+[2022-07-22 16:45:53,590] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-055-000000.pt.
+[2022-07-22 16:45:53,591] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,596] {trainer.py:237} INFO - [1,0] epoch: 55; step: 00001; loss: 241.2140; Accuracy: 0.1562; time: 0.0076s
+[2022-07-22 16:45:53,604] {trainer.py:237} INFO - [1,0] epoch: 55; step: 00002; loss: 395.0948; Accuracy: 0.0781; time: 0.0085s
+[2022-07-22 16:45:53,610] {trainer.py:237} INFO - [1,0] epoch: 55; step: 00003; loss: 218.5673; Accuracy: 0.1719; time: 0.0058s
+[2022-07-22 16:45:53,611] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-056-000000.pt.
+[2022-07-22 16:45:53,611] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,618] {trainer.py:237} INFO - [1,0] epoch: 56; step: 00001; loss: 261.0810; Accuracy: 0.1562; time: 0.0087s
+[2022-07-22 16:45:53,657] {trainer.py:237} INFO - [1,0] epoch: 56; step: 00002; loss: 757.4225; Accuracy: 0.1094; time: 0.0389s
+[2022-07-22 16:45:53,663] {trainer.py:237} INFO - [1,0] epoch: 56; step: 00003; loss: 314.4772; Accuracy: 0.1562; time: 0.0053s
+[2022-07-22 16:45:53,664] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-057-000000.pt.
+[2022-07-22 16:45:53,674] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,680] {trainer.py:237} INFO - [1,0] epoch: 57; step: 00001; loss: 228.9288; Accuracy: 0.1250; time: 0.0170s
+[2022-07-22 16:45:53,687] {trainer.py:237} INFO - [1,0] epoch: 57; step: 00002; loss: 214.6915; Accuracy: 0.2031; time: 0.0067s
+[2022-07-22 16:45:53,697] {trainer.py:237} INFO - [1,0] epoch: 57; step: 00003; loss: 61.8753; Accuracy: 0.1719; time: 0.0104s
+[2022-07-22 16:45:53,698] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-058-000000.pt.
+[2022-07-22 16:45:53,699] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,718] {trainer.py:237} INFO - [1,0] epoch: 58; step: 00001; loss: 292.6386; Accuracy: 0.1250; time: 0.0216s
+[2022-07-22 16:45:53,725] {trainer.py:237} INFO - [1,0] epoch: 58; step: 00002; loss: 332.6698; Accuracy: 0.1094; time: 0.0068s
+[2022-07-22 16:45:53,731] {trainer.py:237} INFO - [1,0] epoch: 58; step: 00003; loss: 314.3435; Accuracy: 0.1094; time: 0.0054s
+[2022-07-22 16:45:53,734] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-059-000000.pt.
+[2022-07-22 16:45:53,735] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,741] {trainer.py:237} INFO - [1,0] epoch: 59; step: 00001; loss: 248.0934; Accuracy: 0.0469; time: 0.0103s
+[2022-07-22 16:45:53,744] {trainer.py:237} INFO - [1,0] epoch: 59; step: 00002; loss: 372.3369; Accuracy: 0.1406; time: 0.0038s
+[2022-07-22 16:45:53,750] {trainer.py:237} INFO - [1,0] epoch: 59; step: 00003; loss: 294.9532; Accuracy: 0.0156; time: 0.0048s
+[2022-07-22 16:45:53,754] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-060-000000.pt.
+[2022-07-22 16:45:53,754] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,761] {trainer.py:237} INFO - [1,0] epoch: 60; step: 00001; loss: 185.9616; Accuracy: 0.1719; time: 0.0117s
+[2022-07-22 16:45:53,768] {trainer.py:237} INFO - [1,0] epoch: 60; step: 00002; loss: 171.6509; Accuracy: 0.0625; time: 0.0067s
+[2022-07-22 16:45:53,776] {trainer.py:237} INFO - [1,0] epoch: 60; step: 00003; loss: 262.0915; Accuracy: 0.0781; time: 0.0075s
+[2022-07-22 16:45:53,777] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-061-000000.pt.
+[2022-07-22 16:45:53,777] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,782] {trainer.py:237} INFO - [1,0] epoch: 61; step: 00001; loss: 266.0280; Accuracy: 0.0781; time: 0.0064s
+[2022-07-22 16:45:53,789] {trainer.py:237} INFO - [1,0] epoch: 61; step: 00002; loss: 252.6154; Accuracy: 0.1719; time: 0.0070s
+[2022-07-22 16:45:53,795] {trainer.py:237} INFO - [1,0] epoch: 61; step: 00003; loss: 503.2880; Accuracy: 0.1406; time: 0.0062s
+[2022-07-22 16:45:53,796] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-062-000000.pt.
+[2022-07-22 16:45:53,796] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,804] {trainer.py:237} INFO - [1,0] epoch: 62; step: 00001; loss: 609.0133; Accuracy: 0.1250; time: 0.0097s
+[2022-07-22 16:45:53,811] {trainer.py:237} INFO - [1,0] epoch: 62; step: 00002; loss: 464.9062; Accuracy: 0.1875; time: 0.0070s
+[2022-07-22 16:45:53,818] {trainer.py:237} INFO - [1,0] epoch: 62; step: 00003; loss: 341.4044; Accuracy: 0.1562; time: 0.0061s
+[2022-07-22 16:45:53,819] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-063-000000.pt.
+[2022-07-22 16:45:53,820] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,826] {trainer.py:237} INFO - [1,0] epoch: 63; step: 00001; loss: 213.6871; Accuracy: 0.1406; time: 0.0078s
+[2022-07-22 16:45:53,831] {trainer.py:237} INFO - [1,0] epoch: 63; step: 00002; loss: 366.3393; Accuracy: 0.1406; time: 0.0055s
+[2022-07-22 16:45:53,838] {trainer.py:237} INFO - [1,0] epoch: 63; step: 00003; loss: 499.9807; Accuracy: 0.2344; time: 0.0076s
+[2022-07-22 16:45:53,840] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-064-000000.pt.
+[2022-07-22 16:45:53,841] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,888] {trainer.py:237} INFO - [1,0] epoch: 64; step: 00001; loss: 431.2820; Accuracy: 0.1250; time: 0.0497s
+[2022-07-22 16:45:53,895] {trainer.py:237} INFO - [1,0] epoch: 64; step: 00002; loss: 238.1058; Accuracy: 0.1719; time: 0.0064s
+[2022-07-22 16:45:53,936] {trainer.py:237} INFO - [1,0] epoch: 64; step: 00003; loss: 234.5503; Accuracy: 0.1406; time: 0.0414s
+[2022-07-22 16:45:53,944] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-065-000000.pt.
+[2022-07-22 16:45:53,944] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,963] {trainer.py:237} INFO - [1,0] epoch: 65; step: 00001; loss: 57.9465; Accuracy: 0.1406; time: 0.0270s
+[2022-07-22 16:45:53,970] {trainer.py:237} INFO - [1,0] epoch: 65; step: 00002; loss: 358.8376; Accuracy: 0.1719; time: 0.0065s
+[2022-07-22 16:45:53,977] {trainer.py:237} INFO - [1,0] epoch: 65; step: 00003; loss: 437.9353; Accuracy: 0.1094; time: 0.0066s
+[2022-07-22 16:45:53,979] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-066-000000.pt.
+[2022-07-22 16:45:53,981] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:53,988] {trainer.py:237} INFO - [1,0] epoch: 66; step: 00001; loss: 331.3288; Accuracy: 0.1875; time: 0.0116s
+[2022-07-22 16:45:54,001] {trainer.py:237} INFO - [1,0] epoch: 66; step: 00002; loss: 388.3422; Accuracy: 0.2031; time: 0.0130s
+[2022-07-22 16:45:54,007] {trainer.py:237} INFO - [1,0] epoch: 66; step: 00003; loss: 376.3984; Accuracy: 0.1406; time: 0.0064s
+[2022-07-22 16:45:54,010] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-067-000000.pt.
+[2022-07-22 16:45:54,011] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,019] {trainer.py:237} INFO - [1,0] epoch: 67; step: 00001; loss: 399.7107; Accuracy: 0.1719; time: 0.0120s
+[2022-07-22 16:45:54,026] {trainer.py:237} INFO - [1,0] epoch: 67; step: 00002; loss: 510.9379; Accuracy: 0.1250; time: 0.0068s
+[2022-07-22 16:45:54,036] {trainer.py:237} INFO - [1,0] epoch: 67; step: 00003; loss: 336.6119; Accuracy: 0.1250; time: 0.0099s
+[2022-07-22 16:45:54,037] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-068-000000.pt.
+[2022-07-22 16:45:54,038] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,044] {trainer.py:237} INFO - [1,0] epoch: 68; step: 00001; loss: 227.7818; Accuracy: 0.2031; time: 0.0081s
+[2022-07-22 16:45:54,049] {trainer.py:237} INFO - [1,0] epoch: 68; step: 00002; loss: 308.6310; Accuracy: 0.0938; time: 0.0052s
+[2022-07-22 16:45:54,059] {trainer.py:237} INFO - [1,0] epoch: 68; step: 00003; loss: 473.0909; Accuracy: 0.1094; time: 0.0101s
+[2022-07-22 16:45:54,060] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-069-000000.pt.
+[2022-07-22 16:45:54,060] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,066] {trainer.py:237} INFO - [1,0] epoch: 69; step: 00001; loss: 146.0358; Accuracy: 0.1875; time: 0.0063s
+[2022-07-22 16:45:54,076] {trainer.py:237} INFO - [1,0] epoch: 69; step: 00002; loss: 296.6430; Accuracy: 0.1250; time: 0.0101s
+[2022-07-22 16:45:54,079] {trainer.py:237} INFO - [1,0] epoch: 69; step: 00003; loss: 344.4945; Accuracy: 0.1094; time: 0.0038s
+[2022-07-22 16:45:54,080] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-070-000000.pt.
+[2022-07-22 16:45:54,081] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,089] {trainer.py:237} INFO - [1,0] epoch: 70; step: 00001; loss: 225.2763; Accuracy: 0.2344; time: 0.0100s
+[2022-07-22 16:45:54,094] {trainer.py:237} INFO - [1,0] epoch: 70; step: 00002; loss: 189.7814; Accuracy: 0.1250; time: 0.0047s
+[2022-07-22 16:45:54,101] {trainer.py:237} INFO - [1,0] epoch: 70; step: 00003; loss: 351.2801; Accuracy: 0.1094; time: 0.0071s
+[2022-07-22 16:45:54,103] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-071-000000.pt.
+[2022-07-22 16:45:54,104] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,109] {trainer.py:237} INFO - [1,0] epoch: 71; step: 00001; loss: 387.5959; Accuracy: 0.1250; time: 0.0081s
+[2022-07-22 16:45:54,112] {trainer.py:237} INFO - [1,0] epoch: 71; step: 00002; loss: 227.3452; Accuracy: 0.1406; time: 0.0033s
+[2022-07-22 16:45:54,122] {trainer.py:237} INFO - [1,0] epoch: 71; step: 00003; loss: 254.3406; Accuracy: 0.1250; time: 0.0091s
+[2022-07-22 16:45:54,124] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-072-000000.pt.
+[2022-07-22 16:45:54,124] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,128] {trainer.py:237} INFO - [1,0] epoch: 72; step: 00001; loss: 251.4526; Accuracy: 0.0781; time: 0.0063s
+[2022-07-22 16:45:54,136] {trainer.py:237} INFO - [1,0] epoch: 72; step: 00002; loss: 255.1191; Accuracy: 0.1719; time: 0.0080s
+[2022-07-22 16:45:54,144] {trainer.py:237} INFO - [1,0] epoch: 72; step: 00003; loss: 257.0036; Accuracy: 0.1562; time: 0.0077s
+[2022-07-22 16:45:54,144] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-073-000000.pt.
+[2022-07-22 16:45:54,145] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,151] {trainer.py:237} INFO - [1,0] epoch: 73; step: 00001; loss: 491.4921; Accuracy: 0.1250; time: 0.0073s
+[2022-07-22 16:45:54,159] {trainer.py:237} INFO - [1,0] epoch: 73; step: 00002; loss: 318.0305; Accuracy: 0.1406; time: 0.0076s
+[2022-07-22 16:45:54,162] {trainer.py:237} INFO - [1,0] epoch: 73; step: 00003; loss: 500.5668; Accuracy: 0.1562; time: 0.0038s
+[2022-07-22 16:45:54,163] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-074-000000.pt.
+[2022-07-22 16:45:54,164] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,174] {trainer.py:237} INFO - [1,0] epoch: 74; step: 00001; loss: 263.8622; Accuracy: 0.1562; time: 0.0118s
+[2022-07-22 16:45:54,207] {trainer.py:237} INFO - [1,0] epoch: 74; step: 00002; loss: 211.0324; Accuracy: 0.2031; time: 0.0322s
+[2022-07-22 16:45:54,223] {trainer.py:237} INFO - [1,0] epoch: 74; step: 00003; loss: 512.3508; Accuracy: 0.1719; time: 0.0161s
+[2022-07-22 16:45:54,225] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-075-000000.pt.
+[2022-07-22 16:45:54,225] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,230] {trainer.py:237} INFO - [1,0] epoch: 75; step: 00001; loss: 380.8832; Accuracy: 0.1406; time: 0.0073s
+[2022-07-22 16:45:54,235] {trainer.py:237} INFO - [1,0] epoch: 75; step: 00002; loss: 426.2648; Accuracy: 0.1875; time: 0.0049s
+[2022-07-22 16:45:54,244] {trainer.py:237} INFO - [1,0] epoch: 75; step: 00003; loss: 199.1789; Accuracy: 0.0938; time: 0.0088s
+[2022-07-22 16:45:54,245] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-076-000000.pt.
+[2022-07-22 16:45:54,245] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,252] {trainer.py:237} INFO - [1,0] epoch: 76; step: 00001; loss: 188.3588; Accuracy: 0.1406; time: 0.0079s
+[2022-07-22 16:45:54,260] {trainer.py:237} INFO - [1,0] epoch: 76; step: 00002; loss: 224.7657; Accuracy: 0.1562; time: 0.0081s
+[2022-07-22 16:45:54,266] {trainer.py:237} INFO - [1,0] epoch: 76; step: 00003; loss: 330.5288; Accuracy: 0.1562; time: 0.0064s
+[2022-07-22 16:45:54,269] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-077-000000.pt.
+[2022-07-22 16:45:54,269] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,276] {trainer.py:237} INFO - [1,0] epoch: 77; step: 00001; loss: 124.3263; Accuracy: 0.2656; time: 0.0084s
+[2022-07-22 16:45:54,284] {trainer.py:237} INFO - [1,0] epoch: 77; step: 00002; loss: 163.9624; Accuracy: 0.1094; time: 0.0091s
+[2022-07-22 16:45:54,291] {trainer.py:237} INFO - [1,0] epoch: 77; step: 00003; loss: 792.7234; Accuracy: 0.1250; time: 0.0079s
+[2022-07-22 16:45:54,293] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-078-000000.pt.
+[2022-07-22 16:45:54,293] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,299] {trainer.py:237} INFO - [1,0] epoch: 78; step: 00001; loss: 250.6402; Accuracy: 0.0938; time: 0.0078s
+[2022-07-22 16:45:54,307] {trainer.py:237} INFO - [1,0] epoch: 78; step: 00002; loss: 432.3698; Accuracy: 0.1875; time: 0.0076s
+[2022-07-22 16:45:54,312] {trainer.py:237} INFO - [1,0] epoch: 78; step: 00003; loss: 160.4077; Accuracy: 0.1875; time: 0.0057s
+[2022-07-22 16:45:54,315] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-079-000000.pt.
+[2022-07-22 16:45:54,316] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,325] {trainer.py:237} INFO - [1,0] epoch: 79; step: 00001; loss: 267.8308; Accuracy: 0.1250; time: 0.0121s
+[2022-07-22 16:45:54,331] {trainer.py:237} INFO - [1,0] epoch: 79; step: 00002; loss: 431.8647; Accuracy: 0.1094; time: 0.0052s
+[2022-07-22 16:45:54,341] {trainer.py:237} INFO - [1,0] epoch: 79; step: 00003; loss: 381.5045; Accuracy: 0.1406; time: 0.0114s
+[2022-07-22 16:45:54,342] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-080-000000.pt.
+[2022-07-22 16:45:54,343] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,346] {trainer.py:237} INFO - [1,0] epoch: 80; step: 00001; loss: 124.6231; Accuracy: 0.0781; time: 0.0049s
+[2022-07-22 16:45:54,356] {trainer.py:237} INFO - [1,0] epoch: 80; step: 00002; loss: 212.3868; Accuracy: 0.1406; time: 0.0094s
+[2022-07-22 16:45:54,360] {trainer.py:237} INFO - [1,0] epoch: 80; step: 00003; loss: 184.1436; Accuracy: 0.1250; time: 0.0049s
+[2022-07-22 16:45:54,361] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-081-000000.pt.
+[2022-07-22 16:45:54,362] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,370] {trainer.py:237} INFO - [1,0] epoch: 81; step: 00001; loss: 206.2625; Accuracy: 0.1719; time: 0.0098s
+[2022-07-22 16:45:54,377] {trainer.py:237} INFO - [1,0] epoch: 81; step: 00002; loss: 140.3432; Accuracy: 0.1562; time: 0.0068s
+[2022-07-22 16:45:54,381] {trainer.py:237} INFO - [1,0] epoch: 81; step: 00003; loss: 413.8828; Accuracy: 0.1094; time: 0.0042s
+[2022-07-22 16:45:54,384] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-082-000000.pt.
+[2022-07-22 16:45:54,385] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,392] {trainer.py:237} INFO - [1,0] epoch: 82; step: 00001; loss: 340.6682; Accuracy: 0.1719; time: 0.0109s
+[2022-07-22 16:45:54,396] {trainer.py:237} INFO - [1,0] epoch: 82; step: 00002; loss: 198.8425; Accuracy: 0.0625; time: 0.0035s
+[2022-07-22 16:45:54,404] {trainer.py:237} INFO - [1,0] epoch: 82; step: 00003; loss: 223.1890; Accuracy: 0.1094; time: 0.0081s
+[2022-07-22 16:45:54,405] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-083-000000.pt.
+[2022-07-22 16:45:54,406] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,411] {trainer.py:237} INFO - [1,0] epoch: 83; step: 00001; loss: 318.7705; Accuracy: 0.1875; time: 0.0074s
+[2022-07-22 16:45:54,421] {trainer.py:237} INFO - [1,0] epoch: 83; step: 00002; loss: 425.9256; Accuracy: 0.1406; time: 0.0091s
+[2022-07-22 16:45:54,427] {trainer.py:237} INFO - [1,0] epoch: 83; step: 00003; loss: 404.3785; Accuracy: 0.1406; time: 0.0067s
+[2022-07-22 16:45:54,428] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-084-000000.pt.
+[2022-07-22 16:45:54,428] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,436] {trainer.py:237} INFO - [1,0] epoch: 84; step: 00001; loss: 478.7732; Accuracy: 0.1562; time: 0.0091s
+[2022-07-22 16:45:54,445] {trainer.py:237} INFO - [1,0] epoch: 84; step: 00002; loss: 384.6697; Accuracy: 0.2188; time: 0.0094s
+[2022-07-22 16:45:54,455] {trainer.py:237} INFO - [1,0] epoch: 84; step: 00003; loss: 307.2639; Accuracy: 0.0781; time: 0.0100s
+[2022-07-22 16:45:54,458] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-085-000000.pt.
+[2022-07-22 16:45:54,469] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,485] {trainer.py:237} INFO - [1,0] epoch: 85; step: 00001; loss: 338.8239; Accuracy: 0.1094; time: 0.0295s
+[2022-07-22 16:45:54,513] {trainer.py:237} INFO - [1,0] epoch: 85; step: 00002; loss: 241.0637; Accuracy: 0.1094; time: 0.0284s
+[2022-07-22 16:45:54,519] {trainer.py:237} INFO - [1,0] epoch: 85; step: 00003; loss: 124.2574; Accuracy: 0.1562; time: 0.0059s
+[2022-07-22 16:45:54,520] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-086-000000.pt.
+[2022-07-22 16:45:54,521] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,527] {trainer.py:237} INFO - [1,0] epoch: 86; step: 00001; loss: 196.5933; Accuracy: 0.1250; time: 0.0077s
+[2022-07-22 16:45:54,537] {trainer.py:237} INFO - [1,0] epoch: 86; step: 00002; loss: 181.0968; Accuracy: 0.1250; time: 0.0101s
+[2022-07-22 16:45:54,545] {trainer.py:237} INFO - [1,0] epoch: 86; step: 00003; loss: 170.2091; Accuracy: 0.1875; time: 0.0080s
+[2022-07-22 16:45:54,546] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-087-000000.pt.
+[2022-07-22 16:45:54,547] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,559] {trainer.py:237} INFO - [1,0] epoch: 87; step: 00001; loss: 215.6922; Accuracy: 0.1562; time: 0.0128s
+[2022-07-22 16:45:54,566] {trainer.py:237} INFO - [1,0] epoch: 87; step: 00002; loss: 591.4276; Accuracy: 0.1094; time: 0.0081s
+[2022-07-22 16:45:54,574] {trainer.py:237} INFO - [1,0] epoch: 87; step: 00003; loss: 223.6176; Accuracy: 0.0781; time: 0.0078s
+[2022-07-22 16:45:54,575] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-088-000000.pt.
+[2022-07-22 16:45:54,576] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,586] {trainer.py:237} INFO - [1,0] epoch: 88; step: 00001; loss: 196.5077; Accuracy: 0.1562; time: 0.0120s
+[2022-07-22 16:45:54,593] {trainer.py:237} INFO - [1,0] epoch: 88; step: 00002; loss: 152.0259; Accuracy: 0.1719; time: 0.0070s
+[2022-07-22 16:45:54,598] {trainer.py:237} INFO - [1,0] epoch: 88; step: 00003; loss: 515.0771; Accuracy: 0.1562; time: 0.0050s
+[2022-07-22 16:45:54,601] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-089-000000.pt.
+[2022-07-22 16:45:54,602] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,608] {trainer.py:237} INFO - [1,0] epoch: 89; step: 00001; loss: 522.1499; Accuracy: 0.1250; time: 0.0098s
+[2022-07-22 16:45:54,614] {trainer.py:237} INFO - [1,0] epoch: 89; step: 00002; loss: 322.7354; Accuracy: 0.0469; time: 0.0061s
+[2022-07-22 16:45:54,622] {trainer.py:237} INFO - [1,0] epoch: 89; step: 00003; loss: 278.4119; Accuracy: 0.1250; time: 0.0086s
+[2022-07-22 16:45:54,623] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-090-000000.pt.
+[2022-07-22 16:45:54,624] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,629] {trainer.py:237} INFO - [1,0] epoch: 90; step: 00001; loss: 413.1612; Accuracy: 0.1719; time: 0.0068s
+[2022-07-22 16:45:54,638] {trainer.py:237} INFO - [1,0] epoch: 90; step: 00002; loss: 259.9963; Accuracy: 0.1094; time: 0.0089s
+[2022-07-22 16:45:54,644] {trainer.py:237} INFO - [1,0] epoch: 90; step: 00003; loss: 543.0244; Accuracy: 0.1562; time: 0.0064s
+[2022-07-22 16:45:54,645] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-091-000000.pt.
+[2022-07-22 16:45:54,646] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,654] {trainer.py:237} INFO - [1,0] epoch: 91; step: 00001; loss: 111.7340; Accuracy: 0.1875; time: 0.0097s
+[2022-07-22 16:45:54,660] {trainer.py:237} INFO - [1,0] epoch: 91; step: 00002; loss: 238.6420; Accuracy: 0.1719; time: 0.0055s
+[2022-07-22 16:45:54,663] {trainer.py:237} INFO - [1,0] epoch: 91; step: 00003; loss: 271.4574; Accuracy: 0.0625; time: 0.0037s
+[2022-07-22 16:45:54,665] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-092-000000.pt.
+[2022-07-22 16:45:54,666] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,674] {trainer.py:237} INFO - [1,0] epoch: 92; step: 00001; loss: 321.8919; Accuracy: 0.1406; time: 0.0105s
+[2022-07-22 16:45:54,680] {trainer.py:237} INFO - [1,0] epoch: 92; step: 00002; loss: 450.4931; Accuracy: 0.1875; time: 0.0062s
+[2022-07-22 16:45:54,689] {trainer.py:237} INFO - [1,0] epoch: 92; step: 00003; loss: 262.2372; Accuracy: 0.2031; time: 0.0085s
+[2022-07-22 16:45:54,691] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-093-000000.pt.
+[2022-07-22 16:45:54,691] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,696] {trainer.py:237} INFO - [1,0] epoch: 93; step: 00001; loss: 436.4355; Accuracy: 0.1406; time: 0.0075s
+[2022-07-22 16:45:54,705] {trainer.py:237} INFO - [1,0] epoch: 93; step: 00002; loss: 342.3580; Accuracy: 0.2500; time: 0.0088s
+[2022-07-22 16:45:54,712] {trainer.py:237} INFO - [1,0] epoch: 93; step: 00003; loss: 50.5087; Accuracy: 0.1875; time: 0.0070s
+[2022-07-22 16:45:54,713] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-094-000000.pt.
+[2022-07-22 16:45:54,714] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,721] {trainer.py:237} INFO - [1,0] epoch: 94; step: 00001; loss: 219.3839; Accuracy: 0.1562; time: 0.0094s
+[2022-07-22 16:45:54,727] {trainer.py:237} INFO - [1,0] epoch: 94; step: 00002; loss: 488.9178; Accuracy: 0.0938; time: 0.0060s
+[2022-07-22 16:45:54,734] {trainer.py:237} INFO - [1,0] epoch: 94; step: 00003; loss: 323.0548; Accuracy: 0.1406; time: 0.0063s
+[2022-07-22 16:45:54,735] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-095-000000.pt.
+[2022-07-22 16:45:54,736] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,741] {trainer.py:237} INFO - [1,0] epoch: 95; step: 00001; loss: 391.6903; Accuracy: 0.0938; time: 0.0070s
+[2022-07-22 16:45:54,757] {trainer.py:237} INFO - [1,0] epoch: 95; step: 00002; loss: 207.7167; Accuracy: 0.1562; time: 0.0158s
+[2022-07-22 16:45:54,772] {trainer.py:237} INFO - [1,0] epoch: 95; step: 00003; loss: 241.7473; Accuracy: 0.1562; time: 0.0154s
+[2022-07-22 16:45:54,773] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-096-000000.pt.
+[2022-07-22 16:45:54,774] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,792] {trainer.py:237} INFO - [1,0] epoch: 96; step: 00001; loss: 299.1834; Accuracy: 0.1562; time: 0.0203s
+[2022-07-22 16:45:54,803] {trainer.py:237} INFO - [1,0] epoch: 96; step: 00002; loss: 298.9704; Accuracy: 0.0781; time: 0.0109s
+[2022-07-22 16:45:54,812] {trainer.py:237} INFO - [1,0] epoch: 96; step: 00003; loss: 207.2817; Accuracy: 0.0781; time: 0.0084s
+[2022-07-22 16:45:54,813] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-097-000000.pt.
+[2022-07-22 16:45:54,813] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,832] {trainer.py:237} INFO - [1,0] epoch: 97; step: 00001; loss: 271.3279; Accuracy: 0.1094; time: 0.0197s
+[2022-07-22 16:45:54,844] {trainer.py:237} INFO - [1,0] epoch: 97; step: 00002; loss: 138.0028; Accuracy: 0.1250; time: 0.0121s
+[2022-07-22 16:45:54,868] {trainer.py:237} INFO - [1,0] epoch: 97; step: 00003; loss: 344.0187; Accuracy: 0.0781; time: 0.0241s
+[2022-07-22 16:45:54,869] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-098-000000.pt.
+[2022-07-22 16:45:54,869] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,876] {trainer.py:237} INFO - [1,0] epoch: 98; step: 00001; loss: 306.6024; Accuracy: 0.1094; time: 0.0082s
+[2022-07-22 16:45:54,889] {trainer.py:237} INFO - [1,0] epoch: 98; step: 00002; loss: 161.4571; Accuracy: 0.1094; time: 0.0129s
+[2022-07-22 16:45:54,897] {trainer.py:237} INFO - [1,0] epoch: 98; step: 00003; loss: 427.5378; Accuracy: 0.1406; time: 0.0075s
+[2022-07-22 16:45:54,903] {trainer.py:439} INFO - [1,0] Saved checkpoint to /tmp/model_fix/gnnmodel-099-000000.pt.
+[2022-07-22 16:45:54,904] {samplers.py:161} INFO - Node Count ([0]): 140
+[2022-07-22 16:45:54,913] {trainer.py:237} INFO - [1,0] epoch: 99; step: 00001; loss: 339.6324; Accuracy: 0.1094; time: 0.0167s
+[2022-07-22 16:45:54,925] {trainer.py:237} INFO - [1,0] epoch: 99; step: 00002; loss: 312.6645; Accuracy: 0.1719; time: 0.0116s
+[2022-07-22 16:45:54,936] {trainer.py:237} INFO - [1,0] epoch: 99; step: 00003; loss: 256.0440; Accuracy: 0.1406; time: 0.0095s
