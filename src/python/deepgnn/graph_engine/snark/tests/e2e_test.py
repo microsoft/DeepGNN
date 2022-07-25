@@ -1622,14 +1622,12 @@ def test_multi_partition_metadata():
             "node_id": 0,
             "node_type": 0,
             "node_weight": 1,
-            "float_feature": {},
             "edge": [
                 {
                     "src_id": 0,
                     "dst_id": 1,
                     "edge_type": 0,
                     "weight": 0.5,
-                    "float_feature": {},
                 }
             ],
         },

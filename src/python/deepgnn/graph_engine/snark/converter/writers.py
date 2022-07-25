@@ -89,7 +89,7 @@ class BinaryWriter:
                         self.node_type_count.append(0)
                     self.node_type_num = type_num_value
                 self.node_writer.add(src, typ, features)
-                self.edge_writer.add_node()  # neighbor index
+                self.edge_writer.add_node()
                 self.node_alias.add(src, typ, weight)
                 self.node_weight[typ] += float(weight)
                 self.node_type_count[typ] += 1
