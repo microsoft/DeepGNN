@@ -750,9 +750,9 @@ def _gen_linear(output, data_data, kwargs={}, partitions=1):
 def test_linear_header():
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "-1 0\n",
-        "-1 1\n",
-        "-1 2\n",
+        "0 -1\n",
+        "1 -1\n",
+        "2 -1\n",
     ]
     meta_data = {"default_node_type": 0, "default_node_weight": 1.5}
     _gen_linear(output, data_data, meta_data)
@@ -772,9 +772,9 @@ def test_linear_header():
 
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "-1 0 0 0\n0 1\n0 2\n",
-        "-1 1 0 0\n1 0\n1 2\n",
-        "-1 2 0 0\n2 0\n2 1\n",
+        "0 -1 0 0\n0 1\n0 2\n",
+        "1 -1 0 0\n1 0\n1 2\n",
+        "2 -1 0 0\n2 0\n2 1\n",
     ]
     meta_data = {"default_edge_type": 0, "default_edge_weight": 200}
     _gen_linear(output, data_data, meta_data)
@@ -804,9 +804,9 @@ def test_linear_header():
 
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "-1 0 1 2 1.1 2.2\n",
-        "-1 1 3 4 3.3 4.4\n",
-        "-1 2 5 6 5.5 6.6\n",
+        "0 -1 1 2 1.1 2.2\n",
+        "1 -1 3 4 3.3 4.4\n",
+        "2 -1 5 6 5.5 6.6\n",
     ]
     meta_data = {
         "default_node_type": 0,
@@ -834,9 +834,9 @@ def test_linear_header():
 
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "-1 0 0 0\n0 1 0 1.5 1 2 1.1 2.2\n",
-        "-1 1 0 0\n1 0 0 1.5 3 4 3.3 4.4\n",
-        "-1 2 0 0\n2 0 0 1.5 5 6 5.5 6.6\n",
+        "0 -1 0 0\n0 1 0 1.5 1 2 1.1 2.2\n",
+        "1 -1 0 0\n1 0 0 1.5 3 4 3.3 4.4\n",
+        "2 -1 0 0\n2 0 0 1.5 5 6 5.5 6.6\n",
     ]
     meta_data = {
         "default_edge_feature_types": ["uint64", "float32"],
@@ -862,9 +862,9 @@ def test_linear_header():
 
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "-1 0 uint64 2 1 2 1.1 2.2 int32 2 1 2\n",
-        "-1 1 uint64 2 3 4 3.3 4.4 int32 2 3 4\n",
-        "-1 2 uint64 2 5 6 5.5 6.6 int32 2 5 6\n",
+        "0 -1 uint64 2 1 2 1.1 2.2 int32 2 1 2\n",
+        "1 -1 uint64 2 3 4 3.3 4.4 int32 2 3 4\n",
+        "2 -1 uint64 2 5 6 5.5 6.6 int32 2 5 6\n",
     ]
     meta_data = {
         "default_node_type": 0,
@@ -897,9 +897,9 @@ def test_linear_header():
 def test_linear_header_multiple_partitions():
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "-1 0\n",
-        "-1 1\n",
-        "-1 2\n",
+        "0 -1\n",
+        "1 -1\n",
+        "2 -1\n",
     ]
     meta_data = {"default_node_type": 0, "default_node_weight": 1.5}
     _gen_linear(output, data_data, meta_data, partitions=2)

@@ -52,7 +52,7 @@ class LinearDecoder(Decoder):
         <edge_2_info>
         ...
         ```
-        node_info: -1 node_id node_type node_weight <features>
+        node_info: node_id -1 node_type node_weight <features>
         edge_info: src dst edge_type edge_weight <features>
         features[dense]: dtype_name length v1 v2 ... dtype_name2 length2 v1 v2 ...
         features[sparse]: dtype_name coords.size,values.size c1 c2 ... v1 v2 ...
@@ -65,9 +65,9 @@ class LinearDecoder(Decoder):
         Edges: {0 -> 1, 1 -> 0} both with type = 0, weight = .5 and a sparse feature
         vector (coords=[0, 4], values=[1, 1, 1] dtype=uint8).
         ```
-        -1 0 1 .5 int32 3 1 1 1 float32 2 1.1 1.1
+        0 -1 1 .5 int32 3 1 1 1 float32 2 1.1 1.1
         0 1 0 .5 uint8 2,3 0 4 1 1 1
-        -1 1 1 .5 int32 3 1 1 1 float32 2 1.1 1.1
+        1 -1 1 .5 int32 3 1 1 1 float32 2 1.1 1.1
         1 0 0 .5 uint8 2,3 0 4 1 1 1
         ```
 
@@ -95,9 +95,9 @@ class LinearDecoder(Decoder):
         ```
         graph.linear
         ```
-        -1 0 1 1 1 1.1 1.1
+        0 -1 1 1 1 1.1 1.1
         0 1 0 4 1 1 1
-        -1 1 1 1 1 1.1 1.1
+        1 -1 1 1 1 1.1 1.1
         1 0 0 4 1 1 1
         ```
     """
@@ -143,7 +143,7 @@ class LinearDecoder(Decoder):
         data = iter(line.split())
 
         src, dst = int(next(data)), int(next(data))
-        if src == -1:
+        if dst == -1:
             typ, weight = self.node_type, self.node_weight
             item_feature_types, item_feature_lens, default_feature_len = (
                 self.node_feature_types,

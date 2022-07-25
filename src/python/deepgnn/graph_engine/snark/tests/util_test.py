@@ -12,7 +12,7 @@ def linear_encode(
     node_features: list,
     edges: list,
     buffer: object = None,  # type: ignore
-) -> str:
+):
     """
     Convert data to a line of the linear format.
 
@@ -23,9 +23,6 @@ def linear_encode(
     node_weight: float
     node_features: [ndarray, ...]
     edges: [(edge_src: int, edge_dst: int, edge_type: int, edge_weight: float, edge_features[ndarray, ...]), ...]
-    Return
-    ------
-    str Linear format version of input.
     """
 
     def _feature_str(features):
@@ -49,23 +46,20 @@ def linear_encode(
         return " ".join(get_f(f) for f in features)
 
     buffer.write(  # type: ignore
-        f"-1 {node_id} {node_type} {node_weight} {_feature_str(node_features)}\n"
+        f"{node_id} -1 {node_type} {node_weight} {_feature_str(node_features)}\n"
     )
     for edge_src, edge_dst, edge_type, edge_weight, edge_features in edges:
         buffer.write(  # type: ignore
             f"{edge_src} {edge_dst} {edge_type} {edge_weight} {_feature_str(edge_features)}\n"
         )
 
-    return ""
 
-
-def json_node_to_linear(node, buffer=None):
+def json_node_to_linear(node, buffer):
     """Convert graph.json to graph.linear."""
     gen = JsonDecoder().decode(node)
     node = next(gen)[1:]
     edges = [edge for edge in gen]
-    output = linear_encode(*node, edges, buffer)
-    return output
+    linear_encode(*node, edges, buffer)
 
 
 def json_to_linear(filename_in, filename_out):
