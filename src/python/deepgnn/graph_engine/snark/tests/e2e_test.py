@@ -62,6 +62,9 @@ nodes = [
         "int64_feature": {"11": [75, 76, 77]},
         "double_feature": {"12": [85, 86, 87]},
         "float16_feature": {"13": [95, 96, 97]},
+        "sparse_float16_feature": {
+            "14": {"coordinates": [5, 13], "values": [1.0, 2.13]}
+        },
         "edge": [],
     },
 ]
@@ -101,6 +104,10 @@ edges = [
         "int64_feature": {"11": [75, 76, 77]},
         "double_feature": {"12": [85, 86, 87]},
         "float16_feature": {"13": [95, 96, 97]},
+        "sparse_float16_feature": {
+            "14": {"coordinates": [5, 13], "values": [1.0, 2.13]}
+        },
+
     },
 ]
 
@@ -252,6 +259,8 @@ def linearize(value):
                     output.append(None)
                 if feature_key == "binary_feature":
                     vv = v
+                elif "sparse" in feature_key:
+                    vv = (np.array(v["coordinates"], dtype=np.int64), np.array(v["values"], dtype=JsonDecoder.convert_map[feature_key.replace("sparse_", "")]))
                 else:
                     vv = np.array(v, dtype=JsonDecoder.convert_map[feature_key])
                 output[int(key)] = vv
@@ -264,7 +273,6 @@ def linearize(value):
 
 
 def write_multi_binary(output_dir, partitions):
-    ## TODO Override with linear decoder.
     partition_meta = ""
     for i, p in enumerate(partitions):
         writer = BinaryWriter(output_dir, i)
@@ -278,7 +286,7 @@ def write_multi_binary(output_dir, partitions):
             ef = "0\n0"
         partition_meta += f"{i}\n3\n3\n3\n2\n2\n{nf}\n{ef}\n"
     meta = open(os.path.join(output_dir, "meta.txt"), "w+")
-    meta.write(f"3\n3\n3\n2\n14\n14\n2\n")
+    meta.write(f"3\n3\n3\n2\n15\n15\n2\n")
     meta.write(partition_meta)
     meta.close()
 
@@ -325,8 +333,8 @@ def test_memory_graph_metadata(multi_partition_graph_data, storage_type):
     assert cl.meta.edge_count == 3
     assert cl.meta.node_type_count == 3
     assert cl.meta.edge_type_count == 2
-    assert cl.meta._node_feature_count == 14
-    assert cl.meta._edge_feature_count == 14
+    assert cl.meta._node_feature_count == 15
+    assert cl.meta._edge_feature_count == 15
 
 
 @pytest.mark.parametrize(
@@ -674,6 +682,38 @@ def test_feature_extraction_after_reset(multi_partition_graph_data):
 
 
 @pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+def test_sparse_node_features_graph_multiple_partitions(
+    multi_partition_graph_data
+):
+    cl = client.MemoryGraph(multi_partition_graph_data, [0, 1])
+    indices, values, dimensions = cl.node_sparse_features(
+        np.array([5], dtype=np.int64),
+        features=np.array([14], dtype=np.int32),
+        dtype=np.float16,
+    )
+    npt.assert_equal(indices, [[[0, 5], [0, 13]]])
+    npt.assert_equal(dimensions, [1])
+    npt.assert_allclose(values, np.array([[1.0, 2.13]], dtype=np.float16))
+
+
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+def test_sparse_edge_features_graph_multiple_partitions(
+    multi_partition_graph_data
+):
+    cl = client.MemoryGraph(multi_partition_graph_data, [0, 1])
+    indices, values, dimensions = cl.edge_sparse_features(
+        np.array([5], dtype=np.int64),
+        np.array([9], dtype=np.int64),
+        np.array([1], dtype=np.int32),
+        features=np.array([14], dtype=np.int32),
+        dtype=np.float16,
+    )
+    npt.assert_equal(indices, [[[0, 5], [0, 13]]])
+    npt.assert_equal(dimensions, [1])
+    npt.assert_allclose(values, np.array([[1.0, 2.13]], dtype=np.float16))
+
+
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_edge_sampler_creation(multi_partition_graph_data):
     cl = client.MemoryGraph(multi_partition_graph_data, [0])
     cl.reset()
@@ -755,8 +795,8 @@ def test_distributed_graph_metadata(multi_partition_graph_data, storage_type):
     assert cl.meta.edge_count == 3
     assert cl.meta.node_type_count == 3
     assert cl.meta.edge_type_count == 2
-    assert cl.meta._node_feature_count == 14
-    assert cl.meta._edge_feature_count == 14
+    assert cl.meta._node_feature_count == 15
+    assert cl.meta._edge_feature_count == 15
     s1.reset()
     s2.reset()
 
@@ -1045,6 +1085,52 @@ def test_remote_client_node_features_multiple_servers_same_data_tst(
     npt.assert_array_almost_equal(v, [[-0.01, -0.02], [-0.03, -0.04]])
     s1.reset()
     s2.reset()
+
+
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+def test_remote_client_sparse_node_features_graph_multiple_partitions(
+    multi_partition_graph_data
+):
+    address = ["localhost:1236", "localhost:1237"]
+    s1 = server.Server(
+        multi_partition_graph_data, [0], address[0]
+    )
+    s2 = server.Server(
+        multi_partition_graph_data, [1], address[1]
+    )
+    cl = client.DistributedGraph(address)
+    indices, values, dimensions = cl.node_sparse_features(
+        np.array([5], dtype=np.int64),
+        features=np.array([14], dtype=np.int32),
+        dtype=np.float16,
+    )
+    npt.assert_equal(indices, [[[0, 5], [0, 13]]])
+    npt.assert_equal(dimensions, [1])
+    npt.assert_allclose(values, np.array([[1.0, 2.13]], dtype=np.float16))
+
+
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+def test_remote_client_sparse_edge_features_graph_multiple_partitions(
+    multi_partition_graph_data
+):
+    address = ["localhost:1236", "localhost:1237"]
+    s1 = server.Server(
+        multi_partition_graph_data, [0], address[0]
+    )
+    s2 = server.Server(
+        multi_partition_graph_data, [1], address[1]
+    )
+    cl = client.DistributedGraph(address)
+    indices, values, dimensions = cl.edge_sparse_features(
+        np.array([5], dtype=np.int64),
+        np.array([9], dtype=np.int64),
+        np.array([1], dtype=np.int32),
+        features=np.array([14], dtype=np.int32),
+        dtype=np.float16,
+    )
+    npt.assert_equal(indices, [[[0, 5], [0, 13]]])
+    npt.assert_equal(dimensions, [1])
+    npt.assert_allclose(values, np.array([[1.0, 2.13]], dtype=np.float16))
 
 
 @pytest.mark.parametrize(
