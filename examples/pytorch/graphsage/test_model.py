@@ -318,15 +318,14 @@ def test_supervised_graphsage_computational_graph(mock_graph):  # noqa: F811
     )
 
     # use one batch to verify if computational graph is connected.
-    simpler = MockSimpleDataLoader(
-        batch_size=256, query_fn=graphsage.query, graph=mock_graph
+    trainloader = torch.utils.data.DataLoader(
+        MockSimpleDataLoader(batch_size=256, query_fn=graphsage.query, graph=mock_graph)
     )
-
-    it = iter(simpler)
+    it = iter(trainloader)
     context = it.next()
 
     # here we are using feature tensor as a proxy for node ids
-    assert np.array_equal(
+    assert torch.equal(
         context["encoder"]["node_feats"]["neighbor_feats"],
         context["encoder"]["neighbor_feats"]["node_feats"],
     )
