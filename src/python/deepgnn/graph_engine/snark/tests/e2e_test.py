@@ -107,7 +107,6 @@ edges = [
         "sparse_float16_feature": {
             "14": {"coordinates": [5, 13], "values": [1.0, 2.13]}
         },
-
     },
 ]
 
@@ -260,16 +259,36 @@ def linearize(value):
                 if feature_key == "binary_feature":
                     vv = v
                 elif "sparse" in feature_key:
-                    vv = (np.array(v["coordinates"], dtype=np.int64), np.array(v["values"], dtype=JsonDecoder.convert_map[feature_key.replace("sparse_", "")]))
+                    vv = (
+                        np.array(v["coordinates"], dtype=np.int64),
+                        np.array(
+                            v["values"],
+                            dtype=JsonDecoder.convert_map[
+                                feature_key.replace("sparse_", "")
+                            ],
+                        ),
+                    )
                 else:
                     vv = np.array(v, dtype=JsonDecoder.convert_map[feature_key])
                 output[int(key)] = vv
         return output
 
     if "node_id" in value:
-        return value["node_id"], -1, value["node_type"], value["node_weight"], get_features(value)
+        return (
+            value["node_id"],
+            -1,
+            value["node_type"],
+            value["node_weight"],
+            get_features(value),
+        )
     else:
-        return value["src_id"], value["dst_id"], value["edge_type"], value["weight"], get_features(value)
+        return (
+            value["src_id"],
+            value["dst_id"],
+            value["edge_type"],
+            value["weight"],
+            get_features(value),
+        )
 
 
 def write_multi_binary(output_dir, partitions):
@@ -682,9 +701,7 @@ def test_feature_extraction_after_reset(multi_partition_graph_data):
 
 
 @pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
-def test_sparse_node_features_graph_multiple_partitions(
-    multi_partition_graph_data
-):
+def test_sparse_node_features_graph_multiple_partitions(multi_partition_graph_data):
     cl = client.MemoryGraph(multi_partition_graph_data, [0, 1])
     indices, values, dimensions = cl.node_sparse_features(
         np.array([5], dtype=np.int64),
@@ -697,9 +714,7 @@ def test_sparse_node_features_graph_multiple_partitions(
 
 
 @pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
-def test_sparse_edge_features_graph_multiple_partitions(
-    multi_partition_graph_data
-):
+def test_sparse_edge_features_graph_multiple_partitions(multi_partition_graph_data):
     cl = client.MemoryGraph(multi_partition_graph_data, [0, 1])
     indices, values, dimensions = cl.edge_sparse_features(
         np.array([5], dtype=np.int64),
@@ -1089,15 +1104,11 @@ def test_remote_client_node_features_multiple_servers_same_data_tst(
 
 @pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_remote_client_sparse_node_features_graph_multiple_partitions(
-    multi_partition_graph_data
+    multi_partition_graph_data,
 ):
     address = ["localhost:1236", "localhost:1237"]
-    s1 = server.Server(
-        multi_partition_graph_data, [0], address[0]
-    )
-    s2 = server.Server(
-        multi_partition_graph_data, [1], address[1]
-    )
+    s1 = server.Server(multi_partition_graph_data, [0], address[0])
+    s2 = server.Server(multi_partition_graph_data, [1], address[1])
     cl = client.DistributedGraph(address)
     indices, values, dimensions = cl.node_sparse_features(
         np.array([5], dtype=np.int64),
@@ -1111,15 +1122,11 @@ def test_remote_client_sparse_node_features_graph_multiple_partitions(
 
 @pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_remote_client_sparse_edge_features_graph_multiple_partitions(
-    multi_partition_graph_data
+    multi_partition_graph_data,
 ):
     address = ["localhost:1236", "localhost:1237"]
-    s1 = server.Server(
-        multi_partition_graph_data, [0], address[0]
-    )
-    s2 = server.Server(
-        multi_partition_graph_data, [1], address[1]
-    )
+    s1 = server.Server(multi_partition_graph_data, [0], address[0])
+    s2 = server.Server(multi_partition_graph_data, [1], address[1])
     cl = client.DistributedGraph(address)
     indices, values, dimensions = cl.edge_sparse_features(
         np.array([5], dtype=np.int64),

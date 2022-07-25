@@ -110,7 +110,7 @@ grpc::Status GraphEngineServiceImpl::GetNodeFeatures(::grpc::ServerContext *cont
             continue;
         }
 
-        response->mutable_feature_values()->resize(feature_offset+fv_size);
+        response->mutable_feature_values()->resize(feature_offset + fv_size);
         auto index = internal_id->second;
         size_t partition_count = m_counts[index];
         auto data = reinterpret_cast<uint8_t *>(response->mutable_feature_values()->data());
@@ -118,7 +118,7 @@ grpc::Status GraphEngineServiceImpl::GetNodeFeatures(::grpc::ServerContext *cont
         for (size_t partition = 0; partition < partition_count && !found; ++partition, ++index)
         {
             found = m_partitions[m_partitions_indices[index]].GetNodeFeature(m_internal_indices[index], features,
-                                                                     std::span(data + feature_offset, fv_size));
+                                                                             std::span(data + feature_offset, fv_size));
         }
         if (found)
         {
@@ -128,7 +128,6 @@ grpc::Status GraphEngineServiceImpl::GetNodeFeatures(::grpc::ServerContext *cont
         else
         {
             response->mutable_feature_values()->resize(feature_offset);
-
         }
     }
 

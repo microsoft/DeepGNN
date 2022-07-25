@@ -130,8 +130,8 @@ void Graph::GetNodeFeature(std::span<const NodeId> node_ids, std::span<snark::Fe
             bool found = false;
             for (size_t partition = 0; partition < partition_count && !found; ++partition, ++index)
             {
-                found = m_partitions[m_partitions_indices[index]].GetNodeFeature(m_internal_indices[index], features,
-                                                                        output.subspan(feature_offset, feature_size));
+                found = m_partitions[m_partitions_indices[index]].GetNodeFeature(
+                    m_internal_indices[index], features, output.subspan(feature_offset, feature_size));
             }
         }
         feature_offset += feature_size;
@@ -187,8 +187,8 @@ void Graph::GetNodeStringFeature(std::span<const NodeId> node_ids, std::span<con
         for (size_t partition = 0; partition < partition_count && !found; ++partition, ++index)
         {
             found = m_partitions[m_partitions_indices[index]].GetNodeStringFeature(
-                m_internal_indices[index], features,
-                out_dimensions.subspan(features_size * node_index, features_size), out_data);
+                m_internal_indices[index], features, out_dimensions.subspan(features_size * node_index, features_size),
+                out_data);
         }
     }
 }
