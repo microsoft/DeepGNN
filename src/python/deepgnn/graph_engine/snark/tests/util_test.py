@@ -5,6 +5,27 @@
 from deepgnn.graph_engine.snark.decoders import JsonDecoder
 
 
+def json_to_linear_feature(features):
+    def get_f(f):
+        if f is None:
+            return "uint8 0"
+        elif isinstance(f, str):
+            return f"binary_feature 1 {f}"
+        elif isinstance(f, tuple):
+            coords, values = f
+            if len(coords.shape) == 1:
+                coordinates_str = " ".join(map(str, coords))
+                length = f"{coords.shape[0]}"
+            else:
+                coordinates_str = " ".join((" ".join(map(str, c)) for c in coords))
+                length = f"{coords.shape[0]},{coords.shape[1]}"
+
+            return f"{values.dtype.name} {length},{values.size} {coordinates_str} {' '.join(map(str, values))}"
+        return f"{f.dtype.name} {f.size} {' '.join(map(str, f))}"
+
+    return " ".join(get_f(f) for f in features)
+
+
 def linear_encode(
     node_id: int,
     blank: int,
@@ -25,33 +46,12 @@ def linear_encode(
     node_features: [ndarray, ...]
     edges: [(edge_src: int, edge_dst: int, edge_type: int, edge_weight: float, edge_features[ndarray, ...]), ...]
     """
-
-    def _feature_str(features):
-        def get_f(f):
-            if f is None:
-                return "uint8 0"
-            elif isinstance(f, str):
-                return f"binary_feature 1 {f}"
-            elif isinstance(f, tuple):
-                coords, values = f
-                if len(coords.shape) == 1:
-                    coordinates_str = " ".join(map(str, coords))
-                    length = f"{coords.shape[0]}"
-                else:
-                    coordinates_str = " ".join((" ".join(map(str, c)) for c in coords))
-                    length = f"{coords.shape[0]},{coords.shape[1]}"
-
-                return f"{values.dtype.name} {length},{values.size} {coordinates_str} {' '.join(map(str, values))}"
-            return f"{f.dtype.name} {f.size} {' '.join(map(str, f))}"
-
-        return " ".join(get_f(f) for f in features)
-
     buffer.write(  # type: ignore
-        f"{node_id} -1 {node_type} {node_weight} {_feature_str(node_features)}\n"
+        f"{node_id} -1 {node_type} {node_weight} {json_to_linear_feature(node_features)}\n"
     )
     for edge_src, edge_dst, edge_type, edge_weight, edge_features in edges:
         buffer.write(  # type: ignore
-            f"{edge_src} {edge_dst} {edge_type} {edge_weight} {_feature_str(edge_features)}\n"
+            f"{edge_src} {edge_dst} {edge_type} {edge_weight} {json_to_linear_feature(edge_features)}\n"
         )
 
 
