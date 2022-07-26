@@ -52,7 +52,7 @@ def create_model(args: argparse.Namespace):
             num_layers=1, 
             num_mlp_layers=2, 
             input_dim=1433,
-            hidden_dim=12, 
+            hidden_dim=128, 
             output_dim=7, 
             final_dropout=0.5, 
             learn_eps=False, 
