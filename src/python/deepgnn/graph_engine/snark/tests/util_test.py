@@ -7,6 +7,7 @@ from deepgnn.graph_engine.snark.decoders import JsonDecoder
 
 def linear_encode(
     node_id: int,
+    blank: int,
     node_type: int,
     node_weight: float,
     node_features: list,
@@ -57,7 +58,7 @@ def linear_encode(
 def json_node_to_linear(node, buffer):
     """Convert graph.json to graph.linear."""
     gen = JsonDecoder().decode(node)
-    node = next(gen)[1:]
+    node = next(gen)
     edges = [edge for edge in gen]
     linear_encode(*node, edges, buffer)
 

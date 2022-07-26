@@ -105,7 +105,7 @@ def triangle_graph(request):
         data_name = triangle_graph_json(workdir.name)
     elif request.param == LinearDecoder:
         json_name = triangle_graph_json(workdir.name)
-        data_name = os.path.join(workdir.name, "graph.linear")
+        data_name = os.path.join("/tmp/test", "graph.linear")
         json_to_linear(json_name, data_name)
     elif request.param == TsvDecoder:
         data_name = triangle_graph_tsv(workdir.name)
@@ -350,36 +350,66 @@ def test_edge_alias_tables(triangle_graph):
         decoder=decoder(),
         dispatcher=d,
     ).convert()
-    with open("{}/edge_0_0.alias".format(output.name), "rb") as ea:
-        expected_size = 36  # Only 1 record
-        result = ea.read(expected_size + 1)
-        assert len(result) == expected_size
-        assert result[0:8] == (9).to_bytes(8, byteorder=sys.byteorder)
-        assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
-        assert result[16:24] == (0).to_bytes(8, byteorder=sys.byteorder)
-        assert result[24:32] == (0).to_bytes(8, byteorder=sys.byteorder)
-        assert result[32:36] == struct.pack("=f", 1.0)
 
-    with open("{}/edge_1_0.alias".format(output.name), "rb") as ea:
-        expected_size = 36  # Only 1 record
-        result = ea.read(expected_size + 1)
-        assert len(result) == expected_size
-        assert result[0:8] == (5).to_bytes(8, byteorder=sys.byteorder)
-        assert result[8:16] == (9).to_bytes(8, byteorder=sys.byteorder)
-        assert result[16:24] == (0).to_bytes(8, byteorder=sys.byteorder)
-        assert result[24:32] == (0).to_bytes(8, byteorder=sys.byteorder)
-        assert result[32:36] == struct.pack("=f", 1.0)
+    if decoder == LinearDecoder:
+        assert os.path.getsize("{}/edge_0_0.alias".format(output.name)) == 0
+        assert os.path.getsize("{}/edge_1_0.alias".format(output.name)) == 0
 
-    with open("{}/edge_1_1.alias".format(output.name), "rb") as ea:
-        expected_size = 36  # Only 1 record
-        result = ea.read(expected_size + 1)
-        assert len(result) == expected_size
-        assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
-        assert result[8:16] == (5).to_bytes(8, byteorder=sys.byteorder)
-        assert result[16:24] == (0).to_bytes(8, byteorder=sys.byteorder)
-        assert result[24:32] == (0).to_bytes(8, byteorder=sys.byteorder)
-        assert result[32:36] == struct.pack("=f", 1.0)
-    assert os.path.getsize("{}/edge_0_1.alias".format(output.name)) == 0
+        with open("{}/edge_0_1.alias".format(output.name), "rb") as ea:
+            expected_size = 36  # Only 1 record
+            result = ea.read(expected_size + 1)
+            assert len(result) == expected_size
+            assert result[0:8] == (9).to_bytes(8, byteorder=sys.byteorder)
+            assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[16:24] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[24:32] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[32:36] == struct.pack("=f", 1.0)
+
+        with open("{}/edge_1_1.alias".format(output.name), "rb") as ea:
+            expected_size = 2 * 36  # 2 record
+            result = ea.read(expected_size + 1)
+            assert len(result) == expected_size
+            assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[8:16] == (5).to_bytes(8, byteorder=sys.byteorder)
+            assert result[16:24] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[24:32] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[32:36] == struct.pack("=f", 1.0)
+            assert result[36:44] == (5).to_bytes(8, byteorder=sys.byteorder)
+            assert result[44:52] == (9).to_bytes(8, byteorder=sys.byteorder)
+            assert result[52:60] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[60:68] == (5).to_bytes(8, byteorder=sys.byteorder)
+    else:
+        assert os.path.getsize("{}/edge_0_1.alias".format(output.name)) == 0
+
+        with open("{}/edge_0_0.alias".format(output.name), "rb") as ea:
+            expected_size = 36  # Only 1 record
+            result = ea.read(expected_size + 1)
+            assert len(result) == expected_size
+            assert result[0:8] == (9).to_bytes(8, byteorder=sys.byteorder)
+            assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[16:24] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[24:32] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[32:36] == struct.pack("=f", 1.0)
+
+        with open("{}/edge_1_0.alias".format(output.name), "rb") as ea:
+            expected_size = 36  # Only 1 record
+            result = ea.read(expected_size + 1)
+            assert len(result) == expected_size
+            assert result[0:8] == (5).to_bytes(8, byteorder=sys.byteorder)
+            assert result[8:16] == (9).to_bytes(8, byteorder=sys.byteorder)
+            assert result[16:24] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[24:32] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[32:36] == struct.pack("=f", 1.0)
+
+        with open("{}/edge_1_1.alias".format(output.name), "rb") as ea:
+            expected_size = 36  # Only 1 record
+            result = ea.read(expected_size + 1)
+            assert len(result) == expected_size
+            assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[8:16] == (5).to_bytes(8, byteorder=sys.byteorder)
+            assert result[16:24] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[24:32] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[32:36] == struct.pack("=f", 1.0)
 
 
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
@@ -412,7 +442,11 @@ def test_node_alias_tables(triangle_graph):
         assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
         assert result[16:20] == struct.pack("=f", 1.0)
 
-    with open("{}/node_1_1.alias".format(output.name), "rb") as ea:
+    if decoder == LinearDecoder:
+        filename = "{}/node_1_0.alias"
+    else:
+        filename = "{}/node_1_1.alias"
+    with open(filename.format(output.name), "rb") as ea:
         expected_size = 20  # Only 1 record
         result = ea.read(expected_size + 1)
         assert len(result) == expected_size
@@ -430,7 +464,11 @@ def test_node_alias_tables(triangle_graph):
 
     assert os.path.getsize("{}/node_0_1.alias".format(output.name)) == 0
     assert os.path.getsize("{}/node_2_1.alias".format(output.name)) == 0
-    assert os.path.getsize("{}/node_1_0.alias".format(output.name)) == 0
+    if decoder == LinearDecoder:
+        filename = "{}/node_1_1.alias"
+    else:
+        filename = "{}/node_1_0.alias"
+    assert os.path.getsize(filename.format(output.name)) == 0
 
 
 def graph_with_sparse_features_json(folder):
