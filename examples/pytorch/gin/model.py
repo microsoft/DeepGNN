@@ -204,6 +204,18 @@ class GIN(BaseSupervisedModel):
         # get_logger().info('Score shape:  ' + str(pooled_h.shape))
         return score
 
+    def forward(self, context: dict):
+        scores: torch.Tensor = self.get_score(context)
+        labels = context["label"].squeeze().long().clone().detach()
+
+        # Calculate cross-entropy loss
+        loss = self.xent(scores, labels)
+
+        # Take argmax to fetch class indices
+        scores = scores.argmax(dim=1)
+
+        return (loss, scores, labels)
+
     def metric_name(self):
         """Metric used for model evaluation."""
         return self.metric.name()
@@ -212,10 +224,12 @@ class GIN(BaseSupervisedModel):
         """Fetch training data from graph."""
         context = {"inputs": inputs}
 
-        context['neighbors'] = graph.neighbors(
+        context['neighbors'] = graph.sample_neighbors(
             nodes = context['inputs'],
-            edge_types = np.array(0),
-        )[0].astype(int)
+            edge_types = np.array([0]),
+            count = 10,
+            strategy = "randomwithoutreplacement"
+        )[0]
 
         context["label"] =  graph.node_features(
             context["inputs"],
@@ -223,10 +237,10 @@ class GIN(BaseSupervisedModel):
             FeatureType.FLOAT,
         )
 
-        context['nb_counts'] = graph.neighbors(
+        context['nb_counts'] = graph.neighbor_count(
             nodes = context['inputs'],
-            edge_types = np.array(0),
-        )[3].astype(float)
+            edge_types = np.array([0]),
+        ).astype(float)
 
 
         context["features"] = graph.node_features(
