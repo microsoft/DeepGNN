@@ -18,9 +18,8 @@ def json_to_linear_feature(features):
                 length = f"{coords.shape[0]}"
             else:
                 coordinates_str = " ".join((" ".join(map(str, c)) for c in coords))
-                length = f"{coords.shape[0]},{coords.shape[1]}"
 
-            return f"{values.dtype.name} {length},{values.size} {coordinates_str} {' '.join(map(str, values))}"
+            return f"{values.dtype.name} {values.size},{coords.shape[1] if len(coords.shape) > 1 else 0} {coordinates_str} {' '.join(map(str, values))}"
         return f"{f.dtype.name} {f.size} {' '.join(map(str, f))}"
 
     return " ".join(get_f(f) for f in features)

@@ -105,7 +105,7 @@ def triangle_graph(request):
         data_name = triangle_graph_json(workdir.name)
     elif request.param == LinearDecoder:
         json_name = triangle_graph_json(workdir.name)
-        data_name = os.path.join("/tmp/test", "graph.linear")
+        data_name = os.path.join(workdir.name, "graph.linear")
         json_to_linear(json_name, data_name)
     elif request.param == TsvDecoder:
         data_name = triangle_graph_tsv(workdir.name)
@@ -532,7 +532,9 @@ def graph_with_sparse_features_json(folder):
             "node_type": 1,
             "node_weight": 1,
             "float_feature": {"0": [1], "1": [-0.03, -0.04]},
-            "sparse_float_feature": {"2": {"coordinates": [1, 3, 7], "values": [5.5]}},
+            "sparse_float_feature": {
+                "2": {"coordinates": [[1, 3, 7]], "values": [5.5]}
+            },
             "edge": [
                 {
                     "src_id": 0,

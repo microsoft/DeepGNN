@@ -185,19 +185,16 @@ class LinearDecoder(Decoder):
                 break
 
             if len(length) > 1:
-                coordinates_len = length[:-1]
-                coordinates_len_total = 1
-                for v in coordinates_len:
-                    coordinates_len_total *= v
-                values_len = length[-1]
-
-                if not coordinates_len:
+                values_len, coords_dim = length
+                if not values_len:
                     value = None
                 else:
                     value = (
                         np.fromiter(
-                            data, count=coordinates_len_total, dtype=np.int64
-                        ).reshape(coordinates_len),
+                            data, count=values_len * max(coords_dim, 1), dtype=np.int64
+                        ).reshape(
+                            (values_len, coords_dim) if coords_dim else values_len
+                        ),
                         np.fromiter(
                             data,
                             count=values_len,
