@@ -153,37 +153,16 @@ class BaseSupervisedModel(BaseModel):
         # in latest stable version. Revisit this part after updating pytorch with the fix included.
         # issue: https://github.com/pytorch/pytorch/issues/32343
         # fix: https://github.com/pytorch/pytorch/pull/37864
-        # labels = F.one_hot(labels, num_classes = 7)
-        # get_logger().info("Label Shape: " + str(labels.shape))
-        # labels = labels.cpu().numpy()
+        labels = labels.cpu().numpy().argmax(1)
         scores: torch.Tensor = self.get_score(context)
-        # get_logger().info("Score Shape: " + str(scores.shape))
-        # get_logger().info("Score: " + str(scores))
-        # get_logger().info("Labels: " + str(labels))
-        
-        # get_logger().info("INPUT SIZE: " + str(scores.shape))
-        # labs = Variable(torch.tensor(labels.squeeze(), dtype=torch.int64).to(device))
-        # get_logger().info("TARGET SIZE: " + str(labs.shape))
-
-        get_logger().info("PRE-SCORES: " + str(scores))
-        scores = scores.argmax(dim=1)
-        # labels = torch.tensor(labels.squeeze(), dtype = torch.long)
-        get_logger().info("POST-SCORES: " + str(scores))
-        get_logger().info("LABELS: " + str(labels))
-        loss = self.xent(
+        return (
+            self.xent(
                 scores,
-                torch.LongTensor(labels.squeeze()).to(device),
-            )
-        labels = torch.tensor(labels.squeeze(), dtype = torch.long)
-        return (loss, scores, labels)
-        # return (
-        #     self.xent(
-        #         scores,
-        #         Variable(torch.tensor(labels.squeeze(), dtype=torch.int64).to(device)),
-        #     ),
-        #     scores.argmax(dim=1),
-        #     torch.tensor(labels.squeeze(), dtype=torch.int64),
-        # )
+                Variable(torch.tensor(labels.squeeze(), dtype=torch.int64).to(device)),
+            ),
+            scores.argmax(dim=1),
+            torch.tensor(labels.squeeze(), dtype=torch.int64),
+        )
 
     def forward(self, context: dict):
         """Return cross entropy loss."""

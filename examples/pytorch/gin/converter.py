@@ -141,8 +141,7 @@ def build_json(g_list):
                 nbs[nb] = 1.0
 
 
-            # print("FEATURES: " + str(g.node_features[node_id]))
-            # print("NODE DATA: " + str(nx.nodes.data))
+=
             node = {
                 "node_weight": 1.0,
                 "node_id": node_id,

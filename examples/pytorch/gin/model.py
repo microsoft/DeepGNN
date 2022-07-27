@@ -143,8 +143,6 @@ class GIN(BaseSupervisedModel):
 
         # Sum Pooling
         # for i in range(len())
-        
-
         pooled = torch.zeros(0)
         for i in range(len(context['nb_counts'][0])):
             num_neighbors = context['nb_counts'][0][i].int()
@@ -175,33 +173,22 @@ class GIN(BaseSupervisedModel):
 
         # Loop across all nodes in mini-batch
         for node_id in range(num_nodes):
-            # Fetch number of neighbors for current node
             num_neighbors = nb_counts[node_id].int().item()
 
-            # Fetch and sum feature values for neighbors
+            # Aggregate and sum features across all neighbors 
             neighbor_features = features[offset: offset + num_neighbors]
-            # get_logger().info("Nb features shape: " + str(neighbor_features.shape))
             sum_features = neighbor_features.sum(0)
-            # get_logger().info("sum features shape: " + str(sum_features.shape))
-
-
 
             # Move offset forward to read next set of nb features
             offset += (num_neighbors + 1)
 
             # Write to pooled matrix
             pooled_h[node_id] = sum_features
-        
-
-        # get_logger().info("Pooled h: " + str(pooled_h))
-        # get_logger().info("Pooled h SHAPE: " + str(pooled_h.shape))
 
         score = 0
         for layer in range(self.num_layers):
             score += F.dropout(self.linears_prediction[layer](pooled_h), self.final_dropout, training = self.training)
 
-        # get_logger().info("Predictions: " + str(pooled_h))
-        # get_logger().info('Score shape:  ' + str(pooled_h.shape))
         return score
 
     def forward(self, context: dict):
@@ -224,12 +211,22 @@ class GIN(BaseSupervisedModel):
         """Fetch training data from graph."""
         context = {"inputs": inputs}
 
-        context['neighbors'] = graph.sample_neighbors(
-            nodes = context['inputs'],
-            edge_types = np.array([0]),
-            count = 10,
-            strategy = "randomwithoutreplacement"
+        context['neighbors'] = graph.neighbors(
+            context["inputs"],
+            np.array([0, 1, 2, 3])
         )[0]
+
+        # context['neighbors'] = graph.sample_neighbors(
+        #     nodes = context['inputs'],
+        #     edge_types = np.array([0, 1, 2, 3]),
+        #     count = 10,
+        #     strategy = "randomwithoutreplacement"
+        # )[0]
+
+        context['nb_counts'] = graph.neighbor_count(
+            nodes = context['inputs'],
+            edge_types = np.array([0, 1, 2, 3]),
+        ).astype(float)
 
         context["label"] =  graph.node_features(
             context["inputs"],
@@ -237,17 +234,12 @@ class GIN(BaseSupervisedModel):
             FeatureType.FLOAT,
         )
 
-        context['nb_counts'] = graph.neighbor_count(
-            nodes = context['inputs'],
-            edge_types = np.array([0]),
-        ).astype(float)
-
-
         context["features"] = graph.node_features(
             context["neighbors"],
             np.array([[self.label_idx, self.label_dim]]),
             FeatureType.FLOAT,
         )
+
         return context
 
     
