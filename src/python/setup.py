@@ -7,6 +7,7 @@ import platform
 import sys
 import os
 import shutil
+import stat
 import pathlib
 from distutils.command.clean import clean
 
@@ -32,9 +33,12 @@ def graph_engine(version: str):
         ]:
             shutil.copy(
                 path,
-                os.path.join(os.path.dirname(__file__), "deepgnn/graph_engine/snark"),
+                os.path.join(
+                    os.path.dirname(__file__), "deepgnn", "graph_engine", "snark"
+                ),
             )
             _, libname = os.path.split(path)
+            os.chmod(path, stat.S_IWRITE)
             fo.write("include python/deepgnn/graph_engine/snark/%s\n" % libname)
 
     here = pathlib.Path(__file__).parent.parent.resolve()
