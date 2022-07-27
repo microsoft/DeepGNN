@@ -67,7 +67,7 @@ class BinaryWriter:
         self.node_type_count: typing.List[int] = []
         self.edge_weight: typing.List[float] = []
         self.edge_type_count: typing.List[int] = []
-        self.prev_node_id = -1
+        self.prev_node_id: typing.Optional[int] = None
 
     def add(self, data: typing.Iterator[typing.Tuple[int, int, int, float, list]]):
         """
@@ -95,7 +95,7 @@ class BinaryWriter:
                 self.node_type_count[typ] += 1
                 self.node_count += 1
             else:
-                if src != self.prev_node_id:
+                if src != self.prev_node_id or self.prev_node_id is None:
                     self.node_writer.add(src, -1, [])
                     self.edge_writer.add_node()
                     self.prev_node_id = src
@@ -105,7 +105,7 @@ class BinaryWriter:
                         self.edge_weight.append(0)
                         self.edge_type_count.append(0)
                     self.edge_type_num = type_num_value
-                self.edge_writer.add(src, dst, typ, weight, features)
+                self.edge_writer.add(dst, typ, weight, features)
                 self.edge_alias.add(src, dst, typ, weight)
                 self.edge_weight[typ] += weight
                 self.edge_type_count[typ] += 1
@@ -267,7 +267,7 @@ class EdgeWriter:
             ctypes.c_uint64(self.ei.tell() // (4 + 8 + 8 + 4))
         )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
 
-    def add(self, src: int, dst: int, tp: int, weight: float, features: list):
+    def add(self, dst: int, tp: int, weight: float, features: list):
         """Append edges starting at node to the output.
 
         Args:
