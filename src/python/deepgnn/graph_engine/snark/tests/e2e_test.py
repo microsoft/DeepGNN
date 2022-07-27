@@ -370,6 +370,30 @@ def test_memory_graph_metadata(multi_partition_graph_data, storage_type):
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+def test_memory_graph_neighbors(multi_partition_graph_data, storage_type):
+    cl = client.MemoryGraph(multi_partition_graph_data, [0, 1], storage_type)
+    cl.neighbors(
+        np.array([9, 0], dtype=np.int64),
+        np.array([0, 1, 2], dtype=np.int32),
+    )
+
+
+@pytest.mark.parametrize(
+    "storage_type",
+    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
+)
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+def test_memory_graph_node_types(multi_partition_graph_data, storage_type):
+    cl = client.MemoryGraph(multi_partition_graph_data, [0, 1], storage_type)
+    types = cl.node_types(np.array([9, 5, 0], dtype=np.int64), -1)
+    npt.assert_equal(types, np.array([0, 2, 1], dtype=np.int32))
+
+
+@pytest.mark.parametrize(
+    "storage_type",
+    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
+)
 @pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_memory_graph_type_counts(multi_partition_graph_data, storage_type):
     cl = client.MemoryGraph(multi_partition_graph_data, [0, 1], storage_type)

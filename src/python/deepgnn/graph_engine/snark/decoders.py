@@ -34,6 +34,7 @@ class Decoder(abc.ABC):
         """Decode the line of text.
 
         This is a generator that yields a node then its outgoing edges in order.
+        A node and its outgoing edges can be on different partitions.
         Yield format is (node_id/src, -1/dst, type, weight, features).
         Features being a list of dense features as ndarrays and sparse features as 2 tuples, coordinates and values.
         """
@@ -136,7 +137,13 @@ class LinearDecoder(Decoder):
         self.n_edge_feature = len(self.edge_feature_types)
 
     def decode(self, line: str) -> Iterator[Tuple[int, int, int, float, list]]:
-        """Convert text line into node object."""
+        """Convert text line into a node and edge iterator.
+
+        This is a generator that yields a node then its outgoing edges in order.
+        A node and its outgoing edges can be on different partitions.
+        Yield format is (node_id/src, -1/dst, type, weight, features).
+        Features being a list of dense features as ndarrays and sparse features as 2 tuples, coordinates and values.
+        """
         if line == "":
             return []
 
@@ -276,6 +283,7 @@ class JsonDecoder(Decoder):
         """Use json package to convert the json text line into a node and edge iterator.
 
         This is a generator that yields a node then its outgoing edges in order.
+        A node and its outgoing edges can be on different partitions.
         Yield format is (node_id/src, -1/dst, type, weight, features).
         Features being a list of dense features as ndarrays and sparse features as 2 tuples, coordinates and values.
         """
@@ -353,6 +361,7 @@ class TsvDecoder(Decoder):
         """Decode tsv based text line into a node and edge iterator.
 
         This is a generator that yields a node then its outgoing edges in order.
+        A node and its outgoing edges can be on different partitions.
         Yield format is (node_id/src, -1/dst, type, weight, features).
         Features being a list of dense features as ndarrays and sparse features as 2 tuples, coordinates and values.
         """
