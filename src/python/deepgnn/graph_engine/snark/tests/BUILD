@@ -41,6 +41,7 @@ py_test(
         requirement("pytest"),
         requirement("networkx"),
         requirement("opencensus"),
+        requirement("fsspec"),
         requirement("grpcio"),
         requirement("grpcio-health-checking"),
         requirement("opencensus-context"),
