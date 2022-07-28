@@ -11,3 +11,9 @@
 * Add BinaryWriter as new entry point for NodeWriter, EdgeWriter and alias writers.
 
 * Meta.json files are no longer needed by the converter. Remove meta path argument from MultiWorkerConverter and Dispatchers.
+
+* Add neighbor count (node degree) functionality for both memory graph and distributed graphs
+
+* Add unit testing for neighbor count feature for memory/distributed graph (base cases, single/multiple partition, invalid nodes and types)
+
+* Adds Python handling of c neigbor count implementation leveraging ctypes library

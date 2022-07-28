@@ -488,7 +488,7 @@ size_t NeighborIndexIterator(uint64_t internal_id, std::span<const Type> edge_ty
 
 size_t Partition::NeighborCount(uint64_t internal_id, std::span<const Type> edge_types) const
 {
-    auto lambda = [](auto start, auto last, int i) { return last - start; };
+    auto lambda = [](auto start, auto last, int i) {};
 
     return NeighborIndexIterator(internal_id, edge_types, lambda, m_neighbors_index, m_edge_types, m_edge_type_offset);
 }
@@ -510,8 +510,6 @@ size_t Partition::FullNeighbor(uint64_t internal_id, std::span<const Type> edge_
             out_edge_weights.emplace_back(index > start ? m_edge_weights[index] - m_edge_weights[index - 1]
                                                         : m_edge_weights[start]);
         }
-
-        return last - start;
     };
 
     return NeighborIndexIterator(internal_id, edge_types, lambda, m_neighbors_index, m_edge_types, m_edge_type_offset);
