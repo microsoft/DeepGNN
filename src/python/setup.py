@@ -31,7 +31,8 @@ def graph_engine(version: str):
         for path in [
             os.path.join("../../bazel-bin", "src", "cc", "lib", _shared_lib())
         ]:
-            os.chmod(path, stat.S_IWRITE)
+            if platform.system() == "Windows":
+                os.chmod(path, stat.S_IWRITE)
             shutil.copy(
                 path,
                 os.path.join(
