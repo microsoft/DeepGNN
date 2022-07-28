@@ -484,7 +484,7 @@ size_t NeighborIndexIterator(uint64_t internal_id, std::span<const Type> edge_ty
         }
     }
     return result;
-}
+} 
 
 size_t Partition::NeighborCount(uint64_t internal_id, std::span<const Type> edge_types) const
 {
