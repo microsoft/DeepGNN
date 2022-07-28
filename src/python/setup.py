@@ -31,6 +31,7 @@ def graph_engine(version: str):
         for path in [
             os.path.join("../../bazel-bin", "src", "cc", "lib", _shared_lib())
         ]:
+            os.chmod(path, stat.S_IWRITE)
             shutil.copy(
                 path,
                 os.path.join(
@@ -38,7 +39,6 @@ def graph_engine(version: str):
                 ),
             )
             _, libname = os.path.split(path)
-            os.chmod(path, stat.S_IWRITE)
             fo.write("include python/deepgnn/graph_engine/snark/%s\n" % libname)
 
     here = pathlib.Path(__file__).parent.parent.resolve()
