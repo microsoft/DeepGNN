@@ -127,10 +127,11 @@ def convert_data(dataset):
 
 def build_json(g_list):
     """"Generate graph.json file from networkx graph."""
+    
 
+    nodes = []
+    data = ""
     for g in g_list:
-        nodes = []
-        data = ""
 
         # Fetch networkx graph from SV2Graph object
 
@@ -140,8 +141,6 @@ def build_json(g_list):
             for nb in nx.neighbors(g.g, node_id):
                 nbs[nb] = 1.0
 
-
-=
             node = {
                 "node_weight": 1.0,
                 "node_id": node_id,
@@ -155,8 +154,9 @@ def build_json(g_list):
                 }
                 for nb in nx.neighbors(g.g, node_id)],
             }
-            data += json.dumps(node) + "\n"
-            nodes.append(node)
+            if node_id not in nodes:
+                data += json.dumps(node) + "\n"
+                nodes.append(node_id)
 
     return data
 
@@ -178,9 +178,8 @@ def _main():
     with open(raw_file, "w+") as f:
         f.write(data)
 
-    print("Finished writing.")
-    meta = open(os.path.join('/tmp/proteins/', "meta.txt"), "w+")
-    
+    print("Finished writing.")  
+      
     # Build extra binaries
     convert.MultiWorkersConverter(
         graph_path=raw_file,

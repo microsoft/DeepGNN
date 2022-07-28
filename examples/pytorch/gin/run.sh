@@ -39,7 +39,7 @@ python3 ${DIR_NAME}/main.py  \
 --data_dir $GRAPH --mode evaluate \
 --backend snark --graph_type local --converter skip \
 --batch_size 128 \
---sample_file /tmp/cora/test.nodes --node_type 0 --max_id -1 \
+--sample_file /tmp/proteins/test.nodes --node_type 0 --max_id -1 \
 --feature_idx 0 --feature_dim 12 --label_idx 1 --label_dim 1 --algo $ALGO \
 --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
 --log_by_steps 1 --use_per_step_metrics $PLATFORM_DEVICE
@@ -49,7 +49,7 @@ if [[ "$ADL_UPLOADER" == "no" ]]; then
     --data_dir $GRAPH --mode inference \
     --backend snark --graph_type local --converter skip \
     --batch_size 128 \
-    --sample_file /tmp/cora/test.nodes --node_type 0 \
+    --sample_file /tmp/proteins/test.nodes --node_type 0 \
     --feature_idx 0 --feature_dim 12 --label_idx 1 --label_dim 1 --algo $ALGO \
     --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
     --log_by_steps 1 --use_per_step_metrics $PLATFORM_DEVICE
@@ -58,7 +58,7 @@ else
     --data_dir $GRAPH --mode inference \
     --backend snark --graph_type local --converter skip \
     --batch_size 128 \
-    --sample_file /tmp/cora/test.nodes --node_type 0 \
+    --sample_file /tmp/proteins/test.nodes --node_type 0 \
     --feature_idx 0 --feature_dim 12 --label_idx 1 --label_dim 1 --algo $ALGO \
     --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path /integration_test/test_adl_uploader \
     --log_by_steps 1 --use_per_step_metrics --enable_adl_uploader --uploader_store_name snrgnndls --uploader_process_num 2 --uploader_threads_num 10 $PLATFORM_DEVICE
