@@ -3,6 +3,8 @@ import torch
 import json
 import random
 import tempfile
+import urllib.request
+import logging
 import numpy as np
 import networkx as nx
 from pathlib import Path
@@ -13,6 +15,17 @@ import deepgnn.graph_engine.snark.convert as convert
 from deepgnn.graph_engine.snark.decoders import JsonDecoder
 from deepgnn.graph_engine.snark.decoders import DecoderType
 import deepgnn.graph_engine.snark.client as client
+
+
+def download_file(url: str, data_dir: str, name: str):
+    """Create dir and download data."""
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+
+    fname = os.path.join(data_dir, name)
+    if not os.path.exists(fname):
+        logging.info(f"download: {fname}")
+        urllib.request.urlretrieve(url, fname)
 
 class S2VGraph(object):
     def __init__(self, g, label, node_tags=None, node_features=None):
@@ -141,11 +154,16 @@ def build_json(g_list):
             for nb in nx.neighbors(g.g, node_id):
                 nbs[nb] = 1.0
 
+            feats = g.node_features[node_id].tolist()
+            feat0 = feats[0]
+            feat1 = feats[1]
+            feat2 = feats[2]
+
             node = {
                 "node_weight": 1.0,
                 "node_id": node_id,
                 "node_type": 0,
-                "float_feature": {"0": g.node_features[node_id].tolist()},
+                "float_feature": {"0": [feat0], "1": [feat1], "2":[feat2]},
                 "edge": [{
                     "src_id": node_id,
                     "dst_id": nb,
@@ -174,12 +192,15 @@ def _main():
     # Create json file in working directory
     working_dir = tempfile.TemporaryDirectory()
     print(working_dir)
+
+    # f = open("/tmp/proteins/graph.json", "x")
+
     raw_file = "/tmp/proteins/graph.json"
     with open(raw_file, "w+") as f:
         f.write(data)
-
+    
     print("Finished writing.")  
-      
+
     # Build extra binaries
     convert.MultiWorkersConverter(
         graph_path=raw_file,

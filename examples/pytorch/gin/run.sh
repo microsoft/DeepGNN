@@ -15,8 +15,6 @@ DIR_NAME=$(dirname "$0")
 GRAPH=/tmp/proteins
 rm -fr $GRAPH
 
-python3 -m deepgnn.graph_engine.data.citation --data_dir $GRAPH
-
 MODEL_DIR=/tmp/model_fix
 rm -rf $MODEL_DIR
 
@@ -32,7 +30,7 @@ python3 ${DIR_NAME}/main.py  \
 --batch_size 32 --learning_rate 0.01 --num_epochs 50 \
 --node_type 0 --max_id -1 \
 --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
---feature_idx 0 --feature_dim 12 --label_idx 1 --label_dim 1 --algo $ALGO \
+--feature_idx 0 --feature_dim 3 --label_idx 1 --label_dim 1 --algo $ALGO \
 --log_by_steps 1 --use_per_step_metrics $PLATFORM_DEVICE --storage_type $STORAGE_TYPE
 
 python3 ${DIR_NAME}/main.py  \
@@ -40,7 +38,7 @@ python3 ${DIR_NAME}/main.py  \
 --backend snark --graph_type local --converter skip \
 --batch_size 128 \
 --sample_file /tmp/proteins/test.nodes --node_type 0 --max_id -1 \
---feature_idx 0 --feature_dim 12 --label_idx 1 --label_dim 1 --algo $ALGO \
+--feature_idx 0 --feature_dim 3 --label_idx 1 --label_dim 1 --algo $ALGO \
 --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
 --log_by_steps 1 --use_per_step_metrics $PLATFORM_DEVICE
 
@@ -50,7 +48,7 @@ if [[ "$ADL_UPLOADER" == "no" ]]; then
     --backend snark --graph_type local --converter skip \
     --batch_size 128 \
     --sample_file /tmp/proteins/test.nodes --node_type 0 \
-    --feature_idx 0 --feature_dim 12 --label_idx 1 --label_dim 1 --algo $ALGO \
+    --feature_idx 0 --feature_dim 3 --label_idx 1 --label_dim 1 --algo $ALGO \
     --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
     --log_by_steps 1 --use_per_step_metrics $PLATFORM_DEVICE
 else
@@ -59,7 +57,7 @@ else
     --backend snark --graph_type local --converter skip \
     --batch_size 128 \
     --sample_file /tmp/proteins/test.nodes --node_type 0 \
-    --feature_idx 0 --feature_dim 12 --label_idx 1 --label_dim 1 --algo $ALGO \
+    --feature_idx 0 --feature_dim 3 --label_idx 1 --label_dim 1 --algo $ALGO \
     --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path /integration_test/test_adl_uploader \
     --log_by_steps 1 --use_per_step_metrics --enable_adl_uploader --uploader_store_name snrgnndls --uploader_process_num 2 --uploader_threads_num 10 $PLATFORM_DEVICE
 fi
