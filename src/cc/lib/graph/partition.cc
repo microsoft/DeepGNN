@@ -474,6 +474,7 @@ size_t NeighborIndexIterator(uint64_t internal_id, std::span<const Type> edge_ty
         {
             break;
         }
+        // Find satisfying edge type, if exists
         if (m_edge_types[i] == edge_types[curr_type])
         {
             const auto start = m_edge_type_offset[i];
@@ -484,7 +485,7 @@ size_t NeighborIndexIterator(uint64_t internal_id, std::span<const Type> edge_ty
         }
     }
     return result;
-} 
+}
 
 size_t Partition::NeighborCount(uint64_t internal_id, std::span<const Type> edge_types) const
 {
