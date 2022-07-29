@@ -7,6 +7,7 @@ import platform
 import sys
 import os
 import shutil
+import stat
 import pathlib
 from distutils.command.clean import clean
 
@@ -30,9 +31,13 @@ def graph_engine(version: str):
         for path in [
             os.path.join("../../bazel-bin", "src", "cc", "lib", _shared_lib())
         ]:
+            if platform.system() == "Windows":
+                os.chmod(path, stat.S_IWRITE)
             shutil.copy(
                 path,
-                os.path.join(os.path.dirname(__file__), "deepgnn/graph_engine/snark"),
+                os.path.join(
+                    os.path.dirname(__file__), "deepgnn", "graph_engine", "snark"
+                ),
             )
             _, libname = os.path.split(path)
             fo.write("include python/deepgnn/graph_engine/snark/%s\n" % libname)
