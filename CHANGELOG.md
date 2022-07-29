@@ -2,6 +2,8 @@
 
 ## 0.1 DeepGNN
 
+### 0.1.52 - 2022-07-27
+
 * Rename and move convert.output to converter.process.converter_process. Dispatchers make argument 'process' default to converter.process.converter_process. Dispatchers move process argument after decoder_type.
 
 * Replace converter and dispatcher's argument "decoder_type" -> "decoder" that accepts Decoder object directly instead of DecoderType enum. Replace DecoderType enum with type hint.
@@ -17,3 +19,5 @@
 * Add unit testing for neighbor count feature for memory/distributed graph (base cases, single/multiple partition, invalid nodes and types)
 
 * Adds Python handling of c neigbor count implementation leveraging ctypes library
+
+* Bugfix: fill dimensions with 0 for missing features.
