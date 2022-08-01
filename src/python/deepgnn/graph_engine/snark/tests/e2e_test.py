@@ -1143,6 +1143,8 @@ def test_remote_client_sparse_node_features_graph_multiple_partitions(
     npt.assert_equal(indices, [[[0, 5], [0, 13]]])
     npt.assert_equal(dimensions, [1])
     npt.assert_allclose(values, np.array([[1.0, 2.13]], dtype=np.float16))
+    s1.reset()
+    s2.reset()
 
 
 @pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
@@ -1163,6 +1165,8 @@ def test_remote_client_sparse_edge_features_graph_multiple_partitions(
     npt.assert_equal(indices, [[[0, 5], [0, 13]]])
     npt.assert_equal(dimensions, [1])
     npt.assert_allclose(values, np.array([[1.0, 2.13]], dtype=np.float16))
+    s1.reset()
+    s2.reset()
 
 
 @pytest.mark.parametrize(
@@ -1308,6 +1312,8 @@ def test_distributed_graph_node_types(multi_partition_graph_data, storage_type):
     cl = client.DistributedGraph(address)
     types = cl.node_types(np.array([9, 5, 0], dtype=np.int64), -1)
     npt.assert_equal(types, np.array([0, 2, 1], dtype=np.int32))
+    s1.reset()
+    s2.reset()
 
     address = ["localhost:124099"]
     if platform.system() != "Darwin":
@@ -1321,6 +1327,7 @@ def test_distributed_graph_node_types(multi_partition_graph_data, storage_type):
     cl = client.DistributedGraph(address)
     types = cl.node_types(np.array([9, 5, 0], dtype=np.int64), -1)
     npt.assert_equal(types, np.array([0, 2, 1], dtype=np.int32))
+    s1.reset()
 
 
 @pytest.mark.parametrize(
