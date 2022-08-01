@@ -213,7 +213,7 @@ class GIN(BaseSupervisedModel):
 
         context['neighbors'] = graph.neighbors(
             context["inputs"],
-            np.array([0, 1, 2, 3])
+            np.array([0])
         )[0]
 
         # context['neighbors'] = graph.sample_neighbors(
@@ -225,7 +225,7 @@ class GIN(BaseSupervisedModel):
 
         context['nb_counts'] = graph.neighbor_count(
             nodes = context['inputs'],
-            edge_types = np.array([0, 1, 2, 3]),
+            edge_types = np.array([0]),
         ).astype(float)
 
         context["label"] =  graph.node_features(

@@ -1,4 +1,6 @@
+from cgi import test
 import os
+from platform import node
 import torch
 import json
 import random
@@ -17,15 +19,6 @@ from deepgnn.graph_engine.snark.decoders import DecoderType
 import deepgnn.graph_engine.snark.client as client
 
 
-def download_file(url: str, data_dir: str, name: str):
-    """Create dir and download data."""
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
-
-    fname = os.path.join(data_dir, name)
-    if not os.path.exists(fname):
-        logging.info(f"download: {fname}")
-        urllib.request.urlretrieve(url, fname)
 
 class S2VGraph(object):
     def __init__(self, g, label, node_tags=None, node_features=None):
@@ -138,16 +131,14 @@ def convert_data(dataset):
 
     return g_list, len(label_dict)
 
-def build_json(g_list):
+def build_json(g_list, train_idx, test_idx):
     """"Generate graph.json file from networkx graph."""
     
 
     nodes = []
     data = ""
     for g in g_list:
-
         # Fetch networkx graph from SV2Graph object
-
         for node_id in g.g:
             # Fetch and set weights for neighbors
             nbs = {}
@@ -162,7 +153,7 @@ def build_json(g_list):
             node = {
                 "node_weight": 1.0,
                 "node_id": node_id,
-                "node_type": 0,
+                "node_type": 1 if node_id in test_idx else 0,
                 "float_feature": {"0": [feat0], "1": [feat1], "2":[feat2]},
                 "edge": [{
                     "src_id": node_id,
@@ -179,27 +170,60 @@ def build_json(g_list):
     return data
 
 
+def seperate(graphs, fold_idx, seed):
+    assert 0 <= fold_idx and fold_idx < 10, "fold_idx must be from 0 to 9."
+
+    skf = StratifiedKFold(n_splits=10, shuffle = True, random_state = seed)
+
+    labels = []
+    nodes = []
+    for graph in graphs:
+        for node_id in graph.g:
+            if node_id not in nodes:
+                nodes.append(node_id)
+                label = graph.node_features[node_id].tolist()[1]
+                labels.append(label)
+
+    idx_list = []
+    print(len(labels))
+    # print(len(nodes))
+    # nodes = list(nodes)
+
+    for idx in skf.split(np.zeros(len(labels)), labels):
+        idx_list.append(idx)
+
+    train_idx, test_idx = idx_list[fold_idx]
+
+    print(train_idx)
+    print(test_idx)
+
+    return train_idx, test_idx
 
 def _main():
 
     # Build networkx graph from .txt file
     g_list = convert_data("PROTEINS")[0]
 
+    train_idx, test_idx = seperate(g_list, 4, 123)
+
+
     # Build json data from networkx and node features
-    data = build_json(g_list)
-    print(data)
+    data = build_json(g_list, train_idx, test_idx)
 
-    # Create json file in working directory
-    working_dir = tempfile.TemporaryDirectory()
-    print(working_dir)
+    # print(data)
+    data_dir = '/tmp/proteins'
 
-    # f = open("/tmp/proteins/graph.json", "x")
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
 
     raw_file = "/tmp/proteins/graph.json"
     with open(raw_file, "w+") as f:
         f.write(data)
     
-    print("Finished writing.")  
+    test_file = "/tmp/proteins/test.nodes"
+    with open(test_file, "w+") as f:
+        for idx in test_idx:
+            f.write(str(idx) + '\n')
 
     # Build extra binaries
     convert.MultiWorkersConverter(

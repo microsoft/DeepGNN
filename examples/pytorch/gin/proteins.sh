@@ -13,7 +13,6 @@ USE_HADOOP=${5:-no}
 DIR_NAME=$(dirname "$0")
 
 GRAPH=/tmp/proteins
-rm -fr $GRAPH
 
 MODEL_DIR=/tmp/model_fix
 rm -rf $MODEL_DIR
@@ -27,7 +26,7 @@ fi
 python3 ${DIR_NAME}/main.py  \
 --data_dir $GRAPH --mode train --seed 123 \
 --backend snark --graph_type local --converter skip \
---batch_size 32 --learning_rate 0.01 --num_epochs 50 \
+--batch_size 32 --learning_rate 0.01 --num_epochs 10 \
 --node_type 0 --max_id -1 \
 --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
 --feature_idx 0 --feature_dim 3 --label_idx 1 --label_dim 1 --algo $ALGO \
@@ -37,7 +36,7 @@ python3 ${DIR_NAME}/main.py  \
 --data_dir $GRAPH --mode evaluate \
 --backend snark --graph_type local --converter skip \
 --batch_size 128 \
---sample_file /tmp/proteins/test.nodes --node_type 0 --max_id -1 \
+--sample_file /tmp/proteins/teste.nodes --node_type 0 --max_id -1 \
 --feature_idx 0 --feature_dim 3 --label_idx 1 --label_dim 1 --algo $ALGO \
 --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
 --log_by_steps 1 --use_per_step_metrics $PLATFORM_DEVICE
@@ -82,4 +81,5 @@ if [[ "$USE_HADOOP" == "yes" ]]; then
     --stream
 fi
 
+rm -fr $GRAPH
 rm -rf $MODEL_DIR
