@@ -653,7 +653,7 @@ TEST(GraphTest, NeighborSampleMultipleTypesMultiplePartitions)
     TestGraph::MemoryGraph m2;
     m2.m_nodes.push_back(TestGraph::Node{
         .m_id = 2,
-        .m_type = 1,
+        .m_type = -1,
         .m_weight = 1.0f,
         .m_neighbors{std::vector<TestGraph::NeighborRecord>{{3, 0, 1.0f}, {4, 0, 3.0f}, {5, 1, 0.5f}, {6, 1, 2.0f}}}});
     auto path = std::filesystem::temp_directory_path();
@@ -685,7 +685,7 @@ TEST(GraphTest, NeighborSampleMultipleTypesNeighborsSpreadAcrossPartitions)
                         .m_neighbors{std::vector<TestGraph::NeighborRecord>{{1, 0, 1.0f}, {2, 0, 1.0f}}}});
     m1.m_nodes.push_back(TestGraph::Node{
         .m_id = 1,
-        .m_type = 1,
+        .m_type = -1,
         .m_weight = 1.0f,
         .m_neighbors{std::vector<TestGraph::NeighborRecord>{{3, 0, 1.0f}, {4, 0, 1.0f}, {5, 1, 1.0f}}}});
     TestGraph::MemoryGraph m2;
@@ -728,7 +728,7 @@ TEST(GraphTest, StatisticalNeighborSampleMultipleTypesNeighborsSpreadAcrossParti
         .m_neighbors{std::vector<TestGraph::NeighborRecord>{{3, 0, 1.0f}, {4, 0, 1.0f}, {5, 1, 1.0f}}}});
     TestGraph::MemoryGraph m2;
     m2.m_nodes.push_back(TestGraph::Node{
-        .m_id = 1, .m_type = 1, .m_neighbors{std::vector<TestGraph::NeighborRecord>{{6, 1, 1.0f}, {7, 1, 1.0f}}}});
+        .m_id = 1, .m_type = -1, .m_neighbors{std::vector<TestGraph::NeighborRecord>{{6, 1, 1.0f}, {7, 1, 1.0f}}}});
     auto path = std::filesystem::temp_directory_path();
     TestGraph::convert(path, "0_0", std::move(m1), 2);
     TestGraph::convert(path, "1_0", std::move(m2), 2);
@@ -774,7 +774,7 @@ TEST(GraphTest, UniformNeighborSampleMultipleTypesNeighborsSpreadAcrossPartition
         .m_neighbors{std::vector<TestGraph::NeighborRecord>{{3, 0, 1.0f}, {4, 0, 1.0f}, {5, 1, 1.0f}}}});
     TestGraph::MemoryGraph m2;
     m2.m_nodes.push_back(TestGraph::Node{
-        .m_id = 1, .m_type = 1, .m_neighbors{std::vector<TestGraph::NeighborRecord>{{6, 1, 1.5f}, {7, 1, 3.0f}}}});
+        .m_id = 1, .m_type = -1, .m_neighbors{std::vector<TestGraph::NeighborRecord>{{6, 1, 1.5f}, {7, 1, 3.0f}}}});
     auto path = std::filesystem::temp_directory_path();
     TestGraph::convert(path, "0_0", std::move(m1), 2);
     TestGraph::convert(path, "1_0", std::move(m2), 2);
@@ -790,6 +790,42 @@ TEST(GraphTest, UniformNeighborSampleMultipleTypesNeighborsSpreadAcrossPartition
                             std::span(neighbor_types), std::span(total_neighbor_counts), 0, 2);
     EXPECT_EQ(std::vector<snark::NodeId>({6, 5, 4, 7, 3, 0}), neighbor_nodes);
     EXPECT_EQ(std::vector<snark::Type>({1, 1, 0, 1, 0, 2}), neighbor_types);
+}
+
+TEST(GraphTest, NodeTypesMultipleTypesNeighborsSpreadAcrossPartitions)
+{
+    TestGraph::MemoryGraph m1;
+    m1.m_nodes.push_back(
+        TestGraph::Node{.m_id = 0,
+                        .m_type = 0,
+                        .m_weight = 1.0f,
+                        .m_neighbors{std::vector<TestGraph::NeighborRecord>{{1, 0, 1.0f}, {2, 0, 1.0f}}}});
+    m1.m_nodes.push_back(TestGraph::Node{
+        .m_id = 1,
+        .m_type = 1,
+        .m_weight = 1.0f,
+        .m_neighbors{std::vector<TestGraph::NeighborRecord>{{3, 0, 1.0f}, {4, 0, 1.0f}, {5, 1, 1.0f}}}});
+    m1.m_nodes.push_back(TestGraph::Node{
+        .m_id = 2,
+        .m_type = -1,
+        .m_weight = 1.0f,
+        .m_neighbors{std::vector<TestGraph::NeighborRecord>{{3, 0, 1.0f}, {4, 0, 1.0f}, {5, 1, 1.0f}}}});
+    TestGraph::MemoryGraph m2;
+    m2.m_nodes.push_back(TestGraph::Node{
+        .m_id = 1, .m_type = -1, .m_neighbors{std::vector<TestGraph::NeighborRecord>{{6, 1, 1.5f}, {7, 1, 3.0f}}}});
+    m2.m_nodes.push_back(TestGraph::Node{
+        .m_id = 2, .m_type = 2, .m_neighbors{std::vector<TestGraph::NeighborRecord>{{6, 1, 1.5f}, {7, 1, 3.0f}}}});
+    auto path = std::filesystem::temp_directory_path();
+
+    TestGraph::convert(path, "0_0", std::move(m1), 2);
+    TestGraph::convert(path, "1_0", std::move(m2), 2);
+    snark::Graph g(path.string(), {0, 1}, snark::PartitionStorageType::memory, "");
+
+    std::vector<snark::NodeId> nodes = {0, 1, 2};
+    std::vector<snark::Type> types(3, -3);
+
+    g.GetNodeType(std::span(nodes), std::span(types), -2);
+    EXPECT_EQ(std::vector<snark::Type>({0, 1, 2}), types);
 }
 
 TEST(GraphTest, UniformNeighborSampleMultipleTypesTriggerConditionalProbabilities)
