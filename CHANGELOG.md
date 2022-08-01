@@ -14,4 +14,6 @@
 
 * Meta.json files are no longer needed by the converter. Remove meta path argument from MultiWorkerConverter and Dispatchers.
 
+* Support nodes and their outgoing edges on different partitions.
+
 * Bugfix: fill dimensions with 0 for missing features.

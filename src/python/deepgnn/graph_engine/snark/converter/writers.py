@@ -67,6 +67,7 @@ class BinaryWriter:
         self.node_type_count: typing.List[int] = []
         self.edge_weight: typing.List[float] = []
         self.edge_type_count: typing.List[int] = []
+        self.prev_node_id: typing.Optional[int] = None
 
     def add(self, data: typing.Iterator[typing.Tuple[int, int, int, float, list]]):
         """
@@ -80,6 +81,7 @@ class BinaryWriter:
         for src, dst, typ, weight, features in data:
             type_num_value = typ + 1
             if dst == -1:
+                self.prev_node_id = src
                 if type_num_value > self.node_type_num:
                     for _ in range(type_num_value - self.node_type_num):
                         self.node_alias.add_type()
@@ -93,6 +95,10 @@ class BinaryWriter:
                 self.node_type_count[typ] += 1
                 self.node_count += 1
             else:
+                if src != self.prev_node_id or self.prev_node_id is None:
+                    self.node_writer.add(src, -1, [])
+                    self.edge_writer.add_node()
+                    self.prev_node_id = src
                 if type_num_value > self.edge_type_num:
                     for _ in range(type_num_value - self.edge_type_num):
                         self.edge_alias.add_type()
@@ -265,6 +271,7 @@ class EdgeWriter:
         """Append edges starting at node to the output.
 
         Args:
+            src: int
             dst: int
             tp: int
             weight: float
@@ -586,7 +593,7 @@ def convert_features(features: list):
             if values.dtype == np.float16:
                 values_buf = np.array(values, dtype=np.float16).tobytes()
             else:
-                values_buf = (np.ctypeslib.as_ctypes_type(values.dtype) * len(values))()
+                values_buf = (np.ctypeslib.as_ctypes_type(values.dtype) * len(values))()  # type: ignore
                 values_buf[:] = values  # type: ignore
 
             # For matrices the number of values might be different than number of coordinates
