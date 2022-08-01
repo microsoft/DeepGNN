@@ -13,3 +13,5 @@
 * Meta.json files are no longer needed by the converter. Remove meta path argument from MultiWorkerConverter and Dispatchers.
 
 * Support nodes and their outgoing edges on different partitions.
+
+* Add new converter input format "Linear" with LinearDecoder. Format has nodes and edges on separate lines, is smaller and faster to convert.

@@ -17,9 +17,77 @@ Users can generate a graph in either format then our pipeline will convert it in
 DeepGNN also supports writing custom decoders, see [the decoders file](https://github.com/microsoft/DeepGNN/blob/main/src/python/deepgnn/graph_engine/snark/decoders.py).
 Just inheret the base class Decoder, overwrite the decode function and pass the new decoder as an argument to the converter or dispatcher.
 
-1. `JSON <#json-format>`_: Heterogeneous or homegeneous graph.
+1. `Linear <#linear-format>`_: Heterogeneous or homegeneous graph.
 
-2. `TSV <#tsv-format>`_: Homogeneous graph only.
+2. `JSON <#json-format>`_: Heterogeneous or homegeneous graph.
+
+3. `TSV <#tsv-format>`_: Homogeneous graph only.
+
+Linear Format
+===========
+
+Linear format is most directly what is given to binary writers, it supports nodes and their outgoing edges in
+different partitions and is smaller and faster to convert.
+
+`graph.linear` layout,
+
+.. code-block:: text
+	<node info>
+	<edge_1_info>
+	<edge_2_info>
+	...
+
+node_info: node_id -1 node_type node_weight <features>
+edge_info: src dst edge_type edge_weight <features>
+features[dense]: dtype_name length v1 v2 ... dtype_name2 length2 v1 v2 ...
+features[sparse]: dtype_name values.size,coords.shape[1] c1 c2 ... v1 v2 ...
+features[sparse]: dtype_name values.size,0 c1 c2 ... v1 v2 ...
+* Nodes must be sorted by node_id, edges sorted by src and then dst.
+
+Here is a concrete example,
+A graph with 2 nodes {0, 1} each with type = 1, weight = .5 and
+feature vectors [1, 1, 1] dtype=int32 and [1.1, 1.1] dtype=float32.
+Edges: {0 -> 1, 1 -> 0} both with type = 0, weight = .5 and a sparse feature
+vector (coords=[0, 4, 10], values=[1, 1, 1] dtype=uint8).
+
+.. code-block:: text
+	0 -1 1 .5 int32 3 1 1 1 float32 2 1.1 1.1
+	0 1 0 .5 uint8 3,0 0 4 10 1 1 1
+	1 -1 1 .5 int32 3 1 1 1 float32 2 1.1 1.1
+	1 0 0 .5 uint8 3,0 0 4 10 1 1 1
+
+Optional Graph Metadata
+The following keyword arguments can be added when creating the decoder,
+	default_node_type: int Type of all nodes, if set do not add node type to any nodes.
+	default_node_weight: int Weight of all nodes, if set do not add node weight to any nodes.
+	default_node_feature_types: ["dtype" or None, ...] Dtype of each feature vector.
+	default_node_feature_lens: [[int, ...] or None, ...] Length value for each feature vector.
+	default_edge_type: int Same as node except for all edges.
+	default_edge_weight: int Same as node except for all edges.
+	default_edge_feature_types: ["dtype" or None, ...] Dtype of each feature vector.
+	default_edge_feature_lens: [[int, ...] or None, ...] Length value for each feature vector.
+
+e.g. the same graph as above with init fully filled in,
+
+.. code-block:: python
+	LinearDecoder(
+		default_node_type=1,
+		default_node_weight=.5,
+		default_node_feature_types=["int32", "float32"],
+		default_node_feature_lens=[[3],[2]],
+		default_edge_type=0,
+		default_edge_weight=.5,
+		default_edge_feature_types=["uint8"],
+		default_edge_feature_lens=[[3, 0]],
+	)
+
+graph.linear,
+
+.. code-block:: text
+	0 -1 1 1 1 1.1 1.1
+	0 1 0 4 10 1 1 1
+	1 -1 1 1 1 1.1 1.1
+	1 0 0 4 10 1 1 1
 
 JSON Format
 ===========
