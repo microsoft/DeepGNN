@@ -81,9 +81,15 @@ grpc::Status GraphEngineServiceImpl::GetNodeTypes(::grpc::ServerContext *context
             continue;
         }
 
-        const auto index = elem->second;
+        auto index = elem->second;
+        size_t partition_count = m_counts[index];
+        int32_t result = -1;
+        for (size_t partition = 0; partition < partition_count && result == -1; ++partition, ++index)
+        {
+            result = m_partitions[m_partitions_indices[index]].GetNodeType(m_internal_indices[index]);
+        }
         response->add_offsets(curr_offset);
-        response->add_types(m_partitions[m_partitions_indices[index]].GetNodeType(m_internal_indices[index]));
+        response->add_types(result);
     }
 
     return grpc::Status::OK;

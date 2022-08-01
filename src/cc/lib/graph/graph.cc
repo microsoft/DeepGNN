@@ -99,8 +99,14 @@ void Graph::GetNodeType(std::span<const NodeId> node_ids, std::span<Type> output
         }
         else
         {
-            const auto index = internal_id->second;
-            *curr_type = m_partitions[m_partitions_indices[index]].GetNodeType(m_internal_indices[index]);
+            auto index = internal_id->second;
+            size_t partition_count = m_counts[index];
+            for (size_t partition = 0; partition < partition_count; ++partition, ++index)
+            {
+                *curr_type = m_partitions[m_partitions_indices[index]].GetNodeType(m_internal_indices[index]);
+                if (*curr_type != -1)
+                    break;
+            }
         }
         ++curr_type;
     }
