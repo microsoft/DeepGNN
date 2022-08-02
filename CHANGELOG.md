@@ -2,7 +2,14 @@
 
 ## 0.1 DeepGNN
 
-### 0.1.52 - 2022-07-27
+### [Unreleased]
+
+### [0.1.53] - 2022-08-02
+
+#### Fixed
+- json/tsv converter didn't sort edges by types resulted in incorrect sampling.
+
+### [0.1.52] - 2022-07-27
 
 * Rename and move convert.output to converter.process.converter_process. Dispatchers make argument 'process' default to converter.process.converter_process. Dispatchers move process argument after decoder_type.
 
