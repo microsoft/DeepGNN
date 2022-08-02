@@ -719,6 +719,7 @@ def test_sanity_edge_sparse_features_data(graph_with_sparse_features):
             np.frombuffer(result[386:expected_size], dtype=np.float32), [5.5, 6.7]
         )
 
+
 def graph_with_inverse_edge_type_order_json(folder):
     data = open(os.path.join(folder, "graph.json"), "w+")
     graph = [
@@ -738,7 +739,7 @@ def graph_with_inverse_edge_type_order_json(folder):
                     "dst_id": 2,
                     "edge_type": 0,
                     "weight": 0.5,
-                }
+                },
             ],
         },
     ]
@@ -750,12 +751,14 @@ def graph_with_inverse_edge_type_order_json(folder):
 
     return data.name
 
+
 def graph_with_inverse_edge_type_order_tsv(folder):
     data = open(os.path.join(folder, "graph.tsv"), "w+")
     data.write("9\t0\t1\tf:0 1;f:-0.01 -0.02\t1,3,1.0|2,0,0.5\n")
     data.flush()
     data.close()
     return data.name
+
 
 @pytest.fixture(scope="module")
 def graph_with_inverse_edge_type_order(request):
@@ -769,6 +772,7 @@ def graph_with_inverse_edge_type_order(request):
 
     yield data_name, request.param
     workdir.cleanup()
+
 
 @pytest.mark.parametrize("graph_with_inverse_edge_type_order", param, indirect=True)
 def test_edge_index_inverted_types(graph_with_inverse_edge_type_order):
@@ -798,6 +802,7 @@ def test_edge_index_inverted_types(graph_with_inverse_edge_type_order):
         assert result[56:64] == (0).to_bytes(8, byteorder=sys.byteorder)
         assert result[64:68] == (0).to_bytes(4, byteorder=sys.byteorder)
         assert result[68:72] == struct.pack("f", -1)
+
 
 if __name__ == "__main__":
     sys.exit(
