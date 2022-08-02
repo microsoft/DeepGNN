@@ -532,9 +532,7 @@ def graph_with_sparse_features_json(folder):
             "node_type": 1,
             "node_weight": 1,
             "float_feature": {"0": [1], "1": [-0.03, -0.04]},
-            "sparse_float_feature": {
-                "2": {"coordinates": [[1, 3, 7]], "values": [5.5]}
-            },
+            "sparse_float_feature": {"2": {"coordinates": [1, 3, 7], "values": [5.5]}},
             "edge": [
                 {
                     "src_id": 0,
@@ -645,7 +643,10 @@ def test_sanity_node_sparse_features_data(graph_with_sparse_features):
         )
 
         assert int.from_bytes(result[60:64], sys.byteorder) == 3
-        assert int.from_bytes(result[64:68], sys.byteorder) == 1
+        if decoder == LinearDecoder:
+            assert int.from_bytes(result[64:68], sys.byteorder) == 3
+        else:
+            assert int.from_bytes(result[64:68], sys.byteorder) == 1
         npt.assert_equal(np.frombuffer(result[68:92], dtype=np.int64), [1, 3, 7])
         npt.assert_almost_equal(np.frombuffer(result[92:96], dtype=np.float32), [5.5])
 

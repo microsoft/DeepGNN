@@ -13,6 +13,8 @@ def json_to_linear_feature(features):
             return f"binary_feature 1 {f}"
         elif isinstance(f, tuple):
             coords, values = f
+            if values.size == 1 and coords.size > 1:
+                coords = coords.reshape((1, -1))
             if len(coords.shape) == 1:
                 coordinates_str = " ".join(map(str, coords))
                 length = f"{coords.shape[0]}"

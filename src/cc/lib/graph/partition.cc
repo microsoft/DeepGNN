@@ -293,7 +293,7 @@ void Partition::ReadEdgeFeaturesData(std::filesystem::path path, std::string suf
 {
     if (is_hdfs_path(path))
     {
-        auto full_path = path / ("edge_features_" + suffix + ".data");
+        auto full_path = path / ("edge_features" + suffix + ".data");
         m_edge_features = std::make_shared<HDFSStorage<uint8_t>>(full_path.c_str(), m_metadata.m_config_path,
                                                                  std::move(suffix), &open_edge_features_data);
     }

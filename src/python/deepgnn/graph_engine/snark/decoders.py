@@ -56,8 +56,8 @@ class LinearDecoder(Decoder):
         node_info: node_id -1 node_type node_weight <features>
         edge_info: src dst edge_type edge_weight <features>
         features[dense]: dtype_name length v1 v2 ... dtype_name2 length2 v1 v2 ...
-        features[sparse]: dtype_name values.size,coords.shape[1] c1 c2 ... v1 v2 ...
-        features[sparse]: dtype_name values.size,0 c1 c2 ... v1 v2 ...
+        features[sparse with 2 dim coordinates vector]: dtype_name values.size,coords.shape[1] c1 c2 ... v1 v2 ...
+        features[sparse with 1 dim coordinates vector]: dtype_name values.size,0 c1 c2 ... v1 v2 ...
         * Nodes must be sorted by node_id, edges sorted by src and then dst.
 
     Linear Format Example
@@ -82,6 +82,9 @@ class LinearDecoder(Decoder):
         default_edge_weight: int Same as node except for all edges.
         default_edge_feature_types: ["dtype" or None, ...] Dtype of each feature vector.
         default_edge_feature_lens: [[int, ...] or None, ...] Length value for each feature vector.
+
+    Init Parameters Format Example
+        Same graph as the previous example, just with defaults specified.
         ```
         LinearDecoder(
             default_node_type=1,
