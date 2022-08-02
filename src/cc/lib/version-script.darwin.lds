@@ -10,6 +10,7 @@ _GetEdgeFeature
 _GetEdgeSparseFeature
 _GetEdgeStringFeature
 _StartServer
+_NeighborCount
 _GetNeighbors
 _WeightedSampleNeighbor
 _UniformSampleNeighbor

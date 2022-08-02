@@ -12,6 +12,7 @@
         GetEdgeSparseFeature;
         GetEdgeStringFeature;
         StartServer;
+        NeighborCount;
         GetNeighbors;
         WeightedSampleNeighbor;
         UniformSampleNeighbor;
