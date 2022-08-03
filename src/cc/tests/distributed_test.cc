@@ -589,7 +589,7 @@ TEST(DistributedTest, NeighborCountMultipleServers)
 
 TEST(DistributedTest, NeighborCountMultipleTypesMultipleServers)
 {
-    auto environment = CreateMultiServerEnvironment("FullNeighborsMultipleServers");
+    auto environment = CreateMultiServerEnvironment("NeighborCountMultipleTypesMultipleServers");
     auto &c = *environment.second;
 
     std::vector<snark::NodeId> input_nodes = {0, 55, 100};

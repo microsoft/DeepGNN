@@ -259,6 +259,67 @@ def test_neighbor_count_graph_nonexistent_node(multi_partition_graph_data):
 
     npt.assert_array_equal(output_node_counts, [0])
 
+# Distributed Neighbor Count Tests
+def test_neighbor_count_remote_client_single_partition(multi_partition_graph_data):
+    s1 = server.Server(multi_partition_graph_data, [0], "localhost:12344")
+    s2 = server.Server(multi_partition_graph_data, [1], "localhost:12354")
+
+    cl = client.DistributedGraph(["localhost:12344", "localhost:12354"])
+    output_node_counts = cl.neighbor_counts(
+        nodes=np.array([9, 0, 5], dtype=np.int64), edge_types=1
+    )
+
+    print(output_node_counts)
+
+    npt.assert_array_equal(output_node_counts, [0, 1, 1])
+
+
+def test_neighbor_count_remote_client_multiple_partitions(multi_partition_graph_data):
+    s1 = server.Server(multi_partition_graph_data, [0], "localhost:12344")
+    s2 = server.Server(multi_partition_graph_data, [1], "localhost:12354")
+
+    cl = client.DistributedGraph(["localhost:12344", "localhost:12354"])
+    output_node_counts = cl.neighbor_counts(
+        nodes=np.array([9, 0, 5], dtype=np.int64), edge_types=1
+    )
+
+    npt.assert_array_equal(output_node_counts, [0, 1, 1])
+
+
+def test_neighbor_count_remote_client_handle_empty_list(multi_partition_graph_data):
+    s1 = server.Server(multi_partition_graph_data, [0], "localhost:12344")
+    s2 = server.Server(multi_partition_graph_data, [1], "localhost:12354")
+
+    cl = client.DistributedGraph(["localhost:12344", "localhost:12354"])
+    output_node_counts = cl.neighbor_counts(
+        nodes=np.array([9], dtype=np.int64), edge_types=[100, 1]
+    )
+
+    npt.assert_array_equal(output_node_counts, [0])
+
+def test_neighbor_count_remote_client_nonmatching_edge_type(multi_partition_graph_data):
+
+    s1 = server.Server(multi_partition_graph_data, [0], "localhost:12344")
+    s2 = server.Server(multi_partition_graph_data, [1], "localhost:12354")
+
+    cl = client.DistributedGraph(["localhost:12344", "localhost:12354"])
+    output_node_counts = cl.neighbor_counts(
+        nodes=np.array([9], dtype=np.int64), edge_types=100
+    )
+
+    npt.assert_array_equal(output_node_counts, [0])
+
+def test_neighbor_count_remote_client_nonexistent_node(multi_partition_graph_data):
+    s1 = server.Server(multi_partition_graph_data, [0], "localhost:12344")
+    s2 = server.Server(multi_partition_graph_data, [1], "localhost:12354")
+
+    cl = client.DistributedGraph(["localhost:12344", "localhost:12354"])
+    output_node_counts = cl.neighbor_counts(
+        nodes=np.array([4], dtype=np.int64), edge_types=1
+    )
+
+    npt.assert_array_equal(output_node_counts, [0])
+
 
 def test_neighbor_sampling_after_reset(multi_partition_graph_data):
     cl = client.MemoryGraph(multi_partition_graph_data, [0])

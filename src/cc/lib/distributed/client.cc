@@ -637,7 +637,6 @@ void GRPCClient::NeighborCount(std::span<const NodeId> node_ids, std::span<const
     std::vector<size_t> reply_offsets(std::size(m_engine_stubs));
     std::atomic<size_t> responses_left{std::size(m_engine_stubs)};
 
-    // Sum neighbor counts starting from 0
     size_t len = node_ids.size();
     std::fill_n(std::begin(output_neighbor_counts), len, 0);
 
