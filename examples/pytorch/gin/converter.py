@@ -154,7 +154,7 @@ def build_json(g_list, train_idx, test_idx):
                 "node_weight": 1.0,
                 "node_id": node_id,
                 "node_type": 1 if node_id in test_idx else 0,
-                "float_feature": {"0": [feat0], "1": [feat1], "2":[feat2]},
+                "float_feature": {"0": [feat0, feat2], "1": [feat1]},
                 "edge": [{
                     "src_id": node_id,
                     "dst_id": nb,

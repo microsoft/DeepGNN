@@ -211,17 +211,17 @@ class GIN(BaseSupervisedModel):
         """Fetch training data from graph."""
         context = {"inputs": inputs}
 
-        context['neighbors'] = graph.neighbors(
-            context["inputs"],
-            np.array([0])
-        )[0]
-
-        # context['neighbors'] = graph.sample_neighbors(
-        #     nodes = context['inputs'],
-        #     edge_types = np.array([0, 1, 2, 3]),
-        #     count = 10,
-        #     strategy = "randomwithoutreplacement"
+        # context['neighbors'] = graph.neighbors(
+        #     context["inputs"],
+        #     np.array([0])
         # )[0]
+
+        context['neighbors'] = graph.sample_neighbors(
+            nodes = context['inputs'],
+            edge_types = np.array([0, 1, 2, 3]),
+            count = 10,
+            strategy = "randomwithoutreplacement"
+        )[0]
 
         context['nb_counts'] = graph.neighbor_count(
             nodes = context['inputs'],
