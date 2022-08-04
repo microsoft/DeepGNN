@@ -3,10 +3,7 @@ import os
 from platform import node
 import torch
 import json
-import random
-import tempfile
-import urllib.request
-import logging
+import argparse
 import numpy as np
 import networkx as nx
 from pathlib import Path
@@ -39,7 +36,7 @@ class S2VGraph(object):
 
         self.max_neighbor = 0
 
-def convert_data(dataset):
+def convert_data(dataset, degree_as_tag):
     """"Convert dataset .txt file to networkx graph."""
 
     print('loading data')
@@ -112,6 +109,10 @@ def convert_data(dataset):
         deg_list = list(dict(g.g.degree(range(len(g.g)))).values())
         g.edge_mat = torch.LongTensor(edges).transpose(0,1)
 
+    if degree_as_tag:
+        for g in g_list:
+            g.node_tags = list(dict(g.g.degree).values())
+
     #Extracting unique tag labels   
     tagset = set([])
     for g in g_list:
@@ -146,15 +147,12 @@ def build_json(g_list, train_idx, test_idx):
                 nbs[nb] = 1.0
 
             feats = g.node_features[node_id].tolist()
-            feat0 = feats[0]
-            feat1 = feats[1]
-            feat2 = feats[2]
 
             node = {
                 "node_weight": 1.0,
                 "node_id": node_id,
                 "node_type": 1 if node_id in test_idx else 0,
-                "float_feature": {"0": [feat0, feat2], "1": [feat1]},
+                "float_feature": {"0": [feats[0:len(feats) - 2]], "1": [feats[:-1]]},
                 "edge": [{
                     "src_id": node_id,
                     "dst_id": nb,
@@ -201,8 +199,12 @@ def seperate(graphs, fold_idx, seed):
 
 def _main():
 
+    parser = argparse.ArgumentParser(description='Loading graphs to json for training/evaluation.')
+    parser.add_argument('--dataset', type=str, default="COLLAB")
+    args = parser.parse_args()
+
     # Build networkx graph from .txt file
-    g_list = convert_data("PROTEINS")[0]
+    g_list = convert_data(args.dataset, True)[0]
 
     train_idx, test_idx = seperate(g_list, 4, 123)
 
@@ -211,16 +213,16 @@ def _main():
     data = build_json(g_list, train_idx, test_idx)
 
     # print(data)
-    data_dir = '/tmp/proteins'
+    data_dir = '/tmp/' + str.lower(args.dataset)
 
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
 
-    raw_file = "/tmp/proteins/graph.json"
+    raw_file = "/tmp/" + str.lower(args.dataset) + "/graph.json"
     with open(raw_file, "w+") as f:
         f.write(data)
     
-    test_file = "/tmp/proteins/test.nodes"
+    test_file = "/tmp/"+ str.lower(args.dataset) +"/test.nodes"
     with open(test_file, "w+") as f:
         for idx in test_idx:
             f.write(str(idx) + '\n')
@@ -229,7 +231,7 @@ def _main():
     convert.MultiWorkersConverter(
         graph_path=raw_file,
         partition_count=1,
-        output_dir="/tmp/proteins",
+        output_dir="/tmp/" + str.lower(args.dataset),
         decoder=JsonDecoder,
     ).convert()
 

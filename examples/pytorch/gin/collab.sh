@@ -12,7 +12,7 @@ USE_HADOOP=${5:-no}
 
 DIR_NAME=$(dirname "$0")
 
-GRAPH=/tmp/proteins
+GRAPH=/tmp/collab
 
 MODEL_DIR=/tmp/model_fix
 rm -rf $MODEL_DIR
@@ -22,7 +22,6 @@ then
     PLATFORM_DEVICE=--gpu
 fi
 
-date >> out.txt
 ### ===== training =======
 python3 ${DIR_NAME}/main.py  \
 --data_dir $GRAPH --mode train --seed 123 \
@@ -30,15 +29,15 @@ python3 ${DIR_NAME}/main.py  \
 --batch_size 32 --learning_rate 0.01 --num_epochs 350 \
 --node_type 0 --max_id -1 \
 --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
---feature_idx 0 --feature_dim 3 --label_idx 1 --label_dim 1 --algo $ALGO \
+--feature_idx 0 --feature_dim 367 --label_idx 1 --label_dim 1 --algo $ALGO \
 --log_by_steps 1 --use_per_step_metrics $PLATFORM_DEVICE --storage_type $STORAGE_TYPE
 
 python3 ${DIR_NAME}/main.py  \
 --data_dir $GRAPH --mode evaluate \
 --backend snark --graph_type local --converter skip \
---batch_size 128 \
---sample_file /tmp/proteins/teste.nodes --node_type 1 --max_id -1 \
---feature_idx 0 --feature_dim 3 --label_idx 1 --label_dim 1 --algo $ALGO \
+--batch_size 128 --num_epochs 10 \
+--sample_file /tmp/collab/test.nodes --node_type 1 --max_id -1 \
+--feature_idx 0 --feature_dim 367 --label_idx 1 --label_dim 1 --algo $ALGO \
 --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
 --log_by_steps 1 --use_per_step_metrics $PLATFORM_DEVICE
 
@@ -46,18 +45,18 @@ if [[ "$ADL_UPLOADER" == "no" ]]; then
     python3 ${DIR_NAME}/main.py  \
     --data_dir $GRAPH --mode inference \
     --backend snark --graph_type local --converter skip \
-    --batch_size 128 \
-    --sample_file /tmp/proteins/test.nodes --node_type 0 \
-    --feature_idx 0 --feature_dim 3 --label_idx 1 --label_dim 1 --algo $ALGO \
+    --batch_size 128 --num_epochs 200 \
+    --sample_file /tmp/collab/test.nodes --node_type 0 \
+    --feature_idx 0 --feature_dim 367 --label_idx 1 --label_dim 1 --algo $ALGO \
     --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
     --log_by_steps 1 --use_per_step_metrics $PLATFORM_DEVICE
 else
     python3 ${DIR_NAME}/main.py  \
     --data_dir $GRAPH --mode inference \
     --backend snark --graph_type local --converter skip \
-    --batch_size 128 \
-    --sample_file /tmp/proteins/test.nodes --node_type 0 \
-    --feature_idx 0 --feature_dim 3 --label_idx 1 --label_dim 1 --algo $ALGO \
+    --batch_size 128 --num_epochs 200 \
+    --sample_file /tmp/collab/test.nodes --node_type 0 \
+    --feature_idx 0 --feature_dim 367 --label_idx 1 --label_dim 1 --algo $ALGO \
     --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path /integration_test/test_adl_uploader \
     --log_by_steps 1 --use_per_step_metrics --enable_adl_uploader --uploader_store_name snrgnndls --uploader_process_num 2 --uploader_threads_num 10 $PLATFORM_DEVICE
 fi
