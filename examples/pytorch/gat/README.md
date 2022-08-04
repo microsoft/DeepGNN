@@ -16,7 +16,7 @@ Graph attention networks (GATs) is a novel neural network architectures that ope
 | Cora     | 83.0          | 83.0 (+/-0.5)    |
 
 # Generate Graph Data
-* [Prepare Graph Data](../../../docs/advanced/data_spec.md)
+* [Prepare Graph Data](../../../docs/graph_engine/data_spec.rst)
 
 # Job Augmentations
 ## GAT
