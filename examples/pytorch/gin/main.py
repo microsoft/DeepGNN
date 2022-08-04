@@ -53,7 +53,7 @@ def create_model(args: argparse.Namespace):
             num_mlp_layers=2, 
             input_dim=args.feature_dim,
             hidden_dim=64, 
-            output_dim=50, 
+            output_dim=121, 
             final_dropout=0.5, 
             learn_eps=False, 
             edge_type=args.edge_type,

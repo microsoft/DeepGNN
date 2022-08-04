@@ -168,7 +168,12 @@ class GIN(BaseSupervisedModel):
         nb_counts = context["nb_counts"].squeeze()
         features = context["features"].squeeze()
 
+        # get_logger().info(str(features.shape))
+
         # Allocate memory for pooling matrix 
+        # get_logger().info(str(num_nodes))
+        # get_logger().info(str(self.feature_dim))
+
         pooled_h = torch.zeros(num_nodes, self.feature_dim)
 
         # Loop across all nodes in mini-batch
@@ -182,6 +187,8 @@ class GIN(BaseSupervisedModel):
             # Move offset forward to read next set of nb features
             offset += (num_neighbors + 1)
 
+            # get_logger().info(str(sum_features.shape))
+
             # Write to pooled matrix
             pooled_h[node_id] = sum_features
 
@@ -193,13 +200,21 @@ class GIN(BaseSupervisedModel):
 
     def forward(self, context: dict):
         scores: torch.Tensor = self.get_score(context)
-        labels = context["label"].squeeze().long().clone().detach()
+        labels = context["label"].squeeze().clone().detach()
+
+        get_logger().info(str(scores.shape))
+        get_logger().info(str(scores))
+
+        get_logger().info('------------------------------')
+
+        get_logger().info(str(labels.shape))
+        get_logger().info(str(labels))
 
         # Calculate cross-entropy loss
         loss = self.xent(scores, labels)
 
         # Take argmax to fetch class indices
-        scores = scores.argmax(dim=1)
+        # scores = scores.argmax(dim=1)
 
         return (loss, scores, labels)
 
@@ -241,7 +256,7 @@ class GIN(BaseSupervisedModel):
 
         context["features"] = graph.node_features(
             context["neighbors"],
-            np.array([[self.label_idx, self.label_dim]]),
+            np.array([[self.feature_idx, self.feature_dim]]),
             FeatureType.FLOAT,
         )
 
