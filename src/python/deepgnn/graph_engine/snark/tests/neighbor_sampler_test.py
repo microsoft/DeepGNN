@@ -259,6 +259,7 @@ def test_neighbor_count_graph_nonexistent_node(multi_partition_graph_data):
 
     npt.assert_array_equal(output_node_counts, [0])
 
+
 # Distributed Neighbor Count Tests
 def test_neighbor_count_remote_client_single_partition(multi_partition_graph_data):
     s1 = server.Server(multi_partition_graph_data, [0], "localhost:12344")
@@ -297,6 +298,7 @@ def test_neighbor_count_remote_client_handle_empty_list(multi_partition_graph_da
 
     npt.assert_array_equal(output_node_counts, [0])
 
+
 def test_neighbor_count_remote_client_nonmatching_edge_type(multi_partition_graph_data):
 
     s1 = server.Server(multi_partition_graph_data, [0], "localhost:12344")
@@ -308,6 +310,7 @@ def test_neighbor_count_remote_client_nonmatching_edge_type(multi_partition_grap
     )
 
     npt.assert_array_equal(output_node_counts, [0])
+
 
 def test_neighbor_count_remote_client_nonexistent_node(multi_partition_graph_data):
     s1 = server.Server(multi_partition_graph_data, [0], "localhost:12344")
