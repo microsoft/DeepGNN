@@ -371,8 +371,15 @@ void Partition::GetNodeSparseFeature(uint64_t internal_node_id, std::span<const 
         {
             continue;
         }
-        assert(stored_size > 12); // minimum is 4 bytes to record there is a single index, actual index (8 bytes)
-                                  // and some data(>0 bytes).
+        if (stored_size <=
+            12) // minimum is 4 bytes to record there is a single index, actual index (8 bytes) and some data(>0 bytes).
+                // Something went wrong in binary converter, we'll log a warning instead of crashing.
+        {
+            RAW_LOG_WARNING("Invalid feature request: sparse feature size is less than 12 bytes for feature %i and "
+                            "node internal id %lu",
+                            feature, internal_node_id);
+            continue;
+        }
         uint32_t indices_size = 0;
         auto indices_size_output = std::span(reinterpret_cast<uint8_t *>(&indices_size), 4);
         m_node_features->read(data_offset, indices_size_output.size(), std::begin(indices_size_output), file_ptr);
@@ -645,6 +652,16 @@ bool Partition::GetEdgeSparseFeature(uint64_t internal_src_node_id, NodeId input
         // Check if the feature is empty
         if (stored_size == 0)
         {
+            continue;
+        }
+
+        if (stored_size <=
+            12) // minimum is 4 bytes to record there is a single index, actual index (8 bytes) and some data(>0 bytes).
+                // Something went wrong in binary converter, we'll log a warning instead of crashing.
+        {
+            RAW_LOG_WARNING("Invalid feature request: sparse feature size is less than 12 bytes for feature %i and "
+                            "edge internal src id %lu, type %i and dst id %li",
+                            feature, internal_src_node_id, input_edge_type, input_edge_dst);
             continue;
         }
 
