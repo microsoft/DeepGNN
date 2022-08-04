@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.53] - 2022-08-02
 
 ### Fixed
-- json/tsv converter didn't sort edges by types resulted in incorrect sampling.
+- JSON/TSV converter didn't sort edges by types resulted in incorrect sampling.
 
 ## [0.1.52] - 2022-07-27
 
