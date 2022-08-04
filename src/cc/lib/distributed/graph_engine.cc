@@ -88,6 +88,8 @@ grpc::Status GraphEngineServiceImpl::GetNodeTypes(::grpc::ServerContext *context
         {
             result = m_partitions[m_partitions_indices[index]].GetNodeType(m_internal_indices[index]);
         }
+        if (result == -1)
+            continue;
         response->add_offsets(curr_offset);
         response->add_types(result);
     }
