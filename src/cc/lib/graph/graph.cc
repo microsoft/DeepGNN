@@ -152,6 +152,8 @@ void Graph::GetNodeSparseFeature(std::span<const NodeId> node_ids, std::span<con
     assert(features.size() == out_indices.size());
     assert(features.size() == out_data.size());
 
+    // Fill out_dimensions in case nodes don't have some features.
+    std::fill(std::begin(out_dimensions), std::end(out_dimensions), 0);
     const int64_t len = node_ids.size();
     for (int64_t node_index = 0; node_index < len; ++node_index)
     {
