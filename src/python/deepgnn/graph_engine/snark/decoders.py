@@ -152,7 +152,7 @@ class EdgeListDecoder(Decoder):
         if line == "":
             return []
 
-        data = iter(line.split())
+        data = iter(line.split(","))
 
         src, dst = int(next(data)), int(next(data))
         if dst == -1:
@@ -192,7 +192,7 @@ class EdgeListDecoder(Decoder):
                     except ValueError:
                         pass
                 if length is None:
-                    length = list(map(int, next(data).split(",")))
+                    length = list(map(int, next(data).split("/")))
             except StopIteration:
                 break
 

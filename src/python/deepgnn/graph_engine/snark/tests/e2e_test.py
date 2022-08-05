@@ -252,9 +252,9 @@ def write_multi_binary(output_dir, partitions):
     def json_to_edge_list_helper(json_input):
         features = json_to_edge_list_feature(JsonDecoder()._pull_features(json_input))
         if "node_id" in json_input:
-            return f"{json_input['node_id']} -1 {json_input['node_type']} {json_input['node_weight']} {features}"
+            return f"{json_input['node_id']},-1,{json_input['node_type']},{json_input['node_weight']},{features}"
         else:
-            return f"{json_input['src_id']} {json_input['dst_id']} {json_input['edge_type']} {json_input['weight']} {features}"
+            return f"{json_input['src_id']},{json_input['dst_id']},{json_input['edge_type']},{json_input['weight']},{features}"
 
     partition_meta = ""
     for i, p in enumerate(partitions):

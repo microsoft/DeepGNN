@@ -791,9 +791,9 @@ def _gen_edge_list(output, data_data, kwargs={}, partitions=1):
 def test_edge_list_header():
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "0 -1\n",
-        "1 -1\n",
-        "2 -1\n",
+        "0,-1\n",
+        "1,-1\n",
+        "2,-1\n",
     ]
     meta_data = {"default_node_type": 0, "default_node_weight": 1.5}
     _gen_edge_list(output, data_data, meta_data)
@@ -813,9 +813,9 @@ def test_edge_list_header():
 
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "0 -1 0 0\n0 1\n0 2\n",
-        "1 -1 0 0\n1 0\n1 2\n",
-        "2 -1 0 0\n2 0\n2 1\n",
+        "0,-1,0,0\n0,1\n0,2\n",
+        "1,-1,0,0\n1,0\n1,2\n",
+        "2,-1,0,0\n2,0\n2,1\n",
     ]
     meta_data = {"default_edge_type": 0, "default_edge_weight": 200}
     _gen_edge_list(output, data_data, meta_data)
@@ -845,9 +845,9 @@ def test_edge_list_header():
 
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "0 -1 1 2 1.1 2.2\n",
-        "1 -1 3 4 3.3 4.4\n",
-        "2 -1 5 6 5.5 6.6\n",
+        "0,-1,1,2,1.1,2.2\n",
+        "1,-1,3,4,3.3,4.4\n",
+        "2,-1,5,6,5.5,6.6\n",
     ]
     meta_data = {
         "default_node_type": 0,
@@ -875,9 +875,9 @@ def test_edge_list_header():
 
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "0 -1 0 0\n0 1 0 1.5 1 2 1.1 2.2\n",
-        "1 -1 0 0\n1 0 0 1.5 3 4 3.3 4.4\n",
-        "2 -1 0 0\n2 0 0 1.5 5 6 5.5 6.6\n",
+        "0,-1,0,0\n0,1,0,1.5,1,2,1.1,2.2\n",
+        "1,-1,0,0\n1,0,0,1.5,3,4,3.3,4.4\n",
+        "2,-1,0,0\n2,0,0,1.5,5,6,5.5,6.6\n",
     ]
     meta_data = {
         "default_edge_feature_types": ["uint64", "float32"],
@@ -903,9 +903,9 @@ def test_edge_list_header():
 
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "0 -1 uint64 2 1 2 1.1 2.2 int32 2 1 2\n",
-        "1 -1 uint64 2 3 4 3.3 4.4 int32 2 3 4\n",
-        "2 -1 uint64 2 5 6 5.5 6.6 int32 2 5 6\n",
+        "0,-1,uint64,2,1,2,1.1,2.2,int32,2,1,2\n",
+        "1,-1,uint64,2,3,4,3.3,4.4,int32,2,3,4\n",
+        "2,-1,uint64,2,5,6,5.5,6.6,int32,2,5,6\n",
     ]
     meta_data = {
         "default_node_type": 0,
@@ -938,9 +938,9 @@ def test_edge_list_header():
 def test_edge_list_header_multiple_partitions():
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "0 -1\n",
-        "1 -1\n",
-        "2 -1\n",
+        "0,-1\n",
+        "1,-1\n",
+        "2,-1\n",
     ]
     meta_data = {"default_node_type": 0, "default_node_weight": 1.5}
     _gen_edge_list(output, data_data, meta_data, partitions=2)
@@ -961,32 +961,32 @@ def test_edge_list_error_checking():
     with pytest.raises(StopIteration):
         next(decoder.decode(""))
     with pytest.raises(ValueError):
-        next(decoder.decode("-1 x"))
+        next(decoder.decode("-1,x"))
     with pytest.raises(RuntimeError):
-        next(decoder.decode("-1 0"))
+        next(decoder.decode("-1,0"))
     with pytest.raises(RuntimeError):
-        next(decoder.decode("-1 0 4"))
+        next(decoder.decode("-1,0,4"))
     with pytest.raises(ValueError):
-        next(decoder.decode("-1 0 4 x"))
+        next(decoder.decode("-1,0,4,x"))
     # ignores feature vector if fails to read
-    next(decoder.decode("-1 0 4 1 bad_key"))
-    next(decoder.decode("-1 0 4 1 float32"))
+    next(decoder.decode("-1,0,4,1,bad_key"))
+    next(decoder.decode("-1,0,4,1,float32"))
     with pytest.raises(ValueError):
-        next(decoder.decode("-1 0 4 1 float32 2"))
+        next(decoder.decode("-1,0,4,1,float32,2"))
     with pytest.raises(ValueError):
-        next(decoder.decode("-1 0 4 1 float32 2 1"))
+        next(decoder.decode("-1,0,4,1,float32,2,1"))
     with pytest.raises(ValueError):
-        next(decoder.decode("-1 0 4 1 float32 2 1 x"))
-    next(decoder.decode("-1 0 4 1 float32 2 1 1"))
-    next(decoder.decode("-1 0 4 1 binary_feature 1 test"))
-    next(decoder.decode("-1 0 4 1 float32 0"))
+        next(decoder.decode("-1,0,4,1,float32,2,1,x"))
+    next(decoder.decode("-1,0,4,1,float32,2,1,1"))
+    next(decoder.decode("-1,0,4,1,binary_feature,1,test"))
+    next(decoder.decode("-1,0,4,1,float32,0"))
     with pytest.raises(RuntimeError):
-        gen = decoder.decode("0 1")
+        gen = decoder.decode("0,1")
         next(gen)
     with pytest.raises(RuntimeError):
-        gen = decoder.decode("0 1 4")
+        gen = decoder.decode("0,1,4")
         next(gen)
-    gen = decoder.decode("0 1 4 1")
+    gen = decoder.decode("0,1,4,1")
     next(gen)
 
 

@@ -24,7 +24,7 @@ Just inheret the base class Decoder, overwrite the decode function and pass the 
 3. `TSV <#tsv-format>`_: Homogeneous graph only.
 
 EdgeList Format
-=============
+===============
 
 The EdgeList format,
 * Supports heterogeneous and homegeneous graphs.
@@ -39,11 +39,11 @@ The EdgeList format,
 	<edge_2_info>
 	...
 
-node_info: node_id -1 node_type node_weight <features>
-edge_info: src dst edge_type edge_weight <features>
-features[dense]: dtype_name length v1 v2 ... dtype_name2 length2 v1 v2 ...
-features[sparse with 2 dim coordinates vector]: dtype_name values.size,coords.shape[1] c1 c2 ... v1 v2 ...
-features[sparse with 1 dim coordinates vector]: dtype_name values.size,0 c1 c2 ... v1 v2 ...
+node_info: node_id,-1,node_type,node_weight,<features>
+edge_info: src,dst,edge_type,edge_weight,<features>
+features[dense]: dtype_name,length,v1,v2,...,dtype_name2,length2,v1,v2,...
+features[sparse with 2 dim coordinates vector]: dtype_name,values.size/coords.shape[1],c1,c2,...,v1,v2,...
+features[sparse with 1 dim coordinates vector]: dtype_name,values.size/0,c1,c2,...,v1,v2,...
 * Nodes must be sorted by node_id, edges sorted by type first then dst.
 * Feature vectors are given indicies based on the order they appear in the line, the first feature vector is index 0.
 A feature index can be skipped by giving a 0 length vector.
@@ -55,10 +55,10 @@ Edges: {0 -> 1, 1 -> 0} both with type = 0, weight = .5 and a sparse feature
 vector (coords=[0, 4, 10], values=[1, 1, 1] dtype=uint8).
 
 .. code-block:: text
-	0 -1 1 .5 int32 3 1 1 1 float32 2 1.1 1.1
-	0 1 0 .5 uint8 3,0 0 4 10 1 1 1
-	1 -1 1 .5 int32 3 1 1 1 float32 2 1.1 1.1
-	1 0 0 .5 uint8 3,0 0 4 10 1 1 1
+	0,-1,1,.5,int32,3,1,1,1,float32,2,1.1,1.1
+	0,1,0,.5,uint8,3/0,0,4,10,1,1,1
+	1,-1,1,.5,int32,3,1,1,1,float32,2,1.1,1.1
+	1,0,0,.5,uint8,3/0,0,4,10,1,1,1
 
 Optional Graph Metadata
 The following keyword arguments can be added when creating the decoder,
@@ -88,10 +88,10 @@ e.g. the same graph as above with init fully filled in,
 graph.csv,
 
 .. code-block:: text
-	0 -1 1 1 1 1.1 1.1
-	0 1 0 4 10 1 1 1
-	1 -1 1 1 1 1.1 1.1
-	1 0 0 4 10 1 1 1
+	0,-1,1,1,1,1.1,1.1
+	0,1,0,4,10,1,1,1
+	1,-1,1,1,1,1.1,1.1
+	1,0,0,4,10,1,1,1
 
 JSON Format
 ===========
