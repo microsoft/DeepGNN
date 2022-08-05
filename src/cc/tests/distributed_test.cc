@@ -765,7 +765,7 @@ TEST(DistributedTest, NodeStringFeaturesMultipleTypesNeighborsSpreadAcrossPartit
     std::vector<std::vector<float>> f2 = {std::vector<float>{7.0f, 8.0f, 9.0f}};
 
     auto environment = CreateMultiServerSplitFeaturesEnvironment(
-        "NodeFeaturesMultipleTypesNeighborsSpreadAcrossPartitions", f0, f1, f2);
+        "NodeStringFeaturesMultipleTypesNeighborsSpreadAcrossPartitions", f0, f1, f2);
     auto &c = *environment.second;
 
     // 0 is a normal node
@@ -797,7 +797,7 @@ TEST(DistributedTest, NodeSparseFeaturesMultipleTypesNeighborsSpreadAcrossPartit
     std::vector<std::vector<float>> f2 = {std::vector<float>(start, start + f2_data.size())};
 
     auto environment = CreateMultiServerSplitFeaturesEnvironment(
-        "NodeFeaturesMultipleTypesNeighborsSpreadAcrossPartitions", f0, f1, f2);
+        "NodeSparseFeaturesMultipleTypesNeighborsSpreadAcrossPartitions", f0, f1, f2);
     auto &c = *environment.second;
 
     // 0 is a normal node
