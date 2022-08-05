@@ -940,6 +940,84 @@ TEST(GraphTest, NodeFeaturesMultipleTypesNeighborsSpreadAcrossPartitions)
               std::vector<float>({1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0}));
 }
 
+TEST(GraphTest, NodeStringFeaturesMultipleTypesNeighborsSpreadAcrossPartitions)
+{
+    TestGraph::MemoryGraph m1;
+    std::vector<std::vector<float>> f0 = {std::vector<float>{1.0f, 2.0f, 3.0f}};
+    std::vector<std::vector<float>> f1 = {std::vector<float>{4.0f, 5.0f, 6.0f}};
+    std::vector<std::vector<float>> f2 = {std::vector<float>{7.0f, 8.0f, 9.0f}};
+
+    m1.m_nodes.push_back(TestGraph::Node{.m_id = 0, .m_type = 0, .m_weight = 1.0f, .m_float_features = f0});
+    m1.m_nodes.push_back(TestGraph::Node{.m_id = 1, .m_type = 1, .m_weight = 1.0f, .m_float_features = f1});
+    m1.m_nodes.push_back(TestGraph::Node{.m_id = 2, .m_type = -1, .m_weight = 1.0f});
+    TestGraph::MemoryGraph m2;
+    m2.m_nodes.push_back(TestGraph::Node{.m_id = 1, .m_type = -1});
+    m2.m_nodes.push_back(TestGraph::Node{.m_id = 2, .m_type = 2, .m_float_features = f2});
+    auto path = std::filesystem::temp_directory_path();
+
+    TestGraph::convert(path, "0_0", std::move(m1), 2);
+    TestGraph::convert(path, "1_0", std::move(m2), 2);
+    snark::Graph g(path.string(), {0, 1}, snark::PartitionStorageType::memory, "");
+
+    // 0 is a normal node
+    // 1, 2 has a parity with type = -1
+    // 3 is non existant
+    std::vector<snark::NodeId> nodes = {0, 1, 2, 3};
+    std::vector<uint8_t> output;
+    std::vector<int64_t> dimensions(4);
+    std::vector<snark::FeatureId> features = {0};
+    g.GetNodeStringFeature(std::span(nodes), std::span(features), std::span(dimensions), output);
+    std::span res(reinterpret_cast<float *>(output.data()), output.size() / sizeof(float));
+    EXPECT_EQ(std::vector<float>(std::begin(res), std::end(res)), std::vector<float>({1, 2, 3, 4, 5, 6, 7, 8, 9}));
+    EXPECT_EQ(dimensions, std::vector<int64_t>({12, 12, 12, 0}));
+}
+
+TEST(GraphTest, NodeSparseFeaturesMultipleTypesNeighborsSpreadAcrossPartitions)
+{
+    TestGraph::MemoryGraph m1;
+    // indices - 1, 14, 20, data - 1
+    std::vector<int32_t> f0_data = {3, 3, 1, 0, 14, 0, 20, 0, 1};
+    // indices - 1, 13, 42, data - 1
+    std::vector<int32_t> f1_data = {3, 3, 1, 0, 13, 0, 42, 0, 1};
+    // indices - [3, 8, 9], [4, 3, 2] data - [5, 42]
+    std::vector<int32_t> f2_data = {6, 3, 3, 0, 8, 0, 9, 0, 4, 0, 3, 0, 2, 0, 5, 42};
+    auto start = reinterpret_cast<float *>(f0_data.data());
+    std::vector<std::vector<float>> f0 = {std::vector<float>(start, start + f0_data.size())};
+    start = reinterpret_cast<float *>(f2_data.data());
+    std::vector<std::vector<float>> f1 = {std::vector<float>(start, start + f1_data.size())};
+    start = reinterpret_cast<float *>(f2_data.data());
+    std::vector<std::vector<float>> f2 = {std::vector<float>(start, start + f2_data.size())};
+
+    m1.m_nodes.push_back(TestGraph::Node{.m_id = 0, .m_type = 0, .m_weight = 1.0f, .m_float_features = f0});
+    m1.m_nodes.push_back(TestGraph::Node{.m_id = 1, .m_type = 1, .m_weight = 1.0f, .m_float_features = f1});
+    m1.m_nodes.push_back(TestGraph::Node{.m_id = 2, .m_type = -1, .m_weight = 1.0f});
+    TestGraph::MemoryGraph m2;
+    m2.m_nodes.push_back(TestGraph::Node{.m_id = 1, .m_type = -1});
+    m2.m_nodes.push_back(TestGraph::Node{.m_id = 2, .m_type = 2, .m_float_features = f2});
+    auto path = std::filesystem::temp_directory_path();
+
+    TestGraph::convert(path, "0_0", std::move(m1), 2);
+    TestGraph::convert(path, "1_0", std::move(m2), 2);
+    snark::Graph g(path.string(), {0, 1}, snark::PartitionStorageType::memory, "");
+
+    // 0 is a normal node
+    // 1, 2 has a parity with type = -1
+    // 3 is non existant
+    std::vector<snark::NodeId> nodes = {0, 1, 2, 3};
+    std::vector<snark::FeatureId> features = {0};
+    std::vector<std::vector<uint8_t>> data(features.size());
+    std::vector<std::vector<int64_t>> indices(features.size());
+    std::vector<int64_t> dimensions = {-1};
+
+    g.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
+    EXPECT_EQ(indices.size(), 1);
+    EXPECT_EQ(data.size(), 1);
+    EXPECT_EQ(std::vector<int64_t>({0, 1, 13, 42, 1, 3, 8, 9, 1, 4, 3, 2}), indices.front());
+    auto tmp = reinterpret_cast<int32_t *>(data.front().data());
+    EXPECT_EQ(std::vector<int32_t>({1, 5, 42}), std::vector<int32_t>(tmp, tmp + 3));
+    EXPECT_EQ(std::vector<int64_t>({3}), dimensions);
+}
+
 TEST(GraphTest, UniformNeighborSampleMultipleTypesTriggerConditionalProbabilities)
 {
     TestGraph::MemoryGraph m1;
