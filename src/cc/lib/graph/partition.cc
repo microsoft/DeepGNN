@@ -1688,7 +1688,7 @@ size_t Partition::FetchNeighborInfo(uint64_t internal_id, std::span<const Type> 
 
 
 size_t Partition::NeighborCount(uint64_t internal_id, std::span<const Type> edge_types) const
-{   
+{
     auto lambda = [&](auto start, auto last, int i)
                         {
                             return last - start;
@@ -1700,7 +1700,7 @@ size_t Partition::NeighborCount(uint64_t internal_id, std::span<const Type> edge
 size_t Partition::FullNeighbor(uint64_t internal_id, std::span<const Type> edge_types,
                                std::vector<NodeId> &out_neighbors_ids, std::vector<Type> &out_edge_types,
                                std::vector<float> &out_edge_weights) const
-{   
+{
     auto lambda = [&](auto start, auto last, int i)
             {
                 // m_edge_destination[last-1]+1 - take the last element and then advance the pointer
