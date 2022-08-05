@@ -1,6 +1,8 @@
+from cProfile import label
 from multiprocessing import pool
 from multiprocessing.sharedctypes import Value
 from optparse import Option
+from sys import float_info
 from typing import Optional
 
 import torch
@@ -200,21 +202,20 @@ class GIN(BaseSupervisedModel):
 
     def forward(self, context: dict):
         scores: torch.Tensor = self.get_score(context)
-        labels = context["label"].squeeze().clone().detach()
+        labels = context["label"].long().squeeze().clone().detach()
 
-        get_logger().info(str(scores.shape))
-        get_logger().info(str(scores))
+        # get_logger().info(str(scores))
+        # get_logger().info(str(scores.shape))
+        # get_logger().info('-------------------')
+        # get_logger().info(str(labels))
+        # get_logger().info(str(labels.shape))
 
-        get_logger().info('------------------------------')
-
-        get_logger().info(str(labels.shape))
-        get_logger().info(str(labels))
 
         # Calculate cross-entropy loss
         loss = self.xent(scores, labels)
 
         # Take argmax to fetch class indices
-        # scores = scores.argmax(dim=1)
+        scores = scores.argmax(dim=1)
 
         return (loss, scores, labels)
 
@@ -238,21 +239,22 @@ class GIN(BaseSupervisedModel):
             strategy = "randomwithoutreplacement"
         )[0]
 
-        # context['nb_counts'] = graph.neighbor_count(
-        #     nodes = context['inputs'],
-        #     edge_types = np.array([0]),
-        # ).astype(float)
+        context['nb_counts'] = graph.neighbor_count(
+            nodes = context['inputs'],
+            edge_types = np.array([0]),
+        ).astype(float)
 
-        context['nb_counts'] = graph.neighbors(
-            context["inputs"],
-            np.array([0])
-        )[3].astype(float)
+        # context['nb_counts'] = graph.neighbors(
+        #     context["inputs"],
+        #     np.array([0])
+        # )[3].astype(float)
 
         context["label"] =  graph.node_features(
             context["inputs"],
             np.array([[self.label_idx, self.label_dim]]),
             FeatureType.FLOAT,
         )
+
 
         context["features"] = graph.node_features(
             context["neighbors"],

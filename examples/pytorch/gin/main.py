@@ -29,6 +29,7 @@ def init_args(parser: argparse.Namespace):
     group = parser.add_argument_group("GIN Parameters")
     group.add_argument("--algo", type=str, default="supervised")
     group.add_argument("--edge_type", type=np.ndarray, default=np.ndarray([]))
+    group.add_argument("--num_classes", type=int, default=2)
 
 
 def create_model(args: argparse.Namespace):
@@ -53,7 +54,7 @@ def create_model(args: argparse.Namespace):
             num_mlp_layers=2, 
             input_dim=args.feature_dim,
             hidden_dim=64, 
-            output_dim=121, 
+            output_dim=args.num_classes, 
             final_dropout=0.5, 
             learn_eps=False, 
             edge_type=args.edge_type,
