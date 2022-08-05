@@ -634,7 +634,6 @@ void GRPCClient::NeighborCount(std::span<const NodeId> node_ids, std::span<const
 
     std::vector<std::future<void>> futures;
     std::vector<GetNeighborCountsReply> replies(std::size(m_engine_stubs));
-    std::vector<size_t> reply_offsets(std::size(m_engine_stubs));
     std::atomic<size_t> responses_left{std::size(m_engine_stubs)};
 
     size_t len = node_ids.size();
@@ -649,20 +648,17 @@ void GRPCClient::NeighborCount(std::span<const NodeId> node_ids, std::span<const
         call->callback = [&responses_left, &replies, &output_neighbor_counts]() {
             // Skip processing until all responses arrived. All responses are stored in the `replies` variable,
             // so we can safely return.
-
             if (responses_left.fetch_sub(1) > 1)
             {
                 return;
             }
-            for (size_t curr_node = 0; curr_node < std::size(output_neighbor_counts); ++curr_node)
-            {
 
-                for (size_t reply_index = 0; reply_index < std::size(replies); ++reply_index)
-                {
-                    const auto &reply = replies[reply_index];
-                    const auto count = reply.neighbor_counts(curr_node);
-                    output_neighbor_counts[curr_node] += count;
-                }
+            for (size_t reply_index = 0; reply_index < std::size(replies); ++reply_index)
+            {
+                const auto &reply = replies[reply_index];
+                auto out = std::begin(output_neighbor_counts);
+                std::transform(out, std::end(output_neighbor_counts), std::begin(reply.neighbor_counts()),
+                               std::begin(output_neighbor_counts), std::plus<int64_t>());
             }
         };
 

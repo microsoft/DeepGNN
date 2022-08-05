@@ -489,9 +489,10 @@ size_t NeighborIndexIterator(uint64_t internal_id, std::span<const Type> edge_ty
 
 size_t Partition::NeighborCount(uint64_t internal_id, std::span<const Type> edge_types) const
 {
-    auto lambda = [](auto start, auto last, auto i) {};
+    const auto lambda = [](const auto start, const auto last, const auto i) {};
 
-    return NeighborIndexIterator(internal_id, edge_types, lambda, m_neighbors_index, m_edge_types, m_edge_type_offset);
+    return NeighborIndexIterator(internal_id, edge_types, std::move(lambda), m_neighbors_index, m_edge_types,
+                                 m_edge_type_offset);
 }
 
 size_t Partition::FullNeighbor(uint64_t internal_id, std::span<const Type> edge_types,
@@ -513,7 +514,8 @@ size_t Partition::FullNeighbor(uint64_t internal_id, std::span<const Type> edge_
         }
     };
 
-    return NeighborIndexIterator(internal_id, edge_types, lambda, m_neighbors_index, m_edge_types, m_edge_type_offset);
+    return NeighborIndexIterator(internal_id, edge_types, std::move(lambda), m_neighbors_index, m_edge_types,
+                                 m_edge_type_offset);
 }
 
 bool Partition::GetEdgeFeature(uint64_t internal_src_node_id, NodeId input_edge_dst, Type input_edge_type,
