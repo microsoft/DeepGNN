@@ -1448,8 +1448,6 @@ class _TrainingWorker:
             time.sleep(0.1)
 
 
-"""
-
 @pytest.mark.parametrize(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
@@ -1776,7 +1774,7 @@ def test_multi_partition_metadata():
     assert cl.meta._node_feature_count == 2  # p0 0 features, p1 2 features
     assert cl.meta._edge_feature_count == 2
 
-"""
+
 if __name__ == "__main__":
     sys.exit(
         pytest.main(

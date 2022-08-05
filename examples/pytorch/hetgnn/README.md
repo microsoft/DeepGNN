@@ -7,7 +7,7 @@ HetGNN first introduces a random walk with restart strategy to sample a fixed si
 Reference: [Heterogeneous Graph Neural Network](https://www3.nd.edu/~dial/publications/zhang_2019_heterogeneous.pdf)
 
 # Generate Graph Data
-* [Prepare Graph Data](../../../docs/advanced/data_spec.md)
+* [Prepare Graph Data](../../../docs/graph_engine/data_spec.rst)
 
 # Job Augmentations
 ## HetGNN

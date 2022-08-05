@@ -4,7 +4,7 @@ Preparing Graph Data
 
 DeepGNN supports both homogeneous and heterogeneous graphs. Nodes and Edges support the following attributes,
 
-  * Node/Edge Type: `int`.
+  * Node/Edge Type: `int, >= 0`.
   * Node/Edge Weight: `float`.
   * Node/Edge Features: `float/uint64/string`.
 
@@ -100,7 +100,7 @@ The JSON format supports heterogeneous and homegeneous graphs.
 
 	{
 	"node_id": "int",
-	"node_type": "int",
+	"node_type": "int, >= 0",
 	"node_weight": "float",
 	"neighbor": {"edge type": {"neighbor_id": "weight(float)", "...": "..."}, "...": "..."},
 	"uint64_feature": {"feature_id": ["int", "..."], "...": "..."},
@@ -109,7 +109,7 @@ The JSON format supports heterogeneous and homegeneous graphs.
 	"edge":[{
 		"src_id": "int",
 		"dst_id": "int",
-		"edge_type": "int",
+		"edge_type": "int, >= 0",
 		"weight": "float",
 		"uint64_feature": {"feature_id": ["int", "..."], "...": ["int", "..."]},
 		"float_feature": {"feature_id": ["float", "..."], "...": ["float", "..."]},

@@ -1,6 +1,16 @@
 # DeepGNN Changelog
 
+## [Unreleased]
+
+* Support nodes and their outgoing edges on different partitions.
+
+* Add new converter input format "Linear" with LinearDecoder. Format has nodes and edges on separate lines, is smaller and faster to convert.
+
+* Bugfix: fill dimensions with 0 for missing features.
+
 ## 0.1 DeepGNN
+
+### 0.1.52 - 2022-07-27
 
 * Rename and move convert.output to converter.process.converter_process. Dispatchers make argument 'process' default to converter.process.converter_process. Dispatchers move process argument after decoder_type.
 
@@ -11,7 +21,3 @@
 * Add BinaryWriter as new entry point for NodeWriter, EdgeWriter and alias writers.
 
 * Meta.json files are no longer needed by the converter. Remove meta path argument from MultiWorkerConverter and Dispatchers.
-
-* Support nodes and their outgoing edges on different partitions.
-
-* Add new converter input format "Linear" with LinearDecoder. Format has nodes and edges on separate lines, is smaller and faster to convert.
