@@ -59,6 +59,8 @@ class LinearDecoder(Decoder):
         features[sparse with 2 dim coordinates vector]: dtype_name values.size,coords.shape[1] c1 c2 ... v1 v2 ...
         features[sparse with 1 dim coordinates vector]: dtype_name values.size,0 c1 c2 ... v1 v2 ...
         * Nodes must be sorted by node_id, edges sorted by type first then dst.
+        * Feature vectors are given indicies based on the order they appear in the line, the first feature vector is index 0.
+        A feature index can be skipped by giving a 0 length vector.
 
     Linear Format Example
         A graph with 2 nodes {0, 1} each with type = 1, weight = .5 and
