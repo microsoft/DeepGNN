@@ -4,7 +4,7 @@
 
 * Support nodes and their outgoing edges on different partitions.
 
-* Add new converter input format "Linear" with LinearDecoder. Format has nodes and edges on separate lines, is smaller and faster to convert.
+* Add new converter input format "EdgeList" with EdgeListDecoder. Format has nodes and edges on separate lines, is smaller and faster to convert.
 
 * Bugfix: fill dimensions with 0 for missing features.
 

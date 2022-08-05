@@ -219,14 +219,14 @@ class CitationGraph(Client):
 
         node_types = self.get_node_types(train_mask, val_mask, test_mask)
 
-        graph_file = os.path.join(data_dir, "graph.linear")
-        self._write_linear_graph(adj, features, labels, node_types, graph_file)
+        graph_file = os.path.join(data_dir, "graph.csv")
+        self._write_edge_list_graph(adj, features, labels, node_types, graph_file)
 
         convert.MultiWorkersConverter(
             graph_path=graph_file,
             partition_count=1,
             output_dir=data_dir,
-            decoder=decoders.LinearDecoder(),
+            decoder=decoders.EdgeListDecoder(),
         ).convert()
 
         train_file = os.path.join(data_dir, "train.nodes")
@@ -250,7 +250,7 @@ class CitationGraph(Client):
             node_types.append(t)
         return node_types
 
-    def _write_linear_graph(
+    def _write_edge_list_graph(
         self,
         adj: sp.csr_matrix,
         features: np.ndarray,
@@ -263,7 +263,7 @@ class CitationGraph(Client):
         assert node_size == labels.shape[0]
         with open(graph_file, "w") as fout:
             for nid in range(node_size):
-                tmp = self.to_linear_node(
+                tmp = self.to_edge_list_node(
                     nid,
                     node_types[nid],
                     flt_feat=list(features[nid].tolist()),
@@ -274,7 +274,7 @@ class CitationGraph(Client):
 
     NODE_TYPE_ID = {"train": 0, "val": 1, "test": 2, "other": 3}
 
-    def to_linear_node(
+    def to_edge_list_node(
         self,
         node_id: int,
         node_type: str,
@@ -282,7 +282,7 @@ class CitationGraph(Client):
         label: int,
         neighbors: np.ndarray,
     ) -> str:
-        """Convert node to linear format."""
+        """Convert node to edge_list format."""
         assert type(flt_feat) is list and type(flt_feat[0]) == float
         assert type(label) is int
         ntype = self.NODE_TYPE_ID[node_type]

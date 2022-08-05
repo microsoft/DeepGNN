@@ -43,10 +43,10 @@ class Decoder(abc.ABC):
 DecoderType = TypeVar("DecoderType", bound=Decoder)
 
 
-class LinearDecoder(Decoder):
+class EdgeListDecoder(Decoder):
     """Convert the text line into node object.
 
-    Linear Format:
+    Edge List Format:
         ```
         <node info>
         <edge_1_info>
@@ -62,7 +62,7 @@ class LinearDecoder(Decoder):
         * Feature vectors are given indicies based on the order they appear in the line, the first feature vector is index 0.
         A feature index can be skipped by giving a 0 length vector.
 
-    Linear Format Example
+    Edge List Format Example
         A graph with 2 nodes {0, 1} each with type = 1, weight = .5 and
         feature vectors [1, 1, 1] dtype=int32 and [1.1, 1.1] dtype=float32.
         Edges: {0 -> 1, 1 -> 0} both with type = 0, weight = .5 and a sparse feature
@@ -88,7 +88,7 @@ class LinearDecoder(Decoder):
     Init Parameters Format Example
         Same graph as the previous example, just with defaults specified.
         ```
-        LinearDecoder(
+        EdgeListDecoder(
             default_node_type=1,
             default_node_weight=.5,
             default_node_feature_types=["int32", "float32"],
@@ -99,7 +99,7 @@ class LinearDecoder(Decoder):
                 default_edge_feature_lens=[[3, 0]],
         )
         ```
-        graph.linear
+        graph.csv
         ```
         0 -1 1 1 1 1.1 1.1
         0 1 0 4 10 1 1 1

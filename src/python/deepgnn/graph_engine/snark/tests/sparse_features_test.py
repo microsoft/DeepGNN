@@ -17,12 +17,12 @@ import numpy.testing as npt
 import pytest
 
 import deepgnn.graph_engine.snark.client as client
-from deepgnn.graph_engine.snark.decoders import JsonDecoder, LinearDecoder
+from deepgnn.graph_engine.snark.decoders import JsonDecoder, EdgeListDecoder
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.dispatcher as dispatcher
 import deepgnn.graph_engine.snark._lib as lib
-from util_test import json_to_linear
+from util_test import json_to_edge_list
 
 
 def graph_with_sparse_features_json(folder):
@@ -138,10 +138,10 @@ def graph_with_sparse_features(request):
     partition_count, decoder_type = request.param
     workdir = tempfile.TemporaryDirectory()
     data_name = graph_with_sparse_features_json(workdir.name)
-    if decoder_type == LinearDecoder:
+    if decoder_type == EdgeListDecoder:
         json_name = data_name
-        data_name = os.path.join(workdir.name, "graph.linear")
-        json_to_linear(json_name, data_name)
+        data_name = os.path.join(workdir.name, "graph.csv")
+        json_to_edge_list(json_name, data_name)
 
     convert.MultiWorkersConverter(
         graph_path=data_name,
@@ -157,7 +157,7 @@ def graph_with_sparse_features(request):
 
 @pytest.mark.parametrize(
     "graph_with_sparse_features",
-    [(1, JsonDecoder), (1, LinearDecoder), (2, JsonDecoder), (2, LinearDecoder)],
+    [(1, JsonDecoder), (1, EdgeListDecoder), (2, JsonDecoder), (2, EdgeListDecoder)],
     indirect=True,
 )
 def test_sanity_node_sparse_features(graph_with_sparse_features):
@@ -174,7 +174,7 @@ def test_sanity_node_sparse_features(graph_with_sparse_features):
 
 @pytest.mark.parametrize(
     "graph_with_sparse_features",
-    [(1, JsonDecoder), (1, LinearDecoder), (2, JsonDecoder), (2, LinearDecoder)],
+    [(1, JsonDecoder), (1, EdgeListDecoder), (2, JsonDecoder), (2, EdgeListDecoder)],
     indirect=True,
 )
 def test_multiple_nodes_sparse_features(graph_with_sparse_features):
@@ -193,7 +193,7 @@ def test_multiple_nodes_sparse_features(graph_with_sparse_features):
 
 @pytest.mark.parametrize(
     "graph_with_sparse_features",
-    [(1, JsonDecoder), (1, LinearDecoder), (2, JsonDecoder), (2, LinearDecoder)],
+    [(1, JsonDecoder), (1, EdgeListDecoder), (2, JsonDecoder), (2, EdgeListDecoder)],
     indirect=True,
 )
 def test_multiple_edges_sparse_features(graph_with_sparse_features):

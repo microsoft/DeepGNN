@@ -13,10 +13,10 @@ import numpy as np
 import numpy.testing as npt
 
 import deepgnn.graph_engine.snark.convert as convert
-from deepgnn.graph_engine.snark.decoders import JsonDecoder, LinearDecoder, TsvDecoder
+from deepgnn.graph_engine.snark.decoders import JsonDecoder, EdgeListDecoder, TsvDecoder
 from deepgnn.graph_engine.snark.dispatcher import QueueDispatcher
 
-from util_test import json_to_linear
+from util_test import json_to_edge_list
 
 
 def triangle_graph_json(folder):
@@ -103,10 +103,10 @@ def triangle_graph(request):
     workdir = tempfile.TemporaryDirectory()
     if request.param == JsonDecoder:
         data_name = triangle_graph_json(workdir.name)
-    elif request.param == LinearDecoder:
+    elif request.param == EdgeListDecoder:
         json_name = triangle_graph_json(workdir.name)
-        data_name = os.path.join(workdir.name, "graph.linear")
-        json_to_linear(json_name, data_name)
+        data_name = os.path.join(workdir.name, "graph.csv")
+        json_to_edge_list(json_name, data_name)
     elif request.param == TsvDecoder:
         data_name = triangle_graph_tsv(workdir.name)
     else:
@@ -116,7 +116,7 @@ def triangle_graph(request):
     workdir.cleanup()
 
 
-param = [JsonDecoder, LinearDecoder, TsvDecoder]
+param = [JsonDecoder, EdgeListDecoder, TsvDecoder]
 
 
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
@@ -351,7 +351,7 @@ def test_edge_alias_tables(triangle_graph):
         dispatcher=d,
     ).convert()
 
-    if decoder == LinearDecoder:
+    if decoder == EdgeListDecoder:
         assert os.path.getsize("{}/edge_0_0.alias".format(output.name)) == 0
         assert os.path.getsize("{}/edge_1_0.alias".format(output.name)) == 0
 
@@ -442,7 +442,7 @@ def test_node_alias_tables(triangle_graph):
         assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
         assert result[16:20] == struct.pack("=f", 1.0)
 
-    if decoder == LinearDecoder:
+    if decoder == EdgeListDecoder:
         filename = "{}/node_1_0.alias"
     else:
         filename = "{}/node_1_1.alias"
@@ -464,7 +464,7 @@ def test_node_alias_tables(triangle_graph):
 
     assert os.path.getsize("{}/node_0_1.alias".format(output.name)) == 0
     assert os.path.getsize("{}/node_2_1.alias".format(output.name)) == 0
-    if decoder == LinearDecoder:
+    if decoder == EdgeListDecoder:
         filename = "{}/node_1_1.alias"
     else:
         filename = "{}/node_1_0.alias"
@@ -576,10 +576,10 @@ def graph_with_sparse_features(request):
     workdir = tempfile.TemporaryDirectory()
     if request.param == JsonDecoder:
         data_name = graph_with_sparse_features_json(workdir.name)
-    elif request.param == LinearDecoder:
+    elif request.param == EdgeListDecoder:
         json_name = graph_with_sparse_features_json(workdir.name)
-        data_name = os.path.join(workdir.name, "graph.linear")
-        json_to_linear(json_name, data_name)
+        data_name = os.path.join(workdir.name, "graph.csv")
+        json_to_edge_list(json_name, data_name)
     else:
         raise ValueError("Unsupported format.")
 
@@ -587,7 +587,7 @@ def graph_with_sparse_features(request):
     workdir.cleanup()
 
 
-param_sparse = [JsonDecoder, LinearDecoder]
+param_sparse = [JsonDecoder, EdgeListDecoder]
 
 
 @pytest.mark.parametrize("graph_with_sparse_features", param_sparse, indirect=True)
@@ -643,7 +643,7 @@ def test_sanity_node_sparse_features_data(graph_with_sparse_features):
         )
 
         assert int.from_bytes(result[60:64], sys.byteorder) == 3
-        if decoder == LinearDecoder:
+        if decoder == EdgeListDecoder:
             assert int.from_bytes(result[64:68], sys.byteorder) == 3
         else:
             assert int.from_bytes(result[64:68], sys.byteorder) == 1
@@ -774,8 +774,8 @@ def test_sanity_edge_sparse_features_data(graph_with_sparse_features):
         )
 
 
-def _gen_linear(output, data_data, kwargs={}, partitions=1):
-    data = open(os.path.join(output.name, "graph.linear"), "w+")
+def _gen_edge_list(output, data_data, kwargs={}, partitions=1):
+    data = open(os.path.join(output.name, "graph.csv"), "w+")
     for v in data_data:
         data.write(v)
     data.flush()
@@ -784,11 +784,11 @@ def _gen_linear(output, data_data, kwargs={}, partitions=1):
         graph_path=data.name,
         partition_count=partitions,
         output_dir=output.name,
-        decoder=LinearDecoder(**kwargs),
+        decoder=EdgeListDecoder(**kwargs),
     ).convert()
 
 
-def test_linear_header():
+def test_edge_list_header():
     output = tempfile.TemporaryDirectory()
     data_data = [
         "0 -1\n",
@@ -796,7 +796,7 @@ def test_linear_header():
         "2 -1\n",
     ]
     meta_data = {"default_node_type": 0, "default_node_weight": 1.5}
-    _gen_linear(output, data_data, meta_data)
+    _gen_edge_list(output, data_data, meta_data)
     with open("{}/node_{}_{}.map".format(output.name, 0, 0), "rb") as nm:
         expected_size = 3 * (2 * 8 + 4)
         result = nm.read(expected_size + 8)
@@ -818,7 +818,7 @@ def test_linear_header():
         "2 -1 0 0\n2 0\n2 1\n",
     ]
     meta_data = {"default_edge_type": 0, "default_edge_weight": 200}
-    _gen_linear(output, data_data, meta_data)
+    _gen_edge_list(output, data_data, meta_data)
     with open("{}/edge_{}_{}.index".format(output.name, 0, 0), "rb") as ei:
         expected_size = 7 * 24
         result = ei.read(expected_size + 100)
@@ -855,7 +855,7 @@ def test_linear_header():
         "default_node_feature_types": ["uint64", "float32"],
         "default_node_feature_lens": [[2], [2]],
     }
-    _gen_linear(output, data_data, meta_data)
+    _gen_edge_list(output, data_data, meta_data)
     with open("{}/node_features_{}_{}.data".format(output.name, 0, 0), "rb") as nfd:
         expected_size = 72
         result = nfd.read(expected_size + 1)
@@ -883,7 +883,7 @@ def test_linear_header():
         "default_edge_feature_types": ["uint64", "float32"],
         "default_edge_feature_lens": [[2], [2]],
     }
-    _gen_linear(output, data_data, meta_data)
+    _gen_edge_list(output, data_data, meta_data)
     with open("{}/edge_features_{}_{}.data".format(output.name, 0, 0), "rb") as nfd:
         expected_size = 72
         result = nfd.read(expected_size + 1)
@@ -913,7 +913,7 @@ def test_linear_header():
         "default_node_feature_types": [None, "float32"],
         "default_node_feature_lens": [None, [2]],
     }
-    _gen_linear(output, data_data, meta_data)
+    _gen_edge_list(output, data_data, meta_data)
     with open("{}/node_features_{}_{}.data".format(output.name, 0, 0), "rb") as nfd:
         expected_size = 96
         result = nfd.read(expected_size + 1)
@@ -935,7 +935,7 @@ def test_linear_header():
         npt.assert_equal(np.frombuffer(result[88:96], dtype=np.int32), [5, 6])
 
 
-def test_linear_header_multiple_partitions():
+def test_edge_list_header_multiple_partitions():
     output = tempfile.TemporaryDirectory()
     data_data = [
         "0 -1\n",
@@ -943,7 +943,7 @@ def test_linear_header_multiple_partitions():
         "2 -1\n",
     ]
     meta_data = {"default_node_type": 0, "default_node_weight": 1.5}
-    _gen_linear(output, data_data, meta_data, partitions=2)
+    _gen_edge_list(output, data_data, meta_data, partitions=2)
     with open("{}/node_{}_{}.map".format(output.name, 0, 0), "rb") as nm:
         expected_size = 2 * (2 * 8 + 4)
         result = nm.read(expected_size + 8)
@@ -956,8 +956,8 @@ def test_linear_header_multiple_partitions():
         assert result[36:40] == (0).to_bytes(4, byteorder=sys.byteorder)
 
 
-def test_linear_error_checking():
-    decoder = LinearDecoder()
+def test_edge_list_error_checking():
+    decoder = EdgeListDecoder()
     with pytest.raises(StopIteration):
         next(decoder.decode(""))
     with pytest.raises(ValueError):

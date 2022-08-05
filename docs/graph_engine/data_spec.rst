@@ -12,26 +12,26 @@ DeepGNN supports both homogeneous and heterogeneous graphs. Nodes and Edges supp
 Graph Data Format
 *****************
 
-DeepGNN supports three file formats: Linear, JSON and TSV.
+DeepGNN supports three file formats: EdgeList, JSON and TSV.
 Users can generate a graph in either format then our pipeline will convert it into binary for training and inference.
 DeepGNN also supports writing custom decoders, see [the decoders file](https://github.com/microsoft/DeepGNN/blob/main/src/python/deepgnn/graph_engine/snark/decoders.py).
 Just inheret the base class Decoder, overwrite the decode function and pass the new decoder as an argument to the converter or dispatcher.
 
-1. `Linear <#linear-format>`_: Heterogeneous or homegeneous graph.
+1. `EdgeList <#EdgeList-format>`_: Heterogeneous or homegeneous graph.
 
 2. `JSON <#json-format>`_: Heterogeneous or homegeneous graph.
 
 3. `TSV <#tsv-format>`_: Homogeneous graph only.
 
-Linear Format
+EdgeList Format
 =============
 
-The linear format,
+The EdgeList format,
 * Supports heterogeneous and homegeneous graphs.
 * Nodes and edges are on separate lines, therefore a node and its outgoing edges may be on separate lines.
 * Small files that are fast to create and convert.
 
-`graph.linear` layout,
+`graph.csv` layout,
 
 .. code-block:: text
 	<node info>
@@ -74,7 +74,7 @@ The following keyword arguments can be added when creating the decoder,
 e.g. the same graph as above with init fully filled in,
 
 .. code-block:: python
-	LinearDecoder(
+	EdgeListDecoder(
 		default_node_type=1,
 		default_node_weight=.5,
 		default_node_feature_types=["int32", "float32"],
@@ -85,7 +85,7 @@ e.g. the same graph as above with init fully filled in,
 		default_edge_feature_lens=[[3, 0]],
 	)
 
-graph.linear,
+graph.csv,
 
 .. code-block:: text
 	0 -1 1 1 1 1.1 1.1

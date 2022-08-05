@@ -25,7 +25,7 @@ def download_file(url: str, data_dir: str, name: str):
         urllib.request.urlretrieve(url, fname)
 
 
-def get_linear_node(
+def get_edge_list_node(
     node_id: int,
     node_type: str,
     flt_feat: List[float],
@@ -33,7 +33,7 @@ def get_linear_node(
     train_neighbors: Set[int],
     test_neighbors: Set[int],
 ) -> str:
-    """Return node with Linear format.
+    """Return node with edge_list format.
 
     node type: 0(train), 1(test)
     use default value for node_weight(1.0), neighbor weight(1.0)
@@ -120,16 +120,18 @@ class Dataset(Client):
             data_dir, train_node_ratio, random_selection
         )
 
-        # build graph - Linear
-        graph_file = os.path.join(data_dir, "graph.linear")
-        self._write_linear_graph(nodes, node_types, train_adjs, test_adjs, graph_file)
+        # build graph - edge_list
+        graph_file = os.path.join(data_dir, "graph.csv")
+        self._write_edge_list_graph(
+            nodes, node_types, train_adjs, test_adjs, graph_file
+        )
 
-        # convert graph: Linear -> Binary
+        # convert graph: edge_list -> Binary
         convert.MultiWorkersConverter(
             graph_path=graph_file,
             partition_count=1,
             output_dir=data_dir,
-            decoder=decoders.LinearDecoder(),
+            decoder=decoders.EdgeListDecoder(),
         ).convert()
 
         # write training/testing nodes.
@@ -171,7 +173,7 @@ class Dataset(Client):
         logging.info("* classes {}".format(set([node[1] for _, node in nodes.items()])))
         logging.info("*******************************************")
 
-    def _write_linear_graph(
+    def _write_edge_list_graph(
         self,
         nodes: Dict[int, Tuple[List[float], int]],
         node_types: Dict[int, str],
@@ -181,7 +183,7 @@ class Dataset(Client):
     ):
         with open(graph_file, "w") as fout:
             for nid, info in nodes.items():
-                tmp = get_linear_node(
+                tmp = get_edge_list_node(
                     nid,
                     node_types[nid],
                     info[0],

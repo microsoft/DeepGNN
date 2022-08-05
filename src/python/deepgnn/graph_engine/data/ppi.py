@@ -122,7 +122,7 @@ class PPI(Client):
         self.FEATURE_DIM = feats.shape[1]
         self.NUM_CLASSES = len(class_map[0])
 
-        graph_file = os.path.join(data_dir, "graph.linear")
+        graph_file = os.path.join(data_dir, "graph.csv")
         with open(graph_file, "w") as fout:
             for i in range(len(nodes)):
                 nid = nodes[i]
@@ -131,7 +131,7 @@ class PPI(Client):
                 label = class_map[nid]
                 assert type(nfeat) == list and type(nfeat[0]) == float
                 assert type(label) == list
-                tmp = self._to_linear_node(
+                tmp = self._to_edge_list_node(
                     nid,
                     ntype,
                     nfeat,
@@ -143,12 +143,12 @@ class PPI(Client):
                 fout.write("\n")
 
         self._write_node_files(data_dir, nodes, nodes_type)
-        # convert graph: Linear -> Binary
+        # convert graph: edge_list -> Binary
         convert.MultiWorkersConverter(
             graph_path=graph_file,
             partition_count=1,
             output_dir=data_dir,
-            decoder=decoders.LinearDecoder(),
+            decoder=decoders.EdgeListDecoder(),
         ).convert()
 
         return data_dir
@@ -168,7 +168,7 @@ class PPI(Client):
                 elif ntype == 2:
                     fout_test.write(str(nid) + "\n")
 
-    def _to_linear_node(
+    def _to_edge_list_node(
         self,
         node_id: int,
         node_type: int,
