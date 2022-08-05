@@ -791,7 +791,7 @@ TEST(DistributedTest, NodeSparseFeaturesMultipleTypesNeighborsSpreadAcrossPartit
     std::vector<int32_t> f2_data = {6, 3, 3, 0, 8, 0, 9, 0, 4, 0, 3, 0, 2, 0, 5, 42};
     auto start = reinterpret_cast<float *>(f0_data.data());
     std::vector<std::vector<float>> f0 = {std::vector<float>(start, start + f0_data.size())};
-    start = reinterpret_cast<float *>(f2_data.data());
+    start = reinterpret_cast<float *>(f1_data.data());
     std::vector<std::vector<float>> f1 = {std::vector<float>(start, start + f1_data.size())};
     start = reinterpret_cast<float *>(f2_data.data());
     std::vector<std::vector<float>> f2 = {std::vector<float>(start, start + f2_data.size())};
@@ -812,9 +812,9 @@ TEST(DistributedTest, NodeSparseFeaturesMultipleTypesNeighborsSpreadAcrossPartit
     c.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
     EXPECT_EQ(indices.size(), 1);
     EXPECT_EQ(data.size(), 1);
-    EXPECT_EQ(std::vector<int64_t>({0, 1, 13, 42, 1, 3, 8, 9, 1, 4, 3, 2}), indices.front());
+    EXPECT_EQ(std::vector<int64_t>({0, 1, 14, 20, 1, 1, 13, 42, 2, 3, 8, 9, 2, 4, 3, 2}), indices.front());
     auto tmp = reinterpret_cast<int32_t *>(data.front().data());
-    EXPECT_EQ(std::vector<int32_t>({1, 5, 42}), std::vector<int32_t>(tmp, tmp + 3));
+    EXPECT_EQ(std::vector<int32_t>({1, 1, 5, 42}), std::vector<int32_t>(tmp, tmp + 4));
     EXPECT_EQ(std::vector<int64_t>({3}), dimensions);
 }
 
