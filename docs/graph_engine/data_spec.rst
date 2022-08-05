@@ -12,7 +12,7 @@ DeepGNN supports both homogeneous and heterogeneous graphs. Nodes and Edges supp
 Graph Data Format
 *****************
 
-DeepGNN supports two file formats: JSON and TSV.
+DeepGNN supports three file formats: Linear, JSON and TSV.
 Users can generate a graph in either format then our pipeline will convert it into binary for training and inference.
 DeepGNN also supports writing custom decoders, see [the decoders file](https://github.com/microsoft/DeepGNN/blob/main/src/python/deepgnn/graph_engine/snark/decoders.py).
 Just inheret the base class Decoder, overwrite the decode function and pass the new decoder as an argument to the converter or dispatcher.
@@ -24,10 +24,12 @@ Just inheret the base class Decoder, overwrite the decode function and pass the 
 3. `TSV <#tsv-format>`_: Homogeneous graph only.
 
 Linear Format
-===========
+=============
 
-Linear format is most directly what is given to binary writers, it supports nodes and their outgoing edges in
-different partitions and is smaller and faster to convert.
+The linear format,
+* Supports heterogeneous and homegeneous graphs.
+* Nodes and edges are on separate lines, therefore a node and its outgoing edges may be on separate lines.
+* Small files that are fast to create and convert.
 
 `graph.linear` layout,
 
@@ -42,7 +44,7 @@ edge_info: src dst edge_type edge_weight <features>
 features[dense]: dtype_name length v1 v2 ... dtype_name2 length2 v1 v2 ...
 features[sparse with 2 dim coordinates vector]: dtype_name values.size,coords.shape[1] c1 c2 ... v1 v2 ...
 features[sparse with 1 dim coordinates vector]: dtype_name values.size,0 c1 c2 ... v1 v2 ...
-* Nodes must be sorted by node_id, edges sorted by src and then dst.
+* Nodes must be sorted by node_id, edges sorted by type first then dst.
 
 Here is a concrete example,
 A graph with 2 nodes {0, 1} each with type = 1, weight = .5 and
