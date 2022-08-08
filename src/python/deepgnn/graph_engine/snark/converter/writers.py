@@ -75,7 +75,8 @@ class BinaryWriter:
 
         args:
             data: Iterable[(int, int, int, float, list)] Data for a node first, then all of
-                its edges in order of dst. Each entry for a node/edge is,
+                its edges in order of type then dst. All of the node's outgoing edges do not need to go to the same writer.
+                Each entry for a node/edge is,
                 (node_id/src, -1/dst, type, weight, [ndarray for each feature vector or None in order of feature index]).
         """
         for src, dst, typ, weight, features in data:
