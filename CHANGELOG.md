@@ -9,9 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Support nodes and their outgoing edges on different partitions.
 
-* Add new converter input format "EdgeList" with EdgeListDecoder. Format has nodes and edges on separate lines, is smaller and faster to convert.
+- Add new converter input format "EdgeList" with EdgeListDecoder. Format has nodes and edges on separate lines, is smaller and faster to convert.
 
-* Bugfix: fill dimensions with 0 for missing features.
+### Fixed
+- Fill dimensions with 0 for missing features.
 
 ## [0.1.54] - 2022-08-04
 

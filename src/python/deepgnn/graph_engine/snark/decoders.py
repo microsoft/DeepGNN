@@ -5,7 +5,7 @@
 import abc
 import json
 import csv
-from typing import TypeVar, Iterator, Tuple, Optional, List
+from typing import TypeVar, Iterator, Tuple, Optional, List, Union
 import numpy as np
 
 
@@ -141,7 +141,9 @@ class EdgeListDecoder(Decoder):
         )
         self.n_edge_feature = len(self.edge_feature_types)
 
-    def _get_feature(self, key: str, length: List[int], data: Iterator):
+    def _get_feature(
+        self, key: str, length: List[int], data: Iterator
+    ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray], None]:
         if not length[0]:
             return None
 
@@ -197,12 +199,11 @@ class EdgeListDecoder(Decoder):
         if weight is None:
             weight = float(next(data))
 
-        features = []
-        n_features = 0
+        features: List[Union[np.ndarray, Tuple[np.ndarray, np.ndarray], None]] = []
         while True:
-            if default_feature_len > n_features:
-                key = item_feature_types[n_features]
-                length = item_feature_lens[n_features]
+            if default_feature_len > len(features):
+                key = item_feature_types[len(features)]
+                length = item_feature_lens[len(features)]
             else:
                 key, length = None, None  # type: ignore
 
@@ -220,7 +221,6 @@ class EdgeListDecoder(Decoder):
                 break
 
             features.append(self._get_feature(key, length, data))
-            n_features += 1
 
         yield src, dst, typ, weight, features
 
