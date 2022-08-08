@@ -1070,6 +1070,11 @@ def test_edge_index_inverted_types(graph_with_inverse_edge_type_order):
         assert result[40:44] == (3).to_bytes(4, byteorder=sys.byteorder)
         assert result[44:48] == struct.pack("f", 1.0)
 
+        assert result[48:56] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[56:64] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[64:68] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[68:72] == struct.pack("f", -1)
+
 
 if __name__ == "__main__":
     sys.exit(
