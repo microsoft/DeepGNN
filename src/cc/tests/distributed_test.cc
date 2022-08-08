@@ -629,8 +629,11 @@ std::pair<ServerList, std::shared_ptr<snark::GRPCClient>> CreateMultiServerSplit
         .m_weight = 1.0f,
         .m_neighbors{std::vector<TestGraph::NeighborRecord>{{3, 0, 1.0f}, {4, 0, 1.0f}, {5, 1, 1.0f}}}});
     TestGraph::MemoryGraph m2;
-    m2.m_nodes.push_back(TestGraph::Node{
-        .m_id = 1, .m_type = 1, .m_neighbors{std::vector<TestGraph::NeighborRecord>{{6, 1, 1.5f}, {7, 1, 3.0f}}}});
+    m2.m_nodes.push_back(
+        TestGraph::Node{.m_id = 1,
+                        .m_type = 1,
+                        .m_weight = 1.0f,
+                        .m_neighbors{std::vector<TestGraph::NeighborRecord>{{6, 1, 1.5f}, {7, 1, 3.0f}}}});
     std::vector<TestGraph::MemoryGraph> test_graphs = {m1, m2};
 
     for (size_t server = 0; server < num_servers; ++server)
@@ -681,10 +684,10 @@ TEST(DistributedTest, UniformNeighborSampleMultipleTypesNeighborsSpreadAcrossPar
     std::vector<snark::Type> neighbor_types(count * nodes.size(), -1);
     std::vector<uint64_t> total_neighbor_counts(nodes.size());
 
-    c.UniformSampleNeighbor(true, 17, std::span(nodes), std::span(types), count, std::span(neighbor_nodes),
+    c.UniformSampleNeighbor(false, 17, std::span(nodes), std::span(types), count, std::span(neighbor_nodes),
                             std::span(neighbor_types), 0, 2);
-    EXPECT_EQ(std::vector<snark::NodeId>({7, 4, 0, 0, 0, 0}), neighbor_nodes);
-    EXPECT_EQ(std::vector<snark::Type>({1, 0, 2, 2, 2, 2}), neighbor_types);
+    EXPECT_EQ(std::vector<snark::NodeId>({7, 3, 7, 5, 7, 5}), neighbor_nodes);
+    EXPECT_EQ(std::vector<snark::Type>({1, 0, 1, 1, 1, 1}), neighbor_types);
 }
 
 std::pair<ServerList, std::shared_ptr<snark::GRPCClient>> CreateMultiServerSplitFeaturesEnvironment(

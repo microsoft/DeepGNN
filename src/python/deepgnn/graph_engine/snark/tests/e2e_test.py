@@ -1729,6 +1729,8 @@ def test_multi_partition_metadata():
     assert cl.meta.edge_type_count == 2
     assert cl.meta._node_feature_count == 2  # p0 0 features, p1 2 features
     assert cl.meta._edge_feature_count == 2
+    v = cl.node_features(np.array([1]), np.array([[1, 2]]), dtype=np.float32)
+    npt.assert_almost_equal(v, np.array([[-0.03, -0.04]]))
 
 
 if __name__ == "__main__":
