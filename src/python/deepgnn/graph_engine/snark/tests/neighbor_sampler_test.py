@@ -273,6 +273,8 @@ def test_neighbor_count_remote_client_single_partition(multi_partition_graph_dat
     print(output_node_counts)
 
     npt.assert_array_equal(output_node_counts, [0, 1, 1])
+    s1.reset()
+    s2.reset()
 
 
 def test_neighbor_count_remote_client_multiple_partitions(multi_partition_graph_data):
@@ -285,6 +287,8 @@ def test_neighbor_count_remote_client_multiple_partitions(multi_partition_graph_
     )
 
     npt.assert_array_equal(output_node_counts, [0, 1, 1])
+    s1.reset()
+    s2.reset()
 
 
 def test_neighbor_count_remote_client_handle_empty_list(multi_partition_graph_data):
@@ -297,6 +301,8 @@ def test_neighbor_count_remote_client_handle_empty_list(multi_partition_graph_da
     )
 
     npt.assert_array_equal(output_node_counts, [0])
+    s1.reset()
+    s2.reset()
 
 
 def test_neighbor_count_remote_client_nonmatching_edge_type(multi_partition_graph_data):
@@ -310,6 +316,8 @@ def test_neighbor_count_remote_client_nonmatching_edge_type(multi_partition_grap
     )
 
     npt.assert_array_equal(output_node_counts, [0])
+    s1.reset()
+    s2.reset()
 
 
 def test_neighbor_count_remote_client_nonexistent_node(multi_partition_graph_data):
@@ -322,6 +330,8 @@ def test_neighbor_count_remote_client_nonexistent_node(multi_partition_graph_dat
     )
 
     npt.assert_array_equal(output_node_counts, [0])
+    s1.reset()
+    s2.reset()
 
 
 def test_neighbor_sampling_after_reset(multi_partition_graph_data):
