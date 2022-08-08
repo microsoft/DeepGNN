@@ -99,11 +99,10 @@ load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
 grpc_extra_deps()
 
 http_archive(
-    # com_google_absl is used by grpc, but we want the latest version for c++20 compat.
-    name = "snark_com_google_absl",
-    sha256 = "a4567ff02faca671b95e31d315bab18b42b6c6f1a60e91c6ea84e5a2142112c2",
-    strip_prefix = "abseil-cpp-20211102.0",
-    urls = ["https://github.com/abseil/abseil-cpp/archive/refs/tags/20211102.0.zip"],
+    name = "com_google_absl",
+    sha256 = "5b7640be0e119de1a9d941cb6b2607d76978eba5720196f1d4fc6de0421d2241",
+    strip_prefix = "abseil-cpp-20220623.0",
+    urls = ["https://github.com/abseil/abseil-cpp/archive/refs/tags/20220623.0.zip"],
 )
 
 http_archive(
