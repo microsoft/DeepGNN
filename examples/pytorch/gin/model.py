@@ -1,8 +1,3 @@
-from cProfile import label
-from multiprocessing import pool
-from multiprocessing.sharedctypes import Value
-from optparse import Option
-from sys import float_info
 from typing import Optional
 
 import torch
@@ -11,14 +6,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from deepgnn.graph_engine import Graph, FeatureType
-from deepgnn.pytorch.common import MeanAggregator, BaseMetric, MRR
+from deepgnn.pytorch.common import BaseMetric, MRR
 from deepgnn.pytorch.modeling import BaseSupervisedModel
 from deepgnn.pytorch.encoding import FeatureEncoder
-from deepgnn import get_logger
+# from deepgnn import get_logger
 
 class MLP(nn.Module):
     """Simple MLP with linear-output model."""
-
+#
     def __init__(
         self,
         num_layers: int,
@@ -32,10 +27,8 @@ class MLP(nn.Module):
         if num_layers < 1:
             raise ValueError("Num layers should be > 0")
         elif num_layers == 1:
-            # Single linear model
             self.linear = nn.Linear(input_dim, output_dim)
         else:
-            # Multi-layer model
             self.linears = torch.nn.ModuleList()
             self.batch_norms = torch.nn.ModuleList()
 
@@ -60,19 +53,6 @@ class MLP(nn.Module):
 
 class GIN(BaseSupervisedModel):
     """Simple supervised GIN model."""
-
-    '''
-            num_layers: number of layers in the neural networks (INCLUDING the input layer)
-            num_mlp_layers: number of layers in mlps (EXCLUDING the input layer)
-            input_dim: dimensionality of input features
-            hidden_dim: dimensionality of hidden units at ALL layers
-            output_dim: number of classes for prediction
-            final_dropout: dropout ratio on the final linear layer
-            learn_eps: If True, learn epsilon to distinguish center nodes from neighboring nodes. If False, aggregate neighbors and center nodes altogether. 
-            neighbor_pooling_type: how to aggregate neighbors (mean, average, or max)
-            graph_pooling_type: how to aggregate entire nodes in a graph (mean, average)
-            device: which device to use
-        '''
 
     def __init__(
         self, 
@@ -141,44 +121,11 @@ class GIN(BaseSupervisedModel):
             else:
                 self.linears_prediction.append(nn.Linear(hidden_dim, output_dim))
     
-    def next_layer(self, h, layer, context):
+    def next_layer(self, h, layer, features, nb_counts, num_nodes):
 
-        # Sum Pooling
-        # for i in range(len())
-        pooled = torch.zeros(0)
-        for i in range(len(context['nb_counts'][0])):
-            num_neighbors = context['nb_counts'][0][i].int()
-            sum_features = torch.sum(context['features'][0][num_neighbors])
-
-        # Average Pooling
-        if self.neighbor_pooling_type == "average":
-            degree = sum(context['label'])
-            pooled = pooled / degree
-        
-
-        #representation of neighboring and center nodes 
-        pooled_rep = self.mlps[layer](pooled)
-        h = self.batch_norms[layer](pooled_rep)
-        h = F.relu(h)
-        return h
-
-    def get_score(self, context: dict):
-        num_nodes = len(context['nb_counts'][0])
+        pooled_h = h
         offset = 0
 
-        # Read from context, condense vector
-        nb_counts = context["nb_counts"].squeeze()
-        features = context["features"].squeeze()
-
-        # get_logger().info(str(features.shape))
-
-        # Allocate memory for pooling matrix 
-        # get_logger().info(str(num_nodes))
-        # get_logger().info(str(self.feature_dim))
-
-        pooled_h = torch.zeros(num_nodes, self.feature_dim)
-
-        # Loop across all nodes in mini-batch
         for node_id in range(num_nodes):
             num_neighbors = nb_counts[node_id].int().item()
 
@@ -189,10 +136,30 @@ class GIN(BaseSupervisedModel):
             # Move offset forward to read next set of nb features
             offset += (num_neighbors + 1)
 
-            # get_logger().info(str(sum_features.shape))
+            # Write to pooled matrix
+            if self.neighbor_pooling_type == "average":
+                sum_features /= num_neighbors
 
             # Write to pooled matrix
             pooled_h[node_id] = sum_features
+    
+        pooled_rep = self.mlps[layer](pooled_h)
+        h = self.batch_norms[layer](pooled_rep)
+
+        # Non-linearity
+        h = F.relu(h)
+
+        return pooled_h
+
+    def get_score(self, context: dict):
+        num_nodes = len(context['nb_counts'][0])
+        nb_counts = context["nb_counts"].squeeze()
+        features = context["features"].squeeze()
+
+        pooled_h = torch.zeros(num_nodes, self.feature_dim)
+
+        for layer in range(self.num_layers - 1):
+            pooled_h = self.next_layer(features, pooled_h, layer, nb_counts, num_nodes)
 
         score = 0
         for layer in range(self.num_layers):
@@ -204,19 +171,11 @@ class GIN(BaseSupervisedModel):
         scores: torch.Tensor = self.get_score(context)
         labels = context["label"].long().squeeze().clone().detach()
 
-        # get_logger().info(str(scores))
-        # get_logger().info(str(scores.shape))
-        # get_logger().info('-------------------')
-        # get_logger().info(str(labels))
-        # get_logger().info(str(labels.shape))
-
-
-        # Calculate cross-entropy loss
         loss = self.xent(scores, labels)
 
         # Take argmax to fetch class indices
         scores = scores.argmax(dim=1)
-
+        
         return (loss, scores, labels)
 
     def metric_name(self):
@@ -226,12 +185,7 @@ class GIN(BaseSupervisedModel):
     def query(self, graph: Graph, inputs: np.array):
         """Fetch training data from graph."""
         context = {"inputs": inputs}
-
-        # context['neighbors'] = graph.neighbors(
-        #     context["inputs"],
-        #     np.array([0])
-        # )[0]
-
+        
         context['neighbors'] = graph.sample_neighbors(
             nodes = context['inputs'],
             edge_types = np.array([0, 1, 2, 3]),
@@ -263,6 +217,3 @@ class GIN(BaseSupervisedModel):
         )
 
         return context
-
-    
-
