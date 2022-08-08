@@ -44,9 +44,9 @@ def get_edge_list_node(
 
     output = ""
     output += f"{node_id},-1,{ntype},1.0,float32,{len(flt_feat)},{','.join([str(v) for v in flt_feat])},float32,1,{label}\n"
-    for nb in train_neighbors:
+    for nb in sorted(train_neighbors):
         output += f"{node_id},{nb},0,1.0\n"
-    for nb in test_neighbors:
+    for nb in sorted(test_neighbors):
         output += f"{node_id},{nb},1,1.0\n"
     return output
 
