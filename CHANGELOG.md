@@ -6,7 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-* Support nodes and their outgoing edges on different partitions.
+### Added
+- Support nodes and their outgoing edges on different partitions.
 
 ## [0.1.54] - 2022-08-04
 
