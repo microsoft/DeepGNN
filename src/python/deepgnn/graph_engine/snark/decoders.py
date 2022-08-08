@@ -141,6 +141,29 @@ class EdgeListDecoder(Decoder):
         )
         self.n_edge_feature = len(self.edge_feature_types)
 
+    def _get_feature(self, key: str, length: List[int], data: Iterator):
+        if not length[0]:
+            return None
+
+        if len(length) > 1:
+            values_len, coords_dim = length
+            return (
+                np.fromiter(
+                    data, count=values_len * max(coords_dim, 1), dtype=np.int64
+                ).reshape((values_len, coords_dim) if coords_dim else values_len),
+                np.fromiter(
+                    data,
+                    count=values_len,
+                    dtype=key,
+                ),
+            )
+
+        length_single = length[0]
+        if length_single == 1 and key == "binary_feature":
+            return next(data)  # type: ignore
+        else:
+            return np.fromiter(data, count=length_single, dtype=key)  # type: ignore
+
     def decode(self, line: str) -> Iterator[Tuple[int, int, int, float, list]]:
         """Convert text line into a node and edge iterator.
 
@@ -196,33 +219,7 @@ class EdgeListDecoder(Decoder):
             except StopIteration:
                 break
 
-            if len(length) > 1:
-                values_len, coords_dim = length
-                if not values_len:
-                    value = None
-                else:
-                    value = (
-                        np.fromiter(
-                            data, count=values_len * max(coords_dim, 1), dtype=np.int64
-                        ).reshape(
-                            (values_len, coords_dim) if coords_dim else values_len
-                        ),
-                        np.fromiter(
-                            data,
-                            count=values_len,
-                            dtype=key,
-                        ),
-                    )
-            else:
-                length_single = length[0]
-                if not length_single:
-                    value = None
-                elif length_single == 1 and key == "binary_feature":
-                    value = next(data)  # type: ignore
-                else:
-                    value = np.fromiter(data, count=length_single, dtype=key)  # type: ignore
-
-            features.append(value)
+            features.append(self._get_feature(key, length, data))
             n_features += 1
 
         yield src, dst, typ, weight, features
