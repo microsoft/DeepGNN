@@ -178,11 +178,11 @@ class PPI(Client):
         train_removed_neighbor: List[int],
     ):
         output = ""
-        output += f"-1 {node_id} {node_type} 1.0 float32 {len(label)} {' '.join([str(v) for v in label])} float32 {len(feat)} {' '.join([str(v) for v in feat])}\n"
+        output += f"{node_id},-1,{node_type},1.0,float32,{len(label)},{','.join([str(v) for v in label])},float32,{len(feat)},{','.join([str(v) for v in feat])}\n"
         for nb in train_neighbor:
-            output += f"{node_id} {nb} 0 1.0\n"
+            output += f"{node_id},{nb},0,1.0\n"
         for nb in train_removed_neighbor:
-            output += f"{node_id} {nb} 1 1.0\n"
+            output += f"{node_id},{nb},1,1.0\n"
         return output
 
 

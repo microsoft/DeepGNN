@@ -287,9 +287,9 @@ class CitationGraph(Client):
         assert type(label) is int
         ntype = self.NODE_TYPE_ID[node_type]
         output = ""
-        output += f"-1 {node_id} {ntype} 1.0 float32 {len(flt_feat)} {' '.join([str(v) for v in flt_feat])} float32 1 {label}\n"
+        output += f"{node_id},-1,{ntype},1.0,float32,{len(flt_feat)},{','.join([str(v) for v in flt_feat])},float32,1,{label}\n"
         for nb in neighbors:
-            output += f"{node_id} {nb} 0 1.0\n"
+            output += f"{node_id},{nb},0,1.0\n"
         return output
 
     def _write_node_files(self, node_types: List[str], train_file: str, test_file: str):
