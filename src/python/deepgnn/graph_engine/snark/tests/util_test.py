@@ -13,11 +13,12 @@ def json_to_edge_list_feature(features):
             return f"binary_feature,1,{f}"
         elif isinstance(f, tuple):
             coords, values = f
+            if values.size == 0:
+                return f"{values.dtype.name},0"
             if values.size == 1 and coords.size > 1:
                 coords = coords.reshape((1, -1))
             if len(coords.shape) == 1:
                 coordinates_str = ",".join(map(str, coords))
-                length = f"{coords.shape[0]}"
             else:
                 coordinates_str = ",".join((",".join(map(str, c)) for c in coords))
 

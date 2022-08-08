@@ -296,7 +296,7 @@ class JsonDecoder(Decoder):
         yield data["node_id"], -1, data["node_type"], data[
             "node_weight"
         ], self._pull_features(data)
-        for edge in data["edge"]:
+        for edge in sorted(data["edge"], key=lambda x: x["edge_type"]):
             yield edge["src_id"], edge["dst_id"], edge["edge_type"], edge[
                 "weight"
             ], self._pull_features(edge)
@@ -392,7 +392,7 @@ class TsvDecoder(Decoder):
             return
 
         neighbors = columns[4].split("|")
-        for n in neighbors:
+        for n in sorted(neighbors, key=lambda x: int(x.split(",")[1])):
             neighbor_columns = n.split(",")
             # make sure the destination id is valid
             assert len(neighbor_columns) > 0 and len(neighbor_columns[0]) > 0

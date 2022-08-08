@@ -578,6 +578,14 @@ def convert_features(features: list):
             output.append(feature)
         elif isinstance(feature, tuple):
             coordinates, values = feature
+            if (
+                coordinates is None
+                or len(coordinates) == 0
+                or values is None
+                or len(values) == 0
+            ):
+                output.append(None)
+                continue
             assert (
                 coordinates.shape[0] == len(values)
                 if len(values) > 1

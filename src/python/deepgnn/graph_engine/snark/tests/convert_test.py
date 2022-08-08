@@ -990,6 +990,87 @@ def test_edge_list_error_checking():
     next(gen)
 
 
+def graph_with_inverse_edge_type_order_json(folder):
+    data = open(os.path.join(folder, "graph.json"), "w+")
+    graph = [
+        {
+            "node_id": 9,
+            "node_type": 0,
+            "node_weight": 1,
+            "edge": [
+                {
+                    "src_id": 9,
+                    "dst_id": 1,
+                    "edge_type": 3,
+                    "weight": 1.0,
+                },
+                {
+                    "src_id": 9,
+                    "dst_id": 2,
+                    "edge_type": 0,
+                    "weight": 0.5,
+                },
+            ],
+        },
+    ]
+    for el in graph:
+        json.dump(el, data)
+        data.write("\n")
+    data.flush()
+    data.close()
+
+    return data.name
+
+
+def graph_with_inverse_edge_type_order_tsv(folder):
+    data = open(os.path.join(folder, "graph.tsv"), "w+")
+    data.write("9\t0\t1\tf:0 1;f:-0.01 -0.02\t1,3,1.0|2,0,0.5\n")
+    data.flush()
+    data.close()
+    return data.name
+
+
+@pytest.fixture(scope="module")
+def graph_with_inverse_edge_type_order(request):
+    workdir = tempfile.TemporaryDirectory()
+    if request.param == JsonDecoder:
+        data_name = graph_with_inverse_edge_type_order_json(workdir.name)
+    elif request.param == TsvDecoder:
+        data_name = graph_with_inverse_edge_type_order_tsv(workdir.name)
+    else:
+        raise ValueError("Unsupported format.")
+
+    yield data_name, request.param
+    workdir.cleanup()
+
+
+@pytest.mark.parametrize(
+    "graph_with_inverse_edge_type_order", [JsonDecoder, TsvDecoder], indirect=True
+)
+def test_edge_index_inverted_types(graph_with_inverse_edge_type_order):
+    output = tempfile.TemporaryDirectory()
+    data_name, decoder = graph_with_inverse_edge_type_order
+    convert.MultiWorkersConverter(
+        graph_path=data_name,
+        partition_count=1,
+        output_dir=output.name,
+        decoder=decoder(),
+    ).convert()
+    with open("{}/edge_{}_{}.index".format(output.name, 0, 0), "rb") as ei:
+        expected_size = 3 * 24  # 2 edges + last line as final close
+        result = ei.read(expected_size + 100)
+        assert len(result) == expected_size
+        assert result[0:8] == (2).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:20] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[20:24] == struct.pack("f", 0.5)
+
+        assert result[24:32] == (1).to_bytes(8, byteorder=sys.byteorder)
+        assert result[32:40] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[40:44] == (3).to_bytes(4, byteorder=sys.byteorder)
+        assert result[44:48] == struct.pack("f", 1.0)
+
+
 if __name__ == "__main__":
     sys.exit(
         pytest.main(

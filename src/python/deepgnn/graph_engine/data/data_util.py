@@ -43,11 +43,11 @@ def get_edge_list_node(
     ntype = 0 if node_type == "train" else 1
 
     output = ""
-    output += f"-1 {node_id} {ntype} 1.0 float32 {len(flt_feat)} {' '.join([str(v) for v in flt_feat])} float32 1 {label}\n"
+    output += f"{node_id},-1,{ntype},1.0,float32,{len(flt_feat)},{','.join([str(v) for v in flt_feat])},float32,1,{label}\n"
     for nb in train_neighbors:
-        output += f"{node_id} {nb} 0 1.0\n"
+        output += f"{node_id},{nb},0,1.0\n"
     for nb in test_neighbors:
-        output += f"{node_id} {nb} 1 1.0\n"
+        output += f"{node_id},{nb},1,1.0\n"
     return output
 
 

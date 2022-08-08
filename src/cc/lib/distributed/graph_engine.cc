@@ -123,10 +123,11 @@ grpc::Status GraphEngineServiceImpl::GetNodeFeatures(::grpc::ServerContext *cont
         size_t partition_count = m_counts[index];
         auto data = reinterpret_cast<uint8_t *>(response->mutable_feature_values()->data());
         bool found = false;
+        auto data_span = std::span(data + feature_offset, fv_size);
         for (size_t partition = 0; partition < partition_count && !found; ++partition, ++index)
         {
             found = m_partitions[m_partitions_indices[index]].GetNodeFeature(m_internal_indices[index], features,
-                                                                             std::span(data + feature_offset, fv_size));
+                                                                             data_span);
         }
         if (found)
         {
@@ -300,14 +301,15 @@ grpc::Status GraphEngineServiceImpl::GetNodeStringFeatures(::grpc::ServerContext
             continue;
         }
 
+        auto dims_span = dimensions.subspan(features_size * node_offset, features_size);
+
         auto index = internal_id->second;
         size_t partition_count = m_counts[index];
         bool found = false;
         for (size_t partition = 0; partition < partition_count && !found; ++partition, ++index)
         {
-            found = m_partitions[m_partitions_indices[index]].GetNodeStringFeature(
-                m_internal_indices[index], features, dimensions.subspan(features_size * node_offset, features_size),
-                values);
+            found = m_partitions[m_partitions_indices[index]].GetNodeStringFeature(m_internal_indices[index], features,
+                                                                                   dims_span, values);
         }
     }
 
