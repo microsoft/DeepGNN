@@ -364,10 +364,14 @@ def test_memory_graph_metadata(multi_partition_graph_data, storage_type):
 @pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_memory_graph_neighbors(multi_partition_graph_data, storage_type):
     cl = client.MemoryGraph(multi_partition_graph_data, [0, 1], storage_type)
-    cl.neighbors(
+    node_ids, weights, edge_types, result_counts = cl.neighbors(
         np.array([9, 0], dtype=np.int64),
         np.array([0, 1, 2], dtype=np.int32),
     )
+    npt.assert_equal(node_ids, np.array([0, 5], dtype=np.int64))
+    npt.assert_almost_equal(weights, np.array([0.5, 1.0], dtype=np.float32))
+    npt.assert_equal(edge_types, np.array([0, 1], dtype=np.int32))
+    npt.assert_equal(result_counts, np.array([1, 1], dtype=np.int64))
 
 
 @pytest.mark.parametrize(
@@ -1288,10 +1292,14 @@ def test_distributed_graph_neighbors(multi_partition_graph_data, storage_type):
         multi_partition_graph_data, [1], hostname=address[1], storage_type=storage_type
     )
     cl = client.DistributedGraph(address)
-    cl.neighbors(
+    node_ids, weights, edge_types, result_counts = cl.neighbors(
         np.array([9, 0], dtype=np.int64),
         np.array([0, 1, 2], dtype=np.int32),
     )
+    npt.assert_equal(node_ids, np.array([0, 5], dtype=np.int64))
+    npt.assert_almost_equal(weights, np.array([0.5, 1.0], dtype=np.float32))
+    npt.assert_equal(edge_types, np.array([0, 1], dtype=np.int32))
+    npt.assert_equal(result_counts, np.array([1, 1], dtype=np.int64))
 
 
 @pytest.mark.parametrize(
