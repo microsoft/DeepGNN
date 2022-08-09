@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+sudo apt-get update
 sudo apt-get install openjdk-8-jre
 export HADOOP_VERSION=hadoop-3.3.1
 wget -nc https://dlcdn.apache.org/hadoop/common/$HADOOP_VERSION/$HADOOP_VERSION.tar.gz
