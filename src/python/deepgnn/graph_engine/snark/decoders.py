@@ -175,7 +175,7 @@ class EdgeListDecoder(Decoder):
         Features being a list of dense features as ndarrays and sparse features as 2 tuples, coordinates and values.
         """
         if line == "":
-            return []
+            return
 
         data = iter(line.split(","))
 
