@@ -147,12 +147,13 @@ def build_json(g_list, train_idx, test_idx):
                 nbs[nb] = 1.0
 
             feats = g.node_features[node_id].tolist()
+            print(len(feats))
 
             node = {
                 "node_weight": 1.0,
                 "node_id": node_id,
                 "node_type": 1 if node_id in test_idx else 0,
-                "float_feature": {"0": [feats[0:len(feats) - 2]], "1": [feats[:-1]]},
+                "float_feature": {"0": [feats[0]], "1": [feats[1:]]},
                 "edge": [{
                     "src_id": node_id,
                     "dst_id": nb,
@@ -200,7 +201,7 @@ def seperate(graphs, fold_idx, seed):
 def _main():
 
     parser = argparse.ArgumentParser(description='Loading graphs to json for training/evaluation.')
-    parser.add_argument('--dataset', type=str, default="COLLAB")
+    parser.add_argument('--dataset', type=str, default="PROTEINS")
     args = parser.parse_args()
 
     # Build networkx graph from .txt file
