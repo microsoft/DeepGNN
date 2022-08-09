@@ -345,8 +345,6 @@ void Partition::GetNodeSparseFeature(uint64_t internal_node_id, std::span<const 
                             feature_string.c_str(), node_id_string.c_str());
             continue;
         }
-        assert(stored_size > 12); // minimum is 4 bytes to record there is a single index, actual index (8 bytes)
-                                  // and some data(>0 bytes).
         uint32_t indices_size = 0;
         auto indices_size_output = std::span(reinterpret_cast<uint8_t *>(&indices_size), 4);
         m_node_features->read(data_offset, indices_size_output.size(), std::begin(indices_size_output), file_ptr);
