@@ -1,4 +1,7 @@
+from multiprocessing import pool
 from typing import Optional
+
+from deepgnn.logging_utils import get_logger
 
 import torch
 import numpy as np
@@ -58,7 +61,7 @@ class GIN(BaseSupervisedModel):
         self, 
         num_layers: int, 
         num_mlp_layers: int, 
-        edge_type: np.ndarray,
+        edge_type: np.array,
         input_dim:int,
         label_idx: int,
         label_dim: int,
@@ -127,6 +130,7 @@ class GIN(BaseSupervisedModel):
         offset = 0
 
         for node_id in range(num_nodes):
+            # get_logger().info(str(node_id))
             num_neighbors = nb_counts[node_id].int().item()
 
             # Aggregate and sum features across all neighbors 
@@ -143,11 +147,11 @@ class GIN(BaseSupervisedModel):
             # Write to pooled matrix
             pooled_h[node_id] = sum_features
     
-        pooled_rep = self.mlps[layer](pooled_h)
-        h = self.batch_norms[layer](pooled_rep)
+        # pooled_rep = self.mlps[layer](pooled_h)
+        # new_h = self.batch_norms[layer](pooled_rep)
 
         # Non-linearity
-        h = F.relu(h)
+        # new_h = F.relu(pooled_h)
 
         return pooled_h
 
@@ -156,13 +160,21 @@ class GIN(BaseSupervisedModel):
         nb_counts = context["nb_counts"].squeeze()
         features = context["features"].squeeze()
 
-        pooled_h = torch.zeros(num_nodes, self.feature_dim)
+
+        pooled_h = features
+        hidden_rep = [pooled_h]
+        # get_logger().info("Features dim: " + str(features.shape))
 
         for layer in range(self.num_layers - 1):
-            pooled_h = self.next_layer(features, pooled_h, layer, nb_counts, num_nodes)
+            pooled_h = self.next_layer(pooled_h, layer, features, nb_counts, num_nodes)
+            hidden_rep.append(pooled_h)
 
         score = 0
-        for layer in range(self.num_layers):
+        # for layer in range(self.num_layers):
+        #     score += F.dropout(self.linears_prediction[layer](pooled_h), self.final_dropout, training = self.training)
+
+        for layer, pooled_h in enumerate(hidden_rep):
+            # pooled_h = torch.spmm(graph_pool, h)
             score += F.dropout(self.linears_prediction[layer](pooled_h), self.final_dropout, training = self.training)
 
         return score
@@ -188,20 +200,20 @@ class GIN(BaseSupervisedModel):
         
         context['neighbors'] = graph.sample_neighbors(
             nodes = context['inputs'],
-            edge_types = np.array([0, 1, 2, 3]),
+            edge_types = np.array(self.edge_type),
             count = 10,
             strategy = "randomwithoutreplacement"
         )[0]
 
-        context['nb_counts'] = graph.neighbor_count(
-            nodes = context['inputs'],
-            edge_types = np.array([0]),
-        ).astype(float)
+        # context['nb_counts'] = graph.neighbor_count(
+        #     nodes = context['inputs'],
+        #     edge_types = np.array(self.edge_type),
+        # ).astype(float)
 
-        # context['nb_counts'] = graph.neighbors(
-        #     context["inputs"],
-        #     np.array([0])
-        # )[3].astype(float)
+        context['nb_counts'] = graph.neighbors(
+            context["inputs"],
+            np.array([0])
+        )[3].astype(float)
 
         context["label"] =  graph.node_features(
             context["inputs"],

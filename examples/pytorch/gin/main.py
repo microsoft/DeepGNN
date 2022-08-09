@@ -28,7 +28,7 @@ criterion = nn.CrossEntropyLoss()
 def init_args(parser: argparse.Namespace):
     group = parser.add_argument_group("GIN Parameters")
     group.add_argument("--algo", type=str, default="supervised")
-    group.add_argument("--edge_type", type=np.ndarray, default=np.ndarray([]))
+    group.add_argument("--edge_type", type=np.array, default=np.array([]))
     group.add_argument("--num_classes", type=int, default=2)
 
 

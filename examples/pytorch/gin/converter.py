@@ -33,7 +33,6 @@ class S2VGraph(object):
         self.neighbors = []
         self.node_features = 0
         self.edge_mat = 0
-
         self.max_neighbor = 0
 
 def convert_data(dataset, degree_as_tag):
@@ -138,22 +137,28 @@ def build_json(g_list, train_idx, test_idx):
 
     nodes = []
     data = ""
+    idx = 0
     for g in g_list:
+        print()
+        label = g.label
         # Fetch networkx graph from SV2Graph object
+        # 3, 7, 9
+        # 1, 2, 3
         for node_id in g.g:
+            print(node_id)
             # Fetch and set weights for neighbors
             nbs = {}
             for nb in nx.neighbors(g.g, node_id):
                 nbs[nb] = 1.0
 
             feats = g.node_features[node_id].tolist()
-            print(len(feats))
+            # print(len(feats))
 
             node = {
                 "node_weight": 1.0,
                 "node_id": node_id,
-                "node_type": 1 if node_id in test_idx else 0,
-                "float_feature": {"0": [feats[0]], "1": [feats[1:]]},
+                "node_type": 0,
+                "float_feature": {"0": feats, "1": label},
                 "edge": [{
                     "src_id": node_id,
                     "dst_id": nb,
@@ -165,6 +170,7 @@ def build_json(g_list, train_idx, test_idx):
             if node_id not in nodes:
                 data += json.dumps(node) + "\n"
                 nodes.append(node_id)
+            idx += 1
 
     return data
 
@@ -184,7 +190,7 @@ def seperate(graphs, fold_idx, seed):
                 labels.append(label)
 
     idx_list = []
-    print(len(labels))
+    # print(len(labels))
     # print(len(nodes))
     # nodes = list(nodes)
 
@@ -201,14 +207,13 @@ def seperate(graphs, fold_idx, seed):
 def _main():
 
     parser = argparse.ArgumentParser(description='Loading graphs to json for training/evaluation.')
-    parser.add_argument('--dataset', type=str, default="PROTEINS")
+    parser.add_argument('--dataset', type=str, default="MUTAG")
     args = parser.parse_args()
 
     # Build networkx graph from .txt file
     g_list = convert_data(args.dataset, True)[0]
 
-    train_idx, test_idx = seperate(g_list, 4, 123)
-
+    train_idx, test_idx = seperate(g_list, 0, 123)
 
     # Build json data from networkx and node features
     data = build_json(g_list, train_idx, test_idx)
