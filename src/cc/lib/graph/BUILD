@@ -37,7 +37,7 @@ cc_library(
     deps = [
         "@boost//:random",
         "@com_github_google_glog//:glog",
-        "@snark_com_google_absl//absl/container:flat_hash_map",
-        "@snark_com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/container:flat_hash_set",
     ],
 )
