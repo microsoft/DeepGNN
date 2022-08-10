@@ -838,7 +838,7 @@ TEST(GraphTest, StatisticalNeighborSampleMultipleTypesNeighborsSpreadAcrossParti
         }
     }
 
-    //EXPECT_EQ(std::vector<size_t>({0, 0, 0, 0, 0, 9965, 9908, 10127, 0}), sample_counts);
+    // EXPECT_EQ(std::vector<size_t>({0, 0, 0, 0, 0, 9965, 9908, 10127, 0}), sample_counts);
 }
 
 TEST(GraphTest, UniformNeighborSampleMultipleTypesNeighborsSpreadAcrossPartitions)
