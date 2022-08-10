@@ -206,15 +206,15 @@ class GIN(BaseSupervisedModel):
             strategy = "randomwithoutreplacement"
         )[0]
 
-        # context['nb_counts'] = graph.neighbor_count(
-        #     nodes = context['inputs'],
-        #     edge_types = np.array(self.edge_type),
-        # ).astype(float)
+        context['nb_counts'] = graph.neighbor_count(
+            nodes = context['inputs'],
+            edge_types = np.array(self.edge_type),
+        ).astype(float)
 
-        context['nb_counts'] = graph.neighbors(
-            context["inputs"],
-            np.array([0])
-        )[3].astype(float)
+        # context['nb_counts'] = graph.neighbors(
+        #     context["inputs"],
+        #     np.array(self.edge_type)
+        # )[3].astype(float)
 
         context["label"] =  graph.node_features(
             context["inputs"],

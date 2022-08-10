@@ -15,8 +15,6 @@ from deepgnn.graph_engine.snark.decoders import JsonDecoder
 from deepgnn.graph_engine.snark.decoders import DecoderType
 import deepgnn.graph_engine.snark.client as client
 
-
-
 class S2VGraph(object):
     def __init__(self, g, label, node_tags=None, node_features=None):
         '''
@@ -171,7 +169,7 @@ def build_json(g_list, train_idx, test_idx):
                 }
                 for nb in nx.neighbors(g.g, node_id)],
             }
-            
+
             data += json.dumps(node) + "\n"
             nodes.append(node_id)
 
@@ -210,7 +208,7 @@ def seperate(graphs, fold_idx, seed):
 def _main():
 
     parser = argparse.ArgumentParser(description='Loading graphs to json for training/evaluation.')
-    parser.add_argument('--dataset', type=str, default="MUTAG")
+    parser.add_argument('--dataset', type=str, default="PROTEINS")
     args = parser.parse_args()
 
     # Build networkx graph from .txt file
