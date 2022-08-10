@@ -138,7 +138,6 @@ class UnSupervisedGraphSage(BaseUnsupervisedModel):
     ):
         """
         Initialize graphsage model for unsupervised node classification.
-
         num_classes -- number of classes of nodes to make predictions.
         enc -- encoder for nodes.
         num_negs -- number of negative samples to use per batch.
