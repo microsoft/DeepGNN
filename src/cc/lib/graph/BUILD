@@ -1,8 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 load("@rules_cc//cc:defs.bzl", "cc_library")
-load("//config:variables.bzl", "CXX_OPTS")
-load("//config:variables.bzl", "PLATFORM_DEFINES")
+load("//config:variables.bzl", "CXX_OPTS", "PLATFORM_DEFINES")
 
 cc_library(
     name = "graph",
@@ -38,7 +37,7 @@ cc_library(
     deps = [
         "@boost//:random",
         "@com_github_google_glog//:glog",
-        "@snark_com_google_absl//absl/container:flat_hash_map",
-        "@snark_com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/container:flat_hash_set",
     ],
 )

@@ -14,7 +14,7 @@ from typing import Tuple
 class HANQueryParamemter:
     """Graph query parameters for HAN model."""
 
-    edge_types: np.array
+    edge_types: np.ndarray
     feature_idx: int
     feature_dim: int
     label_idx: int
@@ -35,7 +35,7 @@ class HANQuery:
         self.metapath_num = int(len(param.edge_types) / len(param.nb_num))
 
     def query_trainning(
-        self, graph: Graph, inputs: np.array, return_shape: bool = False
+        self, graph: Graph, inputs: np.ndarray, return_shape: bool = False
     ):
         """Generate data to train model."""
         if self.param.label_idx == -1:
@@ -139,7 +139,9 @@ class HAN(tf.keras.Model):
         return [self.src_nodes, output_embedding]
 
     def call(
-        self, inputs: Tuple[np.array, np.array, np.array, np.array], training=True
+        self,
+        inputs: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+        training=True,
     ):
         """Generate embeddings, loss and F1 score."""
         src_nodes, labels, node_feats_arr, neighbor_feats_arr = inputs
@@ -185,7 +187,7 @@ class HAN(tf.keras.Model):
         f1 = self.f1_score(labels, predictions)
         return loss, f1
 
-    def train_step(self, data: Tuple[np.array, np.array, np.array, np.array]):
+    def train_step(self, data: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]):
         """Override base train_step."""
         with tf.GradientTape() as tape:
             _, loss, metrics = self(data, training=True)
@@ -196,14 +198,14 @@ class HAN(tf.keras.Model):
         result.update(metrics)
         return result
 
-    def test_step(self, data: Tuple[np.array, np.array, np.array, np.array]):
+    def test_step(self, data: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]):
         """Override base test_step."""
         _, loss, metrics = self(data, training=False)
         result = {"loss": loss}
         result.update(metrics)
         return result
 
-    def predict_step(self, data: Tuple[np.array, np.array, np.array, np.array]):
+    def predict_step(self, data: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]):
         """Override base predict_step."""
         self(data, training=False)
         return [self.src_nodes, self.src_emb]

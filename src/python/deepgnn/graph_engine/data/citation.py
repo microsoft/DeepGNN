@@ -5,7 +5,7 @@ import argparse
 import sys
 import os
 import json
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.decoders as decoders
@@ -26,11 +26,11 @@ def parse_index_file(filename: str) -> List[int]:
     return index
 
 
-def sample_mask(idx: List[int], size: int) -> np.array:
+def sample_mask(idx: Union[List[int], np.ndarray], size: int) -> np.ndarray:
     """Create mask."""
     mask = np.zeros(size)
     mask[idx] = 1
-    return np.array(mask, dtype=np.bool)
+    return np.array(mask, dtype=np.bool8)
 
 
 def load_data(
@@ -38,13 +38,13 @@ def load_data(
 ) -> Tuple[
     sp.csr_matrix,
     sp.lil_matrix,
-    np.array,
-    np.array,
-    np.array,
-    np.array,
-    np.array,
-    np.array,
-    np.array,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
 ]:
     """
     Load input data from gcn/data directory.
@@ -80,7 +80,7 @@ def load_data(
     x, y, tx, ty, allx, ally, graph = tuple(objects)
     fname = os.path.join(data_dir, "ind.{}.test.index".format(dataset_str))
     test_idx_reorder = parse_index_file(fname)
-    test_idx_range = np.sort(test_idx_reorder)
+    test_idx_range: np.ndarray = np.sort(test_idx_reorder)
 
     if dataset_str == "citeseer":
         # Fix citeseer dataset (there are some isolated nodes in the graph)
@@ -128,7 +128,7 @@ def load_data(
     )
 
 
-def preprocess_features(features: sp.lil_matrix) -> np.array:
+def preprocess_features(features: sp.lil_matrix) -> np.ndarray:
     """Row-normalize feature matrix and convert to tuple representation."""
     rowsum = np.array(features.sum(1))
     r_inv = np.power(rowsum, -1).flatten()
@@ -149,12 +149,12 @@ def download_gcn_data(dataset: str, data_dir: str):
 
 
 def random_split(
-    labels: np.array,
+    labels: np.ndarray,
     num_classes: int,
     num_train_per_class: int,
     num_val: int,
     num_test: int,
-) -> Tuple[np.array, np.array, np.array]:
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Split graph data to train/test/validation sets with node sampling."""
     num_train_per_class = 20
     num_nodes = labels.shape[0]
@@ -222,15 +222,12 @@ class CitationGraph(Client):
 
         graph_file = os.path.join(data_dir, "graph.json")
         self._write_json_graph(adj, features, labels, node_types, graph_file)
-        meta_file = os.path.join(data_dir, "meta.json")
-        self._write_meta_file(meta_file)
 
         convert.MultiWorkersConverter(
             graph_path=graph_file,
-            meta_path=meta_file,
             partition_count=1,
             output_dir=data_dir,
-            decoder_type=decoders.DecoderType.JSON,
+            decoder=decoders.JsonDecoder(),
         ).convert()
 
         train_file = os.path.join(data_dir, "train.nodes")
@@ -239,7 +236,7 @@ class CitationGraph(Client):
         return output_dir
 
     def get_node_types(
-        self, train_mask: np.array, val_mask: np.array, test_mask: np.array
+        self, train_mask: np.ndarray, val_mask: np.ndarray, test_mask: np.ndarray
     ) -> List[str]:
         """Return node types: train/val/test."""
         node_types = []
@@ -257,8 +254,8 @@ class CitationGraph(Client):
     def _write_json_graph(
         self,
         adj: sp.csr_matrix,
-        features: np.array,
-        labels: np.array,
+        features: np.ndarray,
+        labels: np.ndarray,
         node_types: List[str],
         graph_file: str,
     ):
@@ -277,19 +274,6 @@ class CitationGraph(Client):
                 fout.write(tmp)
                 fout.write("\n")
 
-    def _write_meta_file(self, meta_file: str):
-        meta = '{"node_type_num": 4, \
-                 "node_float_feature_num": 2, \
-                 "node_binary_feature_num": 0, \
-                 "node_uint64_feature_num": 0, \
-                 "edge_type_num": 1, \
-                 "edge_float_feature_num": 0, \
-                 "edge_binary_feature_num": 0, \
-                 "edge_uint64_feature_num": 0}'
-
-        with open(meta_file, "w") as fout:
-            fout.write(meta)
-
     NODE_TYPE_ID = {"train": 0, "val": 1, "test": 2, "other": 3}
 
     def to_json_node(
@@ -298,7 +282,7 @@ class CitationGraph(Client):
         node_type: str,
         flt_feat: List[float],
         label: int,
-        neighbors: np.array,
+        neighbors: np.ndarray,
     ) -> str:
         """Convert node to json format."""
         assert type(flt_feat) is list and type(flt_feat[0]) == float
@@ -320,7 +304,6 @@ class CitationGraph(Client):
                 }
                 for nb in neighbors
             ],
-            "neighbor": {"0": dict([(str(nb), 1.0) for nb in neighbors])},
         }
         return json.dumps(node)
 

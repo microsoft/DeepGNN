@@ -9,4 +9,4 @@ see [run.sh](./run.sh)
 
 
 ### Run GraphSage with your graph
-* [Prepare Graph Data](../../../docs/prepare_graph_data.md)
+* [Prepare Graph Data](../../../docs/graph_engine/data_spec.rst)

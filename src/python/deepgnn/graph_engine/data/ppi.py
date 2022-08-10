@@ -80,7 +80,7 @@ class PPI(Client):
         other_neighbors: Dict = {nid: [] for nid in nodes}
 
         # edges
-        train_mask = np.zeros(len(nodes), np.bool)
+        train_mask = np.zeros(len(nodes), np.bool8)
         train_mask[train_nodes] = True
         for i, e in enumerate(g["links"]):
             src = id_map[e["source"]]
@@ -142,16 +142,13 @@ class PPI(Client):
                 fout.write(tmp)
                 fout.write("\n")
 
-        meta_file = os.path.join(data_dir, "meta.json")
-        self._write_meta_file(meta_file)
         self._write_node_files(data_dir, nodes, nodes_type)
         # convert graph: JSON -> Binary
         convert.MultiWorkersConverter(
             graph_path=graph_file,
-            meta_path=meta_file,
             partition_count=1,
             output_dir=data_dir,
-            decoder_type=decoders.DecoderType.JSON,
+            decoder=decoders.JsonDecoder(),
         ).convert()
 
         return data_dir
@@ -171,19 +168,6 @@ class PPI(Client):
                 elif ntype == 2:
                     fout_test.write(str(nid) + "\n")
 
-    def _write_meta_file(self, meta_file: str):
-        meta = '{"node_type_num": 3, \
-                 "node_float_feature_num": 2, \
-                 "node_binary_feature_num": 0, \
-                 "node_uint64_feature_num": 0, \
-                 "edge_type_num": 2, \
-                 "edge_float_feature_num": 0, \
-                 "edge_binary_feature_num": 0, \
-                 "edge_uint64_feature_num": 0}'
-
-        with open(meta_file, "w") as fout:
-            fout.write(meta)
-
     def _to_json_node(
         self,
         node_id: int,
@@ -193,8 +177,6 @@ class PPI(Client):
         train_neighbor: List[int],
         train_removed_neighbor: List[int],
     ):
-        nb0 = {str(nb): 1.0 for nb in train_neighbor}
-        nb1 = {str(nb): 1.0 for nb in train_removed_neighbor}
         edges = []
         for nb in train_neighbor:
             e = {"src_id": node_id, "dst_id": nb, "edge_type": 0, "weight": 1.0}
@@ -210,7 +192,6 @@ class PPI(Client):
             "node_weight": 1.0,
             "float_feature": {"0": label, "1": feat},
             "edge": edges,
-            "neighbor": {"0": nb0, "1": nb1},
         }
 
         return json.dumps(node)

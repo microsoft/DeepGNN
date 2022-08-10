@@ -364,6 +364,11 @@ void GRPCClient::GetNodeSparseFeature(std::span<const NodeId> node_ids, std::spa
                                       std::span<int64_t> out_dimensions, std::vector<std::vector<int64_t>> &out_indices,
                                       std::vector<std::vector<uint8_t>> &out_values)
 {
+    assert(out_indices.size() == features.size());
+    assert(out_dimensions.size() == features.size());
+
+    // Fill out_dimensions in case nodes don't have some features.
+    std::fill(std::begin(out_dimensions), std::end(out_dimensions), 0);
     NodeSparseFeaturesRequest request;
     *request.mutable_node_ids() = {std::begin(node_ids), std::end(node_ids)};
     *request.mutable_feature_ids() = {std::begin(features), std::end(features)};

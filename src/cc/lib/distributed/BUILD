@@ -7,6 +7,7 @@ load("//config:variables.bzl", "CXX_OPTS")
 proto_library(
     name = "service_proto",
     srcs = ["service.proto"],
+    visibility = ["//visibility:public"],
 )
 
 cc_proto_library(
@@ -46,8 +47,8 @@ cc_library(
     deps = [
         "//src/cc/lib/graph",
         # Order matters on windows. We want to use latest abseil instead of transitive from grpc.
-        "@snark_com_google_absl//absl/container:flat_hash_map",
-        "@snark_com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/container:flat_hash_set",
         "@boost//:random",
         ":service_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",

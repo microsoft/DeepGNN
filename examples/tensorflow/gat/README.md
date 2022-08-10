@@ -33,4 +33,4 @@ python3 /examples/tensorflow/gat/main.py --mode evaluate --seed 123 --model_dir 
 ```
 
 ### Run GAT with your graph
-* [Prepare Graph Data](../../../docs/prepare_graph_data.md)
+* [Prepare Graph Data](../../../docs/graph_engine/data_spec.rst)

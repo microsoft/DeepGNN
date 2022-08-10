@@ -120,7 +120,7 @@ class HANEncoder(AttEncoder):
             hidden.append(hidden_val)
         return tf.concat(hidden, -1)
 
-    def call(self, inputs: Tuple[np.array, np.array]):  # type: ignore
+    def call(self, inputs: Tuple[np.ndarray, np.ndarray]):  # type: ignore
         """Compute embeddings."""
         node_feats_arr, neighbor_feats_arr = inputs
         embed_list = []

@@ -80,7 +80,7 @@ def test_generator_join(create_graph):
     for total_size in range(1, 50):
         for batch_size in range(1, total_size):
             s = RangeNodeSampler(0, total_size, batch_size, 0, 1, backfill_id=-1)
-            attrs = {"query.return_value": {"inputs": np.array([1], np.int64)}}
+            attrs = {"query.return_value": {"inputs": np.ndarray([1], np.int64)}}
             model = mock.MagicMock(**attrs)
             model.sampler = s
 

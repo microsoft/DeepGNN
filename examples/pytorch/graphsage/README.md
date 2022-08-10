@@ -4,7 +4,7 @@ __GraphSAGE__ is a framework for inductive representation learning on large grap
 Reference: [Inductive Representation Learning on Large Graphs](https://cs.stanford.edu/people/jure/pubs/graphsage-nips17.pdf)
 
 # Generate Graph Data
-* [Prepare Graph Data](../../docs/prepare_graph_data.md)
+* [Prepare Graph Data](../../../docs/graph_engine/data_spec.rst)
 
 # Job Augmentations
 ## GraphSAGE - Unsupervised

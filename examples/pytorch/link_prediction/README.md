@@ -26,7 +26,7 @@ Training steps:
 
 
 # Generate Graph Data
-* [Prepare Graph Data](../../../docs/prepare_graph_data.md)
+* [Prepare Graph Data](../../../docs/graph_engine/data_spec.rst)
 
 * Prepare training data
 

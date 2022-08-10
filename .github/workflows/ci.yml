@@ -28,7 +28,7 @@ jobs:
     needs: pre-commit
     strategy:
       matrix:
-        python-version: ["3.7", "3.8"]
+        python-version: ["3.8", "3.9"]
         os: ["ubuntu-latest", "macos-11", "windows-2019"]
     runs-on: ${{ matrix.os }}
     steps:
@@ -77,7 +77,7 @@ jobs:
     needs: wheel
     strategy:
       matrix:
-        python-version: ["3.7", "3.8"]
+        python-version: ["3.8", "3.9"]
         os: ["ubuntu-latest", "ubuntu-18.04"]
     runs-on: ${{ matrix.os }}
     env:
@@ -99,8 +99,6 @@ jobs:
         uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "pip"
-          cache-dependency-path: "tensorflow/requirements.txt"
       - name: Install tensorflow
         run: pip install --timeout 300 tensorflow
       - name: Install dependencies
@@ -123,7 +121,7 @@ jobs:
     needs: wheel
     strategy:
       matrix:
-        python-version: ["3.7", "3.8"]
+        python-version: ["3.8", "3.9"]
         os: ["ubuntu-latest", "ubuntu-18.04"]
     runs-on: ${{ matrix.os }}
     env:
@@ -145,8 +143,6 @@ jobs:
         uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "pip"
-          cache-dependency-path: "pytorch/requirements.txt"
       - name: Install torch
         run: pip install --timeout 300 torch
       - name: Install dependencies
@@ -155,7 +151,7 @@ jobs:
         run: pip uninstall deepgnn-ge deepgnn-torch
       - name: Install wheels
         run: pip install deepgnn_ge*.whl deepgnn_torch*.whl
-      - name: Run graphsage examples
+      - name: Run gat examples
         run: cd ./pytorch/gat/ && sudo chmod +x *.sh && bash ./run.sh CPU
       - name: Run pytorch geometric examples
         run: cd ./pytorch/geometric/gat/ && sudo chmod +x *.sh && bash ./run.sh CPU
