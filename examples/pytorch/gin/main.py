@@ -12,8 +12,6 @@ from deepgnn.pytorch.modeling import BaseModel
 from deepgnn.pytorch.training import run_dist
 from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.graph_engine import (
-    Graph,
-    FeatureType,
     CSVNodeSampler,
     GENodeSampler,
     SamplingStrategy,
@@ -38,8 +36,6 @@ def create_model(args: argparse.Namespace):
     if args.seed:
         set_seed(args.seed)
 
-    # feature_enc = get_feature_encoder(args)
-
     torch.manual_seed(0)
     np.random.seed(0)    
     device = torch.device("cuda:" + str(args.device)) if torch.cuda.is_available() else torch.device("cpu")
@@ -50,10 +46,10 @@ def create_model(args: argparse.Namespace):
         get_logger().info(f"Creating GIN model with seed:{args.seed}.")
         return GIN(
             metric=Accuracy(),
-            num_layers=1, 
+            num_layers=5, 
             num_mlp_layers=2, 
             input_dim=args.feature_dim,
-            hidden_dim=64, 
+            hidden_dim=4, 
             output_dim=args.num_classes, 
             final_dropout=0.5, 
             learn_eps=False, 
@@ -111,9 +107,6 @@ def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int
         filter(lambda p: p.requires_grad, model.parameters()),
         lr=args.learning_rate * world_size,
     )
-
-
-criterion = nn.CrossEntropyLoss()
 
 def _main():
     # setup default logging component.

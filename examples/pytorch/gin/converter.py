@@ -139,13 +139,17 @@ def build_json(g_list, train_idx, test_idx):
     data = ""
     idx = 0
     for g in g_list:
-        print()
+
         label = g.label
+        
+        graph_ids = {}
+        for node_id in g.g:
+            graph_ids[node_id] = idx
+            idx += 1
         # Fetch networkx graph from SV2Graph object
         # 3, 7, 9
         # 1, 2, 3
         for node_id in g.g:
-            print(node_id)
             # Fetch and set weights for neighbors
             nbs = {}
             for nb in nx.neighbors(g.g, node_id):
@@ -156,21 +160,20 @@ def build_json(g_list, train_idx, test_idx):
 
             node = {
                 "node_weight": 1.0,
-                "node_id": node_id,
+                "node_id": graph_ids[node_id],
                 "node_type": 0,
                 "float_feature": {"0": feats, "1": label},
                 "edge": [{
-                    "src_id": node_id,
-                    "dst_id": nb,
+                    "src_id": graph_ids[node_id],
+                    "dst_id": graph_ids[nb],
                     "edge_type": 0,
                     "weight": 1.0
                 }
                 for nb in nx.neighbors(g.g, node_id)],
             }
-            if node_id not in nodes:
-                data += json.dumps(node) + "\n"
-                nodes.append(node_id)
-            idx += 1
+            
+            data += json.dumps(node) + "\n"
+            nodes.append(node_id)
 
     return data
 

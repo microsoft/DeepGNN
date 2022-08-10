@@ -130,8 +130,10 @@ class GIN(BaseSupervisedModel):
         offset = 0
 
         for node_id in range(num_nodes):
-            # get_logger().info(str(node_id))
-            num_neighbors = nb_counts[node_id].int().item()
+            if node_id < len(nb_counts):
+                num_neighbors = nb_counts[node_id].int().item()
+            else:
+                get_logger().info()
 
             # Aggregate and sum features across all neighbors 
             neighbor_features = features[offset: offset + num_neighbors]
@@ -147,27 +149,26 @@ class GIN(BaseSupervisedModel):
             # Write to pooled matrix
             pooled_h[node_id] = sum_features
     
-        # pooled_rep = self.mlps[layer](pooled_h)
-        # new_h = self.batch_norms[layer](pooled_rep)
+        pooled_rep = self.mlps[layer](pooled_h)
+        new_h = self.batch_norms[layer](pooled_rep)
 
-        # Non-linearity
-        # new_h = F.relu(pooled_h)
+         # Non-linearity
+        new_h = F.relu(pooled_h)
 
-        return pooled_h
+        return new_h
 
     def get_score(self, context: dict):
         num_nodes = len(context['nb_counts'][0])
         nb_counts = context["nb_counts"].squeeze()
         features = context["features"].squeeze()
 
-
-        pooled_h = features
-        hidden_rep = [pooled_h]
+        hidden_rep = [features]
+        h = features
         # get_logger().info("Features dim: " + str(features.shape))
 
         for layer in range(self.num_layers - 1):
-            pooled_h = self.next_layer(pooled_h, layer, features, nb_counts, num_nodes)
-            hidden_rep.append(pooled_h)
+            h = self.next_layer(h, layer, features, nb_counts, num_nodes)
+            hidden_rep.append(h)
 
         score = 0
         # for layer in range(self.num_layers):
