@@ -639,7 +639,7 @@ std::pair<ServerList, std::shared_ptr<snark::GRPCClient>> CreateMultiServerSplit
     for (size_t server = 0; server < num_servers; ++server)
     {
         TempFolder path(name);
-        auto partition = TestGraph::convert(path.path, "0_0", std::move(test_graphs[server]), 1);
+        auto partition = TestGraph::convert(path.path, "0_0", std::move(test_graphs[server]), 3);
         servers.emplace_back(std::make_shared<snark::GRPCServer>(
             std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
                                                             snark::PartitionStorageType::memory, ""),
@@ -686,8 +686,16 @@ TEST(DistributedTest, UniformNeighborSampleMultipleTypesNeighborsSpreadAcrossPar
 
     c.UniformSampleNeighbor(false, 17, std::span(nodes), std::span(types), count, std::span(neighbor_nodes),
                             std::span(neighbor_types), 0, 2);
-    EXPECT_EQ(std::vector<snark::NodeId>({7, 3, 7, 5, 7, 5}), neighbor_nodes);
-    EXPECT_EQ(std::vector<snark::Type>({1, 0, 1, 1, 1, 1}), neighbor_types);
+    if (neighbor_nodes[0] == 7)
+    {
+        EXPECT_EQ(std::vector<snark::NodeId>({7, 3, 7, 5, 7, 5}), neighbor_nodes);
+        EXPECT_EQ(std::vector<snark::Type>({1, 0, 1, 1, 1, 1}), neighbor_types);
+    }
+    else
+    {
+        EXPECT_EQ(std::vector<snark::NodeId>({3, 3, 5, 6, 5, 5}), neighbor_nodes);
+        EXPECT_EQ(std::vector<snark::Type>({0, 0, 1, 1, 1, 1}), neighbor_types);
+    }
 }
 
 std::pair<ServerList, std::shared_ptr<snark::GRPCClient>> CreateMultiServerSplitFeaturesEnvironment(
@@ -710,7 +718,7 @@ std::pair<ServerList, std::shared_ptr<snark::GRPCClient>> CreateMultiServerSplit
     for (size_t server = 0; server < num_servers; ++server)
     {
         TempFolder path(name);
-        auto partition = TestGraph::convert(path.path, "0_0", std::move(test_graphs[server]), 1);
+        auto partition = TestGraph::convert(path.path, "0_0", std::move(test_graphs[server]), 3);
         servers.emplace_back(std::make_shared<snark::GRPCServer>(
             std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
                                                             snark::PartitionStorageType::memory, ""),
