@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### [Unreleased]
 
 ### Added
-- Adds neighbor count method to graph
+- Adds neighbor count method to graph.
 
 ### [0.1.54] - 2022-08-04
 
