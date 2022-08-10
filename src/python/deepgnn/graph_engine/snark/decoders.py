@@ -68,10 +68,10 @@ class EdgeListDecoder(Decoder):
         Edges: {0 -> 1, 1 -> 0} both with type = 0, weight = .5 and a sparse feature
         vector (coords=[0, 4, 10], values=[1, 1, 1] dtype=uint8).
         ```
-        0 -1 1 .5 int32 3 1 1 1 float32 2 1.1 1.1
-        0 1 0 .5 uint8 3,0 0 4 10 1 1 1
-        1 -1 1 .5 int32 3 1 1 1 float32 2 1.1 1.1
-        1 0 0 .5 uint8 3,0 0 4 10 1 1 1
+        0,-1,1,.5,int32,3,1,1,1,float32,2,1.1,1.1
+        0,1,0,.5,uint8,3/0,0,4,10,1,1,1
+        1,-1,1,.5,int32,3,1,1,1,float32,2,1.1,1.1
+        1,0,0,.5,uint8,3/0,0,4,10,1,1,1
         ```
 
     Init Parameters:
@@ -101,10 +101,10 @@ class EdgeListDecoder(Decoder):
         ```
         graph.csv
         ```
-        0 -1 1 1 1 1.1 1.1
-        0 1 0 4 10 1 1 1
-        1 -1 1 1 1 1.1 1.1
-        1 0 0 4 10 1 1 1
+        0,-1,1,1,1,1.1,1.1
+        0,1,0,4,10,1,1,1
+        1,-1,1,1,1,1.1,1.1
+        1,0,0,4,10,1,1,1
         ```
     """
 
@@ -118,6 +118,8 @@ class EdgeListDecoder(Decoder):
         default_edge_feature_types: Optional[List[Optional[str]]] = None,
         default_node_feature_lens: Optional[List[Optional[List[int]]]] = None,
         default_edge_feature_lens: Optional[List[Optional[List[int]]]] = None,
+        delimiter=",",
+        length_delimiter="/",
     ):
         """Initialize the Decoder."""
         super().__init__()
@@ -140,6 +142,9 @@ class EdgeListDecoder(Decoder):
             default_edge_feature_lens if default_edge_feature_lens is not None else []
         )
         self.n_edge_feature = len(self.edge_feature_types)
+
+        self.delimiter = delimiter
+        self.length_delimiter = length_delimiter
 
     def _get_feature(
         self, key: str, length: List[int], data: Iterator
@@ -177,7 +182,7 @@ class EdgeListDecoder(Decoder):
         if line == "":
             return
 
-        data = iter(line.split(","))
+        data = iter(line.split(self.delimiter))
 
         src, dst = int(next(data)), int(next(data))
         if dst == -1:
@@ -216,7 +221,7 @@ class EdgeListDecoder(Decoder):
                     except ValueError:
                         pass
                 if length is None:
-                    length = list(map(int, next(data).split("/")))
+                    length = list(map(int, next(data).split(self.length_delimiter)))
             except StopIteration:
                 break
 
