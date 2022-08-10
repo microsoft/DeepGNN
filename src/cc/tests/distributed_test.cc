@@ -639,7 +639,7 @@ std::pair<ServerList, std::shared_ptr<snark::GRPCClient>> CreateMultiServerSplit
     for (size_t server = 0; server < num_servers; ++server)
     {
         TempFolder path(name);
-        auto partition = TestGraph::convert(path.path, "0_0", std::move(test_graphs[server]), 1);
+        auto partition = TestGraph::convert(path.path, "0_0", std::move(test_graphs[server]), 3);
         servers.emplace_back(std::make_shared<snark::GRPCServer>(
             std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
                                                             snark::PartitionStorageType::memory, ""),
@@ -718,7 +718,7 @@ std::pair<ServerList, std::shared_ptr<snark::GRPCClient>> CreateMultiServerSplit
     for (size_t server = 0; server < num_servers; ++server)
     {
         TempFolder path(name);
-        auto partition = TestGraph::convert(path.path, "0_0", std::move(test_graphs[server]), 1);
+        auto partition = TestGraph::convert(path.path, "0_0", std::move(test_graphs[server]), 3);
         servers.emplace_back(std::make_shared<snark::GRPCServer>(
             std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
                                                             snark::PartitionStorageType::memory, ""),
