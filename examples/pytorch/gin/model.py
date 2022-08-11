@@ -28,7 +28,6 @@ class MLP(nn.Module):
         super(MLP, self).__init__()
         self.num_layers = num_layers
         self.is_single_layer = True
-        get_logger().info("b")
 
         self.h = 0
 
@@ -63,8 +62,6 @@ class MLP(nn.Module):
                 # get_logger().info("h shape: " + str(self.h.shape))
                 # get_logger().info("linear layer shape: " + str(self.linears[layer]))
                 self.h = F.relu(self.batch_norms[layer](self.linears[layer](self.h)))
-                # get_logger().info("post h addr: " + str(id(self.h)))
-                # get_logger().info("post h shape: " + str(self.h.shape))
             return self.linears[self.num_layers - 1](self.h)
 
 
@@ -124,12 +121,6 @@ class GIN(BaseSupervisedModel):
         # Batch Norms to be applied on final layer
         self.batch_norms = torch.nn.ModuleList()
 
-        get_logger().info("INPUT DIM: " + str(input_dim))
-        get_logger().info("HIDDEN DIM: " + str(hidden_dim))
-        get_logger().info("OUTPUT DIM: " + str(output_dim))
-        get_logger().info("NUM LAYERS: " + str(num_layers))
-        get_logger().info("NUM MLP LAYERS: " + str(num_mlp_layers))
-
         for layer in range(self.num_layers-1):
             if layer == 0:
                 self.mlps.append(MLP(num_mlp_layers, input_dim, hidden_dim, hidden_dim))
@@ -147,15 +138,20 @@ class GIN(BaseSupervisedModel):
                 self.linears_prediction.append(nn.Linear(hidden_dim, output_dim))
     
     def next_layer(self, h, layer, features, nb_counts, num_nodes):
-        # get_logger().info("NEXT LAYER CALL: ----------------------------------------")
-        #get_logger().info("H SHAPE: " + str(h.shape))
-        offset = 0
-        # get_logger().info("INSIDE!")
+        pooled_rep = self.mlps[layer](h)
+        h = self.batch_norms[layer](pooled_rep)
+        h = F.relu(h)
+        return h
 
+    def get_score(self, context: dict):
+        num_nodes = len(context['nb_counts'][0])
+        nb_counts = context["nb_counts"].squeeze()
+        features = context["features"].squeeze()
+
+        offset = 0
         pooled = torch.zeros(num_nodes, self.feature_dim)
 
         for node_id in range(num_nodes):
-            # get_logger().info("inside loop on iter " + str(node_id))
             num_neighbors = nb_counts[node_id].int().item()
 
             # Aggregate and sum features across all neighbors 
@@ -172,52 +168,21 @@ class GIN(BaseSupervisedModel):
             # Write to pooled matrix
             pooled[node_id] = sum_features
 
-        
-       # get_logger().info("POOLED: " + str(pooled))
-
-        if layer == 0:
-            pooled_rep = self.mlps[layer](pooled)
-            
-        else:
-            pooled_rep = self.mlps[layer](h)
-
-        h = self.batch_norms[layer](pooled_rep)
-        h = F.relu(h)
-
-        return h
-
-    def get_score(self, context: dict):
-        num_nodes = len(context['nb_counts'][0])
-        nb_counts = context["nb_counts"].squeeze()
-        features = context["features"].squeeze()
-        nb_features = context["nb-features"].squeeze()
-
-        get_logger().info("FEATURES: " + str(features))
-
         # get_logger().info("NB COUNTS: " + str(nb_counts))
 
-        hidden_rep = [features]
-        h = features
-        # get_logger().info("Features dim: " + str(features.shape))
-        # idx = 0
+        hidden_rep = [pooled]
+        h = pooled
+        
         for layer in range(self.num_layers - 1):
-
-            # get_logger().info("pre H: " + str(h))
             h = self.next_layer(h, layer, features, nb_counts, num_nodes)
-            # get_logger().info("post H: " + str(h))
             hidden_rep.append(h)
-            get_logger().info("Layer " + str(layer) + " ===============================")
-            get_logger().info("H: " + str(h))
-            # idx += 1
 
         score = 0
-        # for layer in range(self.num_layers):
-        #     score += F.dropout(self.linears_prediction[layer](pooled_h), self.final_dropout, training = self.training)
-
-        for layer, pooled_h in enumerate(hidden_rep):
-            # pooled_h = torch.spmm(graph_pool, h)
-            # get_logger().info("Layer " + str(layer) + " | " + str(pooled_h.shape))
-            score += F.dropout(self.linears_prediction[layer](pooled_h), self.final_dropout, training = self.training)
+        
+        for layer, h in enumerate(hidden_rep):
+            # pooled_h = torch.spmm(nb_features, h)
+            # get_logger().info("Layer " + str(layer) + " | h shape: " + str(pooled_h.shape))
+            score += F.dropout(self.linears_prediction[layer](h), self.final_dropout, training = self.training)
             # get_logger().info("Layer " + str(layer) + " finished.")
             # get_logger().info(str(score))
            #  get_logger().info(str(score.shape))
@@ -242,18 +207,25 @@ class GIN(BaseSupervisedModel):
     def query(self, graph: Graph, inputs: np.array):
         """Fetch training data from graph."""
         context = {"inputs": inputs}
-        
+
+        # get_logger().info("USING SAMPLE NEIGBORS *****************************")
         # context['neighbors'] = graph.sample_neighbors(
         #     nodes = context['inputs'],
         #     edge_types = np.array(self.edge_type),
-        #     count = 100,
+        #     count = 67,
         #     strategy = "randomwithoutreplacement"
         # )[0]
-        
+
+        # get_logger().info("LEN 1: " + str(len(context['neighbors'])))
+        # get_logger().info("**********************************************************")
+
+        # get_logger().info("USING NORMAL NEIGBORS *****************************")
         context['neighbors'] = graph.neighbors(
             context["inputs"],
             np.array(self.edge_type)
-        )[0]
+        )[0][:len(context['inputs'])]
+        # get_logger().info("LEN 2: " + str(len(context['neighbors'])))
+        # get_logger().info("**********************************************************")
 
         context['nb_counts'] = graph.neighbor_count(
             nodes = context['inputs'],
@@ -272,11 +244,10 @@ class GIN(BaseSupervisedModel):
         )
 
         context["features"] = graph.node_features(
-            context["inputs"],
+            context["neighbors"],
             np.array([[self.feature_idx, self.feature_dim]]),
             FeatureType.FLOAT,
         )
-
 
         context["nb-features"] = graph.node_features(
             context["neighbors"],

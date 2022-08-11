@@ -24,8 +24,8 @@ Inference
 | **model_dir** | "" | Model checkpoint. |
 | **metric_dir** | "" | Training metrics save path. |
 | **save_path** | "" | Inference result save path. |
-| **num_epochs** | 20 | Number of epochs for training. |
-| **batch_size** | 512 | Mini-batch size. |
+| **num_epochs** | 10 | Number of epochs for training. |
+| **batch_size** | 128 | Mini-batch size. |
 | **learning_rate** | 0.01 | Learning rate. |
 | **node_type** | 0 | Node type of training set. |
 | **feature_idx** | -1 | Feature index. |

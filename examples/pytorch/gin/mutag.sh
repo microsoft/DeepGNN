@@ -26,7 +26,7 @@ fi
 python3 ${DIR_NAME}/main.py  \
 --data_dir $GRAPH --mode train --seed 123 \
 --backend snark --graph_type local --converter skip \
---batch_size 32 --learning_rate 0.01 --num_epochs 10 \
+--batch_size 32 --learning_rate 0.01 --num_epochs 350 \
 --node_type 0 --max_id -1 --num_classes 2 \
 --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
 --feature_idx 0 --feature_dim 7 --label_idx 1 --label_dim 1 --algo $ALGO \
@@ -37,7 +37,7 @@ python3 ${DIR_NAME}/main.py  \
 --backend snark --graph_type local --converter skip \
 --batch_size 128 --num_epochs 10 \
 --sample_file /tmp/mutag/test.nodes --node_type 0 --max_id -1 \
---feature_idx 0 --feature_dim 4 --label_idx 1 --label_dim 1 --algo $ALGO \
+--feature_idx 0 --feature_dim 7 --label_idx 1 --label_dim 1 --algo $ALGO \
 --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
 --log_by_steps 1 --use_per_step_metrics $PLATFORM_DEVICE
 
@@ -47,7 +47,7 @@ if [[ "$ADL_UPLOADER" == "no" ]]; then
     --backend snark --graph_type local --converter skip \
     --batch_size 128 \
     --sample_file /tmp/mutag/test.nodes --node_type 0 \
-    --feature_idx 0 --feature_dim 4 --label_idx 1 --label_dim 1 --algo $ALGO \
+    --feature_idx 0 --feature_dim 7 --label_idx 1 --label_dim 1 --algo $ALGO \
     --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
     --log_by_steps 1 --use_per_step_metrics $PLATFORM_DEVICE
 else
@@ -56,7 +56,7 @@ else
     --backend snark --graph_type local --converter skip \
     --batch_size 128 --num_classes 2 \
     --sample_file /tmp/mutag/test.nodes --node_type 0 \
-    --feature_idx 0 --feature_dim 4 --label_idx 1 --label_dim 1 --algo $ALGO \
+    --feature_idx 0 --feature_dim 7 --label_idx 1 --label_dim 1 --algo $ALGO \
     --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path /integration_test/test_adl_uploader \
     --log_by_steps 1 --use_per_step_metrics --enable_adl_uploader --uploader_store_name snrgnndls --uploader_process_num 2 --uploader_threads_num 10 $PLATFORM_DEVICE
 fi

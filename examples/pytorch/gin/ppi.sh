@@ -13,9 +13,6 @@ USE_HADOOP=${5:-no}
 DIR_NAME=$(dirname "$0")
 
 GRAPH=/tmp/ppi
-rm -fr $GRAPH
-
-python3 -m deepgnn.graph_engine.data.ppi --data_dir $GRAPH
 
 MODEL_DIR=/tmp/model_fix
 rm -rf $MODEL_DIR
