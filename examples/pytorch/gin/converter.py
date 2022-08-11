@@ -173,7 +173,7 @@ def build_json(g_list, train_idx, test_idx):
             data += json.dumps(node) + "\n"
             nodes.append(node_id)
 
-    return data
+    return data, nodes
 
 
 def seperate(graphs, fold_idx, seed):
@@ -183,13 +183,13 @@ def seperate(graphs, fold_idx, seed):
 
     labels = []
     nodes = []
+    
     for graph in graphs:
         for node_id in graph.g:
-            if node_id not in nodes:
-                nodes.append(node_id)
-                label = graph.node_features[node_id].tolist()[1]
-                labels.append(label)
+            label = graph.node_features[node_id].tolist()[1]
+            labels.append(label)
 
+    print(len(labels))
     idx_list = []
     # print(len(labels))
     # print(len(nodes))
@@ -200,24 +200,26 @@ def seperate(graphs, fold_idx, seed):
 
     train_idx, test_idx = idx_list[fold_idx]
 
-    print(train_idx)
-    print(test_idx)
+    # print(str(len(train_idx)) + "|" + str(train_idx))
+    # print(str(len(test_idx)) + "|" + str(test_idx))
 
     return train_idx, test_idx
 
 def _main():
 
     parser = argparse.ArgumentParser(description='Loading graphs to json for training/evaluation.')
-    parser.add_argument('--dataset', type=str, default="PROTEINS")
+    parser.add_argument('--dataset', type=str, default="MUTAG")
     args = parser.parse_args()
 
     # Build networkx graph from .txt file
-    g_list = convert_data(args.dataset, True)[0]
+    g_list = convert_data(args.dataset, False)[0]
 
     train_idx, test_idx = seperate(g_list, 0, 123)
 
     # Build json data from networkx and node features
-    data = build_json(g_list, train_idx, test_idx)
+    data, nodes = build_json(g_list, train_idx, test_idx)
+
+    print("Num nodes: " + str(len(nodes)))
 
     # print(data)
     data_dir = '/tmp/' + str.lower(args.dataset)
@@ -237,7 +239,7 @@ def _main():
     # Build extra binaries
     convert.MultiWorkersConverter(
         graph_path=raw_file,
-        partition_count=1,
+        partition_count=10,
         output_dir="/tmp/" + str.lower(args.dataset),
         decoder=JsonDecoder,
     ).convert()

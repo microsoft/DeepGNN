@@ -29,7 +29,7 @@ python3 ${DIR_NAME}/main.py  \
 --batch_size 32 --learning_rate 0.01 --num_epochs 10 \
 --node_type 0 --max_id -1 --num_classes 2 \
 --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
---feature_idx 0 --feature_dim 4 --label_idx 1 --label_dim 1 --algo $ALGO \
+--feature_idx 0 --feature_dim 7 --label_idx 1 --label_dim 1 --algo $ALGO \
 --log_by_steps 1 --use_per_step_metrics $PLATFORM_DEVICE --storage_type $STORAGE_TYPE
 
 python3 ${DIR_NAME}/main.py  \
@@ -45,7 +45,7 @@ if [[ "$ADL_UPLOADER" == "no" ]]; then
     python3 ${DIR_NAME}/main.py  \
     --data_dir $GRAPH --mode inference \
     --backend snark --graph_type local --converter skip \
-    --batch_size 128 --num_classes 2 \
+    --batch_size 128 \
     --sample_file /tmp/mutag/test.nodes --node_type 0 \
     --feature_idx 0 --feature_dim 4 --label_idx 1 --label_dim 1 --algo $ALGO \
     --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
@@ -81,5 +81,4 @@ if [[ "$USE_HADOOP" == "yes" ]]; then
     --stream
 fi
 
-rm -fr $GRAPH
 rm -rf $MODEL_DIR

@@ -26,8 +26,8 @@ fi
 python3 ${DIR_NAME}/main.py  \
 --data_dir $GRAPH --mode train --seed 123 \
 --backend snark --graph_type local --converter skip \
---batch_size 32 --learning_rate 0.01 --num_epochs 350 \
---node_type 0 --max_id -1 \
+--batch_size 32 --learning_rate 0.01 --num_epochs 10 \
+--node_type 0 --max_id -1 --num_classes 3 \
 --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
 --feature_idx 0 --feature_dim 367 --label_idx 1 --label_dim 1 --algo $ALGO \
 --log_by_steps 1 --use_per_step_metrics $PLATFORM_DEVICE --storage_type $STORAGE_TYPE
@@ -35,8 +35,8 @@ python3 ${DIR_NAME}/main.py  \
 python3 ${DIR_NAME}/main.py  \
 --data_dir $GRAPH --mode evaluate \
 --backend snark --graph_type local --converter skip \
---batch_size 128 --num_epochs 10 \
---sample_file /tmp/collab/test.nodes --node_type 1 --max_id -1 \
+--batch_size 128 --num_epochs 10 --num_classes 3 \
+--sample_file /tmp/collab/test.nodes --node_type 0 --max_id -1 \
 --feature_idx 0 --feature_dim 367 --label_idx 1 --label_dim 1 --algo $ALGO \
 --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
 --log_by_steps 1 --use_per_step_metrics $PLATFORM_DEVICE
@@ -45,7 +45,7 @@ if [[ "$ADL_UPLOADER" == "no" ]]; then
     python3 ${DIR_NAME}/main.py  \
     --data_dir $GRAPH --mode inference \
     --backend snark --graph_type local --converter skip \
-    --batch_size 128 --num_epochs 200 \
+    --batch_size 128 --num_classes 3 \
     --sample_file /tmp/collab/test.nodes --node_type 0 \
     --feature_idx 0 --feature_dim 367 --label_idx 1 --label_dim 1 --algo $ALGO \
     --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
@@ -54,7 +54,7 @@ else
     python3 ${DIR_NAME}/main.py  \
     --data_dir $GRAPH --mode inference \
     --backend snark --graph_type local --converter skip \
-    --batch_size 128 --num_epochs 200 \
+    --batch_size 128 --num_classes 3 \
     --sample_file /tmp/collab/test.nodes --node_type 0 \
     --feature_idx 0 --feature_dim 367 --label_idx 1 --label_dim 1 --algo $ALGO \
     --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path /integration_test/test_adl_uploader \
@@ -76,9 +76,10 @@ if [[ "$USE_HADOOP" == "yes" ]]; then
     --batch_size 140 --learning_rate 0.005 --num_epochs 100 \
     --node_type 0 --max_id -1 \
     --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
-    --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 121 --algo $ALGO \
+    --feature_idx 0 --feature_dim 367 --label_idx 1 --label_dim 1 --algo $ALGO \
     --log_by_steps 1 --use_per_step_metrics $PLATFORM_DEVICE \
     --stream
 fi
 
+rm -fr $GRAPH
 rm -rf $MODEL_DIR
