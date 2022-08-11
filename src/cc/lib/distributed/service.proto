@@ -162,7 +162,7 @@ message GetNeighborsReply {
 }
 
 message GetNeighborCountsReply {
-  repeated int64 neighbor_counts = 1;
+  repeated uint64 neighbor_counts = 1;
 }
 
 message WeightedSampleNeighborsRequest {
