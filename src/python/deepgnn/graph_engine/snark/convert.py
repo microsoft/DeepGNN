@@ -115,7 +115,7 @@ class MultiWorkersConverter:
 
         for data in dataset:
             data_len = len(data)
-            split_len = data_len // self.thread_count + 1
+            split_len = data_len // self.partition_count + 1
             for i in range(0, data_len, split_len):
                 d.dispatch(data[i : i + split_len])
 
