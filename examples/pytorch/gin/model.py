@@ -50,21 +50,21 @@ class MLP(nn.Module):
                 self.batch_norms.append(nn.BatchNorm1d((hidden_dim)))
 
     def forward(self, x):
-        print("Dim x: " + str(x.shape))
+        # print("Dim x: " + str(x.shape))
         # print("Dim lay1 : " + str(self.linears[0].shape))
         if self.is_single_layer:
             return self.linear(x)
         else:
             # get_logger().info("Inside forward!")
             self.h = x
-            get_logger().info("h addr: " + str(id(self.h)))
+            # get_logger().info("h addr: " + str(id(self.h)))
             # print(str(id(h)))
             for layer in range(self.num_layers - 1):
-                get_logger().info("h shape: " + str(self.h.shape))
-                get_logger().info("linear layer shape: " + str(self.linears[layer]))
+                # get_logger().info("h shape: " + str(self.h.shape))
+                # get_logger().info("linear layer shape: " + str(self.linears[layer]))
                 self.h = F.relu(self.batch_norms[layer](self.linears[layer](self.h)))
-                get_logger().info("post h addr: " + str(id(self.h)))
-                get_logger().info("post h shape: " + str(self.h.shape))
+                # get_logger().info("post h addr: " + str(id(self.h)))
+                # get_logger().info("post h shape: " + str(self.h.shape))
             return self.linears[self.num_layers - 1](self.h)
 
 
@@ -147,15 +147,15 @@ class GIN(BaseSupervisedModel):
                 self.linears_prediction.append(nn.Linear(hidden_dim, output_dim))
     
     def next_layer(self, h, layer, features, nb_counts, num_nodes):
-        get_logger().info("NEXT LAYER CALL: ----------------------------------------")
-        get_logger().info("H SHAPE: " + str(h.shape))
+        # get_logger().info("NEXT LAYER CALL: ----------------------------------------")
+        #get_logger().info("H SHAPE: " + str(h.shape))
         offset = 0
         # get_logger().info("INSIDE!")
 
         pooled = torch.zeros(num_nodes, self.feature_dim)
 
         for node_id in range(num_nodes):
-            get_logger().info("inside loop on iter " + str(node_id))
+            # get_logger().info("inside loop on iter " + str(node_id))
             num_neighbors = nb_counts[node_id].int().item()
 
             # Aggregate and sum features across all neighbors 
@@ -175,25 +175,13 @@ class GIN(BaseSupervisedModel):
         
        # get_logger().info("POOLED: " + str(pooled))
 
-        if layer >= 1:
-            get_logger().info("h shape: " + str(h.shape))
-            get_logger().info("pooled shape: " + str(h.shape))
-            res = torch.spmm(h, pooled)
-            get_logger().info("res shape: " + str(h.shape))
+        if layer == 0:
+            pooled_rep = self.mlps[layer](pooled)
+            
         else:
-            res = pooled
-        
-        get_logger().info(str(pooled.shape))
-        # get_logger().info(str(self.mlps[layer](h)))
-        pooled_rep = self.mlps[layer](res)
-        get_logger().info("REACHED!")
+            pooled_rep = self.mlps[layer](h)
 
-        # get_logger().info(str(self.batch_norms))
         h = self.batch_norms[layer](pooled_rep)
-        get_logger().info("REACHED pt 2!")
-
-
-         # Non-linearity
         h = F.relu(h)
 
         return h
@@ -202,21 +190,25 @@ class GIN(BaseSupervisedModel):
         num_nodes = len(context['nb_counts'][0])
         nb_counts = context["nb_counts"].squeeze()
         features = context["features"].squeeze()
+        nb_features = context["nb-features"].squeeze()
 
-        # get_logger().info("FEATURES: " + str(features))
+        get_logger().info("FEATURES: " + str(features))
 
         # get_logger().info("NB COUNTS: " + str(nb_counts))
 
         hidden_rep = [features]
         h = features
         # get_logger().info("Features dim: " + str(features.shape))
-        idx = 0
+        # idx = 0
         for layer in range(self.num_layers - 1):
+
             # get_logger().info("pre H: " + str(h))
-            h = self.next_layer(hidden_rep[idx], layer, features, nb_counts, num_nodes)
+            h = self.next_layer(h, layer, features, nb_counts, num_nodes)
             # get_logger().info("post H: " + str(h))
             hidden_rep.append(h)
-            idx += 1
+            get_logger().info("Layer " + str(layer) + " ===============================")
+            get_logger().info("H: " + str(h))
+            # idx += 1
 
         score = 0
         # for layer in range(self.num_layers):
@@ -224,7 +216,11 @@ class GIN(BaseSupervisedModel):
 
         for layer, pooled_h in enumerate(hidden_rep):
             # pooled_h = torch.spmm(graph_pool, h)
+            # get_logger().info("Layer " + str(layer) + " | " + str(pooled_h.shape))
             score += F.dropout(self.linears_prediction[layer](pooled_h), self.final_dropout, training = self.training)
+            # get_logger().info("Layer " + str(layer) + " finished.")
+            # get_logger().info(str(score))
+           #  get_logger().info(str(score.shape))
 
         return score
 
@@ -275,8 +271,14 @@ class GIN(BaseSupervisedModel):
             FeatureType.FLOAT,
         )
 
-
         context["features"] = graph.node_features(
+            context["inputs"],
+            np.array([[self.feature_idx, self.feature_dim]]),
+            FeatureType.FLOAT,
+        )
+
+
+        context["nb-features"] = graph.node_features(
             context["neighbors"],
             np.array([[self.feature_idx, self.feature_dim]]),
             FeatureType.FLOAT,
