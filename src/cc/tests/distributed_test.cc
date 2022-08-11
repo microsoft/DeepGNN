@@ -146,6 +146,139 @@ TEST(DistributedTest, NodeStringFeaturesMultipleServers)
     EXPECT_EQ(dimensions, std::vector<int64_t>({8, 8, 8, 20, 0, 0, 8, 4}));
 }
 
+TEST(DistributedTest, NodeSparseFeaturesMultipleServers)
+{
+    const size_t num_nodes = 4;
+    const size_t num_servers = 1;
+    size_t start_node = 1;
+    std::vector<std::unique_ptr<snark::GRPCServer>> servers;
+    std::vector<std::shared_ptr<grpc::Channel>> channels;
+    for (size_t server_index = 0; server_index < num_servers; ++server_index)
+    {
+        TestGraph::MemoryGraph m;
+        for (size_t n = start_node; n < start_node + num_nodes; n++)
+        {
+            std::vector<std::vector<float>> features;
+            if (n == start_node)
+            {
+                std::vector<int32_t> f1_data = {{3, 3, 1, 0, 13, 0, 42, 0, 1}};
+                auto start = reinterpret_cast<float *>(f1_data.data());
+                features = {std::vector<float>(start, start + f1_data.size())};
+            }
+            m.m_nodes.push_back(TestGraph::Node{
+                .m_id = snark::NodeId(n), .m_type = 0, .m_weight = 1.0f, .m_float_features = std::move(features)});
+        }
+        start_node += num_nodes;
+
+        TempFolder path("NodeSparseFeaturesMultipleServers");
+        auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
+
+        servers.emplace_back(std::make_unique<snark::GRPCServer>(
+            std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
+                                                            snark::PartitionStorageType::memory, ""),
+            std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", ""));
+        channels.emplace_back(servers.back()->InProcessChannel());
+    }
+    snark::GRPCClient c(channels, 1, 1);
+
+    std::vector<snark::NodeId> input_nodes = {2, 5, 0, 1};
+    std::vector<snark::FeatureId> features = {1, 0};
+    std::vector<std::vector<uint8_t>> values(features.size());
+    std::vector<std::vector<int64_t>> indices(features.size());
+    std::vector<int64_t> dimensions(features.size());
+    c.GetNodeSparseFeature(std::span(input_nodes), std::span(features), std::span(dimensions), indices, values);
+    std::span res(reinterpret_cast<int32_t *>(values[1].data()), values[1].size() / 4);
+    EXPECT_EQ(std::vector<int32_t>(std::begin(res), std::end(res)), std::vector<int32_t>({1}));
+    EXPECT_EQ(dimensions, std::vector<int64_t>({0, 3}));
+}
+
+TEST(DistributedTest, NodeSparseFeaturesSingleServerMissingFeatures)
+{
+    // indices - 17416, data - 1.0
+    std::vector<int32_t> f5_data = {1, 1, 17416, 0, 1065353216};
+    auto f5_start = reinterpret_cast<float *>(f5_data.data());
+    // indices - 1, data - 1.0
+    std::vector<int32_t> f6_data = {1, 1, 0, 0, 1065353216};
+    auto f6_start = reinterpret_cast<float *>(f6_data.data());
+
+    std::vector<std::vector<float>> input_features = {{},
+                                                      {},
+                                                      {},
+                                                      {},
+                                                      {},
+                                                      std::vector<float>(f5_start, f5_start + f5_data.size()),
+                                                      std::vector<float>(f6_start, f6_start + f6_data.size())};
+    TestGraph::MemoryGraph m;
+    m.m_nodes.push_back(TestGraph::Node{
+        .m_id = snark::NodeId(13979298), .m_type = 0, .m_weight = 1.0f, .m_float_features = std::move(input_features)});
+    TempFolder path("NodeSparseFeaturesSingleServerMissingFeatures");
+    auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
+
+    auto server = std::make_unique<snark::GRPCServer>(
+        std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
+                                                        snark::PartitionStorageType::memory, ""),
+        std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", "");
+    auto channel = server->InProcessChannel();
+
+    snark::GRPCClient c({channel}, 1, 1);
+
+    std::vector<snark::NodeId> nodes = {13979298};
+    std::vector<snark::FeatureId> features = {6};
+
+    std::vector<std::vector<uint8_t>> data(features.size());
+    std::vector<std::vector<int64_t>> indices(features.size());
+    std::vector<int64_t> dimensions = {-1};
+    c.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
+    EXPECT_EQ(std::vector<int64_t>({0, 0}), indices[0]);
+    EXPECT_EQ(std::vector<int64_t>({1}), dimensions);
+    auto tmp = reinterpret_cast<float *>(data[0].data());
+    EXPECT_EQ(std::vector<float>({1.0}), std::vector<float>(tmp, tmp + 1));
+
+    features = {1, 6};
+
+    data = {{}, {}};
+    indices = {{}, {}};
+    dimensions = {-1, -1};
+    c.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
+    EXPECT_EQ(std::vector<int64_t>({}), indices[0]);
+    EXPECT_EQ(std::vector<int64_t>({0, 0}), indices[1]);
+    EXPECT_EQ(std::vector<int64_t>({0, 1}), dimensions);
+    tmp = reinterpret_cast<float *>(data[1].data());
+    EXPECT_EQ(std::vector<float>({1.0}), std::vector<float>(tmp, tmp + 1));
+
+    features = {1, 2, 5, 6};
+    data = {{}, {}, {}, {}};
+    indices = {{}, {}, {}, {}};
+    dimensions = {-1, -1, -1, -1};
+    c.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
+    EXPECT_EQ(std::vector<int64_t>({}), indices[0]);
+    EXPECT_EQ(std::vector<int64_t>({}), indices[1]);
+    EXPECT_EQ(std::vector<int64_t>({0, 17416}), indices[2]);
+    EXPECT_EQ(std::vector<int64_t>({0, 0}), indices[3]);
+    EXPECT_EQ(std::vector<int64_t>({0, 0, 1, 1}), dimensions);
+    EXPECT_EQ(0, data[0].size());
+    EXPECT_EQ(0, data[1].size());
+    tmp = reinterpret_cast<float *>(data[2].data());
+    EXPECT_EQ(std::vector<float>({1.0}), std::vector<float>(tmp, tmp + 1));
+    tmp = reinterpret_cast<float *>(data[3].data());
+    EXPECT_EQ(std::vector<float>({1.0}), std::vector<float>(tmp, tmp + 1));
+
+    features = {5, 6};
+    data = {{}, {}};
+    indices = {{}, {}};
+    dimensions = {-1, -1};
+    c.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
+    EXPECT_EQ(std::vector<int64_t>({0, 17416}), indices[0]);
+    EXPECT_EQ(std::vector<int64_t>({0, 0}), indices[1]);
+    EXPECT_EQ(std::vector<int64_t>({1, 1}), dimensions);
+    EXPECT_EQ(sizeof(float), data[0].size());
+    EXPECT_EQ(sizeof(float), data[1].size());
+    tmp = reinterpret_cast<float *>(data[0].data());
+    EXPECT_EQ(std::vector<float>({1.0}), std::vector<float>(tmp, tmp + 1));
+    tmp = reinterpret_cast<float *>(data[1].data());
+    EXPECT_EQ(std::vector<float>({1.0}), std::vector<float>(tmp, tmp + 1));
+}
+
 namespace
 {
 using TestChannels = std::vector<std::shared_ptr<grpc::Channel>>;

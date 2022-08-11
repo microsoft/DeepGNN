@@ -8,7 +8,7 @@ RotatE [Paper](https://arxiv.org/abs/1902.10197)
 # Generate Graph Data
 pytorch/data/tools/convert_kg_to_json.py: convert standard knowledge graph data to deepgnn json format.
 pytorch/data/tools/produce_test_file.py: generate sample file for evaluation.
-* [Prepare Graph Data](../../../docs/advanced/data_spec.md)
+* [Prepare Graph Data](../../../docs/graph_engine/data_spec.rst)
 
 # Job Augmentations
 ## GAT
