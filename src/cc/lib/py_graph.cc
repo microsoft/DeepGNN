@@ -629,7 +629,7 @@ int32_t NeighborCount(PyGraph *py_graph, NodeID *in_node_ids, size_t in_node_ids
         RAW_LOG_ERROR("Internal graph is not initialized");
         return 1;
     }
-    std::fill_n(out_neighbor_counts, in_node_ids_size, 0);
+
     if (py_graph->graph->graph)
     {
         py_graph->graph->graph->NeighborCount(

@@ -214,7 +214,6 @@ def test_full_neighbor_graph_handle_empty_list(multi_partition_graph_data):
     npt.assert_array_equal(counts, [0])
 
 
-# Neighbor Count Tests
 def test_neighbor_count_graph_single_partition(multi_partition_graph_data):
     g = client.MemoryGraph(multi_partition_graph_data, [1])
     output_node_counts = g.neighbor_counts(
@@ -260,7 +259,6 @@ def test_neighbor_count_graph_nonexistent_node(multi_partition_graph_data):
     npt.assert_array_equal(output_node_counts, [0])
 
 
-# Distributed Neighbor Count Tests
 def test_neighbor_count_remote_client_single_partition(multi_partition_graph_data):
     s1 = server.Server(multi_partition_graph_data, [0], "localhost:12344")
     s2 = server.Server(multi_partition_graph_data, [1], "localhost:12354")
