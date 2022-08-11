@@ -801,7 +801,7 @@ def test_remote_client_node_features_single_server(
 ):
     address = ["localhost:9999"]
     if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+        address = [a + f"{storage_type}" for a in address]
     s = server.Server(
         multi_partition_graph_data, [0], address[0], storage_type=storage_type
     )
@@ -825,7 +825,7 @@ def test_remote_client_node_features_single_server(
 def test_distributed_graph_metadata(multi_partition_graph_data, storage_type):
     address = ["localhost:2234", "localhost:2235"]
     if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+        address = [a + f"{int(storage_type)}{int(time.time()) % 100}" for a in address]
 
     s1 = server.Server(
         multi_partition_graph_data, [0], address[0], storage_type=storage_type
@@ -853,7 +853,7 @@ def test_distributed_graph_metadata(multi_partition_graph_data, storage_type):
 def test_distributed_graph_type_counts(multi_partition_graph_data, storage_type):
     address = ["localhost:12234", "localhost:12235"]
     if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+        address = [a + f"{storage_type}" for a in address]
     s1 = server.Server(
         multi_partition_graph_data, [0], address[0], storage_type=storage_type
     )
@@ -891,7 +891,7 @@ def test_remote_client_node_features_multiple_servers(
 ):
     address = ["localhost:1234", "localhost:1235"]
     if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+        address = [a + f"{int(storage_type)}{int(time.time()) % 100}" for a in address]
     s1 = server.Server(
         multi_partition_graph_data, [0], address[0], storage_type=storage_type
     )
@@ -922,7 +922,7 @@ def test_remote_client_node_string_features_multiple_servers(
 ):
     address = ["localhost:1234", "localhost:1235"]
     if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+        address = [a + f"{int(storage_type)}{int(time.time()) % 100}" for a in address]
     s1 = server.Server(
         multi_partition_graph_data, [0], address[0], storage_type=storage_type
     )
@@ -947,7 +947,7 @@ def test_remote_client_node_string_features_multiple_servers(
 def test_remote_client_node_extra_features(multi_partition_graph_data, storage_type):
     address = ["localhost:11234", "localhost:11235"]
     if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+        address = [a + f"{int(storage_type)}{int(time.time()) % 100}" for a in address]
     s1 = server.Server(
         multi_partition_graph_data, [0], address[0], storage_type=storage_type
     )
@@ -996,7 +996,7 @@ def test_remote_client_edge_extra_features_graph_multiple_partitions(
 ):
     address = ["localhost:9234", "localhost:9235"]
     if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+        address = [a + f"{int(storage_type)}{int(time.time()) % 100}" for a in address]
     s1 = server.Server(
         multi_partition_graph_data, [0], address[0], storage_type=storage_type
     )
@@ -1046,7 +1046,7 @@ def test_remote_client_missing_edge_features_graph_multiple_partitions(
 ):
     address = ["localhost:9234", "localhost:9235"]
     if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+        address = [a + f"{int(storage_type)}{int(time.time()) % 100}" for a in address]
     s1 = server.Server(
         multi_partition_graph_data, [0], address[0], storage_type=storage_type
     )
@@ -1078,7 +1078,7 @@ def test_remote_client_missing_edge_string_features_graph_multiple_partitions(
 ):
     address = ["localhost:9236", "localhost:9237"]
     if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+        address = [a + f"{int(storage_type)}{int(time.time()) % 100}" for a in address]
     s1 = server.Server(
         multi_partition_graph_data, [0], address[0], storage_type=storage_type
     )
@@ -1111,7 +1111,7 @@ def test_remote_client_node_features_multiple_servers_same_data_tst(
 ):
     address = ["localhost:1236", "localhost:1237"]
     if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+        address = [a + f"{int(storage_type)}{int(time.time()) % 100}" for a in address]
     s1 = server.Server(
         multi_partition_graph_data, [0, 1], address[0], storage_type=storage_type
     )
@@ -1183,7 +1183,7 @@ def test_remote_client_node_features_multiple_servers_connection_loss(
 ):
     address = ["localhost:1238", "localhost:1239"]
     if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+        address = [a + f"{int(storage_type)}{int(time.time()) % 100}" for a in address]
     s1 = server.Server(
         multi_partition_graph_data, [0], hostname=address[0], storage_type=storage_type
     )
@@ -1222,7 +1222,7 @@ def test_node_sampling_distributed_graph_multiple_partitions(
 ):
     address = ["localhost:1240", "localhost:1241"]
     if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+        address = [a + f"{storage_type}" for a in address]
     s1 = server.Server(multi_partition_graph_data, [0], hostname=address[0])
     s2 = server.Server(multi_partition_graph_data, [1], hostname=address[1])
 
@@ -1246,7 +1246,7 @@ def test_node_sampling_distributed_graph_multiple_partitions_raises_empty_types(
 ):
     address = ["localhost:12409", "localhost:12419"]
     if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+        address = [a + f"{storage_type}" for a in address]
     s1 = server.Server(
         multi_partition_graph_data, [0], hostname=address[0], storage_type=storage_type
     )
@@ -1265,8 +1265,8 @@ def test_node_sampling_distributed_graph_multiple_partitions_raises_empty_types(
 def test_edge_sampling_distributed_graph_multiple_partitions(
     multi_partition_graph_data,
 ):
-    _ = server.Server(multi_partition_graph_data, [0], hostname="localhost:1243")
-    _ = server.Server(multi_partition_graph_data, [1], hostname="localhost:1244")
+    s1 = server.Server(multi_partition_graph_data, [0], hostname="localhost:1243")
+    s2 = server.Server(multi_partition_graph_data, [1], hostname="localhost:1244")
 
     cl = client.DistributedGraph(["localhost:1243", "localhost:1244"])
     es = client.EdgeSampler(cl, [0, 1])
@@ -1274,6 +1274,8 @@ def test_edge_sampling_distributed_graph_multiple_partitions(
     npt.assert_array_equal(s, [0, 0, 5, 5, 5])
     npt.assert_array_equal(d, [5, 5, 9, 9, 9])
     npt.assert_array_equal(t, [1, 1, 1, 1, 1])
+    s1.reset()
+    s2.reset()
 
 
 @pytest.mark.parametrize(
@@ -1284,7 +1286,7 @@ def test_edge_sampling_distributed_graph_multiple_partitions(
 def test_distributed_graph_neighbors(multi_partition_graph_data, storage_type):
     address = ["localhost:12409", "localhost:12419"]
     if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+        address = [a + f"{int(storage_type)}{int(time.time()) % 100}" for a in address]
     s1 = server.Server(
         multi_partition_graph_data, [0], hostname=address[0], storage_type=storage_type
     )
@@ -1300,6 +1302,8 @@ def test_distributed_graph_neighbors(multi_partition_graph_data, storage_type):
     npt.assert_almost_equal(weights, np.array([0.5, 1.0], dtype=np.float32))
     npt.assert_equal(edge_types, np.array([0, 1], dtype=np.int32))
     npt.assert_equal(result_counts, np.array([1, 1], dtype=np.int64))
+    s1.reset()
+    s2.reset()
 
 
 @pytest.mark.parametrize(
@@ -1310,7 +1314,7 @@ def test_distributed_graph_neighbors(multi_partition_graph_data, storage_type):
 def test_distributed_graph_node_types(multi_partition_graph_data, storage_type):
     address = ["localhost:12409", "localhost:12419"]
     if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+        address = [a + f"{int(storage_type)}{int(time.time()) % 100}" for a in address]
     s1 = server.Server(
         multi_partition_graph_data, [0], hostname=address[0], storage_type=storage_type
     )
@@ -1325,7 +1329,7 @@ def test_distributed_graph_node_types(multi_partition_graph_data, storage_type):
 
     address = ["localhost:124099"]
     if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+        address = [a + f"{int(storage_type)}{int(time.time()) % 100}" for a in address]
     s1 = server.Server(
         multi_partition_graph_data,
         [0, 1],
@@ -1348,7 +1352,7 @@ def test_edge_sampling_distributed_graph_multiple_partitions_raises_empty_types(
 ):
     address = ["localhost:12439", "localhost:12449"]
     if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+        address = [a + f"{int(storage_type)}{int(time.time()) % 100}" for a in address]
     s1 = server.Server(
         multi_partition_graph_data, [0], hostname=address[0], storage_type=storage_type
     )
@@ -1373,7 +1377,7 @@ def test_node_sampling_distributed_graph_multiple_partitions_server_down(
 ):
     address = ["localhost:1250", "localhost:1251"]
     if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+        address = [a + f"{int(storage_type)}{int(time.time()) % 100}" for a in address]
     s1 = server.Server(
         multi_partition_graph_data, [0], hostname=address[0], storage_type=storage_type
     )
@@ -1401,7 +1405,7 @@ def test_edge_sampling_distributed_graph_multiple_partitions_server_down(
 ):
     address = ["localhost:1253", "localhost:1254"]
     if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+        address = [a + f"{int(storage_type)}{int(time.time()) % 100}" for a in address]
     s1 = server.Server(
         multi_partition_graph_data, [0], hostname=address[0], storage_type=storage_type
     )
@@ -1457,7 +1461,9 @@ def test_servers_stay_alive_on_client_disconnects(
 ):
     addresses = ["localhost:1255", "localhost:1256"]
     if platform.system() != "Darwin":
-        addresses = [a + f"{int(storage_type)}" for a in addresses]
+        addresses = [
+            a + f"{int(storage_type)}{int(time.time()) % 100}" for a in addresses
+        ]
     s1 = server.Server(
         multi_partition_graph_data,
         [0],
