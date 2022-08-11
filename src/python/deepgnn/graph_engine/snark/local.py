@@ -5,6 +5,7 @@
 import random
 from typing import List, Tuple, Union, Dict
 
+
 import numpy as np
 import deepgnn.graph_engine.snark.client as client
 from deepgnn.graph_engine._base import FeatureType, Graph, SamplingStrategy
@@ -106,6 +107,7 @@ class Client(Graph):
         default_node_type: int = -1,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Sample node neighbors."""
+        get_logger().info("COUNT: " + str(count))
         if strategy == "byweight":
             result = self.graph.weighted_sample_neighbors(  # type: ignore
                 nodes,
