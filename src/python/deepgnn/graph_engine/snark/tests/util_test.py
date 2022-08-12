@@ -10,7 +10,7 @@ def json_to_edge_list_feature(features):
         if f is None:
             return "uint8,0"
         elif isinstance(f, str):
-            return f"binary_feature,1,{f}"
+            return f"binary,1,{f}"
         elif isinstance(f, tuple):
             coords, values = f
             if values.size == 0:

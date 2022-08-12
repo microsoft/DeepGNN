@@ -44,7 +44,7 @@ DecoderType = TypeVar("DecoderType", bound=Decoder)
 
 
 class EdgeListDecoder(Decoder):
-    """Convert the text line into node object.
+    r"""Convert the text line into node object.
 
     Edge List Format:
         ```
@@ -106,6 +106,9 @@ class EdgeListDecoder(Decoder):
         1,-1,1,1,1,1.1,1.1
         1,0,0,4,10,1,1,1
         ```
+
+
+    * \ is the escape for the delimiter in "binary" features.
     """
 
     def __init__(
@@ -166,8 +169,11 @@ class EdgeListDecoder(Decoder):
             )
 
         length_single = length[0]
-        if length_single == 1 and key == "binary_feature":
-            return next(data)  # type: ignore
+        if length_single == 1 and key == "binary":
+            output = next(data)
+            while output[-1] == "\\":  # Escape
+                output = f"{output[:-1]}{self.delimiter}{next(data)}"
+            return output
         else:
             return np.fromiter(data, count=length_single, dtype=key)  # type: ignore
 

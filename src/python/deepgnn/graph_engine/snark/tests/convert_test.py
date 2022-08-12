@@ -962,25 +962,25 @@ def test_edge_list_error_checking():
     with pytest.raises(StopIteration):
         next(decoder.decode(""))
     with pytest.raises(ValueError):
-        next(decoder.decode("-1,x"))
+        next(decoder.decode("x"))
     with pytest.raises(RuntimeError):
-        next(decoder.decode("-1,0"))
+        next(decoder.decode("0,-1"))
     with pytest.raises(RuntimeError):
-        next(decoder.decode("-1,0,4"))
+        next(decoder.decode("0,-1,4"))
     with pytest.raises(ValueError):
-        next(decoder.decode("-1,0,4,x"))
+        next(decoder.decode("0,-1,4,x"))
     # ignores feature vector if fails to read
-    next(decoder.decode("-1,0,4,1,bad_key"))
-    next(decoder.decode("-1,0,4,1,float32"))
+    next(decoder.decode("0,-1,4,1,bad_key"))
+    next(decoder.decode("0,-1,4,1,float32"))
     with pytest.raises(ValueError):
-        next(decoder.decode("-1,0,4,1,float32,2"))
+        next(decoder.decode("0,-1,4,1,float32,2"))
     with pytest.raises(ValueError):
-        next(decoder.decode("-1,0,4,1,float32,2,1"))
+        next(decoder.decode("0,-1,4,1,float32,2,1"))
     with pytest.raises(ValueError):
-        next(decoder.decode("-1,0,4,1,float32,2,1,x"))
-    next(decoder.decode("-1,0,4,1,float32,2,1,1"))
-    next(decoder.decode("-1,0,4,1,binary_feature,1,test"))
-    next(decoder.decode("-1,0,4,1,float32,0"))
+        next(decoder.decode("0,-1,4,1,float32,2,1,x"))
+    next(decoder.decode("0,-1,4,1,float32,2,1,1"))
+    next(decoder.decode("0,-1,4,1,binary,1,test"))
+    next(decoder.decode("0,-1,4,1,float32,0"))
     with pytest.raises(RuntimeError):
         gen = decoder.decode("0,1")
         next(gen)
@@ -989,6 +989,18 @@ def test_edge_list_error_checking():
         next(gen)
     gen = decoder.decode("0,1,4,1")
     next(gen)
+
+
+def test_edge_list_binary_escape():
+    decoder = EdgeListDecoder()
+    src, dst, typ, weight, features = next(
+        decoder.decode("0,-1,0,1.0,binary,1,test\,feature")
+    )
+    assert features[0] == "test,feature"
+    src, dst, typ, weight, features = next(
+        decoder.decode("0,-1,0,1.0,binary,1,test,feature")
+    )
+    assert features[0] == "test"
 
 
 def test_binary_writer_error_checking():
