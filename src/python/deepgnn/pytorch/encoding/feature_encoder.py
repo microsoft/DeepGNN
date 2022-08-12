@@ -33,16 +33,16 @@ from deepgnn.pytorch.common.utils import get_python_type
 class FeatureEncoder(torch.nn.Module):
     """Encoder for raw feature of graph nodes."""
 
-    def __init__(self, dtype: np.dtype, feature_dim: int, embed_dim: int):
+    def __init__(self, feature_type: np.dtype, feature_dim: int, embed_dim: int):
         """Initialize feature encoder.
 
         Args:
-            dtype: type of raw features.
+            feature_type: type of raw features.
             feature_dim: dimension of raw features.
             embed_dim: dimension of encoder output.
         """
         super(FeatureEncoder, self).__init__()
-        self.dtype = dtype
+        self.feature_type = feature_type
         self.feature_dim = feature_dim
         self.embed_dim = embed_dim
 
@@ -63,7 +63,7 @@ class FeatureEncoder(torch.nn.Module):
 class TwinBERTFeatureEncoder(FeatureEncoder):
     """Wrapper for TwinBERTEncoder."""
 
-    def __init__(self, dtype: np.dtype, config: dict, pooler_count: int = 1):
+    def __init__(self, feature_type: np.dtype, config: dict, pooler_count: int = 1):
         """Initialize TwinBERT encoder.
 
         Args:
@@ -75,8 +75,8 @@ class TwinBERTFeatureEncoder(FeatureEncoder):
         self.tokenize_func = None
 
         super(TwinBERTFeatureEncoder, self).__init__(
-            dtype,
-            self.get_feature_dim(dtype, config),
+            feature_type,
+            self.get_feature_dim(feature_type, config),
             config[DOWNSCALE] if config[DOWNSCALE] > 0 else config["hidden_size"],
         )
 
@@ -95,12 +95,12 @@ class TwinBERTFeatureEncoder(FeatureEncoder):
         self.tokenize_func = tokenizer.extract_from_sentence
 
     @classmethod
-    def get_feature_dim(cls, dtype: np.dtype, config: dict):
+    def get_feature_dim(cls, feature_type: np.dtype, config: dict):
         """Extract feature dimensions."""
         max_seq_len = config[MAX_SEQ_LEN]
-        if dtype == np.uint8:
+        if feature_type == np.uint8:
             return config[MAX_SENT_CHARS]
-        if dtype == np.int64:
+        if feature_type == np.int64:
             if config[EMBEDDING_TYPE] == TRILETTER:
                 return max_seq_len * (config[TRILETTER_MAX_LETTERS_IN_WORD] + 1)
             else:
@@ -185,12 +185,14 @@ class TwinBERTFeatureEncoder(FeatureEncoder):
 
     def transform(self, context: dict):
         """Transform binary or int64 features."""
-        if self.dtype == np.uint8:
+        if self.feature_type == np.uint8:
             self._tokenize(context)
-        elif self.dtype == np.int64:
+        elif self.feature_type == np.int64:
             self._extract_sequence_id_and_mask(context)
         else:
-            raise RuntimeError(f"Raw feature with type {self.dtype} is not supported.")
+            raise RuntimeError(
+                f"Raw feature with type {self.feature_type} is not supported."
+            )
 
     def forward(self, context: dict, pooler_index: int = 0, output_encoded_layer=False):
         """Encode context recursively to get binary(string) feature embedding."""
@@ -233,15 +235,15 @@ class MultiTypeFeatureEncoder(FeatureEncoder):
 
     def __init__(
         self,
-        dtype: np.dtype,
+        feature_type: np.dtype,
         config: dict,
         encoder_types: list,
         share_encoder=False,
     ):
         """Initialize MultiType feature encoder."""
         super(MultiTypeFeatureEncoder, self).__init__(
-            dtype=dtype,
-            feature_dim=TwinBERTFeatureEncoder.get_feature_dim(dtype, config),
+            feature_type=feature_type,
+            feature_dim=TwinBERTFeatureEncoder.get_feature_dim(feature_type, config),
             embed_dim=config[DOWNSCALE],
         )
 
@@ -252,7 +254,7 @@ class MultiTypeFeatureEncoder(FeatureEncoder):
             self.add_module(
                 FEATURE_ENCODER_STR,
                 TwinBERTFeatureEncoder(
-                    dtype=self.dtype,
+                    feature_type=self.feature_type,
                     config=config,
                     pooler_count=len(self.encoder_types),
                 ),
@@ -263,7 +265,7 @@ class MultiTypeFeatureEncoder(FeatureEncoder):
                 self.add_module(
                     encoder_type + FEATURE_ENCODER_STR,
                     TwinBERTFeatureEncoder(
-                        dtype=self.dtype, config=config, pooler_count=1
+                        feature_type=self.feature_type, config=config, pooler_count=1
                     ),
                 )
 
@@ -337,7 +339,7 @@ def get_feature_encoder(args: argparse.Namespace):
 
             return (
                 MultiTypeFeatureEncoder(
-                    get_python_type(args.dtype),
+                    get_python_type(args.feature_type),
                     config,
                     encoders,
                     args.share_encoder,
@@ -345,6 +347,6 @@ def get_feature_encoder(args: argparse.Namespace):
                 config,
             )  # here we also return the config object because model will use it.
         else:
-            return TwinBERTFeatureEncoder(get_python_type(args.dtype), config)
+            return TwinBERTFeatureEncoder(get_python_type(args.feature_type), config)
 
     return None

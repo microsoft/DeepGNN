@@ -12,7 +12,7 @@ def sample_out_edges(
     count: int,
     sampling_strategy: str = "byweight",
     edge_feature_meta: np.ndarray = None,
-    edge_dtype: np.dtype = np.dtype(np.float32),
+    edge_feature_type: np.dtype = np.dtype(np.float32),
 ):
     """
     Get out edges for each nodes and edge features.
@@ -29,7 +29,7 @@ def sample_out_edges(
         For example, `edge_feature_meta = np.array([[0, 2], [1, 3]], dtype=np.int32)`
         - feature index = 0, feature dimension = 2
         - feature index = 1, feature dimension = 3
-      * edge_dtype: feauture value type: [np.float32|BINARY|INT64]
+      * edge_feature_type: feauture value type: [np.float32|BINARY|INT64]
 
     Return:
       * edges: out edges of `nodes`, `edges.shape == (len(nodes) * count, 3)`.
@@ -52,7 +52,7 @@ def sample_out_edges(
 
     feat = None
     if edge_feature_meta is not None:
-        feat = graph.edge_features(edges, edge_feature_meta, edge_dtype)
+        feat = graph.edge_features(edges, edge_feature_meta, edge_feature_type)
     return edges, feat
 
 

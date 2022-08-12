@@ -23,12 +23,12 @@ class HetGnnModel(BaseUnsupervisedModel):
         embed_d: int,
         feature_idx: int,
         feature_dim: int,
-        dtype: np.dtype,
+        feature_type: np.dtype,
         metric=MRR(),
     ):
         """Initialize HetGnn model."""
         super(HetGnnModel, self).__init__(
-            dtype=dtype,
+            feature_type=feature_type,
             feature_idx=feature_idx,
             feature_dim=feature_dim,
             feature_enc=None,

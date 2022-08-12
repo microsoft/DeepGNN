@@ -22,7 +22,7 @@ class SupervisedGraphSage(BaseSupervisedModel):
         num_classes: int,
         label_idx: int,
         label_dim: int,
-        dtype: np.dtype,
+        feature_type: np.dtype,
         feature_idx: int,
         feature_dim: int,
         edge_type: int,
@@ -33,7 +33,7 @@ class SupervisedGraphSage(BaseSupervisedModel):
     ):
         """Initialize a graphsage model for node classification."""
         super(SupervisedGraphSage, self).__init__(
-            dtype=dtype,
+            feature_type=feature_type,
             feature_idx=feature_idx,
             feature_dim=feature_dim,
             feature_enc=feature_enc,
@@ -95,7 +95,7 @@ class SupervisedGraphSage(BaseSupervisedModel):
         context["encoder"] = self.enc.query(
             context["inputs"],
             graph,
-            self.dtype,
+            self.feature_type,
             self.feature_idx,
             self.feature_dim,
         )
@@ -127,7 +127,7 @@ class UnSupervisedGraphSage(BaseUnsupervisedModel):
         num_classes: int,
         edge_type: int,
         fanouts: list,
-        dtype: np.dtype,
+        feature_type: np.dtype,
         feature_idx: int,
         feature_dim: int,
         num_negs: int = 20,
@@ -145,7 +145,7 @@ class UnSupervisedGraphSage(BaseUnsupervisedModel):
         neg_type -- type of nodes for negative samples.
         """
         super(UnSupervisedGraphSage, self).__init__(
-            dtype=dtype,
+            feature_type=feature_type,
             feature_idx=feature_idx,
             feature_dim=feature_dim,
             feature_enc=feature_enc,
@@ -202,7 +202,7 @@ class UnSupervisedGraphSage(BaseUnsupervisedModel):
         context["encoder"] = self.enc.query(
             context["inputs"],
             graph,
-            self.dtype,
+            self.feature_type,
             self.feature_idx,
             self.feature_dim,
         )
@@ -212,10 +212,10 @@ class UnSupervisedGraphSage(BaseUnsupervisedModel):
             graph, context["inputs"], np.array([self.edge_type], dtype=np.int32)
         ).flatten()
         context["encoder_neg"] = self.enc.query(
-            neg, graph, self.dtype, self.feature_idx, self.feature_dim
+            neg, graph, self.feature_type, self.feature_idx, self.feature_dim
         )
         context["encoder_pos"] = self.enc.query(
-            nbs, graph, self.dtype, self.feature_idx, self.feature_dim
+            nbs, graph, self.feature_type, self.feature_idx, self.feature_dim
         )
         self.transform(context)
         return context

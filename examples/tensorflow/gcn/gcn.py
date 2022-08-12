@@ -24,7 +24,7 @@ class GCNQueryParameter:
     feature_dim: int
     label_idx: int
     label_dim: int
-    dtype: np.dtype = np.float32
+    feature_type: np.dtype = np.float32
     label_type: np.dtype = np.float32
     num_hops: int = 2
 
@@ -54,7 +54,7 @@ class GCNQuery:
         input_mask = np.zeros(nodes.size, np.bool)
         input_mask[src_idx] = True
 
-        feat = graph.node_features(nodes, self.feat_meta, self.param.dtype)
+        feat = graph.node_features(nodes, self.feat_meta, self.param.feature_type)
         label = graph.node_features(nodes, self.label_meta, self.param.label_type)
         label = label.astype(np.int32)
 

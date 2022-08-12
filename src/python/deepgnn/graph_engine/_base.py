@@ -138,13 +138,13 @@ class Graph:
         raise NotImplementedError
 
     def node_features(
-        self, nodes: np.ndarray, features: np.ndarray, dtype: np.dtype
+        self, nodes: np.ndarray, features: np.ndarray, feature_type: np.dtype
     ) -> np.ndarray:
         """Fetch node features.
 
         nodes -- array of nodes to fetch features from.
         features -- two dimensional int array where each row is [feature_id, feature_dim].
-        dtype -- type of the features to extract.
+        feature_type -- type of the features to extract.
 
         Returns a blob array with feature values per node. The shape of the array is
         [len(nodes), sum(map(lambda f: f[1], features)))].
@@ -152,13 +152,13 @@ class Graph:
         raise NotImplementedError
 
     def edge_features(
-        self, edges: np.ndarray, features: np.ndarray, dtype: np.dtype
+        self, edges: np.ndarray, features: np.ndarray, feature_type: np.dtype
     ) -> np.ndarray:
         """Fetch edge features.
 
         edges -- array of triples [src, dst, type].
         features -- array of pairs describing features: [feature_id, feature_dim].
-        dtype -- type of features to extract.
+        feature_type -- type of features to extract.
         """
         raise NotImplementedError
 

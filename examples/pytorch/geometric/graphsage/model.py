@@ -24,7 +24,7 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         num_classes: int,
         label_idx: int,
         label_dim: int,
-        dtype: np.dtype,
+        feature_type: np.dtype,
         feature_idx: int,
         feature_dim: int,
         edge_type: int,
@@ -35,7 +35,7 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
     ):
         """Initialize a graphsage model for node classification."""
         super(PTGSupervisedGraphSage, self).__init__(
-            dtype=dtype,
+            feature_type=feature_type,
             feature_idx=feature_idx,
             feature_dim=feature_dim,
             feature_enc=feature_enc,
@@ -90,7 +90,7 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         # Nodes for which we need features (layer 0)
         n0_out = np.concatenate([n1_out, n1_in])
         x0 = graph.node_features(
-            n0_out, np.array([[self.feature_idx, self.feature_dim]]), self.dtype
+            n0_out, np.array([[self.feature_idx, self.feature_dim]]), self.feature_type
         )
 
         context["x0"] = x0

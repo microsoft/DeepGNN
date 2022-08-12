@@ -20,7 +20,7 @@ class BaseModel(nn.Module):
 
     def __init__(
         self,
-        dtype: np.dtype,
+        feature_type: np.dtype,
         feature_idx: int,
         feature_dim: int,
         feature_enc: Optional[FeatureEncoder],
@@ -28,7 +28,7 @@ class BaseModel(nn.Module):
         """Initialize common fields.
 
         Args:
-            dtype: feature type used for graph querying.
+            feature_type: feature type used for graph querying.
             feature_idx: feature index used for graph querying.
             feature_dim: feature dimension used for graph querying.
             feature_enc: feature encoder used to encode input raw feature(mainly for binary) to embedding.
@@ -36,9 +36,9 @@ class BaseModel(nn.Module):
         super(BaseModel, self).__init__()
 
         get_logger().info(
-            f"[BaseModel] dtype: {dtype}, feature_idx:{feature_idx}, feature_dim:{feature_dim}."
+            f"[BaseModel] feature_type: {feature_type}, feature_idx:{feature_idx}, feature_dim:{feature_dim}."
         )
-        self.dtype = dtype
+        self.feature_type = feature_type
         self.feature_idx = feature_idx
 
         # If feature_enc is valid, overwrite self.feature_dim with feature_enc.feature_dim.
@@ -87,7 +87,7 @@ class BaseModel(nn.Module):
         """Stub for metric evaluation."""
         if self.metric is not None:
             preds = torch.unsqueeze(torch.cat(preds, 0), 1)
-            labels = torch.unsqueeze(torch.cat(labels, 0), 1).type(preds.dtype)
+            labels = torch.unsqueeze(torch.cat(labels, 0), 1).type(preds.feature_type)
             return self.metric.compute(preds, labels)
         return torch.tensor(0.0)
 
@@ -128,14 +128,14 @@ class BaseSupervisedModel(BaseModel):
 
     def __init__(
         self,
-        dtype: np.dtype,
+        feature_type: np.dtype,
         feature_idx: int,
         feature_dim: int,
         feature_enc: Optional[FeatureEncoder],
     ):
         """Initialize common fields."""
         super(BaseSupervisedModel, self).__init__(
-            dtype=dtype,
+            feature_type=feature_type,
             feature_idx=feature_idx,
             feature_dim=feature_dim,
             feature_enc=feature_enc,
@@ -172,14 +172,14 @@ class BaseUnsupervisedModel(BaseModel):
 
     def __init__(
         self,
-        dtype: np.dtype,
+        feature_type: np.dtype,
         feature_idx: int,
         feature_dim: int,
         feature_enc: Optional[FeatureEncoder],
     ):
         """Initialize common fields."""
         super(BaseUnsupervisedModel, self).__init__(
-            dtype=dtype,
+            feature_type=feature_type,
             feature_idx=feature_idx,
             feature_dim=feature_dim,
             feature_enc=feature_enc,
