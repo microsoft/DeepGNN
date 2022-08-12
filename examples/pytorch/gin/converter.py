@@ -131,7 +131,6 @@ def convert_data(dataset, degree_as_tag):
 
 def build_json(g_list, train_idx, test_idx):
     """"Generate graph.json file from networkx graph."""
-    
 
     nodes = []
     data = ""
@@ -160,7 +159,7 @@ def build_json(g_list, train_idx, test_idx):
                 "node_weight": 1.0,
                 "node_id": graph_ids[node_id],
                 "node_type": 0,
-                "float_feature": {"0": feats, "1": label},
+                "float_feature": {"0": feats, "1": [label]},
                 "edge": [{
                     "src_id": graph_ids[node_id],
                     "dst_id": graph_ids[nb],

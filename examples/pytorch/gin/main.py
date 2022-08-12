@@ -1,11 +1,12 @@
 import argparse
+
 import torch
 import torch.nn as nn
 import numpy as np
 import random
 from deepgnn import TrainMode, setup_default_logging_config
 from deepgnn import get_logger
-from deepgnn.pytorch.common import MRR, Accuracy
+from deepgnn.pytorch.common import MeanAggregator, MRR, Accuracy
 from deepgnn.pytorch.common.utils import get_feature_type, set_seed
 from deepgnn.pytorch.encoding import get_feature_encoder
 from deepgnn.pytorch.modeling import BaseModel
@@ -103,10 +104,7 @@ def create_dataset(
 
 
 def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):
-    return torch.optim.SGD(
-        filter(lambda p: p.requires_grad, model.parameters()),
-        lr=args.learning_rate * world_size,
-    )
+    return torch.optim.Adam(model.parameters(), lr=args.learning_rate)
 
 def _main():
     # setup default logging component.

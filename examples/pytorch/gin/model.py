@@ -1,6 +1,4 @@
-from multiprocessing import pool
 from typing import Optional
-from urllib.request import HTTPDigestAuthHandler
 
 from deepgnn.logging_utils import get_logger
 
@@ -10,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from deepgnn.graph_engine import Graph, FeatureType
-from deepgnn.pytorch.common import BaseMetric, MRR
+from deepgnn.pytorch.common import MeanAggregator, BaseMetric, MRR
 from deepgnn.pytorch.modeling import BaseSupervisedModel
 from deepgnn.pytorch.encoding import FeatureEncoder
 # from deepgnn import get_logger
@@ -136,20 +134,12 @@ class GIN(BaseSupervisedModel):
                 self.linears_prediction.append(nn.Linear(input_dim, output_dim))
             else:
                 self.linears_prediction.append(nn.Linear(hidden_dim, output_dim))
-    
-    def next_layer(self, h, layer, features, nb_counts, num_nodes):
-        pooled_rep = self.mlps[layer](h)
-        h = self.batch_norms[layer](pooled_rep)
-        h = F.relu(h)
-        return h
 
-    def get_score(self, context: dict):
-        num_nodes = len(context['nb_counts'][0])
-        nb_counts = context["nb_counts"].squeeze()
-        features = context["features"].squeeze()
-
+    def graphpool(self, features, nb_counts, num_nodes):
         offset = 0
-        pooled = torch.zeros(num_nodes, self.feature_dim)
+
+        # if layer == 0:
+        graph_pool = torch.zeros(num_nodes, self.feature_dim)
 
         for node_id in range(num_nodes):
             num_neighbors = nb_counts[node_id].int().item()
@@ -164,39 +154,92 @@ class GIN(BaseSupervisedModel):
             # Write to pooled matrix
             if self.neighbor_pooling_type == "average":
                 sum_features /= num_neighbors
+            
+            # get_logger().info("Layer " + str(layer) + " --------------------------------")
+            # get_logger().info("Node id: " + str(node_id))
+            # get_logger().info("pooled shape: " + str(sum_features.shape))
+            # Write to pooled matrix
+            graph_pool[node_id] = sum_features
+        
+        return graph_pool
+    
+    def next_layer(self, h, layer, nb_counts, num_nodes):
+        offset = 0
 
+        if layer == 0:
+            pooled = torch.zeros(num_nodes, self.feature_dim)
+        else:
+            pooled = torch.zeros(num_nodes, self.hidden_dim)
+
+        for node_id in range(num_nodes):
+            num_neighbors = nb_counts[node_id].int().item()
+
+            # Aggregate and sum features across all neighbors 
+            neighbor_features = h[offset: offset + num_neighbors]
+            sum_features = neighbor_features.sum(0)
+
+            # Move offset forward to read next set of nb features
+            offset += (num_neighbors + 1)
+
+            # Write to pooled matrix
+            if self.neighbor_pooling_type == "average":
+                sum_features /= num_neighbors
+            
+            # get_logger().info("Layer " + str(layer) + " --------------------------------")
+            # get_logger().info("Node id: " + str(node_id))
+            # get_logger().info("pooled shape: " + str(sum_features.shape))
             # Write to pooled matrix
             pooled[node_id] = sum_features
 
+        pooled_rep = self.mlps[layer](pooled)
+        h = self.batch_norms[layer](pooled_rep)
+        h = F.relu(h)
+        return h
+
+    def get_score(self, context: dict):
+        num_nodes = len(context['nb_counts'][0])
+        nb_counts = context["nb_counts"].squeeze()
+        features = context["features"].squeeze()
+        nb_features = context["nb-features"].squeeze()
+
+        # graph_pool = self.graphpool(nb_features, nb_counts, num_nodes)
         # get_logger().info("NB COUNTS: " + str(nb_counts))
 
-        hidden_rep = [pooled]
-        h = pooled
+        hidden_rep = [features]
+        h = features
         
         for layer in range(self.num_layers - 1):
-            h = self.next_layer(h, layer, features, nb_counts, num_nodes)
+            h = self.next_layer(h, layer, nb_counts, num_nodes)
             hidden_rep.append(h)
 
         score = 0
         
         for layer, h in enumerate(hidden_rep):
-            # pooled_h = torch.spmm(nb_features, h)
-            # get_logger().info("Layer " + str(layer) + " | h shape: " + str(pooled_h.shape))
-            score += F.dropout(self.linears_prediction[layer](h), self.final_dropout, training = self.training)
-            # get_logger().info("Layer " + str(layer) + " finished.")
-            # get_logger().info(str(score))
-           #  get_logger().info(str(score.shape))
+
+            # get_logger().info("Layer " + str(layer) + " =====================================================")
+            ma = MeanAggregator(h)
+            pooled_h = ma.forward(
+                h, num_nodes
+            )
+
+            #get_logger().info("Pooled h " + str(layer)
+
+            # get_logger().info("Pooled h shape: " + str(pooled_h.shape))
+            score += F.dropout(self.linears_prediction[layer](pooled_h), self.final_dropout, training = self.training)
+            # get_logger().info("==========================================================================================")
 
         return score
 
     def forward(self, context: dict):
         scores: torch.Tensor = self.get_score(context)
+        # get_logger().info("Scores: " )
         labels = context["label"].long().squeeze().clone().detach()
 
         loss = self.xent(scores, labels)
 
         # Take argmax to fetch class indices
         scores = scores.argmax(dim=1)
+        # get_logger().info("Scores: " + str(scores.float().mean()))
         
         return (loss, scores, labels)
 
@@ -244,7 +287,7 @@ class GIN(BaseSupervisedModel):
         )
 
         context["features"] = graph.node_features(
-            context["neighbors"],
+            context["inputs"],
             np.array([[self.feature_idx, self.feature_dim]]),
             FeatureType.FLOAT,
         )
