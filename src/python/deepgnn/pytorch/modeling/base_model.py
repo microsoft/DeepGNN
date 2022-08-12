@@ -87,7 +87,7 @@ class BaseModel(nn.Module):
         """Stub for metric evaluation."""
         if self.metric is not None:
             preds = torch.unsqueeze(torch.cat(preds, 0), 1)
-            labels = torch.unsqueeze(torch.cat(labels, 0), 1).type(preds.feature_type)
+            labels = torch.unsqueeze(torch.cat(labels, 0), 1).type(preds.dtype)
             return self.metric.compute(preds, labels)
         return torch.tensor(0.0)
 

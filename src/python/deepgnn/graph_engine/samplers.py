@@ -249,7 +249,7 @@ class FileEdgeSampler(BaseSampler):
         shuffle=False,
         delimeter="\t",
         feature_dim=0,
-        dtype=np.float32,
+        feature_type=np.float32,
         drop_last=False,
         backfill_id=INVALID_NODE_ID,
         worker_index=0,
@@ -268,7 +268,7 @@ class FileEdgeSampler(BaseSampler):
           shuffle(int, optional): set to True to have the data reshuffled at every epoch (default: False).
           delimeter(str, optional): The string used to separate values. (default: '\\t').
           feature_dim(int, optional): the feature dimentions in sample files. (default: 0).
-          dtype(numpy.dtype, optional): the feature dimentions in sample files. (default: np.float32).
+          feature_type(np.dtype, optional): the feature dimentions in sample files. (default: np.float32).
           drop_last(bool, optional): set to True to drop the last incomplete batch, if the dataset size is not divisible by the batch size. If False and the size of dataset is not divisible by the batch size, the last batch will be padded with backfill_id. (default: False)
           backfill_id(int, optional): backfill value for the last no-full batch. (default: INVALID_NODE_ID)
           worker_index(int, optional): worker index from distrbiuted training. for single worker job, please use default value. (default: 0)
@@ -283,7 +283,7 @@ class FileEdgeSampler(BaseSampler):
             data_parallel_num=data_parallel_num,
         )
         self.feature_dim = feature_dim
-        self.dtype = dtype
+        self.feature_type = feature_type
         self.edge_type = edge_type
         self.shuffle = shuffle
         self.drop_last = drop_last
@@ -295,7 +295,7 @@ class FileEdgeSampler(BaseSampler):
         self.logger.info("Edge Sample files: {0}".format(", ".join(filelist)))
         edges = []
         features = []
-        ftype = get_python_type(self.dtype)
+        ftype = get_python_type(self.feature_type)
 
         for f in filelist:
             for line in open(f):
@@ -310,7 +310,7 @@ class FileEdgeSampler(BaseSampler):
             [self.edges, np.full((len(edges), 1), self.edge_type)], axis=1
         )
         if len(features) > 0:
-            self.features = np.array(features, dtype=self.dtype)
+            self.features = np.array(features, dtype=self.feature_type)
         self.logger.info("total #edges: {0}".format(len(self.edges)))
 
     def __len__(self):

@@ -34,7 +34,7 @@ def create_model(args: argparse.Namespace):
         args=args,
         feature_dim=args.feature_dim,
         feature_idx=args.feature_idx,
-        dtype=get_python_type(args.dtype),
+        feature_type=get_python_type(args.feature_type),
         feature_enc=feature_enc[0],
         vocab_index=feature_enc[1][DEFAULT_VOCAB_CHAR_INDEX],
     )

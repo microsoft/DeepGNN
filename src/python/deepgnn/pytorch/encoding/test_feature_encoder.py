@@ -93,14 +93,14 @@ c_wordpiece_expected_tensors = [
 ]
 
 
-def get_twinbert_encoder(config_file, dtype=np.uint8):
+def get_twinbert_encoder(config_file, feature_type=np.uint8):
     torch.manual_seed(0)
     config = TwinBERTEncoder.init_config_from_file(config_file)
-    return TwinBERTFeatureEncoder(dtype, config, pooler_count=2)
+    return TwinBERTFeatureEncoder(feature_type, config, pooler_count=2)
 
 
-def verify_twinbert_encoder_simple_input(config_file, dtype, pooler_index=0):
-    twinbert = get_twinbert_encoder(config_file, dtype)
+def verify_twinbert_encoder_simple_input(config_file, feature_type, pooler_index=0):
+    twinbert = get_twinbert_encoder(config_file, feature_type)
     twinbert.eval()
 
     tokenize_with_triletter = twinbert.config[EMBEDDING_TYPE] == TRILETTER
@@ -112,7 +112,7 @@ def verify_twinbert_encoder_simple_input(config_file, dtype, pooler_index=0):
 
     test_input = (
         c_test_strings
-        if dtype == np.uint8
+        if feature_type == np.uint8
         else (
             c_triletter_input_features
             if tokenize_with_triletter
@@ -122,9 +122,9 @@ def verify_twinbert_encoder_simple_input(config_file, dtype, pooler_index=0):
 
     def verify_encode(input, expect):
         context = {}
-        if dtype == np.uint8:
+        if feature_type == np.uint8:
             context["feature"] = np.array([bytearray(input, encoding="utf-8")] * 3)
-        elif dtype == np.int64:
+        elif feature_type == np.int64:
             context["feature"] = np.array([input] * 3)
 
         twinbert.transform(context)

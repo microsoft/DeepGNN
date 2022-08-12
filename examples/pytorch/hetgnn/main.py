@@ -25,7 +25,7 @@ def create_model(args: argparse.Namespace):
         node_type_count=args.node_type_count,
         neighbor_count=args.neighbor_count,
         embed_d=args.feature_dim,  # currently feature dimention is equal to embedding dimention.
-        dtype=get_python_type(args.dtype),
+        feature_type=get_python_type(args.feature_type),
         feature_idx=args.feature_idx,
         feature_dim=args.feature_dim,
     )
