@@ -397,6 +397,7 @@ void Partition::GetNodeStringFeature(uint64_t internal_node_id, std::span<const 
         {
             continue;
         }
+
         out_dimensions[feature_index] = stored_size;
         const auto old_values_length = out_values.size();
         out_values.resize(old_values_length + stored_size);
@@ -453,7 +454,7 @@ size_t NeighborIndexIterator(uint64_t internal_id, std::span<const Type> edge_ty
 
 size_t Partition::NeighborCount(uint64_t internal_id, std::span<const Type> edge_types) const
 {
-    const auto lambda = [](const auto start, const auto last, const auto i) {};
+    auto lambda = [](const auto start, const auto last, const auto i) {};
 
     return NeighborIndexIterator(internal_id, edge_types, std::move(lambda), m_neighbors_index, m_edge_types,
                                  m_edge_type_offset);
