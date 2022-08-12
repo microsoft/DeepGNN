@@ -68,6 +68,7 @@ class BinaryWriter:
         self.edge_weight: typing.List[float] = []
         self.edge_type_count: typing.List[int] = []
         self.prev_node_id: typing.Optional[int] = None
+        self.prev_edge_type: typing.Optional[int] = None
 
     def add(self, data: typing.Iterator[typing.Tuple[int, int, int, float, list]]):
         """
@@ -83,6 +84,7 @@ class BinaryWriter:
             type_num_value = typ + 1
             if dst == -1:
                 self.prev_node_id = src
+                self.prev_edge_type = None
                 if type_num_value > self.node_type_num:
                     for _ in range(type_num_value - self.node_type_num):
                         self.node_alias.add_type()
@@ -97,9 +99,14 @@ class BinaryWriter:
                 self.node_count += 1
             else:
                 if src != self.prev_node_id or self.prev_node_id is None:
+                    self.prev_edge_type = None
                     self.node_writer.add(src, -1, [])
                     self.edge_writer.add_node()
                     self.prev_node_id = src
+                assert (
+                    self.prev_edge_type is None or typ >= self.prev_edge_type
+                ), "A node's outgoing edges must be sorted with type in increasing order."
+                self.prev_edge_type = typ
                 if type_num_value > self.edge_type_num:
                     for _ in range(type_num_value - self.edge_type_num):
                         self.edge_alias.add_type()

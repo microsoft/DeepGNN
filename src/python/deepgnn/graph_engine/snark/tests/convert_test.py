@@ -15,6 +15,7 @@ import numpy.testing as npt
 import deepgnn.graph_engine.snark.convert as convert
 from deepgnn.graph_engine.snark.decoders import JsonDecoder, EdgeListDecoder, TsvDecoder
 from deepgnn.graph_engine.snark.dispatcher import QueueDispatcher
+from deepgnn.graph_engine.snark.converter.writers import BinaryWriter
 
 from util_test import json_to_edge_list
 
@@ -988,6 +989,27 @@ def test_edge_list_error_checking():
         next(gen)
     gen = decoder.decode("0,1,4,1")
     next(gen)
+
+
+def test_binary_writer_error_checking():
+    output = tempfile.TemporaryDirectory()
+    node = [(0, -1, 0, 0.1, [])]
+    edges = [(0, 1, 0, 0.1, []), (0, 2, 1, 0.1, []), (0, 3, 0, 0.1, [])]
+    writer = BinaryWriter(output.name, "0_0")
+    with pytest.raises(AssertionError):
+        writer.add(edges)
+    writer = BinaryWriter(output.name, "0_0")
+    with pytest.raises(AssertionError):
+        for edge in edges:
+            writer.add([edge])
+
+    writer = BinaryWriter(output.name, "0_0")
+    with pytest.raises(AssertionError):
+        writer.add(node + edges)
+    writer = BinaryWriter(output.name, "0_0")
+    with pytest.raises(AssertionError):
+        for edge in node + edges:
+            writer.add([edge])
 
 
 def graph_with_inverse_edge_type_order_json(folder):
