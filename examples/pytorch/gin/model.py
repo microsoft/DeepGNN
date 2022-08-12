@@ -216,6 +216,7 @@ class GIN(BaseSupervisedModel):
 
             # get_logger().info("Layer " + str(layer) + " =====================================================")
             ma = MeanAggregator(h)
+            # graph_pool = ma.forward(nb_features, num_nodes)
             pooled_h = ma.forward(h, num_nodes)
 
             # get_logger().info("Pooled h " + str(layer)
@@ -227,18 +228,18 @@ class GIN(BaseSupervisedModel):
                 training=self.training,
             )
             # get_logger().info("==========================================================================================")
-
         return score
 
     def forward(self, context: dict):
         scores: torch.Tensor = self.get_score(context)
-        # get_logger().info("Scores: " )
+        # get_logger().info("Scores: " + str(scores))
+        # scores: torch.Tensor = scores.max(1, keepdim=True)
         labels = context["label"].long().squeeze().clone().detach()
-
         loss = self.xent(scores, labels)
 
         # Take argmax to fetch class indices
         scores = scores.argmax(dim=1)
+        # pred = scores.max(1, keepdim=True)
         # get_logger().info("Scores: " + str(scores.float().mean()))
 
         return (loss, scores, labels)

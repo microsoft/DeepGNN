@@ -177,8 +177,10 @@ def build_json(g_list, train_idx, test_idx):
                 ],
             }
 
-            data += json.dumps(node) + "\n"
-            nodes.append(node_id)
+            if (label == 0 and graph_ids[node_id] < 878) or label == 1:
+                data += json.dumps(node) + "\n"
+                nodes.append(graph_ids[node_id])
+
 
     return data, nodes
 
