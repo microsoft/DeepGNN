@@ -9,7 +9,7 @@ from deepgnn.pytorch.common import create_adamw_optimizer
 from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.pytorch.common.utils import (
     get_logger,
-    get_dtype,
+    get_python_type,
     get_store_name_and_path,
     set_seed,
 )
@@ -34,7 +34,7 @@ def create_model(args: argparse.Namespace):
         args=args,
         feature_dim=args.feature_dim,
         feature_idx=args.feature_idx,
-        dtype=get_dtype(args.dtype),
+        dtype=get_python_type(args.dtype),
         feature_enc=feature_enc[0],
         vocab_index=feature_enc[1][DEFAULT_VOCAB_CHAR_INDEX],
     )

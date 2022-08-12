@@ -10,7 +10,7 @@ from deepgnn.graph_engine import define_param_graph_engine
 def init_model_common_args(parser: argparse.ArgumentParser):
     """Model configuration."""
     group = parser.add_argument_group("Model Common Parameters")
-    group.add_argument("--dtype", default="float", type=str, choices=["float", "uint64", "binary"], help="Feature type.")
+    group.add_argument("--feature_type", default="float", type=str, choices=["float", "uint64", "binary"], help="Feature type.")
     group.add_argument("--feature_idx", default=-1, type=int, help="Feature index.")
     group.add_argument("--feature_dim", default=0, type=int, help="Feature dimension.")
     group.add_argument("--label_idx", default=1, type=int, help="Label index.")

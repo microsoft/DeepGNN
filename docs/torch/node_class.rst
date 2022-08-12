@@ -49,7 +49,7 @@ Combined imports from `model.py <https://github.com/microsoft/DeepGNN/blob/main/
 	>>> from deepgnn.pytorch.common import Accuracy
 	>>> from deepgnn.pytorch.modeling.base_model import BaseModel
 	>>> from deepgnn.pytorch.nn.gat_conv import GATConv
-	>>> from deepgnn.graph_engine import Graph, FeatureType, graph_ops
+	>>> from deepgnn.graph_engine import Graph, graph_ops
 	>>> from deepgnn import str2list_int
 	>>> from deepgnn.pytorch.common.utils import set_seed
 	>>> from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
@@ -71,8 +71,8 @@ In the GAT model, query samples neighbors repeatedly `num_hops` times in order t
 	...     feature_dim: int
 	...     label_idx: int
 	...     label_dim: int
-	...     feature_type: FeatureType = FeatureType.FLOAT
-	...     label_type: FeatureType = FeatureType.FLOAT
+	...     feature_type: dtype = np.float32
+	...     label_type: dtype = np.float32
 	...     num_hops: int = 2
 	>>> class GATQuery:
 	...     def __init__(self, p: GATQueryParameter):
@@ -122,7 +122,7 @@ In the GAT model, forward pass uses two of our built-in `GATConv layers <https:/
 	...         q_param: GATQueryParameter = None,
 	...     ):
 	...         self.q = GATQuery(q_param)
-	...         super().__init__(FeatureType.FLOAT, 0, 0, None)
+	...         super().__init__(np.float32, 0, 0, None)
 	...         self.num_classes = num_classes
 	...
 	...         self.out_dim = num_classes

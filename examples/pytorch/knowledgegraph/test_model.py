@@ -55,7 +55,7 @@ class MockGraph(Graph):
         return self.edge_array[indexes]
 
     def edge_features(
-        self, edges: np.ndarray, features: np.ndarray, dtype: np.dtype
+        self, edges: np.ndarray, features: np.ndarray, feature_type: np.dtype
     ) -> np.ndarray:
         features = []
 

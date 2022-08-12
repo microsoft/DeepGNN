@@ -15,7 +15,7 @@ from deepgnn import get_logger
 from deepgnn.pytorch.common.consts import PREFIX_CHECKPOINT
 
 
-def get_dtype(dtype_str: str):
+def get_python_type(dtype_str: str):
     """Convert string to feature type Enum."""
     dtype_str = dtype_str.lower()
     if dtype_str == "float":

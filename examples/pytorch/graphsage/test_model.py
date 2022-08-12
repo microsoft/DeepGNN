@@ -309,7 +309,7 @@ def test_supervised_graphsage_computational_graph(mock_graph):  # noqa: F811
         metric=F1Score(),
         label_idx=label_idx,
         label_dim=label_dim,
-        feature_type=FeatureType.FLOAT,
+        feature_type=np.float32,
         feature_idx=feature_idx,
         feature_dim=feature_dim,
         edge_type=edge_type,

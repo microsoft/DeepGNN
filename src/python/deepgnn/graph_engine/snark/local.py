@@ -131,7 +131,7 @@ class Client(Graph):
         raise NotImplementedError(f"Unknown strategy type {strategy}")
 
     def node_features(
-        self, nodes: np.ndarray, features: np.ndarray, dtype: np.dtype
+        self, nodes: np.ndarray, features: np.ndarray, feature_type: np.dtype
     ) -> np.ndarray:
         """Fetch node features."""
         assert len(features.shape) == 2
@@ -142,7 +142,7 @@ class Client(Graph):
                     f"Requesting feature with id #{feature[0]} that is larger than number of the node features {self.graph.meta._node_feature_count} in the graph"
                 )
 
-        return self.graph.node_features(nodes, features, dtype)
+        return self.graph.node_features(nodes, features, feature_type)
 
     def random_walk(
         self,
@@ -184,7 +184,7 @@ class Client(Graph):
         return self.graph.node_types(nodes, -1)
 
     def edge_features(
-        self, edges: np.ndarray, features: np.ndarray, dtype: np.dtype
+        self, edges: np.ndarray, features: np.ndarray, feature_type: np.dtype
     ) -> np.ndarray:
         """Fetch edge features."""
         edges = np.array(edges, dtype=np.int64)
@@ -202,7 +202,7 @@ class Client(Graph):
             np.copy(edges[:, 1]),
             np.copy(edges[:, 2]),
             features,
-            dtype,
+            feature_type,
         )
 
     def node_count(self, types: Union[int, np.ndarray]) -> int:

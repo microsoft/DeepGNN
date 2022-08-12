@@ -27,7 +27,7 @@ from deepgnn.pytorch.common.consts import (
     ENCODER_TYPES,
     EMBS_LIST,
 )
-from deepgnn.pytorch.common.utils import get_dtype
+from deepgnn.pytorch.common.utils import get_python_type
 
 
 class FeatureEncoder(torch.nn.Module):
@@ -337,7 +337,7 @@ def get_feature_encoder(args: argparse.Namespace):
 
             return (
                 MultiTypeFeatureEncoder(
-                    get_dtype(args.dtype),
+                    get_python_type(args.dtype),
                     config,
                     encoders,
                     args.share_encoder,
@@ -345,6 +345,6 @@ def get_feature_encoder(args: argparse.Namespace):
                 config,
             )  # here we also return the config object because model will use it.
         else:
-            return TwinBERTFeatureEncoder(get_dtype(args.dtype), config)
+            return TwinBERTFeatureEncoder(get_python_type(args.dtype), config)
 
     return None

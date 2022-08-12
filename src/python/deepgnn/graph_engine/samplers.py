@@ -29,14 +29,9 @@ def get_files(filenames, worker_index, num_workers):
     return sample_files
 
 
-def get_dtype(dtype):
+def get_python_type(dtype):
     """Map numpy to python types."""
-    if dtype not in [np.float32, np.int64]:
-        raise RuntimeError("unknown dtype: {}".format(str(dtype)))
-    if dtype == np.float32:
-        return float
-    elif dtype == np.int64:
-        return int
+    return type(dtype(0).item())
 
 
 class BaseSampler(object):
@@ -300,7 +295,7 @@ class FileEdgeSampler(BaseSampler):
         self.logger.info("Edge Sample files: {0}".format(", ".join(filelist)))
         edges = []
         features = []
-        ftype = get_dtype(self.dtype)
+        ftype = get_python_type(self.dtype)
 
         for f in filelist:
             for line in open(f):
