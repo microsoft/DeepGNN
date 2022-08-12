@@ -2278,8 +2278,8 @@ TEST(GraphTest, GetNeigborCountSinglePartition)
 {
     TestGraph::MemoryGraph m1;
 
-    /* 
-    
+    /*
+
     Insert first node and neighbors
 
     (0, 0, 1.0)
@@ -2294,8 +2294,8 @@ TEST(GraphTest, GetNeigborCountSinglePartition)
                         .m_type = 0,
                         .m_weight = 1.0f,
                         .m_neighbors{std::vector<TestGraph::NeighborRecord>{{1, 0, 1.0f}, {2, 0, 1.0f}}}});
-        
-    /* 
+
+    /*
 
     Insert second node and neighbors
 
@@ -2305,7 +2305,7 @@ TEST(GraphTest, GetNeigborCountSinglePartition)
     (3,0,1.0)  (4,0,1.0)
 
     */
-   
+
     m1.m_nodes.push_back(TestGraph::Node{
         .m_id = 1,
         .m_type = 1,
@@ -2325,7 +2325,7 @@ TEST(GraphTest, GetNeigborCountSinglePartition)
     g.NeighborCount(std::span(nodes), std::span(types), output_neighbors_count);
     print_content(output_neighbors_count);
     EXPECT_EQ(std::vector<uint64_t>({2, 2}), output_neighbors_count);
-    
+
     // Check for different singe edge type filter
     types = {1};
     std::fill_n(output_neighbors_count.begin(), 2, 0);
@@ -2361,8 +2361,8 @@ TEST(GraphTest, GetNeigborCountMultiplePartitions)
 {
     TestGraph::MemoryGraph m1;
 
-    /* 
-    
+    /*
+
     Insert first node and neighbors
 
     (0, 0, 1.0)
@@ -2377,8 +2377,8 @@ TEST(GraphTest, GetNeigborCountMultiplePartitions)
                         .m_type = 0,
                         .m_weight = 1.0f,
                         .m_neighbors{std::vector<TestGraph::NeighborRecord>{{1, 0, 1.0f}, {2, 0, 1.0f}}}});
-        
-    /* 
+
+    /*
 
     Insert second node and neighbors
 
@@ -2388,20 +2388,20 @@ TEST(GraphTest, GetNeigborCountMultiplePartitions)
     (3,0,1.0)  (4,0,1.0)
 
     */
-   
+
     m1.m_nodes.push_back(TestGraph::Node{
         .m_id = 1,
         .m_type = 1,
         .m_weight = 1.0f,
         .m_neighbors{std::vector<TestGraph::NeighborRecord>{{3, 0, 1.0f}, {4, 0, 1.0f}, {5, 1, 1.0f}}}});
 
-    
 
-    /* 
+
+    /*
 
     Insert third node neighbors in new partition
 
-    (1, 1, 1.0) 
+    (1, 1, 1.0)
     |         |
     v         v
     (6,0,1.0)  (7,0,1.0)
@@ -2428,7 +2428,7 @@ TEST(GraphTest, GetNeigborCountMultiplePartitions)
     EXPECT_EQ(std::vector<uint64_t>({0, 3}), output_neighbors_count);
 
     // Check for multiple edge types
-    types = {0, 1};  
+    types = {0, 1};
     std::fill_n(output_neighbors_count.begin(), 2, 0);
 
     g.NeighborCount(std::span(nodes), std::span(types), output_neighbors_count);

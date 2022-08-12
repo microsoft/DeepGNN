@@ -265,7 +265,7 @@ class UnSupervisedGraphSage(BaseUnsupervisedModel):
         labels = torch.cat(
             (torch.zeros_like(neg_logits), torch.ones_like(logits)), dim=2
         )
-        
+
         return loss, scores, labels
 
     def metric_name(self):

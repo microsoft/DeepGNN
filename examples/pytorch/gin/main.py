@@ -24,6 +24,7 @@ from model import GIN
 
 criterion = nn.CrossEntropyLoss()
 
+
 def init_args(parser: argparse.Namespace):
     group = parser.add_argument_group("GIN Parameters")
     group.add_argument("--algo", type=str, default="supervised")
@@ -38,8 +39,12 @@ def create_model(args: argparse.Namespace):
         set_seed(args.seed)
 
     torch.manual_seed(0)
-    np.random.seed(0)    
-    device = torch.device("cuda:" + str(args.device)) if torch.cuda.is_available() else torch.device("cpu")
+    np.random.seed(0)
+    device = (
+        torch.device("cuda:" + str(args.device))
+        if torch.cuda.is_available()
+        else torch.device("cpu")
+    )
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(0)
 
@@ -47,21 +52,21 @@ def create_model(args: argparse.Namespace):
         get_logger().info(f"Creating GIN model with seed:{args.seed}.")
         return GIN(
             metric=Accuracy(),
-            num_layers=5, 
-            num_mlp_layers=2, 
+            num_layers=5,
+            num_mlp_layers=2,
             input_dim=args.feature_dim,
-            hidden_dim=64, 
-            output_dim=args.num_classes, 
-            final_dropout=0.5, 
-            learn_eps=False, 
+            hidden_dim=64,
+            output_dim=args.num_classes,
+            final_dropout=0.5,
+            learn_eps=False,
             edge_type=args.edge_type,
             feature_type=get_feature_type(args.feature_type),
             feature_dim=args.feature_dim,
             feature_idx=args.feature_idx,
             label_idx=args.label_idx,
             label_dim=args.label_dim,
-            graph_pooling_type="sum", 
-            neighbor_pooling_type="sum", 
+            graph_pooling_type="sum",
+            neighbor_pooling_type="sum",
             device=device,
         )
     else:
@@ -105,6 +110,7 @@ def create_dataset(
 
 def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):
     return torch.optim.Adam(model.parameters(), lr=args.learning_rate)
+
 
 def _main():
     # setup default logging component.

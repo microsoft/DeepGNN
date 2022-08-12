@@ -15,16 +15,17 @@ from deepgnn.graph_engine.snark.decoders import JsonDecoder
 from deepgnn.graph_engine.snark.decoders import DecoderType
 import deepgnn.graph_engine.snark.client as client
 
+
 class S2VGraph(object):
     def __init__(self, g, label, node_tags=None, node_features=None):
-        '''
-            g: a networkx graph
-            label: an integer graph label
-            node_tags: a list of integer node tags
-            node_features: a torch float tensor, one-hot representation of the tag that is used as input to neural nets
-            edge_mat: a torch long tensor, contain edge list, will be used to create torch sparse tensor
-            neighbors: list of neighbors (without self-loop)
-        '''
+        """
+        g: a networkx graph
+        label: an integer graph label
+        node_tags: a list of integer node tags
+        node_features: a torch float tensor, one-hot representation of the tag that is used as input to neural nets
+        edge_mat: a torch long tensor, contain edge list, will be used to create torch sparse tensor
+        neighbors: list of neighbors (without self-loop)
+        """
         self.label = label
         self.g = g
         self.node_tags = node_tags
@@ -33,15 +34,16 @@ class S2VGraph(object):
         self.edge_mat = 0
         self.max_neighbor = 0
 
-def convert_data(dataset, degree_as_tag):
-    """"Convert dataset .txt file to networkx graph."""
 
-    print('loading data')
+def convert_data(dataset, degree_as_tag):
+    """ "Convert dataset .txt file to networkx graph."""
+
+    print("loading data")
     g_list = []
     label_dict = {}
     feat_dict = {}
 
-    with open('dataset/%s/%s.txt' % (dataset, dataset), 'r') as f:
+    with open("dataset/%s/%s.txt" % (dataset, dataset), "r") as f:
         n_g = int(f.readline().strip())
         for i in range(n_g):
             row = f.readline().strip().split()
@@ -62,7 +64,9 @@ def convert_data(dataset, degree_as_tag):
                     row = [int(w) for w in row]
                     attr = None
                 else:
-                    row, attr = [int(w) for w in row[:tmp]], np.array([float(w) for w in row[tmp:]])
+                    row, attr = [int(w) for w in row[:tmp]], np.array(
+                        [float(w) for w in row[tmp:]]
+                    )
                 if not row[0] in feat_dict:
                     mapped = len(feat_dict)
                     feat_dict[row[0]] = mapped
@@ -86,7 +90,7 @@ def convert_data(dataset, degree_as_tag):
             # print(node_tags)
             g_list.append(S2VGraph(g, l, node_tags))
 
-    #add labels and edge_mat       
+    # add labels and edge_mat
     for g in g_list:
         g.neighbors = [[] for i in range(len(g.g))]
         for i, j in g.g.edges():
@@ -104,33 +108,35 @@ def convert_data(dataset, degree_as_tag):
         edges.extend([[i, j] for j, i in edges])
 
         deg_list = list(dict(g.g.degree(range(len(g.g)))).values())
-        g.edge_mat = torch.LongTensor(edges).transpose(0,1)
+        g.edge_mat = torch.LongTensor(edges).transpose(0, 1)
 
     if degree_as_tag:
         for g in g_list:
             g.node_tags = list(dict(g.g.degree).values())
 
-    #Extracting unique tag labels   
+    # Extracting unique tag labels
     tagset = set([])
     for g in g_list:
         tagset = tagset.union(set(g.node_tags))
 
     tagset = list(tagset)
-    tag2index = {tagset[i]:i for i in range(len(tagset))}
+    tag2index = {tagset[i]: i for i in range(len(tagset))}
 
     for g in g_list:
         g.node_features = torch.zeros(len(g.node_tags), len(tagset))
-        g.node_features[range(len(g.node_tags)), [tag2index[tag] for tag in g.node_tags]] = 1
+        g.node_features[
+            range(len(g.node_tags)), [tag2index[tag] for tag in g.node_tags]
+        ] = 1
 
-
-    print('# classes: %d' % len(label_dict))
-    print('# maximum node tag: %d' % len(tagset))
+    print("# classes: %d" % len(label_dict))
+    print("# maximum node tag: %d" % len(tagset))
     print("# data: %d" % len(g_list))
 
     return g_list, len(label_dict)
 
+
 def build_json(g_list, train_idx, test_idx):
-    """"Generate graph.json file from networkx graph."""
+    """ "Generate graph.json file from networkx graph."""
 
     nodes = []
     data = ""
@@ -138,7 +144,7 @@ def build_json(g_list, train_idx, test_idx):
     for g in g_list:
 
         label = g.label
-        
+
         graph_ids = {}
         for node_id in g.g:
             graph_ids[node_id] = idx
@@ -160,13 +166,15 @@ def build_json(g_list, train_idx, test_idx):
                 "node_id": graph_ids[node_id],
                 "node_type": 0,
                 "float_feature": {"0": feats, "1": [label]},
-                "edge": [{
-                    "src_id": graph_ids[node_id],
-                    "dst_id": graph_ids[nb],
-                    "edge_type": 0,
-                    "weight": 1.0
-                }
-                for nb in nx.neighbors(g.g, node_id)],
+                "edge": [
+                    {
+                        "src_id": graph_ids[node_id],
+                        "dst_id": graph_ids[nb],
+                        "edge_type": 0,
+                        "weight": 1.0,
+                    }
+                    for nb in nx.neighbors(g.g, node_id)
+                ],
             }
 
             data += json.dumps(node) + "\n"
@@ -178,11 +186,11 @@ def build_json(g_list, train_idx, test_idx):
 def seperate(graphs, fold_idx, seed):
     assert 0 <= fold_idx and fold_idx < 10, "fold_idx must be from 0 to 9."
 
-    skf = StratifiedKFold(n_splits=10, shuffle = True, random_state = seed)
+    skf = StratifiedKFold(n_splits=10, shuffle=True, random_state=seed)
 
     labels = []
     nodes = []
-    
+
     for graph in graphs:
         for node_id in graph.g:
             label = graph.node_features[node_id].tolist()[1]
@@ -204,10 +212,13 @@ def seperate(graphs, fold_idx, seed):
 
     return train_idx, test_idx
 
+
 def _main():
 
-    parser = argparse.ArgumentParser(description='Loading graphs to json for training/evaluation.')
-    parser.add_argument('--dataset', type=str, default="MUTAG")
+    parser = argparse.ArgumentParser(
+        description="Loading graphs to json for training/evaluation."
+    )
+    parser.add_argument("--dataset", type=str, default="MUTAG")
     args = parser.parse_args()
 
     # Build networkx graph from .txt file
@@ -221,7 +232,7 @@ def _main():
     print("Num nodes: " + str(len(nodes)))
 
     # print(data)
-    data_dir = '/tmp/' + str.lower(args.dataset)
+    data_dir = "/tmp/" + str.lower(args.dataset)
 
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
@@ -229,11 +240,11 @@ def _main():
     raw_file = "/tmp/" + str.lower(args.dataset) + "/graph.json"
     with open(raw_file, "w+") as f:
         f.write(data)
-    
-    test_file = "/tmp/"+ str.lower(args.dataset) +"/test.nodes"
+
+    test_file = "/tmp/" + str.lower(args.dataset) + "/test.nodes"
     with open(test_file, "w+") as f:
         for idx in test_idx:
-            f.write(str(idx) + '\n')
+            f.write(str(idx) + "\n")
 
     # Build extra binaries
     convert.MultiWorkersConverter(

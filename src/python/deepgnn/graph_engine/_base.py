@@ -184,7 +184,6 @@ class Graph:
         """Fetch node degrees."""
         return self.graph.neighbor_counts(nodes, self.__check_types(edge_types))
 
-
     def node_count(self, types: Union[int, np.array]) -> int:
         """Return the number of nodes."""
         raise NotImplementedError

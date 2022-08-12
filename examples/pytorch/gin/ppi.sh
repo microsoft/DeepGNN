@@ -56,7 +56,7 @@ else
     --backend snark --graph_type local --converter skip \
     --batch_size 1000 --num_classes 121 \
     --sample_file /tmp/ppi/test.nodes --node_type 0 \
-    --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 1 --algo $ALGO \   
+    --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 1 --algo $ALGO \
     --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path /integration_test/test_adl_uploader \
     --log_by_steps 1 --use_per_step_metrics --enable_adl_uploader --uploader_store_name snrgnndls --uploader_process_num 2 --uploader_threads_num 10 $PLATFORM_DEVICE
 fi
@@ -76,7 +76,7 @@ if [[ "$USE_HADOOP" == "yes" ]]; then
     --batch_size 140 --learning_rate 0.005 --num_epochs 100 \
     --node_type 0 --max_id -1 --num_classes 121 \
     --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
-    --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 1 --algo $ALGO \   
+    --feature_idx 1 --feature_dim 50 --label_idx 0 --label_dim 1 --algo $ALGO \
     --log_by_steps 1 --use_per_step_metrics $PLATFORM_DEVICE \
     --stream
 fi

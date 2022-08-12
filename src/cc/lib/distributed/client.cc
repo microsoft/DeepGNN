@@ -1815,7 +1815,7 @@ void GRPCClient::GetEdgeStringFeature(std::span<const NodeId> edge_src_ids, std:
     ExtractStringFeatures(response_index, replies, out_dimensions, out_values);
 }
 
-void GRPCClient::NeighborCount(std::span<const NodeId> node_ids, std::span<const Type> edge_types, 
+void GRPCClient::NeighborCount(std::span<const NodeId> node_ids, std::span<const Type> edge_types,
                                  std::span<uint64_t> output_neighbor_counts)
 {
     GetNeighborsRequest request;
@@ -1827,12 +1827,12 @@ void GRPCClient::NeighborCount(std::span<const NodeId> node_ids, std::span<const
     std::vector<GetNeighborCountsReply> replies(std::size(m_engine_stubs));
     std::vector<size_t> reply_offsets(std::size(m_engine_stubs));
     std::atomic<size_t> responses_left{std::size(m_engine_stubs)};
-    
+
 
     for (size_t shard = 0; shard < m_engine_stubs.size(); ++shard)
     {
         auto *call = new AsyncClientCall();
-        auto response_reader = 
+        auto response_reader =
             m_engine_stubs[shard]->PrepareAsyncGetNeighborCounts(&call->context, request, NextCompletionQueue());
 
         call->callback = [&responses_left, &replies, &output_neighbor_counts]() {

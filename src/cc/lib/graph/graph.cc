@@ -763,7 +763,7 @@ void Graph::NeighborCount(std::span<const NodeId> input_node_ids, std::span<cons
                           std::span<uint64_t> output_neighbors_counts) const
 
 {
-    for (size_t idx = 0; idx < input_node_ids.size(); ++idx) 
+    for (size_t idx = 0; idx < input_node_ids.size(); ++idx)
     {
         auto internal_id = m_node_map.find(input_node_ids[idx]);
 
@@ -771,7 +771,7 @@ void Graph::NeighborCount(std::span<const NodeId> input_node_ids, std::span<cons
         {
             continue;
         }
-        else 
+        else
         {
             auto index = internal_id->second;
             size_t partition_count = m_counts[index];

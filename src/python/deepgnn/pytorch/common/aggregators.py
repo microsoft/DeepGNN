@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 from deepgnn import get_logger
 
+
 class SumAggregator(nn.Module):
     """Aggregates a node's embeddings using sum of neighbors' embeddings."""
 

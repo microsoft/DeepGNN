@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from deepgnn.graph_engine import Graph, FeatureType
 from deepgnn import get_logger
 
+
 class GINEncoder(nn.Module):
     """Encode a node's using 'convolutional' GIN approach."""
 
@@ -23,8 +24,7 @@ class GINEncoder(nn.Module):
         edge_type: int = 0,
         base_model=None,
     ):
-        """Initialize GINEncoder.
-        """
+        """Initialize GINEncoder."""
         super(GINEncoder, self).__init__()
 
         def query():
