@@ -1,10 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-load("@rules_python//python:defs.bzl", "py_test")
-load("//config:variables.bzl", "PLATFORM_DEFINES")
 load("@rules_python//python:defs.bzl", "py_library")
-load("@pip_deps//:requirements.bzl", "requirement")
 
 py_library(
     name = "graph_engine_snark",
@@ -16,7 +13,8 @@ py_library(
         "convert.py",
         "meta_merger.py",
         "converter/__init__.py",
-        "converter/json_converter.py",
+        "converter/process.py",
+        "converter/writers.py",
         "converter/options.py",
         "decoders.py",
         "dispatcher.py",

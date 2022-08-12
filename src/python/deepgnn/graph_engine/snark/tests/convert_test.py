@@ -13,7 +13,7 @@ import numpy as np
 import numpy.testing as npt
 
 import deepgnn.graph_engine.snark.convert as convert
-from deepgnn.graph_engine.snark.decoders import DecoderType
+from deepgnn.graph_engine.snark.decoders import JsonDecoder, TsvDecoder
 from deepgnn.graph_engine.snark.dispatcher import QueueDispatcher
 
 
@@ -82,19 +82,8 @@ def triangle_graph_json(folder):
         json.dump(el, data)
         data.write("\n")
     data.flush()
-
-    meta = open(os.path.join(folder, "meta.txt"), "w+")
-    meta.write(
-        '{"node_type_num": 3, "edge_type_num": 2, \
-        "node_uint64_feature_num": 0, "node_float_feature_num": 2, \
-        "node_binary_feature_num": 0, "edge_uint64_feature_num": 1, \
-        "edge_float_feature_num": 1, "edge_binary_feature_num": 1}'
-    )
-    meta.flush()
-
     data.close()
-    meta.close()
-    return data.name, meta.name
+    return data.name
 
 
 def triangle_graph_tsv(folder):
@@ -103,49 +92,36 @@ def triangle_graph_tsv(folder):
     data.write("0\t1\t1\tf:1;f:-0.03 -0.04\t5,1,1,;f:3 4\n")
     data.write("5\t2\t1\tf:1 1;f:-0.05 -0.06\t9,1,0.7,b:hello\n")
     data.flush()
-
-    meta = open(os.path.join(folder, "meta.txt"), "w+")
-    meta.write(
-        '{"node_type_num": 3, "edge_type_num": 2, \
-        "node_uint64_feature_num": 0, "node_float_feature_num": 2, \
-        "node_binary_feature_num": 0, "edge_uint64_feature_num": 1, \
-        "edge_float_feature_num": 1, "edge_binary_feature_num": 1}'
-    )
-    meta.flush()
-
     data.close()
-    meta.close()
-
-    return data.name, meta.name
+    return data.name
 
 
 @pytest.fixture(scope="module")
 def triangle_graph(request):
     workdir = tempfile.TemporaryDirectory()
-    if request.param == DecoderType.JSON:
-        data_name, meta_name = triangle_graph_json(workdir.name)
-    elif request.param == DecoderType.TSV:
-        data_name, meta_name = triangle_graph_tsv(workdir.name)
+    if request.param == JsonDecoder:
+        data_name = triangle_graph_json(workdir.name)
+    elif request.param == TsvDecoder:
+        data_name = triangle_graph_tsv(workdir.name)
     else:
         raise ValueError("Unsupported format.")
 
-    yield data_name, meta_name, request.param
+    yield data_name, request.param
     workdir.cleanup()
 
 
-param = [DecoderType.JSON, DecoderType.TSV]
+param = [JsonDecoder, TsvDecoder]
 
 
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
 def test_sanity_node_map(triangle_graph):
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name, decoder = triangle_graph
+    data_name, decoder = triangle_graph
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder=decoder(),
     ).convert()
 
     with open("{}/node_{}_{}.map".format(output.name, 0, 0), "rb") as nm:
@@ -166,13 +142,12 @@ def test_sanity_node_map(triangle_graph):
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
 def test_sanity_node_index(triangle_graph):
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name, decoder = triangle_graph
+    data_name, decoder = triangle_graph
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder=decoder(),
     ).convert()
     with open("{}/node_{}_{}.index".format(output.name, 0, 0), "rb") as ni:
         expected_size = 3 * 8 + 8
@@ -187,13 +162,12 @@ def test_sanity_node_index(triangle_graph):
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
 def test_sanity_node_feature_index(triangle_graph):
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name, decoder = triangle_graph
+    data_name, decoder = triangle_graph
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder=decoder(),
     ).convert()
     with open("{}/node_features_{}_{}.index".format(output.name, 0, 0), "rb") as ni:
         expected_size = (
@@ -213,13 +187,12 @@ def test_sanity_node_feature_index(triangle_graph):
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
 def test_sanity_neighbors_index(triangle_graph):
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name, decoder = triangle_graph
+    data_name, decoder = triangle_graph
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder=decoder(),
     ).convert()
     with open("{}/neighbors_{}_{}.index".format(output.name, 0, 0), "rb") as ni:
         expected_size = 3 * 8 + 8  # 3 nodes + 8 as final close
@@ -234,13 +207,12 @@ def test_sanity_neighbors_index(triangle_graph):
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
 def test_sanity_edge_index(triangle_graph):
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name, decoder = triangle_graph
+    data_name, decoder = triangle_graph
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder=decoder(),
     ).convert()
     with open("{}/edge_{}_{}.index".format(output.name, 0, 0), "rb") as ei:
         expected_size = 4 * 24  # 3 nodes + last line as final close
@@ -270,13 +242,12 @@ def test_sanity_edge_index(triangle_graph):
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
 def test_sanity_edge_features_index(triangle_graph):
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name, decoder = triangle_graph
+    data_name, decoder = triangle_graph
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder=decoder(),
     ).convert()
     with open("{}/edge_features_{}_{}.index".format(output.name, 0, 0), "rb") as ni:
         expected_values = [0, 24, 24, 32, 37]
@@ -293,13 +264,12 @@ def test_sanity_edge_features_index(triangle_graph):
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
 def test_sanity_edge_features_data(triangle_graph):
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name, decoder = triangle_graph
+    data_name, decoder = triangle_graph
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder=decoder(),
     ).convert()
     with open("{}/edge_features_{}_{}.data".format(output.name, 0, 0), "rb") as ni:
         expected_size = 37  # last value in edge_features_index
@@ -318,13 +288,12 @@ def test_sanity_edge_features_data(triangle_graph):
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
 def test_sanity_metadata(triangle_graph):
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name, decoder = triangle_graph
+    data_name, decoder = triangle_graph
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder=decoder(),
     ).convert()
     with open("{}/meta.txt".format(output.name), "r") as ni:
         result = ni.readlines()
@@ -335,7 +304,7 @@ def test_sanity_metadata(triangle_graph):
         assert int(result[2]) == 3
         assert int(result[3]) == 2
         assert int(result[4]) == 2
-        assert int(result[5]) == 3
+        assert int(result[5]) == 2
 
         # partition information
         assert int(result[6]) == 1
@@ -357,7 +326,7 @@ def test_sanity_metadata(triangle_graph):
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
 def test_edge_alias_tables(triangle_graph):
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name, decoder = triangle_graph
+    data_name, decoder = triangle_graph
 
     class Counter:
         def __init__(self):
@@ -367,15 +336,12 @@ def test_edge_alias_tables(triangle_graph):
             self.count += 1
             return self.count % 2
 
-    d = QueueDispatcher(
-        Path(output.name), 2, meta_name, convert.output, Counter(), decoder
-    )
+    d = QueueDispatcher(Path(output.name), 2, Counter(), decoder())
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=2,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder=decoder(),
         dispatcher=d,
     ).convert()
     with open("{}/edge_0_0.alias".format(output.name), "rb") as ea:
@@ -413,7 +379,7 @@ def test_edge_alias_tables(triangle_graph):
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
 def test_node_alias_tables(triangle_graph):
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name, decoder = triangle_graph
+    data_name, decoder = triangle_graph
 
     class Counter:
         def __init__(self):
@@ -423,15 +389,12 @@ def test_node_alias_tables(triangle_graph):
             self.count += 1
             return self.count % 2
 
-    d = QueueDispatcher(
-        Path(output.name), 2, meta_name, convert.output, Counter(), decoder
-    )
+    d = QueueDispatcher(Path(output.name), 2, Counter(), decoder())
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=2,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder=decoder(),
         dispatcher=d,
     ).convert()
 
@@ -560,45 +523,31 @@ def graph_with_sparse_features_json(folder):
         json.dump(el, data)
         data.write("\n")
     data.flush()
-
-    meta = open(os.path.join(folder, "meta.txt"), "w+")
-    meta.write(
-        '{"node_type_num": 3, "edge_type_num": 2, \
-        "node_uint64_feature_num": 0, "node_float_feature_num": 2, \
-        "node_binary_feature_num": 0, "edge_uint64_feature_num": 1, \
-        "edge_float_feature_num": 1, "edge_binary_feature_num": 1}'
-    )
-    meta.flush()
-
     data.close()
-    meta.close()
-    return data.name, meta.name
+    return data.name
 
 
 @pytest.fixture(scope="module")
 def graph_with_sparse_features(request):
     workdir = tempfile.TemporaryDirectory()
-    if request.param == DecoderType.JSON:
-        data_name, meta_name = graph_with_sparse_features_json(workdir.name)
+    if request.param == JsonDecoder:
+        data_name = graph_with_sparse_features_json(workdir.name)
     else:
         raise ValueError("Unsupported format.")
 
-    yield data_name, meta_name, request.param
+    yield data_name, request.param
     workdir.cleanup()
 
 
-@pytest.mark.parametrize(
-    "graph_with_sparse_features", [DecoderType.JSON], indirect=True
-)
+@pytest.mark.parametrize("graph_with_sparse_features", [JsonDecoder], indirect=True)
 def test_sanity_node_sparse_features_index(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name, decoder = graph_with_sparse_features
+    data_name, decoder = graph_with_sparse_features
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder=decoder(),
     ).convert()
     with open("{}/node_features_{}_{}.index".format(output.name, 0, 0), "rb") as ni:
         expected_size = 88
@@ -611,18 +560,15 @@ def test_sanity_node_sparse_features_index(graph_with_sparse_features):
         assert actual[6:11] == [60, 96, 96, 96, 128]
 
 
-@pytest.mark.parametrize(
-    "graph_with_sparse_features", [DecoderType.JSON], indirect=True
-)
+@pytest.mark.parametrize("graph_with_sparse_features", [JsonDecoder], indirect=True)
 def test_sanity_node_sparse_features_data(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name, decoder = graph_with_sparse_features
+    data_name, decoder = graph_with_sparse_features
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder=decoder(),
     ).convert()
     with open("{}/node_features_{}_{}.data".format(output.name, 0, 0), "rb") as nfd:
         expected_size = 128  # last value in edge_features_index
@@ -658,18 +604,15 @@ def test_sanity_node_sparse_features_data(graph_with_sparse_features):
         )
 
 
-@pytest.mark.parametrize(
-    "graph_with_sparse_features", [DecoderType.JSON], indirect=True
-)
+@pytest.mark.parametrize("graph_with_sparse_features", [JsonDecoder], indirect=True)
 def test_sanity_edge_sparse_features_index(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name, decoder = graph_with_sparse_features
+    data_name, decoder = graph_with_sparse_features
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder=decoder(),
     ).convert()
     with open("{}/edge_features_{}_{}.index".format(output.name, 0, 0), "rb") as ei:
         expected_size = 152
@@ -683,18 +626,15 @@ def test_sanity_edge_sparse_features_index(graph_with_sparse_features):
         assert actual[16:19] == [362, 362, 394]
 
 
-@pytest.mark.parametrize(
-    "graph_with_sparse_features", [DecoderType.JSON], indirect=True
-)
+@pytest.mark.parametrize("graph_with_sparse_features", [JsonDecoder], indirect=True)
 def test_sanity_edge_sparse_features_data(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
-    data_name, meta_name, decoder = graph_with_sparse_features
+    data_name, decoder = graph_with_sparse_features
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        meta_path=meta_name,
         partition_count=1,
         output_dir=output.name,
-        decoder_type=decoder,
+        decoder=decoder(),
     ).convert()
     with open("{}/edge_features_{}_{}.data".format(output.name, 0, 0), "rb") as efd:
         expected_size = 394  # last value in edge_features_index
@@ -778,6 +718,90 @@ def test_sanity_edge_sparse_features_data(graph_with_sparse_features):
         npt.assert_allclose(
             np.frombuffer(result[386:expected_size], dtype=np.float32), [5.5, 6.7]
         )
+
+
+def graph_with_inverse_edge_type_order_json(folder):
+    data = open(os.path.join(folder, "graph.json"), "w+")
+    graph = [
+        {
+            "node_id": 9,
+            "node_type": 0,
+            "node_weight": 1,
+            "edge": [
+                {
+                    "src_id": 9,
+                    "dst_id": 1,
+                    "edge_type": 3,
+                    "weight": 1.0,
+                },
+                {
+                    "src_id": 9,
+                    "dst_id": 2,
+                    "edge_type": 0,
+                    "weight": 0.5,
+                },
+            ],
+        },
+    ]
+    for el in graph:
+        json.dump(el, data)
+        data.write("\n")
+    data.flush()
+    data.close()
+
+    return data.name
+
+
+def graph_with_inverse_edge_type_order_tsv(folder):
+    data = open(os.path.join(folder, "graph.tsv"), "w+")
+    data.write("9\t0\t1\tf:0 1;f:-0.01 -0.02\t1,3,1.0|2,0,0.5\n")
+    data.flush()
+    data.close()
+    return data.name
+
+
+@pytest.fixture(scope="module")
+def graph_with_inverse_edge_type_order(request):
+    workdir = tempfile.TemporaryDirectory()
+    if request.param == JsonDecoder:
+        data_name = graph_with_inverse_edge_type_order_json(workdir.name)
+    elif request.param == TsvDecoder:
+        data_name = graph_with_inverse_edge_type_order_tsv(workdir.name)
+    else:
+        raise ValueError("Unsupported format.")
+
+    yield data_name, request.param
+    workdir.cleanup()
+
+
+@pytest.mark.parametrize("graph_with_inverse_edge_type_order", param, indirect=True)
+def test_edge_index_inverted_types(graph_with_inverse_edge_type_order):
+    output = tempfile.TemporaryDirectory()
+    data_name, decoder = graph_with_inverse_edge_type_order
+    convert.MultiWorkersConverter(
+        graph_path=data_name,
+        partition_count=1,
+        output_dir=output.name,
+        decoder=decoder(),
+    ).convert()
+    with open("{}/edge_{}_{}.index".format(output.name, 0, 0), "rb") as ei:
+        expected_size = 3 * 24  # 2 edges + last line as final close
+        result = ei.read(expected_size + 100)
+        assert len(result) == expected_size
+        assert result[0:8] == (2).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:20] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[20:24] == struct.pack("f", 0.5)
+
+        assert result[24:32] == (1).to_bytes(8, byteorder=sys.byteorder)
+        assert result[32:40] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[40:44] == (3).to_bytes(4, byteorder=sys.byteorder)
+        assert result[44:48] == struct.pack("f", 1.0)
+
+        assert result[48:56] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[56:64] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[64:68] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[68:72] == struct.pack("f", -1)
 
 
 if __name__ == "__main__":
