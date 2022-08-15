@@ -666,9 +666,18 @@ TEST(DistributedTest, NeighborSampleMultipleTypesNeighborsSpreadAcrossPartitions
     c.WeightedSampleNeighbor(13, std::span(nodes), std::span(types), count, std::span(neighbor_nodes),
                              std::span(neighbor_types), std::span(neighbor_weights), 0, 0, 0);
 
-    EXPECT_EQ(std::vector<snark::NodeId>({4, 6, 7, 6, 5, 5}), neighbor_nodes);
-    EXPECT_EQ(std::vector<snark::Type>({0, 1, 1, 1, 1, 1}), neighbor_types);
-    EXPECT_EQ(std::vector<float>({1.f, 1.5f, 3.f, 1.5f, 1.f, 1.f}), neighbor_weights);
+    if (neighbor_nodes[0] == 4)
+    {
+        EXPECT_EQ(std::vector<snark::NodeId>({4, 6, 7, 6, 5, 5}), neighbor_nodes);
+        EXPECT_EQ(std::vector<snark::Type>({0, 1, 1, 1, 1, 1}), neighbor_types);
+        EXPECT_EQ(std::vector<float>({1.f, 1.5f, 3.f, 1.5f, 1.f, 1.f}), neighbor_weights);
+    }
+    else
+    {
+        EXPECT_EQ(std::vector<snark::NodeId>({7, 3, 7, 6, 7, 6}), neighbor_nodes);
+        EXPECT_EQ(std::vector<snark::Type>({1, 0, 1, 1, 1, 1}), neighbor_types);
+        EXPECT_EQ(std::vector<float>({3.f, 1f, 3.f, 1.5f, 3.f, 1.5f}), neighbor_weights);
+    }
 }
 
 TEST(DistributedTest, UniformNeighborSampleMultipleTypesNeighborsSpreadAcrossPartitions)
