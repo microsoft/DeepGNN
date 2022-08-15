@@ -170,6 +170,7 @@ class GIN(BaseSupervisedModel):
             pooled = torch.zeros(num_nodes, self.hidden_dim)
 
         for node_id in range(num_nodes):
+            # get_logger().info("node id: " + str(node_id))
             num_neighbors = nb_counts[node_id].int().item()
 
             # Aggregate and sum features across all neighbors
@@ -196,12 +197,14 @@ class GIN(BaseSupervisedModel):
 
     def get_score(self, context: dict):
         num_nodes = len(context["nb_counts"][0])
+        # get_logger().info("num nodes: " + str(num_nodes))
         nb_counts = context["nb_counts"].squeeze()
         features = context["features"].squeeze()
         nb_features = context["nb-features"].squeeze()
-
+        # get_logger().info("features dim: " + str(features.shape))
+        # get_logger().info("nb-features dim: " + str(nb_features.shape))
         # graph_pool = self.graphpool(nb_features, nb_counts, num_nodes)
-        # get_logger().info("NB COUNTS: " + str(nb_counts))
+        # get_logger().info("NB FEATURES DIM: " + str(nb_counts))
 
         hidden_rep = [features]
         h = features
@@ -213,11 +216,11 @@ class GIN(BaseSupervisedModel):
         score = 0
 
         for layer, h in enumerate(hidden_rep):
-
             # get_logger().info("Layer " + str(layer) + " =====================================================")
             ma = MeanAggregator(h)
             # graph_pool = ma.forward(nb_features, num_nodes)
-            pooled_h = ma.forward(h, num_nodes)
+            # get_logger().info("LEN: " + str(h.shape))
+            pooled_h = ma.forward(h, h.shape[0])
 
             # get_logger().info("Pooled h " + str(layer)
 
@@ -227,7 +230,6 @@ class GIN(BaseSupervisedModel):
                 self.final_dropout,
                 training=self.training,
             )
-            # get_logger().info("==========================================================================================")
         return score
 
     def forward(self, context: dict):
@@ -256,17 +258,27 @@ class GIN(BaseSupervisedModel):
         # context['neighbors'] = graph.sample_neighbors(
         #     nodes = context['inputs'],
         #     edge_types = np.array(self.edge_type),
-        #     count = 67,
+        #     count = 10,
         #     strategy = "randomwithoutreplacement"
-        # )[0]
+        # )
+
+        context["neighbors"] = graph.neighbors(
+            context["inputs"], np.array(self.edge_type)
+        )[0]
+
+        
+
+        # get_logger().info("Neighbors: " + str(context["neighbors"]))
+        # get_logger().info("Neighbors dims: " + str(len(context["neighbors"])))
 
         # get_logger().info("LEN 1: " + str(len(context['neighbors'])))
         # get_logger().info("**********************************************************")
 
         # get_logger().info("USING NORMAL NEIGBORS *****************************")
-        context["neighbors"] = graph.neighbors(
-            context["inputs"], np.array(self.edge_type)
-        )[0][: len(context["inputs"])]
+        # context["neighbors"] = graph.neighbors(
+        #     context["inputs"], np.array(self.edge_type)
+        # )
+        # get_logger().info("NEIGHBORS: " + str(context["neighbors"]))
         # get_logger().info("LEN 2: " + str(len(context['neighbors'])))
         # get_logger().info("**********************************************************")
 
