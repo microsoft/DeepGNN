@@ -676,7 +676,7 @@ TEST(DistributedTest, NeighborSampleMultipleTypesNeighborsSpreadAcrossPartitions
     {
         EXPECT_EQ(std::vector<snark::NodeId>({7, 3, 7, 6, 7, 6}), neighbor_nodes);
         EXPECT_EQ(std::vector<snark::Type>({1, 0, 1, 1, 1, 1}), neighbor_types);
-        EXPECT_EQ(std::vector<float>({3.f, 1f, 3.f, 1.5f, 3.f, 1.5f}), neighbor_weights);
+        EXPECT_EQ(std::vector<float>({3.f, 1.f, 3.f, 1.5f, 3.f, 1.5f}), neighbor_weights);
     }
 }
 
