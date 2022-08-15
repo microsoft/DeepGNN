@@ -791,7 +791,6 @@ def test_node_sampler_reset(multi_partition_graph_data):
         ns.sample(5)
 
 
-"""
 @pytest.mark.parametrize(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
@@ -1342,6 +1341,8 @@ def test_distributed_graph_node_types(multi_partition_graph_data, storage_type):
     npt.assert_equal(types, np.array([0, 2, 1], dtype=np.int32))
     s1.reset()
 
+
+"""
 
 @pytest.mark.parametrize(
     "storage_type",
