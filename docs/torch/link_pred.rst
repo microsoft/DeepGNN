@@ -127,8 +127,8 @@ In this example, the query function will generate a set of positive and negative
 	...     feature_dim: int
 	...     label_idx: int
 	...     label_dim: int
-	...     feature_type: dtype = np.float32
-	...     label_type: dtype = np.float32
+	...     feature_type: np.dtype = np.float32
+	...     label_type: np.dtype = np.float32
 
 	>>> class LinkPredictionQuery:
 	...     def __init__(self, p: LinkPredictionQueryParameter):

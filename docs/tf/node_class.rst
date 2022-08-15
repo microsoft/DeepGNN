@@ -41,8 +41,8 @@ Node Classification with GAT
     ...    feature_dim: int
     ...    label_idx: int
     ...    label_dim: int
-    ...    feature_type: dtype = np.float32
-    ...    label_type: dtype = np.float32
+    ...    feature_type: np.dtype = np.float32
+    ...    label_type: np.dtype = np.float32
     ...    num_hops: int = 2
 
 
