@@ -1261,9 +1261,6 @@ def test_node_sampling_distributed_graph_multiple_partitions_raises_empty_types(
     s2.reset()
 
 
-"""
-
-
 @pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_edge_sampling_distributed_graph_multiple_partitions(
     multi_partition_graph_data,
@@ -1368,6 +1365,9 @@ def test_edge_sampling_distributed_graph_multiple_partitions_raises_empty_types(
         client.EdgeSampler(cl, [10])
     s1.reset()
     s2.reset()
+
+
+"""
 
 
 @pytest.mark.parametrize(
