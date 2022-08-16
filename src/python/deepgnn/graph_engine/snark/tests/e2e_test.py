@@ -1306,9 +1306,6 @@ def test_distributed_graph_neighbors(multi_partition_graph_data, storage_type):
     s2.reset()
 
 
-"""
-
-
 @pytest.mark.parametrize(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
@@ -1343,6 +1340,9 @@ def test_distributed_graph_node_types(multi_partition_graph_data, storage_type):
     types = cl.node_types(np.array([9, 5, 0], dtype=np.int64), -1)
     npt.assert_equal(types, np.array([0, 2, 1], dtype=np.int32))
     s1.reset()
+
+
+"""
 
 
 @pytest.mark.parametrize(
