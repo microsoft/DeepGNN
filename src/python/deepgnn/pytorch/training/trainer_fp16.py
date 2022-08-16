@@ -4,9 +4,8 @@
 
 import argparse
 import torch
-from torch.nn import Module
 from torch.optim import Optimizer
-from typing import Any, Optional, Dict
+from typing import Any, Optional, Dict, Tuple
 from deepgnn.pytorch.common.consts import FP16_APEX, FP16_AMP, FP16_NO
 from deepgnn.pytorch.training.trainer import Trainer, BaseModel
 
@@ -32,7 +31,7 @@ class FP16Trainer(Trainer):
         dataset: Any,
         optimizer: Optional[Optimizer] = None,
         eval_dataset_for_training: Any = None,
-    ):
+    ) -> BaseModel:
         model = super()._initialize(
             model, dataset, optimizer, eval_dataset_for_training
         )
@@ -62,13 +61,15 @@ class FP16Trainer(Trainer):
     def _apex_step(self):
         self.optimizer.step()
 
-    def _amp_backward(self, loss):
+    def _amp_backward(self, loss: float):
         self.grad_scaler.scale(loss).backward()
 
     def _amp_step(self):
         self.grad_scaler.step(self.optimizer)
 
-    def _train_one_step_internal(self, model: Module, data: Dict):
+    def _train_one_step_internal(
+        self, model: BaseModel, data: Dict
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         if not self.fp16_enabled():
             return super()._train_one_step_internal(model, data)
 
@@ -104,18 +105,22 @@ class FP16Trainer(Trainer):
 
         return loss, score, label
 
-    def _evaluate_one_step_internal(self, model: Module, data: Dict):
+    def _evaluate_one_step_internal(
+        self, model: BaseModel, data: Dict
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         if self.args.gpu and self.args.fp16 == FP16_AMP:
             with torch.cuda.amp.autocast():
                 return super()._evaluate_one_step_internal(model, data)
         return super()._evaluate_one_step_internal(model, data)
 
-    def _inference_one_step_internal(self, model: Module, data: Dict):
+    def _inference_one_step_internal(
+        self, model: BaseModel, data: Dict
+    ) -> torch.Tensor:
         if self.args.gpu and self.args.fp16 == FP16_AMP:
             with torch.cuda.amp.autocast():
                 return super()._inference_one_step_internal(model, data)
         return super()._inference_one_step_internal(model, data)
 
-    def fp16_enabled(self):
+    def fp16_enabled(self) -> bool:
         """Check if trainer should use fp16 mode."""
         return self.args.gpu and self.args.fp16 != FP16_NO

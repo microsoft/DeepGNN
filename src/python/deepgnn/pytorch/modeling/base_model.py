@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 """Base classes for torch models."""
-from typing import Optional
+from typing import Optional, Tuple, Union, IO
 
 import torch
 import torch.nn as nn
@@ -48,11 +48,11 @@ class BaseModel(nn.Module):
         self.xent = nn.CrossEntropyLoss()
         self.metric: BaseMetric
 
-    def get_score(self, context: dict):
+    def get_score(self, context: dict) -> torch.Tensor:
         """Evaluate model."""
         raise NotImplementedError
 
-    def get_embedding(self, context: dict):
+    def get_embedding(self, context: dict) -> torch.Tensor:
         """
         Get embedding.
 
@@ -65,7 +65,9 @@ class BaseModel(nn.Module):
         """
         return self.get_score(context)
 
-    def output_embedding(self, output, context: dict, embeddings):
+    def output_embedding(
+        self, output: IO[str], context: dict, embeddings: torch.Tensor
+    ):
         """Dump embeddings to a file."""
         embeddings = embeddings.data.cpu().numpy()
         inputs = context["inputs"].squeeze(0)
@@ -79,11 +81,11 @@ class BaseModel(nn.Module):
             )
         output.writelines(embedding_strs)
 
-    def metric_name(self):
+    def metric_name(self) -> str:
         """Metric used for model evaluation."""
         return self.metric.name() if self.metric is not None else ""
 
-    def compute_metric(self, preds, labels):
+    def compute_metric(self, preds, labels) -> torch.Tensor:
         """Stub for metric evaluation."""
         if self.metric is not None:
             preds = torch.unsqueeze(torch.cat(preds, 0), 1)
@@ -91,7 +93,7 @@ class BaseModel(nn.Module):
             return self.metric.compute(preds, labels)
         return torch.tensor(0.0)
 
-    def query(self, context: dict, graph: Graph):
+    def query(self, context: dict, graph: Graph) -> dict:
         """Query graph engine to fetch graph data for model execution.
 
         This function will be invoked by prefetch. Args:
@@ -141,7 +143,9 @@ class BaseSupervisedModel(BaseModel):
             feature_enc=feature_enc,
         )
 
-    def _loss_inner(self, context: dict):
+    def _loss_inner(
+        self, context: dict
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Cross entropy loss for a list of nodes."""
         labels = context["label"].squeeze()
         device = labels.device
@@ -152,7 +156,7 @@ class BaseSupervisedModel(BaseModel):
         # issue: https://github.com/pytorch/pytorch/issues/32343
         # fix: https://github.com/pytorch/pytorch/pull/37864
         labels = labels.cpu().numpy().argmax(1)
-        scores: torch.Tensor = self.get_score(context)
+        scores = self.get_score(context)
         return (
             self.xent(
                 scores,
@@ -162,7 +166,7 @@ class BaseSupervisedModel(BaseModel):
             torch.tensor(labels.squeeze(), dtype=torch.int64),
         )
 
-    def forward(self, context: dict):
+    def forward(self, context: dict) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Return cross entropy loss."""
         return self._loss_inner(context)
 
@@ -185,12 +189,21 @@ class BaseUnsupervisedModel(BaseModel):
             feature_enc=feature_enc,
         )
 
-    def get_neg_node(self, graph: Graph, num_negs: int, neg_type: int):
+    def get_neg_node(
+        self, graph: Graph, num_negs: int, neg_type: Union[int, np.ndarray]
+    ) -> np.ndarray:
         """Fetch negative examples, random nodes in a graph."""
-        return graph.sample_nodes(num_negs, neg_type, SamplingStrategy.Weighted)
+        output = graph.sample_nodes(num_negs, neg_type, SamplingStrategy.Weighted)
+        if isinstance(output, tuple):
+            output = output[0]
+        return output
 
     def get_pos_node(
-        self, graph: Graph, nodes: np.ndarray, edge_types: np.ndarray, count: int = 1
-    ):
+        self,
+        graph: Graph,
+        nodes: np.ndarray,
+        edge_types: Union[int, np.ndarray],
+        count: int = 1,
+    ) -> np.ndarray:
         """Return positive examples, node neighbors."""
         return graph.sample_neighbors(nodes, edge_types, count)[0]

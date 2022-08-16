@@ -7,10 +7,10 @@ import torch
 import os
 import numpy as np
 
-from torch.nn import Module
 from torch.optim import Optimizer
+from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.tensorboard import SummaryWriter
-from typing import Any, Optional, Dict, List
+from typing import Any, Optional, Dict, List, IO, Tuple
 
 from deepgnn import (
     get_logger,
@@ -60,13 +60,15 @@ class Trainer:
         self.start_time = time.time()
         self.max_steps = 0
 
+        self.optimizer: Optimizer
+
     def run(
         self,
         model: BaseModel,
         dataset: Any,
         optimizer: Optional[Optimizer] = None,
         eval_dataset_for_training: Any = None,
-    ):
+    ) -> Optional[torch.Tensor]:
         """
         Perform training/evaluation/inference according to training mode set in constructor.
 
@@ -123,7 +125,7 @@ class Trainer:
 
         return result
 
-    def _init_model(self, model: BaseModel):
+    def _init_model(self, model: BaseModel) -> BaseModel:
         self.model = model
         self.model_name = type(self.model).__name__
 
@@ -143,7 +145,7 @@ class Trainer:
         self._load_checkpoint()
         return model
 
-    def _init_optimizer(self, optimizer: Optimizer):
+    def _init_optimizer(self, optimizer: Optimizer) -> Optimizer:
         self.lr_scheduler = self._create_lr_scheduler(optimizer)
         return optimizer
 
@@ -153,15 +155,15 @@ class Trainer:
         dataset: Any,
         optimizer: Optional[Optimizer] = None,
         eval_dataset_for_training: Any = None,
-    ):
+    ) -> BaseModel:
         model = self._init_model(model)
         self.dataset = dataset
         self.eval_dataset_for_training = eval_dataset_for_training
-        self.optimizer = self._init_optimizer(optimizer) if optimizer else optimizer
+        self.optimizer = self._init_optimizer(optimizer) if optimizer else optimizer  # type: ignore
 
         return model
 
-    def _train(self, model: Module):
+    def _train(self, model: BaseModel):
         self._init_summary_writer(prefix="train/worker")
         model.train()
 
@@ -170,14 +172,14 @@ class Trainer:
         for epoch in range(self.epochs_trained, self.args.num_epochs):
             self._train_one_epoch(model, epoch)
 
-    def _train_one_epoch(self, model: Module, epoch: int):
+    def _train_one_epoch(self, model: BaseModel, epoch: int):
         for i, data in enumerate(self.dataset):
             # Skip trained steps.
             if i < self.step:
                 continue
 
-            self.train_losses = []  # type: List[float]
-            self.train_metrics = []  # type: List[float]
+            self.train_losses: List[float] = []
+            self.train_metrics: List[float] = []
             self._train_one_step(model, data, epoch)
             if self._should_stop():
                 break
@@ -187,7 +189,7 @@ class Trainer:
         if self.rank == 0 and epoch % self.args.save_ckpt_by_epochs == 0:
             self._save_checkpoint(epoch + 1)
 
-    def _train_one_step(self, model: Module, data: Dict, epoch: int):
+    def _train_one_step(self, model: BaseModel, data: Dict, epoch: int):
         self._increment_step()
         self._prepare_data(data)
 
@@ -209,7 +211,7 @@ class Trainer:
         metric = (
             self.model.compute_metric([pred], [label]).data.item()
             if self.args.use_per_step_metrics
-            else torch.tensor(0.0)
+            else 0.0
         )
         self.train_metrics.append(metric)
 
@@ -273,7 +275,9 @@ class Trainer:
             )
             model.train()
 
-    def _train_one_step_internal(self, model: Module, data: Dict):
+    def _train_one_step_internal(
+        self, model: BaseModel, data: Dict
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         loss, pred, label = model(data)
         loss.backward()
         if self.args.clip_grad:
@@ -281,7 +285,7 @@ class Trainer:
         self.optimizer.step()
         return loss, pred, label
 
-    def _evaluate(self, model: Module):
+    def _evaluate(self, model: BaseModel) -> Tuple[torch.Tensor, torch.Tensor]:
         if self.args.mode != TrainMode.TRAIN:
             self._init_summary_writer(prefix="evaluate/worker")
         model.eval()
@@ -327,7 +331,9 @@ class Trainer:
         eval_loss = torch.tensor(eval_loss)
         return eval_metric, eval_loss
 
-    def _evaluate_one_step(self, model: Module, data: Dict):
+    def _evaluate_one_step(
+        self, model: BaseModel, data: Dict
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         is_eval_during_training = self.args.mode == TrainMode.TRAIN
         if not is_eval_during_training:
             self._increment_step()
@@ -356,10 +362,12 @@ class Trainer:
 
         return pred, label, loss
 
-    def _evaluate_one_step_internal(self, model: Module, data: Dict):
+    def _evaluate_one_step_internal(
+        self, model: BaseModel, data: Dict
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         return model(data)
 
-    def _inference(self, model: Module):
+    def _inference(self, model: BaseModel):
         self._init_summary_writer(prefix="inference/worker")
         model.eval()
 
@@ -370,7 +378,7 @@ class Trainer:
                     if self._should_stop():
                         break
 
-    def _inference_one_step(self, model: Module, data: Dict, fp: Any):
+    def _inference_one_step(self, model: BaseModel, data: Dict, fp: IO[str]):
         self._increment_step()
         self._prepare_data(data)
 
@@ -384,14 +392,16 @@ class Trainer:
                 self._wrap_log(f"step: {self.step:05d}; time: {duration:.4f}s")
             )
 
-    def _inference_one_step_internal(self, model: Module, data: Dict):
+    def _inference_one_step_internal(
+        self, model: BaseModel, data: Dict
+    ) -> torch.Tensor:
         return self.model.get_embedding(data)
 
     def _increment_step(self):
         self.step += 1
         self.global_step += 1
 
-    def _should_stop(self):
+    def _should_stop(self) -> bool:
         return self.max_steps > 0 and self.step >= self.max_steps
 
     def _init_summary_writer(self, prefix: str):
@@ -399,7 +409,7 @@ class Trainer:
             os.path.join(self.args.metric_dir, f"{prefix}-{self.rank}")
         )
 
-    def _check_duration(self):
+    def _check_duration(self) -> float:
         duration = time.time() - self.start_time
         self.start_time = time.time()
         return duration
@@ -408,10 +418,10 @@ class Trainer:
         if self.args.gpu:
             to_cuda(data)
 
-    def _wrap_log(self, content: str):
+    def _wrap_log(self, content: str) -> str:
         return f"[{self.world_size},{self.rank}] {content}"
 
-    def _create_lr_scheduler(self, optimizer: Optimizer):
+    def _create_lr_scheduler(self, optimizer: Optimizer) -> Optional[LambdaLR]:
         num_training_steps = self.max_steps * self.args.num_epochs
         return (
             get_linear_schedule_with_warmup(
@@ -471,7 +481,7 @@ class Trainer:
         )
         self.logger.info(self._wrap_log(f"Max steps per epoch:{self.max_steps}"))
 
-    def _get_embedding_writer(self):
+    def _get_embedding_writer(self) -> IO[str]:
         embed_path = os.path.join(
             self.args.save_path, f"{PREFIX_EMBEDDING}-{self.rank}"
         )
@@ -484,5 +494,5 @@ class Trainer:
                 file_path_prefix=embed_path,
             )
 
-            return uploader
+            return uploader  # type: ignore
         return open(embed_path + ".tsv", "w", encoding="utf-8")

@@ -23,7 +23,7 @@ from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LambdaLR
 
 
-def get_constant_schedule(optimizer: Optimizer, last_epoch: int = -1):
+def get_constant_schedule(optimizer: Optimizer, last_epoch: int = -1) -> LambdaLR:
     """
     Create a schedule with a constant learning rate, using the learning rate set in optimizer.
 
@@ -41,7 +41,7 @@ def get_constant_schedule(optimizer: Optimizer, last_epoch: int = -1):
 
 def get_constant_schedule_with_warmup(
     optimizer: Optimizer, num_warmup_steps: int, last_epoch: int = -1
-):
+) -> LambdaLR:
     """
     Create a schedule with a constant learning rate preceded by a warmup period.
 
@@ -67,8 +67,11 @@ def get_constant_schedule_with_warmup(
 
 
 def get_linear_schedule_with_warmup(
-    optimizer, num_warmup_steps, num_training_steps, last_epoch=-1
-):
+    optimizer: Optimizer,
+    num_warmup_steps: int,
+    num_training_steps: int,
+    last_epoch: int = -1,
+) -> LambdaLR:
     """
     Create a schedule with a learning rate that decreases linearly from the initial lr set in the optimizer to 0.
 
@@ -104,7 +107,7 @@ def get_cosine_schedule_with_warmup(
     num_training_steps: int,
     num_cycles: float = 0.5,
     last_epoch: int = -1,
-):
+) -> LambdaLR:
     """
     Create a schedule with a learning rate that decreases as cosine function from the initial lr set in the optimizer to 0.
 
@@ -145,7 +148,7 @@ def get_cosine_with_hard_restarts_schedule_with_warmup(
     num_training_steps: int,
     num_cycles: int = 1,
     last_epoch: int = -1,
-):
+) -> LambdaLR:
     """
     Create a schedule with a learning rate that decreases as cosine function with several hard restarts.
 
@@ -183,13 +186,13 @@ def get_cosine_with_hard_restarts_schedule_with_warmup(
 
 
 def get_polynomial_decay_schedule_with_warmup(
-    optimizer,
-    num_warmup_steps,
-    num_training_steps,
-    lr_end=1e-7,
-    power=1.0,
-    last_epoch=-1,
-):
+    optimizer: Optimizer,
+    num_warmup_steps: int,
+    num_training_steps: int,
+    lr_end: float = 1e-7,
+    power: float = 1.0,
+    last_epoch: int = -1,
+) -> LambdaLR:
     """
     Create a schedule with a learning rate that decreases as a polynomial decay.
 
