@@ -1342,9 +1342,6 @@ def test_distributed_graph_node_types(multi_partition_graph_data, storage_type):
     s1.reset()
 
 
-"""
-
-
 @pytest.mark.parametrize(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
@@ -1783,7 +1780,7 @@ def test_multi_partition_metadata():
     assert cl.meta._edge_feature_count == 2
     v = cl.node_features(np.array([1]), np.array([[1, 2]]), dtype=np.float32)
     npt.assert_almost_equal(v, np.array([[-0.03, -0.04]]))
-"""
+
 
 if __name__ == "__main__":
     sys.exit(
