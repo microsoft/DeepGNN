@@ -48,6 +48,7 @@ py_test(
         requirement("opencensus"),
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
+        requirement("avro-python3"),
     ],
 )
 
