@@ -4,7 +4,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Callable
+from typing import Callable, Optional
 
 
 class AttnHead(nn.Module):
@@ -14,7 +14,7 @@ class AttnHead(nn.Module):
         self,
         in_dim: int,
         out_dim: int,
-        act: Callable = F.elu,
+        act: Optional[Callable[[torch.Tensor], torch.Tensor]] = F.elu,
         in_drop: float = 0.0,
         coef_drop: float = 0.0,
     ):
@@ -41,7 +41,7 @@ class AttnHead(nn.Module):
         # TODO: add bias
         self.bias = nn.Parameter(torch.zeros(self.out_dim))
 
-    def forward(self, feat, adj):
+    def forward(self, feat: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:
         """Evaluate module."""
         # feat: [N, F], adj: [N, N]
         if self.training:
@@ -62,7 +62,13 @@ class AttnHead(nn.Module):
         else:
             return self.act(ret)
 
-    def _call_dense_version(self, seq_fts, f_1, f_2, adj):
+    def _call_dense_version(
+        self,
+        seq_fts: torch.Tensor,
+        f_1: torch.Tensor,
+        f_2: torch.Tensor,
+        adj: torch.Tensor,
+    ) -> torch.Tensor:
         bias_mat = -1e9 * (1.0 - adj)
         logits = f_1 + f_2.transpose(1, 0)  # [N, N]-broadcasting
         assert logits.shape[0] == logits.shape[1]
@@ -75,7 +81,13 @@ class AttnHead(nn.Module):
         vals = torch.matmul(coefs, seq_fts)  # [N, F']
         return vals
 
-    def _call_sparse_version(self, seq_fts, f_1, f_2, adj):
+    def _call_sparse_version(
+        self,
+        seq_fts: torch.Tensor,
+        f_1: torch.Tensor,
+        f_2: torch.Tensor,
+        adj: torch.Tensor,
+    ) -> torch.Tensor:
         indices = adj._indices()
         adj_shape = adj.shape
         row = indices[0]
@@ -103,7 +115,7 @@ class GATConv(nn.Module):
         in_dim: int,
         out_dim: int,
         attn_heads: int,
-        act: Callable = None,
+        act: Optional[Callable[[torch.Tensor], torch.Tensor]] = None,
         in_drop: float = 0.0,
         coef_drop: float = 0.0,
         attn_aggregate: str = "concat",
@@ -145,7 +157,7 @@ class GATConv(nn.Module):
         for i in range(self.attn_heads):
             self.add_module(f"att_head-{i}", self.headers[i])
 
-    def forward(self, feat, bias_mat):
+    def forward(self, feat: torch.Tensor, bias_mat: torch.Tensor) -> torch.Tensor:
         """Evaluate module."""
         attns = []
         for i in range(self.attn_heads):

@@ -16,7 +16,7 @@
 """PyTorch optimization for BERT model."""
 
 import math
-from typing import Callable, Iterable, Tuple
+from typing import Callable, Iterable, Tuple, Optional
 
 import torch
 from torch.optim import Optimizer
@@ -288,7 +288,7 @@ class AdamW(Optimizer):
         )
         super().__init__(params, defaults)
 
-    def step(self, closure: Callable = None):
+    def step(self, closure: Callable[[], float] = None) -> Optional[float]:
         """
         Perform a single optimization step.
 
