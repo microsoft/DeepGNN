@@ -187,26 +187,20 @@ class LSTMAggregator(tf.keras.layers.Layer):
         """Evaluate aggregator."""
         self_vecs, neig_vecs = inputs  # [N, in_dim], [N, num_nb, in_dim]
 
-        dims = tf.shape(neig_vecs)
-        batch_size = dims[0]
-        # initial_state = self.lstm_cell.zero_state(batch_size, tf.float32)
         used = tf.sign(tf.reduce_max(tf.abs(neig_vecs), axis=2))
         length = tf.reduce_sum(used, axis=1)
         length = tf.maximum(length, tf.constant(1.0))
         length = tf.cast(length, tf.int32)
 
         rnn_outputs = self.rnn(neig_vecs)  # , sequence_length=length)
-        batch_size = tf.shape(rnn_outputs)[0]
         max_len = tf.shape(rnn_outputs)[1]
         out_size = int(rnn_outputs.get_shape()[2])
-        index = tf.range(0, batch_size) * max_len + (length - 1)
+        index = tf.range(0, tf.shape(rnn_outputs)[0]) * max_len + (length - 1)
         flat = tf.reshape(rnn_outputs, [-1, out_size])
         neigh_h = tf.gather(flat, index)
 
         from_neig = self.neigh_weight(neigh_h)  # [N, output_dim]
         from_self = self.self_weight(self_vecs)  # [N, output_dim]
-
-        output = tf.add_n([from_self, from_neig])
 
         if self.concat:
             output = tf.concat([from_self, from_neig], axis=1)
