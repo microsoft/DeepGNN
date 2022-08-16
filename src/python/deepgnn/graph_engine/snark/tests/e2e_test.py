@@ -1327,7 +1327,7 @@ def test_distributed_graph_node_types(multi_partition_graph_data, storage_type):
     s1.reset()
     s2.reset()
 
-    address = ["localhost:124099"]
+    address = ["localhost:12429"]
     if platform.system() != "Darwin":
         address = [a + f"{int(storage_type)}{int(time.time()) % 100}" for a in address]
     s1 = server.Server(
