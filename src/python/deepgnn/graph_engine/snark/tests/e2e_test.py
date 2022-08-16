@@ -817,8 +817,6 @@ def test_remote_client_node_features_single_server(
     s.reset()
 
 
-"""
-
 @pytest.mark.parametrize(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
@@ -913,6 +911,8 @@ def test_remote_client_node_features_multiple_servers(
     s1.reset()
     s2.reset()
 
+
+"""
 
 @pytest.mark.parametrize(
     "storage_type",
