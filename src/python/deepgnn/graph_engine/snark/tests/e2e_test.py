@@ -1036,9 +1036,6 @@ def test_remote_client_edge_extra_features_graph_multiple_partitions(
     s2.reset()
 
 
-"""
-
-
 @pytest.mark.parametrize(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
@@ -1452,6 +1449,9 @@ class _TrainingWorker:
                 dtype=np.float32,
             )
             time.sleep(0.1)
+
+
+"""
 
 
 @pytest.mark.parametrize(
