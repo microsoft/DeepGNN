@@ -912,8 +912,6 @@ def test_remote_client_node_features_multiple_servers(
     s2.reset()
 
 
-"""
-
 @pytest.mark.parametrize(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
@@ -922,7 +920,7 @@ def test_remote_client_node_features_multiple_servers(
 def test_remote_client_node_string_features_multiple_servers(
     multi_partition_graph_data, storage_type
 ):
-    address = ["localhost:1234", "localhost:1235"]
+    address = ["localhost:1434", "localhost:1435"]
     if platform.system() != "Darwin":
         address = [a + f"{int(storage_type)}{int(time.time()) % 100}" for a in address]
     s1 = server.Server(
@@ -1036,6 +1034,9 @@ def test_remote_client_edge_extra_features_graph_multiple_partitions(
         feature_id += 1
     s1.reset()
     s2.reset()
+
+
+"""
 
 
 @pytest.mark.parametrize(
