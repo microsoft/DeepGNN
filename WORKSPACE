@@ -17,9 +17,9 @@ http_archive(
 
 http_archive(
     name = "rules_python",
-    sha256 = "a30abdfc7126d497a7698c29c46ea9901c6392d6ed315171a6df5ce433aa4502",
-    strip_prefix = "rules_python-0.6.0",
-    url = "https://github.com/bazelbuild/rules_python/archive/0.6.0.tar.gz",
+    sha256 = "c03246c11efd49266e8e41e12931090b613e12a59e6f55ba2efd29a7cb8b4258",
+    strip_prefix = "rules_python-0.11.0",
+    url = "https://github.com/bazelbuild/rules_python/archive/0.11.0.tar.gz",
 )
 
 load("@rules_python//python:pip.bzl", "pip_parse")
@@ -33,6 +33,16 @@ pip_parse(
 load("@pip_deps//:requirements.bzl", "install_deps")
 
 install_deps()
+
+pip_parse(
+    name = "doc_deps",
+    python_interpreter = "python",
+    requirements_lock = "//:docs/requirements.txt",
+)
+
+load("@doc_deps//:requirements.bzl", install_doc_deps = "install_deps")
+
+install_doc_deps()
 
 git_repository(
     name = "googletest",
