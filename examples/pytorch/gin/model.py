@@ -1,3 +1,4 @@
+from multiprocessing import pool
 from typing import Optional
 
 from deepgnn.logging_utils import get_logger
@@ -94,7 +95,7 @@ class GIN(BaseSupervisedModel):
         self.final_dropout = final_dropout
         self.device = device
         self.metric = metric
-        self.edge_type = edge_type
+        self.edge_types = edge_type
         self.num_layers = num_layers
         self.num_mlp_layers = num_mlp_layers
         self.graph_pooling_type = graph_pooling_type
@@ -163,7 +164,7 @@ class GIN(BaseSupervisedModel):
 
     def next_layer(self, h, layer, nb_counts, num_nodes):
         offset = 0
-
+        get_logger().info("len of neighbors: " + str(num_nodes))
         if layer == 0:
             pooled = torch.zeros(num_nodes, self.feature_dim)
         else:
@@ -172,24 +173,30 @@ class GIN(BaseSupervisedModel):
         for node_id in range(num_nodes):
             # get_logger().info("node id: " + str(node_id))
             num_neighbors = nb_counts[node_id].int().item()
+            # assert(num_neighbors != 0)
+            # get_logger().info("num neighbors: " + str)
 
             # Aggregate and sum features across all neighbors
             neighbor_features = h[offset : offset + num_neighbors]
             sum_features = neighbor_features.sum(0)
 
             # Move offset forward to read next set of nb features
-            offset += num_neighbors + 1
+            offset += num_neighbors
 
             # Write to pooled matrix
             if self.neighbor_pooling_type == "average":
-                sum_features /= num_neighbors
+                torch.div(sum_features, num_neighbors)
 
-            # get_logger().info("Layer " + str(layer) + " --------------------------------")
-            # get_logger().info("Node id: " + str(node_id))
-            # get_logger().info("pooled shape: " + str(sum_features.shape))
-            # Write to pooled matrix
             pooled[node_id] = sum_features
 
+        # get_logger().info("OFFSET: " + str(offset))
+       # assert((offset - 1) == num_nodes)
+        # get_logger().info("OFFSET: " + str(offset))
+        # print("COMPARISON 2 ---------------------------------------------")
+        # print("pooled: " + str(pooled))
+        # print("pooled shape: " + str(pooled.shape))
+        # print("-----------------------------------------------------------")
+        # exit()
         pooled_rep = self.mlps[layer](pooled)
         h = self.batch_norms[layer](pooled_rep)
         h = F.relu(h)
@@ -201,30 +208,50 @@ class GIN(BaseSupervisedModel):
         nb_counts = context["nb_counts"].squeeze()
         features = context["features"].squeeze()
         nb_features = context["nb-features"].squeeze()
-        # get_logger().info("features dim: " + str(features.shape))
+        # get_logger().info("features: " + str(features))
         # get_logger().info("nb-features dim: " + str(nb_features.shape))
         # graph_pool = self.graphpool(nb_features, nb_counts, num_nodes)
         # get_logger().info("NB FEATURES DIM: " + str(nb_counts))
 
-        hidden_rep = [features]
-        h = features
+        hidden_rep = [nb_features]
+        h = nb_features
+        # get_logger().info("nb-features: " + str(nb_features))
+
+        # get_logger().info("Comparison 0 ------------------------------------------------")
+        # get_logger().info("H: " + str(h))
+        # get_logger().info("H shape: " + str(h.shape))
+        # get_logger().info("-------------------------------------------------------------")
 
         for layer in range(self.num_layers - 1):
-            h = self.next_layer(h, layer, nb_counts, num_nodes)
+            if layer == 0:
+                h = nb_features
+            else:
+                h = self.next_layer(features, layer, nb_counts, num_nodes)
+                # get_logger().info("Comparison " + str(layer + 1) + "------------------------------------------------")
+                # get_logger().info("H: " + str(h))
+                # get_logger().info("H shape: " + str(h.shape))
+                # get_logger().info("-------------------------------------------------------------")
             hidden_rep.append(h)
 
         score = 0
 
         for layer, h in enumerate(hidden_rep):
-            # get_logger().info("Layer " + str(layer) + " =====================================================")
+            #get_logger().info("Layer " + str(layer) + " =====================================================")
             ma = MeanAggregator(h)
             # graph_pool = ma.forward(nb_features, num_nodes)
             # get_logger().info("LEN: " + str(h.shape))
-            pooled_h = ma.forward(h, h.shape[0])
-
-            # get_logger().info("Pooled h " + str(layer)
+            # get_logger().info("h " + str(h))
+            # get_logger().info("node count: " + str(h.shape[0]))
+            pooled_h = ma.forward(h, context["node_count"][0])    
+            # get_logger().info("=====================================================")
+            # get_logger().info("Pooled h " + str(pooled_h))
+            # exit()
 
             # get_logger().info("Pooled h shape: " + str(pooled_h.shape))
+            # get_logger().info("=====================================================")
+            assert(not torch.equal(pooled_h, h))
+            # exit()
+
             score += F.dropout(
                 self.linears_prediction[layer](pooled_h),
                 self.final_dropout,
@@ -234,7 +261,7 @@ class GIN(BaseSupervisedModel):
 
     def forward(self, context: dict):
         scores: torch.Tensor = self.get_score(context)
-        # get_logger().info("Scores: " + str(scores))
+        # get_logger().info("HERE!")
         # scores: torch.Tensor = scores.max(1, keepdim=True)
         labels = context["label"].long().squeeze().clone().detach()
         loss = self.xent(scores, labels)
@@ -262,29 +289,15 @@ class GIN(BaseSupervisedModel):
         #     strategy = "randomwithoutreplacement"
         # )
 
-        context["neighbors"] = graph.neighbors(
-            context["inputs"], np.array(self.edge_type)
-        )[0]
+        context["neighbors"] = graph.sample_neighbors(context["inputs"], self.edge_types, 10)[0].flatten()
+        # context["neighbors"] = np.unique(context["neighbors"], return_inverse=True)[0]
 
-        
+        context["node_count"] = len(context["inputs"])
 
-        # get_logger().info("Neighbors: " + str(context["neighbors"]))
-        # get_logger().info("Neighbors dims: " + str(len(context["neighbors"])))
-
-        # get_logger().info("LEN 1: " + str(len(context['neighbors'])))
-        # get_logger().info("**********************************************************")
-
-        # get_logger().info("USING NORMAL NEIGBORS *****************************")
-        # context["neighbors"] = graph.neighbors(
-        #     context["inputs"], np.array(self.edge_type)
-        # )
-        # get_logger().info("NEIGHBORS: " + str(context["neighbors"]))
-        # get_logger().info("LEN 2: " + str(len(context['neighbors'])))
-        # get_logger().info("**********************************************************")
 
         context["nb_counts"] = graph.neighbor_count(
             nodes=context["inputs"],
-            edge_types=np.array(self.edge_type),
+            edge_types=self.edge_types,
         ).astype(float)
 
         # context['nb_counts'] = graph.neighbors(
@@ -298,16 +311,31 @@ class GIN(BaseSupervisedModel):
             FeatureType.FLOAT,
         )
 
+        # get_logger().info("LABEL: " + str(context['label'].sum()))
+        # get_logger().info("NEIGHBORS: " + str(context['neighbors']))
+
         context["features"] = graph.node_features(
             context["inputs"],
             np.array([[self.feature_idx, self.feature_dim]]),
             FeatureType.FLOAT,
         )
 
+
+        # get_logger().info("inputs dtype: " + str(context["inputs"].dtype))
+        # get_logger().info("inputs shape: " + str(context["inputs"].shape()))
+        # get_logger().info("---------------------------------------------")
+        # get_logger().info("neighbors dtype: " + str(context["neighbors"].dtype))
+        # get_logger().info("neighbors shape: " + str(context["neighbors"].shape()))
+
+        
         context["nb-features"] = graph.node_features(
             context["neighbors"],
             np.array([[self.feature_idx, self.feature_dim]]),
             FeatureType.FLOAT,
         )
+
+        # get_logger().info("features 2: " + str(context["nb-features"].sum()))
+
+        # exit()
 
         return context

@@ -29,7 +29,7 @@ fi
 python3 ${DIR_NAME}/main.py  \
 --data_dir $GRAPH --mode train --seed 123 \
 --backend snark --graph_type local --converter skip \
---batch_size 64 --learning_rate 0.005 --num_epochs 100 \
+--batch_size 64 --learning_rate 0.01 --num_epochs 100 \
 --node_type 0 --max_id -1 --num_classes 7 \
 --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
 --feature_idx 0 --feature_dim 1433 --label_idx 1 --label_dim 1 --algo $ALGO \
@@ -38,7 +38,7 @@ python3 ${DIR_NAME}/main.py  \
 python3 ${DIR_NAME}/main.py  \
 --data_dir $GRAPH --mode evaluate \
 --backend snark --graph_type local --converter skip \
---batch_size 1000 \
+--batch_size 1000 --num_classes 7 \
 --sample_file /tmp/cora/test.nodes --node_type 0 --max_id -1 \
 --feature_idx 0 --feature_dim 1433 --label_idx 1 --label_dim 1 --algo $ALGO \
 --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \

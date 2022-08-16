@@ -52,7 +52,7 @@ def create_model(args: argparse.Namespace):
         get_logger().info(f"Creating GIN model with seed:{args.seed}.")
         return GIN(
             metric=Accuracy(),
-            num_layers=5,
+            num_layers=1,
             num_mlp_layers=2,
             input_dim=args.feature_dim,
             hidden_dim=64,

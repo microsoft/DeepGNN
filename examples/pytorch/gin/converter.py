@@ -251,7 +251,7 @@ def _main():
     # Build extra binaries
     convert.MultiWorkersConverter(
         graph_path=raw_file,
-        partition_count=10,
+        partition_count=1,
         output_dir="/tmp/" + str.lower(args.dataset),
         decoder=JsonDecoder,
     ).convert()
