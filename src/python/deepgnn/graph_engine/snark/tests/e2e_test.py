@@ -817,6 +817,8 @@ def test_remote_client_node_features_single_server(
     s.reset()
 
 
+"""
+
 @pytest.mark.parametrize(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
@@ -1100,8 +1102,6 @@ def test_remote_client_missing_edge_string_features_graph_multiple_partitions(
     s1.reset()
     s2.reset()
 
-
-"""
 
 @pytest.mark.parametrize(
     "storage_type",
