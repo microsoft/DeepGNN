@@ -1044,7 +1044,7 @@ def test_remote_client_edge_extra_features_graph_multiple_partitions(
 def test_remote_client_missing_edge_features_graph_multiple_partitions(
     multi_partition_graph_data, storage_type
 ):
-    address = ["localhost:9234", "localhost:9235"]
+    address = ["localhost:9238", "localhost:9239"]
     if platform.system() != "Darwin":
         address = [a + f"{int(storage_type)}{int(time.time()) % 100}" for a in address]
     s1 = server.Server(
