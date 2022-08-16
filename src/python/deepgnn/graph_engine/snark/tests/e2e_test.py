@@ -1306,6 +1306,9 @@ def test_distributed_graph_neighbors(multi_partition_graph_data, storage_type):
     s2.reset()
 
 
+"""
+
+
 @pytest.mark.parametrize(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
@@ -1365,9 +1368,6 @@ def test_edge_sampling_distributed_graph_multiple_partitions_raises_empty_types(
         client.EdgeSampler(cl, [10])
     s1.reset()
     s2.reset()
-
-
-"""
 
 
 @pytest.mark.parametrize(
