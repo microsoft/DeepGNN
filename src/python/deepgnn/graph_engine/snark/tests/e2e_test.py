@@ -1261,6 +1261,9 @@ def test_node_sampling_distributed_graph_multiple_partitions_raises_empty_types(
     s2.reset()
 
 
+"""
+
+
 @pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_edge_sampling_distributed_graph_multiple_partitions(
     multi_partition_graph_data,
@@ -1449,9 +1452,6 @@ class _TrainingWorker:
                 dtype=np.float32,
             )
             time.sleep(0.1)
-
-
-"""
 
 
 @pytest.mark.parametrize(
