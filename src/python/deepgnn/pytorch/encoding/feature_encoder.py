@@ -276,8 +276,8 @@ class MultiTypeFeatureEncoder(FeatureEncoder):
     def get_feature_encoder(self, encoder_type: str) -> TwinBERTFeatureEncoder:
         """Get encoder by type."""
         if self.share_encoder:
-            return getattr(self, FEATURE_ENCODER_STR, None)
-        return getattr(self, encoder_type + FEATURE_ENCODER_STR, None)
+            return getattr(self, FEATURE_ENCODER_STR)  # type: ignore
+        return getattr(self, encoder_type + FEATURE_ENCODER_STR)  # type: ignore
 
     def forward(self, context: dict):
         """Compute embeddings and save in context."""

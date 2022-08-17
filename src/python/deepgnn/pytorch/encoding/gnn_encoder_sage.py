@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from deepgnn.graph_engine import Graph, FeatureType, QueryOutput
+from deepgnn.graph_engine import Graph, FeatureType
 from deepgnn import get_logger
 from deepgnn.pytorch.modeling.base_model import BaseModel
 
@@ -18,9 +18,11 @@ class SageEncoder(nn.Module):
     def __init__(
         self,
         features: Callable[[torch.Tensor], torch.Tensor],
-        query_func: Union[
-            Callable[[np.ndarray, Graph, FeatureType, int, int], dict],
-            Callable[[torch.Tensor], torch.Tensor],
+        query_func: Optional[
+            Union[
+                Callable[[np.ndarray, Graph, FeatureType, int, int], dict],
+                Callable[[torch.Tensor], torch.Tensor],
+            ]
         ],
         feature_dim: int,
         aggregator: nn.Module,
@@ -77,7 +79,7 @@ class SageEncoder(nn.Module):
         feature_idx: int,
         feature_dim: int,
         neigh_nodes: np.ndarray = None,
-    ) -> QueryOutput:
+    ) -> dict:
         """Query graph for training data."""
         context = {}
         if neigh_nodes is None:

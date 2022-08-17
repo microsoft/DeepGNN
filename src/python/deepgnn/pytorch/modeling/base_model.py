@@ -107,7 +107,7 @@ class BaseModel(nn.Module):
         """
         raise NotImplementedError
 
-    def transform(self, context: QueryOutput):
+    def transform(self, context: dict):
         """Perform necessary transformation after fetching data from graph engine.
 
         This function will be invoked by prefetch. Args:
@@ -116,7 +116,7 @@ class BaseModel(nn.Module):
         if self.feature_enc:
             self.feature_enc.transform(context)
 
-    def encode_feature(self, context: QueryOutput):
+    def encode_feature(self, context: dict):
         """Encode feature vectors."""
         if self.feature_enc:
             self.feature_enc.forward(context)

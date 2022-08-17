@@ -263,7 +263,7 @@ class MockBackend(GraphEngineBackend):
     ):
         if MockBackend._backend is None:
             MockBackend._backend = object.__new__(cls)
-            MockBackend._backend._graph = MockGraph(feat_data, adj_lists)
+            MockBackend._backend._graph = MockGraph(feat_data, adj_lists)  # type: ignore
 
         return MockBackend._backend
 

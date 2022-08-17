@@ -325,7 +325,7 @@ def test_multithreaded_calls(multi_partition_graph_data, storage_type):
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
-def test_node_features_graph_multiple_partitions(
+def test_node_sampler_graph_multiple_partitions(
     multi_partition_graph_data, storage_type
 ):
     cl = client.MemoryGraph(multi_partition_graph_data, [0], storage_type)

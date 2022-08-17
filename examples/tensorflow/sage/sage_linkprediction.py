@@ -91,7 +91,7 @@ class GraphSAGELinkPrediction(tf.keras.Model):
         num_samples: List[int],
         dropout: float = 0.0,
         agg_type: str = "mean",
-        identity_embed_shape: List[int] = None,
+        identity_embed_shape: List[int] = [],
         concat: bool = True,
     ):
         """Initialize model."""
@@ -107,7 +107,7 @@ class GraphSAGELinkPrediction(tf.keras.Model):
         self.dropout = dropout
         self.identity_embed_shape = identity_embed_shape
         self.concat = concat
-        self.inference_node = None
+        self.inference_node: str
 
         # fmt: off
         # init src|dst aggregate layer.

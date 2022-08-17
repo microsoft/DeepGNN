@@ -285,7 +285,7 @@ class HetGnnModel(BaseUnsupervisedModel):
 
         return context
 
-    def query(self, graph: Graph, inputs: List):
+    def query(self, graph: Graph, inputs: np.ndarray):
         """Query graph for training data."""
         context = {"inputs": inputs}
         triple_context: List[Union[Dict, List]] = []
@@ -301,7 +301,7 @@ class HetGnnModel(BaseUnsupervisedModel):
         context["encoder"] = triple_context
         return context
 
-    def query_inference(self, graph: Graph, inputs: List):
+    def query_inference(self, graph: Graph, inputs: np.ndarray):
         """Query graph to generate embeddings."""
         context = {}
         context["inputs"] = inputs[:, 0]

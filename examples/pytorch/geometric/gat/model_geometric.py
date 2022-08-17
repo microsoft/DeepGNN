@@ -66,12 +66,12 @@ class GAT(BaseModel):
     def __init__(
         self,
         in_dim: int,
+        q_param: GATQueryParameter,
         head_num: List = [8, 1],
         hidden_dim: int = 8,
         num_classes: int = -1,
         ffd_drop: float = 0.0,
         attn_drop: float = 0.0,
-        q_param: GATQueryParameter = None,
     ):
         """Initialize model."""
         self.q = GATQuery(q_param)

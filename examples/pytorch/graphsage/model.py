@@ -196,7 +196,7 @@ class UnSupervisedGraphSage(BaseUnsupervisedModel):
         nn.init.xavier_uniform_(self.weight)
         self.bce_loss = torch.nn.BCEWithLogitsLoss()
 
-    def query(self, graph: Graph, inputs: np.ndarray):  # type: ignore[override]
+    def query(self, graph: Graph, inputs: np.ndarray) -> dict:
         """Fetch training data from graph."""
         context = {"inputs": inputs}
         context["encoder"] = self.enc.query(

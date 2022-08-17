@@ -52,7 +52,7 @@ class MockBackend(GraphEngineBackend):
         if MockBackend._backend is None:
             MockBackend._backend = object.__new__(cls)
             np.random.RandomState(seed=1)
-            MockBackend._backend._graph = None
+            MockBackend._backend._graph = None  # type: ignore
 
         return MockBackend._backend
 

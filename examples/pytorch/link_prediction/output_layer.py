@@ -5,7 +5,7 @@ import torch.nn as nn
 
 from deepgnn.pytorch.encoding.twinbert.pooler import WeightPooler
 from deepgnn.pytorch.encoding.twinbert.encoder import TwinBERTEncoder
-from deepgnn.pytorch.encoding.twinbert.deepspeed.nvidia_modeling import (
+from deepgnn.pytorch.encoding.twinbert.deepspeed.nvidia_modeling import (  # type: ignore
     BertEncoder,
     BertConfig,
 )
