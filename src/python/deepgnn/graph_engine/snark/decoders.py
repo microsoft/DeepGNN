@@ -107,8 +107,11 @@ class EdgeListDecoder(Decoder):
         1,0,0,4,10,1,1,1
         ```
 
-
-    * \ is the escape for the delimiter in "binary" features.
+    Delimiters
+        "," is the default column delimiter, it can be overriden with the delimiter parameter.
+        "/" is the default sparse features length delimiter, it can be overriden with the
+            length_delimiter parameter.
+        "\" is the escape for the delimiter in "binary" features.
     """
 
     def __init__(
