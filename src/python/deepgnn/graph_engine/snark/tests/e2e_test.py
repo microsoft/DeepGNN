@@ -61,10 +61,7 @@ nodes = [
         "uint64_feature": {"10": [65, 66, 67]},
         "int64_feature": {"11": [75, 76, 77]},
         "double_feature": {"12": [85, 86, 87]},
-        "float16_feature": {"13": [95, 96, 97]},
-        "sparse_float16_feature": {
-            "14": {"coordinates": [5, 13], "values": [1.0, 2.13]}
-        },
+        "float16_feature": {"13": [95, 96, 97], "14": [105, 106, 107]},
         "edge": [],
     },
 ]
@@ -103,10 +100,7 @@ edges = [
         "uint64_feature": {"10": [65, 66, 67]},
         "int64_feature": {"11": [75, 76, 77]},
         "double_feature": {"12": [85, 86, 87]},
-        "float16_feature": {"13": [95, 96, 97]},
-        "sparse_float16_feature": {
-            "14": {"coordinates": [5, 13], "values": [1.0, 2.13]}
-        },
+        "float16_feature": {"13": [95, 96, 97], "14": [105, 106, 107]},
     },
 ]
 
@@ -730,34 +724,6 @@ def test_feature_extraction_after_reset(multi_partition_graph_data):
 
 
 @pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
-def test_sparse_node_features_graph_multiple_partitions(multi_partition_graph_data):
-    cl = client.MemoryGraph(multi_partition_graph_data, [0, 1])
-    indices, values, dimensions = cl.node_sparse_features(
-        np.array([5], dtype=np.int64),
-        features=np.array([14], dtype=np.int32),
-        dtype=np.float16,
-    )
-    npt.assert_equal(indices, [[[0, 5], [0, 13]]])
-    npt.assert_equal(dimensions, [1])
-    npt.assert_allclose(values, np.array([[1.0, 2.13]], dtype=np.float16))
-
-
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
-def test_sparse_edge_features_graph_multiple_partitions(multi_partition_graph_data):
-    cl = client.MemoryGraph(multi_partition_graph_data, [0, 1])
-    indices, values, dimensions = cl.edge_sparse_features(
-        np.array([5], dtype=np.int64),
-        np.array([9], dtype=np.int64),
-        np.array([1], dtype=np.int32),
-        features=np.array([14], dtype=np.int32),
-        dtype=np.float16,
-    )
-    npt.assert_equal(indices, [[[0, 5], [0, 13]]])
-    npt.assert_equal(dimensions, [1])
-    npt.assert_allclose(values, np.array([[1.0, 2.13]], dtype=np.float16))
-
-
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_edge_sampler_creation(multi_partition_graph_data):
     cl = client.MemoryGraph(multi_partition_graph_data, [0])
     cl.reset()
@@ -1127,48 +1093,6 @@ def test_remote_client_node_features_multiple_servers_same_data_tst(
 
     assert v.shape == (2, 2)
     npt.assert_array_almost_equal(v, [[-0.01, -0.02], [-0.03, -0.04]])
-    s1.reset()
-    s2.reset()
-
-
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
-def test_remote_client_sparse_node_features_graph_multiple_partitions(
-    multi_partition_graph_data,
-):
-    address = ["localhost:1336", "localhost:1337"]
-    s1 = server.Server(multi_partition_graph_data, [0], address[0])
-    s2 = server.Server(multi_partition_graph_data, [1], address[1])
-    cl = client.DistributedGraph(address)
-    indices, values, dimensions = cl.node_sparse_features(
-        np.array([5], dtype=np.int64),
-        features=np.array([14], dtype=np.int32),
-        dtype=np.float16,
-    )
-    npt.assert_equal(indices, [[[0, 5], [0, 13]]])
-    npt.assert_equal(dimensions, [1])
-    npt.assert_allclose(values, np.array([[1.0, 2.13]], dtype=np.float16))
-    s1.reset()
-    s2.reset()
-
-
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
-def test_remote_client_sparse_edge_features_graph_multiple_partitions(
-    multi_partition_graph_data,
-):
-    address = ["localhost:1338", "localhost:1339"]
-    s1 = server.Server(multi_partition_graph_data, [0], address[0])
-    s2 = server.Server(multi_partition_graph_data, [1], address[1])
-    cl = client.DistributedGraph(address)
-    indices, values, dimensions = cl.edge_sparse_features(
-        np.array([5], dtype=np.int64),
-        np.array([9], dtype=np.int64),
-        np.array([1], dtype=np.int32),
-        features=np.array([14], dtype=np.int32),
-        dtype=np.float16,
-    )
-    npt.assert_equal(indices, [[[0, 5], [0, 13]]])
-    npt.assert_equal(dimensions, [1])
-    npt.assert_allclose(values, np.array([[1.0, 2.13]], dtype=np.float16))
     s1.reset()
     s2.reset()
 
