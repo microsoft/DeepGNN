@@ -4,8 +4,8 @@
 import json
 import torch
 import torch.nn as nn
-from output_layer import OutputLayer
-from consts import SIM_TYPE_COSINE
+from output_layer import OutputLayer  # type: ignore
+from consts import SIM_TYPE_COSINE  # type: ignore
 
 
 class MultiTaskAggregator(nn.Module):

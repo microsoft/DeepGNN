@@ -9,7 +9,7 @@ from deepgnn import get_logger
 from typing import List
 
 from deepgnn.graph_engine import Graph
-from sage import SAGEQuery, SAGEQueryParameter
+from sage import SAGEQuery, SAGEQueryParameter  # type: ignore
 
 
 class SAGELinkPredictionQuery(SAGEQuery):

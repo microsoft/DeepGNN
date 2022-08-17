@@ -38,8 +38,8 @@ from deepgnn.graph_engine import (
     create_backend,
 )
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
-from args import init_args
-from model import LinkPredictionModel
+from args import init_args  # type: ignore
+from model import LinkPredictionModel  # type: ignore
 from deepgnn.graph_engine.test_adl_reader import IS_ADL_CONFIG_VALID
 
 pytestmark = pytest.mark.skipif(not IS_ADL_CONFIG_VALID, reason="Invalid adl config.")

@@ -30,15 +30,15 @@ from deepgnn.graph_engine import (
     create_backend,
 )
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
-from model import HetGnnModel
-from sampler import HetGnnDataSampler
+from model import HetGnnModel  # type: ignore
+from sampler import HetGnnDataSampler  # type: ignore
 from conftest import (  # noqa: F401
     load_data,
     prepare_local_test_files,
     init_het_input_data,
-)
-import evaluation
-import conftest
+)  # type: ignore
+import evaluation  # type: ignore
+import conftest  # type: ignore
 
 node_base_index = 1000000
 

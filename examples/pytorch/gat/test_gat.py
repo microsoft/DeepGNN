@@ -21,7 +21,7 @@ from deepgnn.graph_engine import (
 )
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
 from deepgnn.graph_engine.data.citation import Cora
-from model import GAT, GATQueryParameter
+from model import GAT, GATQueryParameter  # type: ignore
 
 
 def setup_test(main_file):

@@ -24,10 +24,10 @@ from deepgnn.pytorch.common.metrics import BaseMetric, ROC
 from deepgnn.pytorch.modeling.base_model import BaseSupervisedModel
 from deepgnn.pytorch.encoding import FeatureEncoder, MultiTypeFeatureEncoder
 
-from encoder import GnnEncoder
-from output_layer import OutputLayer
-from multi_task import MultiTaskAggregator
-from consts import SIM_TYPE_COSINE_WITH_RNS, ENCODER_LABEL, FANOUTS_NAME
+from encoder import GnnEncoder  # type: ignore
+from output_layer import OutputLayer  # type: ignore
+from multi_task import MultiTaskAggregator  # type: ignore
+from consts import SIM_TYPE_COSINE_WITH_RNS, ENCODER_LABEL, FANOUTS_NAME  # type: ignore
 
 
 class LinkPredictionModel(BaseSupervisedModel):

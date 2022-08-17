@@ -11,7 +11,7 @@ from deepgnn import get_logger
 
 from deepgnn.graph_engine import Graph, SamplingStrategy
 
-from sage import SAGEQuery, SAGEQueryParameter
+from sage import SAGEQuery, SAGEQueryParameter  # type: ignore
 
 
 @dataclass

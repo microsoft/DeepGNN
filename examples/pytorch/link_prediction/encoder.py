@@ -18,7 +18,7 @@ from deepgnn.pytorch.encoding import (
     HetGnnEncoder,
     LightGCNEncoder,
 )
-from consts import (
+from consts import (  # type: ignore
     FANOUTS_NAME,
     ENCODER_LABEL,
     ENCODER_GAT,

@@ -19,7 +19,7 @@ from deepgnn.tf import common
 from deepgnn.tf.common.dataset import create_tf_dataset
 from deepgnn.tf.common.trainer_factory import get_trainer
 
-from han import HAN, HANQuery, HANQueryParamemter
+from han import HAN, HANQuery, HANQueryParamemter  # type: ignore
 from functools import partial
 
 
