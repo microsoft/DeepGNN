@@ -662,7 +662,8 @@ void GRPCClient::NeighborCount(std::span<const NodeId> node_ids, std::span<const
                 // Mismatch in lengths of output and reply vectors
                 std::transform(std::begin(reply.neighbor_counts()),
                                std::begin(reply.neighbor_counts()) + std::min(output_len, size_t(reply_len)),
-                               std::begin(output_neighbor_counts), std::plus<int64_t>());
+                               std::begin(output_neighbor_counts), std::begin(output_neighbor_counts),
+                               std::plus<uint64_t>());
             }
         };
 
