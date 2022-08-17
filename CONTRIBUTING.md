@@ -89,7 +89,7 @@ Install and run linters(same on both systems):
 ```sh
 pip install --upgrade pip
 pip install -r tests/requirements.txt
-pip install wheel pre-commit==2.17.0 mypy==0.780
+pip install wheel pre-commit==2.17.0 mypy==0.971
 pre-commit install
 pre-commit run --all-files
 ```
