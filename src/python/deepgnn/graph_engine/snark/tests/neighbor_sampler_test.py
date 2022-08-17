@@ -412,10 +412,10 @@ def test_remote_client_weighted_sampling_from_unsorted_types(
 def test_remote_client_weighted_sampling_with_missing_neighbors(
     multi_partition_graph_data,
 ):
-    s1 = server.Server(multi_partition_graph_data, [0], "localhost:12357")
-    s2 = server.Server(multi_partition_graph_data, [1], "localhost:12367")
+    s1 = server.Server(multi_partition_graph_data, [0], "localhost:12378")
+    s2 = server.Server(multi_partition_graph_data, [1], "localhost:12379")
 
-    cl = client.DistributedGraph(["localhost:12357", "localhost:12367"])
+    cl = client.DistributedGraph(["localhost:12378", "localhost:12379"])
     neighbors, weights, types = cl.weighted_sample_neighbors(
         # Cover two cases: missing node(node_id=1) and missing neighbors(node_id=0)
         nodes=np.array([1, 0], dtype=np.int64),
