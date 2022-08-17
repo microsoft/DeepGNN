@@ -83,12 +83,13 @@ grpc::Status GraphEngineServiceImpl::GetNodeTypes(::grpc::ServerContext *context
 
         auto index = elem->second;
         const size_t partition_count = m_counts[index];
-        int32_t result = -1;
-        for (size_t partition = 0; partition < partition_count && result == -1; ++partition, ++index)
+        Type result = snark::DEFAULT_NODE_TYPE;
+        for (size_t partition = 0; partition < partition_count && result == snark::DEFAULT_NODE_TYPE;
+             ++partition, ++index)
         {
             result = m_partitions[m_partitions_indices[index]].GetNodeType(m_internal_indices[index]);
         }
-        if (result == -1)
+        if (result == snark::DEFAULT_NODE_TYPE)
             continue;
         response->add_offsets(curr_offset);
         response->add_types(result);
@@ -125,7 +126,7 @@ grpc::Status GraphEngineServiceImpl::GetNodeFeatures(::grpc::ServerContext *cont
         auto data_span = std::span(data + feature_offset, fv_size);
         for (size_t partition = 0; partition < partition_count; ++partition, ++index)
         {
-            if (m_partitions[m_partitions_indices[index]].GetNodeType(m_internal_indices[index]) != -1)
+            if (m_partitions[m_partitions_indices[index]].HasNodeFeatures(m_internal_indices[index]))
             {
                 response->mutable_feature_values()->resize(feature_offset + fv_size);
                 m_partitions[m_partitions_indices[index]].GetNodeFeature(m_internal_indices[index], features,

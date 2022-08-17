@@ -26,6 +26,7 @@ struct Partition
     Partition(std::filesystem::path path, std::string suffix, PartitionStorageType storage_type);
 
     Type GetNodeType(uint64_t internal_node_id) const;
+    bool HasNodeFeatures(uint64_t internal_node_id) const;
     bool GetNodeFeature(uint64_t internal_node_id, std::span<snark::FeatureMeta> features,
                         std::span<uint8_t> output) const;
     bool GetNodeSparseFeature(uint64_t internal_node_id, std::span<const snark::FeatureId> features, int64_t prefix,

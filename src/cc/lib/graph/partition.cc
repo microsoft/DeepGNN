@@ -314,10 +314,15 @@ Type Partition::GetNodeType(uint64_t internal_node_id) const
     return m_node_types[internal_node_id];
 }
 
+bool Partition::HasNodeFeatures(uint64_t internal_node_id) const
+{
+    return GetNodeType(internal_node_id) != snark::DEFAULT_NODE_TYPE;
+}
+
 bool Partition::GetNodeFeature(uint64_t internal_id, std::span<snark::FeatureMeta> features,
                                std::span<uint8_t> output) const
 {
-    if (GetNodeType(internal_id) == -1)
+    if (!HasNodeFeatures(internal_id))
         return false;
 
     auto file_ptr = m_node_features->start();
@@ -355,7 +360,7 @@ bool Partition::GetNodeSparseFeature(uint64_t internal_node_id, std::span<const 
                                      std::vector<std::vector<int64_t>> &out_indices,
                                      std::vector<std::vector<uint8_t>> &out_values) const
 {
-    if (GetNodeType(internal_node_id) == -1)
+    if (!HasNodeFeatures(internal_node_id))
         return false;
 
     assert(features.size() == out_dimensions.size());
@@ -431,7 +436,7 @@ bool Partition::GetNodeSparseFeature(uint64_t internal_node_id, std::span<const 
 bool Partition::GetNodeStringFeature(uint64_t internal_node_id, std::span<const snark::FeatureId> features,
                                      std::span<int64_t> out_dimensions, std::vector<uint8_t> &out_values) const
 {
-    if (GetNodeType(internal_node_id) == -1)
+    if (!HasNodeFeatures(internal_node_id))
         return false;
 
     assert(features.size() == out_dimensions.size());
