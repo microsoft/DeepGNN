@@ -34,6 +34,16 @@ load("@pip_deps//:requirements.bzl", "install_deps")
 
 install_deps()
 
+pip_parse(
+    name = "doc_deps",
+    python_interpreter = "python",
+    requirements_lock = "//:docs/requirements.txt",
+)
+
+load("@doc_deps//:requirements.bzl", install_doc_deps = "install_deps")
+
+install_doc_deps()
+
 git_repository(
     name = "googletest",
     remote = "https://github.com/google/googletest",
