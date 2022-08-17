@@ -88,7 +88,7 @@ class MockModel(torch.nn.Module):
         return torch.cat([result, result], -1)
 
     # dump embeddings to a file.
-    def output_embedding(self, output, context: dict, embeddings):
+    def output_embedding(self, output, context, embeddings):
         embeddings = embeddings.data.cpu().numpy()
         inputs = context["inputs"].squeeze(0)
         for k in range(len(embeddings)):

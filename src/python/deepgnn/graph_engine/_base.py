@@ -10,6 +10,9 @@ from enum import Enum, IntEnum
 from fsspec.utils import infer_storage_options
 
 
+QueryOutput = Union[dict, tuple, np.ndarray, list]
+
+
 class FeatureType(Enum):
     """Feature types to fetch from a graph engine."""
 

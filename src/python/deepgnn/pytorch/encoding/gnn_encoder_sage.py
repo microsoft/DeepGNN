@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from deepgnn.graph_engine import Graph, FeatureType
+from deepgnn.graph_engine import Graph, FeatureType, QueryOutput
 from deepgnn import get_logger
 from deepgnn.pytorch.modeling.base_model import BaseModel
 
@@ -77,7 +77,7 @@ class SageEncoder(nn.Module):
         feature_idx: int,
         feature_dim: int,
         neigh_nodes: np.ndarray = None,
-    ) -> dict:
+    ) -> QueryOutput:
         """Query graph for training data."""
         context = {}
         if neigh_nodes is None:

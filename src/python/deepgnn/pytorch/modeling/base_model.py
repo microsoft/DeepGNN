@@ -8,7 +8,7 @@ import torch.nn as nn
 import numpy as np
 
 from torch.autograd import Variable
-from deepgnn.graph_engine import Graph, FeatureType, SamplingStrategy
+from deepgnn.graph_engine import Graph, FeatureType, SamplingStrategy, QueryOutput
 from deepgnn.pytorch.encoding.feature_encoder import FeatureEncoder
 from deepgnn.pytorch.common.metrics import BaseMetric
 from deepgnn.graph_engine.samplers import BaseSampler
@@ -48,11 +48,11 @@ class BaseModel(nn.Module):
         self.xent = nn.CrossEntropyLoss()
         self.metric: BaseMetric
 
-    def get_score(self, context: dict) -> torch.Tensor:
+    def get_score(self, context: QueryOutput) -> torch.Tensor:
         """Evaluate model."""
         raise NotImplementedError
 
-    def get_embedding(self, context: dict) -> torch.Tensor:
+    def get_embedding(self, context: QueryOutput) -> torch.Tensor:
         """
         Get embedding.
 
@@ -66,11 +66,16 @@ class BaseModel(nn.Module):
         return self.get_score(context)
 
     def output_embedding(
-        self, output: IO[str], context: dict, embeddings: torch.Tensor
+        self, output: IO[str], context: QueryOutput, embeddings: torch.Tensor
     ):
         """Dump embeddings to a file."""
         embeddings = embeddings.data.cpu().numpy()
-        inputs = context["inputs"].squeeze(0)
+        if isinstance(context, dict):
+            inputs = context["inputs"].squeeze(0)  # type: ignore
+        elif isinstance(context, torch.Tensor):
+            inputs = context.squeeze(0)  # type: ignore
+        else:
+            raise TypeError("Invalid input type.")
         embedding_strs = []
         for k in range(len(embeddings)):
             embedding_strs.append(
@@ -93,16 +98,16 @@ class BaseModel(nn.Module):
             return self.metric.compute(preds, labels)
         return torch.tensor(0.0)
 
-    def query(self, context: dict, graph: Graph) -> dict:
+    def query(self, graph: Graph, inputs: np.ndarray) -> QueryOutput:
         """Query graph engine to fetch graph data for model execution.
 
         This function will be invoked by prefetch. Args:
-            context: nested numpy array dictionary.
             graph: Graph to query.
+            inputs: nested numpy array dictionary.
         """
         raise NotImplementedError
 
-    def transform(self, context: dict):
+    def transform(self, context: QueryOutput):
         """Perform necessary transformation after fetching data from graph engine.
 
         This function will be invoked by prefetch. Args:
@@ -111,12 +116,12 @@ class BaseModel(nn.Module):
         if self.feature_enc:
             self.feature_enc.transform(context)
 
-    def encode_feature(self, context: dict):
+    def encode_feature(self, context: QueryOutput):
         """Encode feature vectors."""
         if self.feature_enc:
             self.feature_enc.forward(context)
 
-    def forward(self, context: dict):
+    def forward(self, context: QueryOutput):
         """Execute common forward operation for all models.
 
         Args:
@@ -144,10 +149,15 @@ class BaseSupervisedModel(BaseModel):
         )
 
     def _loss_inner(
-        self, context: dict
+        self, context: QueryOutput
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Cross entropy loss for a list of nodes."""
-        labels = context["label"].squeeze()
+        if isinstance(context, dict):
+            labels = context["label"].squeeze()  # type: ignore
+        elif isinstance(context, torch.Tensor):
+            labels = context.squeeze()  # type: ignore
+        else:
+            raise TypeError("Invalid input type.")
         device = labels.device
 
         # TODO(chaoyl): Due to the bug of pytorch argmax, we have to copy labels to numpy for argmax
@@ -166,7 +176,9 @@ class BaseSupervisedModel(BaseModel):
             torch.tensor(labels.squeeze(), dtype=torch.int64),
         )
 
-    def forward(self, context: dict) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(
+        self, context: QueryOutput
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Return cross entropy loss."""
         return self._loss_inner(context)
 

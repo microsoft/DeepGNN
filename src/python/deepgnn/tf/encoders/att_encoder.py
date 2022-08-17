@@ -4,7 +4,7 @@
 import numpy as np
 import tensorflow as tf
 
-from deepgnn.graph_engine import Graph, FeatureType
+from deepgnn.graph_engine import Graph, FeatureType, QueryOutput
 from deepgnn.tf import layers
 
 
@@ -40,7 +40,7 @@ class AttEncoder(layers.Layer):
             for _ in range(self.head_num)
         ]
 
-    def query(self, context: dict, graph: Graph):
+    def query(self, graph: Graph, context: QueryOutput):
         """Fetch training data from graph."""
         neighbors = graph.sample_neighbors(
             context["inputs"], self.edge_type, self.nb_num
@@ -57,7 +57,7 @@ class AttEncoder(layers.Layer):
         )
         return context
 
-    def call(self, context: dict):
+    def call(self, context: QueryOutput):
         """Compute embeddings."""
         seq = tf.concat(
             [context["node_feats"], context["neighbor_feats"]], 1

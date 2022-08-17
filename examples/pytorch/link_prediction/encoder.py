@@ -206,7 +206,7 @@ class GnnEncoder(nn.Module):
 
         return getattr(self, f"{prefix}_lgcl_encoder")(context)
 
-    def forward(self, context: dict):
+    def forward(self, context):
         """Evaluate saved encoder and return term tensor with mask and label."""
         embs_list = context[EMBS_LIST]
         term_tensors = context[TERM_TENSOR]

@@ -31,10 +31,7 @@ class SAGELinkPredictionQuery(SAGEQuery):
 
         edge_label = graph.edge_features(seed_edges, self.label_meta, self.param.label_type)
 
-        graph_tensor = [src_graph_nodes, dst_graph_nodes, edge_label]
-        graph_tensor.extend(src_neighbor_list_idx)
-        graph_tensor.extend(dst_neighbor_list_idx)
-        graph_tensor = tuple(graph_tensor)
+        graph_tensor = tuple([src_graph_nodes, dst_graph_nodes, edge_label] + src_neighbor_list_idx + dst_neighbor_list_idx)
 
         if return_shape:
             # N is the number of `nodes`, which is variable because `inputs` nodes are different.
@@ -66,9 +63,7 @@ class SAGELinkPredictionQuery(SAGEQuery):
         seed_nodes = inputs
         graph_nodes, neighbor_list_idx = self._query_neighbor(graph, seed_nodes)
 
-        graph_tensor = [graph_nodes]
-        graph_tensor.extend(neighbor_list_idx)
-        graph_tensor = tuple(graph_tensor)
+        graph_tensor = tuple([graph_nodes] + neighbor_list_idx)
 
         if return_shape:
             # N is the number of `nodes`, which is variable because `inputs` nodes are different.

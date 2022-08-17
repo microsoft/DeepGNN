@@ -373,7 +373,7 @@ class KGEModel(BaseModel):
         score = self.gamma.item() - score.sum(dim=2)
         return score
 
-    def forward(self, context: dict):
+    def forward(self, context: dict):  # type: ignore[override]
         """Calculate loss."""
         if "bias" in context.keys():
             return self.loss_eval(context)

@@ -8,7 +8,12 @@ import torch.nn as nn
 
 from typing import Optional
 from deepgnn import TrainMode, vec2str
-from deepgnn.graph_engine import Graph, FeatureType, INVALID_NODE_ID, multihop
+from deepgnn.graph_engine import (
+    Graph,
+    FeatureType,
+    INVALID_NODE_ID,
+    multihop,
+)
 
 from deepgnn.pytorch.common.consts import (
     NODE_SRC,
@@ -96,12 +101,12 @@ class LinkPredictionModel(BaseSupervisedModel):
             )
             self.multi_task_aggregator = MultiTaskAggregator(config)
 
-    def get_score(self, context: dict):
+    def get_score(self, context: dict):  # type: ignore[override]
         """Calculate score."""
         self.encode_feature(context)
         return self.gnn_encoder(context)
 
-    def forward(self, context: dict):
+    def forward(self, context: dict):  # type: ignore[override]
         """Calculate scores and return them with loss and labels."""
         batch = context[NODE_FEATURES]
         # source nodes
@@ -214,7 +219,7 @@ class LinkPredictionModel(BaseSupervisedModel):
         """Metric used for evaluation."""
         return self.metric.name()
 
-    def query(self, graph: Graph, inputs: np.ndarray):
+    def query(self, graph: Graph, inputs: np.ndarray) -> tuple:
         """
         Query graph for training data.
 
@@ -335,7 +340,7 @@ class LinkPredictionModel(BaseSupervisedModel):
         self.transform(context)
         return context
 
-    def get_embedding(self, context: dict):
+    def get_embedding(self, context: dict):  # type: ignore[override]
         """Compute embeddings, scores for src and destination nodes."""
         batch = context[NODE_FEATURES]
         # source nodes
@@ -372,7 +377,7 @@ class LinkPredictionModel(BaseSupervisedModel):
 
         return scores, src_info[0], dst_info[0], batch[0]
 
-    def output_embedding(self, output, context: dict, embeddings):
+    def output_embedding(self, output, context: dict, embeddings):  # type: ignore[override]
         """Print embeddings."""
         scores, src_batch, dst_batch, row_id = embeddings
         scores = torch.sigmoid(scores).cpu().detach().numpy()

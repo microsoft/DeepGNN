@@ -74,7 +74,7 @@ class HetGnnModel(BaseUnsupervisedModel):
                 nn.init.xavier_normal_(m.weight.data)
                 m.bias.data.fill_(0.1)
 
-    def get_score(self, context: dict):
+    def get_score(self, context: dict):  # type: ignore[override]
         """Calculate scores for central, positive and negative nodes."""
         c_out, p_out, n_out = self.aggregate_all(context)
         return c_out, p_out, n_out
@@ -214,7 +214,7 @@ class HetGnnModel(BaseUnsupervisedModel):
 
         return loss_sum.mean(), scores, labels
 
-    def forward(self, context: dict):
+    def forward(self, context: dict):  # type: ignore[override]
         """Calculate score based on inputs in the context and return loss."""
         feature_list = context["encoder"]
         inputs = context["inputs"]
@@ -239,7 +239,7 @@ class HetGnnModel(BaseUnsupervisedModel):
 
         return self.cross_entropy_loss(c_out, p_out, n_out, self.embed_d)
 
-    def get_embedding(self, context: dict):
+    def get_embedding(self, context: dict):  # type: ignore[override]
         """Calculate embedding."""
         context["encoder"]["node_type"] = int(context["node_type"])
         return self.node_het_agg(context["encoder"])
