@@ -358,7 +358,6 @@ grpc::Status GraphEngineServiceImpl::GetNeighborCounts(::grpc::ServerContext *co
 grpc::Status GraphEngineServiceImpl::GetNeighbors(::grpc::ServerContext *context,
                                                   const snark::GetNeighborsRequest *request,
                                                   snark::GetNeighborsReply *response)
-
 {
     const auto node_count = request->node_ids().size();
     response->mutable_neighbor_counts()->Resize(node_count, 0);

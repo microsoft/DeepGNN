@@ -17,9 +17,9 @@ http_archive(
 
 http_archive(
     name = "rules_python",
-    sha256 = "5fa3c738d33acca3b97622a13a741129f67ef43f5fdfcec63b29374cc0574c29",
-    strip_prefix = "rules_python-0.9.0",
-    url = "https://github.com/bazelbuild/rules_python/archive/refs/tags/0.9.0.tar.gz",
+    sha256 = "c03246c11efd49266e8e41e12931090b613e12a59e6f55ba2efd29a7cb8b4258",
+    strip_prefix = "rules_python-0.11.0",
+    url = "https://github.com/bazelbuild/rules_python/archive/0.11.0.tar.gz",
 )
 
 load("@rules_python//python:pip.bzl", "pip_parse")
@@ -33,6 +33,16 @@ pip_parse(
 load("@pip_deps//:requirements.bzl", "install_deps")
 
 install_deps()
+
+pip_parse(
+    name = "doc_deps",
+    python_interpreter = "python",
+    requirements_lock = "//:docs/requirements.txt",
+)
+
+load("@doc_deps//:requirements.bzl", install_doc_deps = "install_deps")
+
+install_doc_deps()
 
 git_repository(
     name = "googletest",
@@ -85,9 +95,9 @@ http_archive(
 
 http_archive(
     name = "com_github_grpc_grpc",
-    sha256 = "ec19657a677d49af59aa806ec299c070c882986c9fcc022b1c22c2a3caf01bcd",
-    strip_prefix = "grpc-1.45.0",
-    urls = ["https://github.com/grpc/grpc/archive/v1.45.0.tar.gz"],
+    sha256 = "9b1f348b15a7637f5191e4e673194549384f2eccf01fcef7cc1515864d71b424",
+    strip_prefix = "grpc-1.48.0",
+    urls = ["https://github.com/grpc/grpc/archive/v1.48.0.tar.gz"],
 )
 
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
@@ -99,11 +109,10 @@ load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
 grpc_extra_deps()
 
 http_archive(
-    # com_google_absl is used by grpc, but we want the latest version for c++20 compat.
-    name = "snark_com_google_absl",
-    sha256 = "a4567ff02faca671b95e31d315bab18b42b6c6f1a60e91c6ea84e5a2142112c2",
-    strip_prefix = "abseil-cpp-20211102.0",
-    urls = ["https://github.com/abseil/abseil-cpp/archive/refs/tags/20211102.0.zip"],
+    name = "com_google_absl",
+    sha256 = "5b7640be0e119de1a9d941cb6b2607d76978eba5720196f1d4fc6de0421d2241",
+    strip_prefix = "abseil-cpp-20220623.0",
+    urls = ["https://github.com/abseil/abseil-cpp/archive/refs/tags/20220623.0.zip"],
 )
 
 http_archive(

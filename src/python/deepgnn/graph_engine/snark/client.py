@@ -30,7 +30,6 @@ import numpy as np
 from deepgnn.graph_engine.snark._lib import _get_c_lib
 from deepgnn.graph_engine.snark._downloader import download_graph_data, GraphPath
 from deepgnn.graph_engine.snark.meta import Meta
-from deepgnn import get_logger
 
 
 class _DEEP_GRAPH(Structure):
@@ -616,7 +615,7 @@ class MemoryGraph:
         return py_cb.values, dimensions // py_cb.values.itemsize
 
     def neighbor_counts(
-        self, nodes: np.ndarray, edge_types: Union[int, np.ndarray]
+        self, nodes: np.ndarray, edge_types: Union[List[int], int]
     ) -> np.ndarray:
         """Retrieve degree of node with satisfying edge types.
 
@@ -625,7 +624,7 @@ class MemoryGraph:
             edge_types -- type of edges to use for selection.
 
         Returns:
-            np.array: neighbor count
+            np.ndarray: neighbor count
         """
         nodes = np.array(nodes, dtype=np.int64)
         edge_types = _make_sorted_list(edge_types)
@@ -772,8 +771,7 @@ class MemoryGraph:
             c_int64(default_node),
             c_int32(default_type),
         )
-        get_logger().info("RESULT NODES: " + str(result_nodes[0]))
-        get_logger().info("LEN OF RESULT NODES: " + str(len(result_nodes[0])))
+
         return result_nodes, result_types
 
     def reset(self):

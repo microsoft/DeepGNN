@@ -571,6 +571,14 @@ def convert_features(features: list):
             output.append(feature)
         elif isinstance(feature, tuple):
             coordinates, values = feature
+            if (
+                coordinates is None
+                or len(coordinates) == 0
+                or values is None
+                or len(values) == 0
+            ):
+                output.append(None)
+                continue
             assert (
                 coordinates.shape[0] == len(values)
                 if len(values) > 1
@@ -586,7 +594,7 @@ def convert_features(features: list):
             if values.dtype == np.float16:
                 values_buf = np.array(values, dtype=np.float16).tobytes()
             else:
-                values_buf = (np.ctypeslib.as_ctypes_type(values.dtype) * len(values))()
+                values_buf = (np.ctypeslib.as_ctypes_type(values.dtype) * len(values))()  # type: ignore
                 values_buf[:] = values  # type: ignore
 
             # For matrices the number of values might be different than number of coordinates
