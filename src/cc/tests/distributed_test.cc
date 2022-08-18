@@ -546,6 +546,149 @@ TEST(DistributedTest, UniformSampleNeighborsWithoutReplacementMultipleServers)
     EXPECT_EQ(output_nodes, std::vector<snark::NodeId>({2, 4, 59, 57, 81, 79}));
 }
 
+TEST(DistributedTest, NeighborCountMultipleServers)
+{
+    const size_t num_servers = 2;
+    ServerList servers;
+    std::vector<std::shared_ptr<grpc::Channel>> channels;
+    size_t curr_node = 0;
+    for (size_t server = 0; server < num_servers; ++server)
+    {
+        TestGraph::MemoryGraph m;
+        for (size_t n = 0; n < num_nodes / num_servers; n++, curr_node++)
+        {
+            std::vector<float> vals(fv_size);
+            std::iota(std::begin(vals), std::end(vals), float(curr_node));
+            m.m_nodes.push_back(TestGraph::Node{.m_id = snark::NodeId(curr_node),
+                                                .m_type = 0,
+                                                .m_weight = 1.0f,
+                                                .m_neighbors = {TestGraph::NeighborRecord{curr_node + 1, 0, 1.0f},
+                                                                TestGraph::NeighborRecord{curr_node + 2, 1, 2.0f},
+                                                                TestGraph::NeighborRecord{curr_node + 3, 1, 1.0f},
+                                                                TestGraph::NeighborRecord{curr_node + 4, 2, 2.0f}}});
+        }
+
+        TempFolder path("NeighborCountMultipleServers");
+        auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
+        servers.emplace_back(std::make_shared<snark::GRPCServer>(
+            std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
+                                                            snark::PartitionStorageType::memory, ""),
+            std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", ""));
+        channels.emplace_back(servers.back()->InProcessChannel());
+    }
+
+    snark::GRPCClient c(std::move(channels), 1, 1);
+    std::vector<snark::NodeId> input_nodes = {0};
+    std::vector<snark::Type> input_types = {0, 1};
+    size_t size = input_nodes.size();
+    std::vector<uint64_t> output_counts(size);
+    std::fill_n(std::begin(output_counts), size, -1); // Fill with -1 to check update
+    c.NeighborCount(std::span(input_nodes), std::span(input_types), std::span(output_counts));
+    EXPECT_EQ(output_counts, std::vector<uint64_t>({3}));
+}
+
+TEST(DistributedTest, NeighborCountMismatchingOutputSize)
+{
+    const size_t num_servers = 2;
+    ServerList servers;
+    std::vector<std::shared_ptr<grpc::Channel>> channels;
+    size_t curr_node = 0;
+    for (size_t server = 0; server < num_servers; ++server)
+    {
+        TestGraph::MemoryGraph m;
+        for (size_t n = 0; n < num_nodes / num_servers; n++, curr_node++)
+        {
+            std::vector<float> vals(fv_size);
+            std::iota(std::begin(vals), std::end(vals), float(curr_node));
+            m.m_nodes.push_back(TestGraph::Node{.m_id = snark::NodeId(curr_node),
+                                                .m_type = 0,
+                                                .m_weight = 1.0f,
+                                                .m_neighbors = {TestGraph::NeighborRecord{curr_node + 1, 0, 1.0f},
+                                                                TestGraph::NeighborRecord{curr_node + 2, 1, 2.0f},
+                                                                TestGraph::NeighborRecord{curr_node + 3, 1, 1.0f},
+                                                                TestGraph::NeighborRecord{curr_node + 4, 2, 2.0f}}});
+        }
+
+        TempFolder path("NeighborCountMismatchingOutputSize");
+        auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
+        servers.emplace_back(std::make_shared<snark::GRPCServer>(
+            std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
+                                                            snark::PartitionStorageType::memory, ""),
+            std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", ""));
+        channels.emplace_back(servers.back()->InProcessChannel());
+    }
+
+    snark::GRPCClient c(std::move(channels), 1, 1);
+    std::vector<snark::NodeId> input_nodes = {0};
+    std::vector<snark::Type> input_types = {0, 1};
+    size_t size = input_nodes.size();
+
+    // Make output counts larger than replies size to test mismatch
+    std::vector<uint64_t> output_counts(size + 5);
+
+    std::fill_n(std::begin(output_counts), size, -1); // Fill with -1 to check update
+    c.NeighborCount(std::span(input_nodes), std::span(input_types), std::span(output_counts));
+    EXPECT_EQ(output_counts, std::vector<uint64_t>({3, 0, 0, 0, 0, 0}));
+}
+
+TEST(DistributedTest, NeighborCountEmptyGraph)
+{
+    const size_t num_servers = 2;
+    ServerList servers;
+    std::vector<std::shared_ptr<grpc::Channel>> channels;
+    size_t curr_node = 0;
+    for (size_t server = 0; server < num_servers; ++server)
+    {
+        TestGraph::MemoryGraph m;
+        for (size_t n = 0; n < num_nodes / num_servers; n++, curr_node++)
+        {
+            std::vector<float> vals(fv_size);
+            std::iota(std::begin(vals), std::end(vals), float(curr_node));
+            m.m_nodes.push_back(TestGraph::Node{.m_id = snark::NodeId(curr_node),
+                                                .m_type = 0,
+                                                .m_weight = 1.0f,
+                                                .m_neighbors = {TestGraph::NeighborRecord{curr_node + 1, 0, 1.0f},
+                                                                TestGraph::NeighborRecord{curr_node + 2, 1, 2.0f},
+                                                                TestGraph::NeighborRecord{curr_node + 3, 1, 1.0f},
+                                                                TestGraph::NeighborRecord{curr_node + 4, 2, 2.0f}}});
+        }
+
+        TempFolder path("NeighborCountMismatchingOutputSizeEmptyGraphEng");
+        auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
+
+        // EmptyGraphEngine as engine service
+        servers.emplace_back(std::make_shared<snark::GRPCServer>(
+            std::shared_ptr<snark::GraphEngineServiceImpl>{},
+            std::make_shared<snark::GraphSamplerServiceImpl>(path.string(), std::set<size_t>{0}), "localhost:0", "", "",
+            ""));
+        channels.emplace_back(servers.back()->InProcessChannel());
+    }
+
+    snark::GRPCClient c(std::move(channels), 1, 1);
+    std::vector<snark::NodeId> input_nodes = {0};
+    std::vector<snark::Type> input_types = {};
+    size_t size = input_nodes.size();
+
+    // Make output counts larger than replies size to test mismatch
+    std::vector<uint64_t> output_counts(size + 5);
+
+    std::fill_n(std::begin(output_counts), size, -1); // Fill with -1 to check update
+    c.NeighborCount(std::span(input_nodes), std::span(input_types), std::span(output_counts));
+    EXPECT_EQ(output_counts, std::vector<uint64_t>({0, 0, 0, 0, 0, 0}));
+}
+
+TEST(DistributedTest, NeighborCountMultipleTypesMultipleServers)
+{
+    auto environment = CreateMultiServerEnvironment("NeighborCountMultipleTypesMultipleServers");
+    auto &c = *environment.second;
+
+    std::vector<snark::NodeId> input_nodes = {0, 55, 100};
+    std::vector<snark::Type> input_types = {0};
+    std::vector<uint64_t> output_counts(input_nodes.size());
+    c.NeighborCount(std::span(input_nodes), std::span(input_types), std::span(output_counts));
+    EXPECT_EQ(output_counts, std::vector<uint64_t>({4, 4, 0}));
+}
+
 TEST(DistributedTest, FullNeighborsMultipleTypesMultipleServers)
 {
     const size_t num_servers = 2;
@@ -610,6 +753,7 @@ TEST(DistributedTest, FullNeighborsMultipleServers)
     EXPECT_EQ(output_weights, std::vector<float>({1, 2, 1, 2, 1, 2, 1, 2}));
     EXPECT_EQ(output_counts, std::vector<uint64_t>({4, 4}));
 }
+
 namespace
 {
 
