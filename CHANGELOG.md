@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Support nodes and their outgoing edges on different partitions.
 
+- Adds neighbor count method to graph.
+
 ## [0.1.54] - 2022-08-04
 
 ### Fixed

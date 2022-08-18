@@ -308,6 +308,35 @@ void Graph::GetEdgeStringFeature(std::span<const NodeId> input_edge_src, std::sp
     }
 }
 
+void Graph::NeighborCount(std::span<const NodeId> input_node_ids, std::span<const Type> input_edge_types,
+                          std::span<uint64_t> output_neighbors_counts) const
+
+{
+    size_t num_nodes = input_node_ids.size();
+    std::fill_n(std::begin(output_neighbors_counts), num_nodes, 0);
+
+    for (size_t idx = 0; idx < num_nodes; ++idx)
+    {
+        auto internal_id = m_node_map.find(input_node_ids[idx]);
+
+        if (internal_id == std::end(m_node_map))
+        {
+            continue;
+        }
+        else
+        {
+            auto index = internal_id->second;
+            size_t partition_count = m_counts[index];
+
+            for (size_t partition = 0; partition < partition_count; ++partition, ++index)
+            {
+                output_neighbors_counts[idx] += m_partitions[m_partitions_indices[index]].NeighborCount(
+                    m_internal_indices[index], input_edge_types);
+            }
+        }
+    }
+}
+
 void Graph::FullNeighbor(std::span<const NodeId> input_node_ids, std::span<const Type> input_edge_types,
                          std::vector<NodeId> &output_neighbor_ids, std::vector<Type> &output_neighbor_types,
                          std::vector<float> &output_neighbors_weights,
