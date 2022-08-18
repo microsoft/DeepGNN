@@ -40,7 +40,7 @@ class AttEncoder(layers.Layer):
             for _ in range(self.head_num)
         ]
 
-    def query(self, graph: Graph, context: QueryOutput):
+    def query(self, graph: Graph, context: QueryOutput) -> dict:
         """Fetch training data from graph."""
         neighbors = graph.sample_neighbors(
             context["inputs"], self.edge_type, self.nb_num

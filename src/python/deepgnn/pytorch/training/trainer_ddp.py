@@ -9,8 +9,9 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel
 from torch.optim import Optimizer
 
-from typing import Any, Optional, Tuple
+from typing import Optional, Tuple
 from torch.nn.utils import parameters_to_vector, vector_to_parameters
+from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.pytorch.training.trainer_fp16 import FP16Trainer, BaseModel
 from deepgnn.pytorch.training.utils import disable_infini_band
 
@@ -65,9 +66,9 @@ class DDPTrainer(FP16Trainer):
     def _initialize(
         self,
         model: BaseModel,
-        dataset: Any,
+        dataset: TorchDeepGNNDataset,
         optimizer: Optional[Optimizer] = None,
-        eval_dataset_for_training: Any = None,
+        eval_dataset_for_training: TorchDeepGNNDataset = None,
     ) -> BaseModel:
         model = super()._initialize(
             model, dataset, optimizer, eval_dataset_for_training

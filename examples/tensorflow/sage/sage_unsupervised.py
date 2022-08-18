@@ -63,7 +63,7 @@ class UnsupervisedQuery(SAGEQuery):
 
     def query_training(
         self, graph: Graph, inputs: np.ndarray, return_shape: bool = False
-    ):
+    ) -> tuple:
         """Retrieve graph data to train model."""
         seed_nodes = inputs
         positive, negative = self._sample_postive_negative_nodes(graph, seed_nodes)

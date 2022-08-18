@@ -21,7 +21,7 @@ class SAGELinkPredictionQuery(SAGEQuery):
 
     def query_training(
         self, graph: Graph, inputs: np.ndarray, return_shape: bool = False
-    ):
+    ) -> tuple:
         """Fetch data to train model."""
         # fmt: off
         seed_edges = inputs  # [Batch_size, 3]
@@ -53,7 +53,7 @@ class SAGELinkPredictionQuery(SAGEQuery):
 
     def query_inference(
         self, graph: Graph, inputs: np.ndarray, return_shape: bool = False
-    ):
+    ) -> tuple:
         """Inference `inputs` is different with train `inputs`.
 
         * for training job, `inputs` are edges.

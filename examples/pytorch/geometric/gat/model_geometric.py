@@ -37,7 +37,7 @@ class GATQuery:
         self.label_meta = np.array([[p.label_idx, p.label_dim]], np.int32)
         self.feat_meta = np.array([[p.feature_idx, p.feature_dim]], np.int32)
 
-    def query_training(self, graph: Graph, inputs):
+    def query_training(self, graph: Graph, inputs: np.ndarray) -> tuple:
         """Fetch training data."""
         nodes, edges, src_idx = graph_ops.sub_graph(
             graph,

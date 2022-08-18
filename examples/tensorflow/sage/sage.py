@@ -93,7 +93,7 @@ class SAGEQuery:
 
     def query_training(
         self, graph: Graph, inputs: np.ndarray, return_shape: bool = False
-    ):
+    ) -> tuple:
         """Fetch training data from graph."""
         # fmt: off
         seed_nodes = inputs

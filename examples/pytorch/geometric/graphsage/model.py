@@ -67,7 +67,7 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         elist = torch.cat([src, dst], dim=0)
         return elist
 
-    def query(self, graph: Graph, inputs: np.ndarray):
+    def query(self, graph: Graph, inputs: np.ndarray) -> dict:
         """Query graph for training data."""
         context = {"inputs": inputs}
         context["label"] = graph.node_features(
@@ -98,7 +98,7 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         context["out_2"] = n2_out.shape[0]  # Number of output nodes of layer 2
         return context
 
-    def get_score(self, context: QueryOutput):
+    def get_score(self, context: QueryOutput) -> torch.Tensor:
         """Generate scores for a list of nodes."""
         self.encode_feature(context)
         embeds = self.get_embedding(context)
@@ -109,7 +109,7 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         """Metric used for training."""
         return self.metric.name()
 
-    def get_embedding(self, context: QueryOutput):
+    def get_embedding(self, context: QueryOutput) -> torch.Tensor:
         """Generate embedding."""
         out_1 = context["out_1"]
         out_2 = context["out_2"]

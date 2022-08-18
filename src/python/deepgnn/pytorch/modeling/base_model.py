@@ -121,7 +121,9 @@ class BaseModel(nn.Module):
         if self.feature_enc:
             self.feature_enc.forward(context)
 
-    def forward(self, context: QueryOutput):
+    def forward(
+        self, context: QueryOutput
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Execute common forward operation for all models.
 
         Args:

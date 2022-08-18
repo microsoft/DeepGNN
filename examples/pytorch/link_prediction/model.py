@@ -6,7 +6,7 @@ import os
 import torch
 import torch.nn as nn
 
-from typing import Optional
+from typing import Optional, Tuple
 from deepgnn import TrainMode, vec2str
 from deepgnn.graph_engine import (
     Graph,
@@ -101,12 +101,12 @@ class LinkPredictionModel(BaseSupervisedModel):
             )
             self.multi_task_aggregator = MultiTaskAggregator(config)
 
-    def get_score(self, context: dict):  # type: ignore[override]
+    def get_score(self, context: dict) -> torch.Tensor:  # type: ignore[override]
         """Calculate score."""
         self.encode_feature(context)
         return self.gnn_encoder(context)
 
-    def forward(self, context: dict):  # type: ignore[override]
+    def forward(self, context: dict) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:  # type: ignore[override]
         """Calculate scores and return them with loss and labels."""
         batch = context[NODE_FEATURES]
         # source nodes
@@ -340,7 +340,7 @@ class LinkPredictionModel(BaseSupervisedModel):
         self.transform(context)
         return context
 
-    def get_embedding(self, context: dict):  # type: ignore[override]
+    def get_embedding(self, context: dict) -> torch.Tensor:  # type: ignore[override]
         """Compute embeddings, scores for src and destination nodes."""
         batch = context[NODE_FEATURES]
         # source nodes

@@ -5,7 +5,8 @@
 import argparse
 import torch
 from torch.optim import Optimizer
-from typing import Any, Optional, Dict, Tuple
+from typing import Optional, Dict, Tuple
+from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.pytorch.common.consts import FP16_APEX, FP16_AMP, FP16_NO
 from deepgnn.pytorch.training.trainer import Trainer, BaseModel
 
@@ -28,9 +29,9 @@ class FP16Trainer(Trainer):
     def _initialize(
         self,
         model: BaseModel,
-        dataset: Any,
+        dataset: TorchDeepGNNDataset,
         optimizer: Optional[Optimizer] = None,
-        eval_dataset_for_training: Any = None,
+        eval_dataset_for_training: TorchDeepGNNDataset = None,
     ) -> BaseModel:
         model = super()._initialize(
             model, dataset, optimizer, eval_dataset_for_training

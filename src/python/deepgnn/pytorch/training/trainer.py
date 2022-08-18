@@ -10,7 +10,7 @@ import numpy as np
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.tensorboard import SummaryWriter
-from typing import Any, Optional, Dict, List, IO, Tuple
+from typing import Optional, Dict, List, IO, Tuple
 
 from deepgnn import (
     get_logger,
@@ -20,6 +20,7 @@ from deepgnn import (
     LOG_PROPS_PLATFORM_PYTORCH,
     LOG_PROPS_EVENT_END_WORKER,
 )
+from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.pytorch.modeling.base_model import BaseModel
 from deepgnn.pytorch.common.consts import PREFIX_CHECKPOINT, PREFIX_EMBEDDING
 from deepgnn.pytorch.common.optimization import get_linear_schedule_with_warmup
@@ -65,9 +66,9 @@ class Trainer:
     def run(
         self,
         model: BaseModel,
-        dataset: Any,
+        dataset: TorchDeepGNNDataset,
         optimizer: Optional[Optimizer] = None,
-        eval_dataset_for_training: Any = None,
+        eval_dataset_for_training: TorchDeepGNNDataset = None,
     ) -> Optional[torch.Tensor]:
         """
         Perform training/evaluation/inference according to training mode set in constructor.
@@ -152,9 +153,9 @@ class Trainer:
     def _initialize(
         self,
         model: BaseModel,
-        dataset: Any,
+        dataset: TorchDeepGNNDataset,
         optimizer: Optional[Optimizer] = None,
-        eval_dataset_for_training: Any = None,
+        eval_dataset_for_training: TorchDeepGNNDataset = None,
     ) -> BaseModel:
         model = self._init_model(model)
         self.dataset = dataset
