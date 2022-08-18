@@ -77,7 +77,7 @@ class BaseTFTrainer(Trainer):
             np.random.seed(seed)
             random.seed(seed)
 
-    def tf_device(self) -> tf.devuce:
+    def tf_device(self) -> tf.device:
         """Return current device."""
         return tf.compat.v1.device(
             tf.compat.v1.train.replica_device_setter(cluster=None)

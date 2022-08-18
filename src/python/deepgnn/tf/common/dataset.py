@@ -12,7 +12,7 @@ from typing import Callable
 
 def create_tf_dataset(
     sampler_class: BaseSampler,
-    query_fn: Callable = None,
+    query_fn: Callable,
     backend: GraphEngineBackend = None,
     num_workers: int = 1,
     worker_index: int = 0,

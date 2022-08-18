@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 """Useful functions to work with graph that are not part of it's API."""
+from typing import Tuple, Optional
 import numpy as np
 from deepgnn.graph_engine import Graph, FeatureType
 
@@ -13,7 +14,7 @@ def sample_out_edges(
     sampling_strategy: str = "byweight",
     edge_feature_meta: np.ndarray = None,
     edge_feature_type: FeatureType = FeatureType.FLOAT,
-):
+) -> Tuple[np.ndarray, Optional[np.ndarray]]:
     """
     Get out edges for each nodes and edge features.
 
@@ -56,7 +57,7 @@ def sample_out_edges(
     return edges, feat
 
 
-def get_skipgrams_size(path_len: int, left_win_size: int, right_win_size: int):
+def get_skipgrams_size(path_len: int, left_win_size: int, right_win_size: int) -> int:
     """Compute skipgrams size."""
     pair_count = 0
     assert path_len > 0
@@ -67,7 +68,9 @@ def get_skipgrams_size(path_len: int, left_win_size: int, right_win_size: int):
     return pair_count
 
 
-def gen_skipgrams(paths: np.ndarray, left_win_size: int, right_win_size: int):
+def gen_skipgrams(
+    paths: np.ndarray, left_win_size: int, right_win_size: int
+) -> np.ndarray:
     """Generate skipgram word pairs."""
     batch_size = paths.shape[0]
     path_len = paths.shape[1]
@@ -98,7 +101,7 @@ def sub_graph(
     self_loop: bool = True,
     undirected: bool = True,
     return_edges: bool = False,
-):
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Generate n-hops neighbor graph for src nodes.
 

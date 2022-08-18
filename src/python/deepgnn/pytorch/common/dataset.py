@@ -3,9 +3,13 @@
 """Dataset implementation for torch models."""
 
 import torch
-from deepgnn.graph_engine import DeepGNNDataset, GraphEngineBackend
+from deepgnn.graph_engine import (
+    DeepGNNDataset,
+    GraphEngineBackend,
+    Generator,
+)
 from torch.utils.data import IterableDataset
-from typing import Callable, Iterator, Any
+from typing import Callable, Union
 
 
 class TorchDeepGNNDataset(IterableDataset, DeepGNNDataset):
@@ -14,7 +18,7 @@ class TorchDeepGNNDataset(IterableDataset, DeepGNNDataset):
     def __init__(
         self,
         sampler_class,
-        query_fn: Callable = None,
+        query_fn: Callable,
         backend: GraphEngineBackend = None,
         num_workers: int = 1,
         worker_index: int = 0,
@@ -69,7 +73,7 @@ class TorchDeepGNNDataset(IterableDataset, DeepGNNDataset):
             )
         super().init_sampler()
 
-    def __iter__(self) -> Iterator[Any]:
+    def __iter__(self) -> Union[Generator, DeepGNNDataset._DeepGNNDatasetIterator]:
         """Create sampler and start iteration."""
         self._torch_init_sampler()
         return DeepGNNDataset.__iter__(self)
