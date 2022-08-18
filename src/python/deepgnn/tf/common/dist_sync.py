@@ -13,7 +13,7 @@ class DistributedSync:
 
     SYNC_FILE = "sync"
 
-    def __init__(self, folder, task_index, num_tasks):
+    def __init__(self, folder: str, task_index: int, num_tasks: int):
         """
         Initialize folder.
 
@@ -40,7 +40,7 @@ class DistributedSync:
                     time.sleep(60)
                     retry -= 1
 
-    def sync(self, tag):
+    def sync(self, tag: str):
         """Block until all workers are ready."""
         with open(
             os.path.join(

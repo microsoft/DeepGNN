@@ -8,7 +8,7 @@ import logging
 import numpy as np
 import random
 import json
-from typing import List, Union, Callable
+from typing import List, Union, Callable, Optional
 from deepgnn.tf.common.utils import log_model_info
 from deepgnn.tf.common.utils import node_embedding_to_string
 from deepgnn.tf.common.base_trainer import Trainer
@@ -24,7 +24,7 @@ class _Stopwatch:
     def __init__(self):
         self._prev_time = time.time()
 
-    def tictoc(self):
+    def tictoc(self) -> float:
         current = time.time()
         delta = current - self._prev_time
         self._prev_time = current
@@ -47,18 +47,18 @@ class _LoggerCallback(tf.keras.callbacks.Callback):
         self._steps = 0
         self._epoch = 0
 
-    def on_batch_end(self, batch, logs=None):
+    def on_batch_end(self, batch: int, logs: Optional[dict] = None):
         self._log_step(logs)
         self._steps += 1
 
-    def on_test_batch_end(self, batch, logs=None):
+    def on_test_batch_end(self, batch: int, logs: Optional[dict] = None):
         self._log_step(logs)
         self._steps += 1
 
-    def on_predict_batch_end(self, batch, logs=None):
+    def on_predict_batch_end(self, batch: int, logs: Optional[dict] = None):
         raise NotImplementedError
 
-    def on_epoch_begin(self, epoch, logs=None):
+    def on_epoch_begin(self, epoch: int, logs: Optional[dict] = None):
         self._epoch = epoch
 
     def _log_step(self, logs):

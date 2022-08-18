@@ -5,6 +5,7 @@ import os
 import subprocess
 import time
 import glob
+from typing import List, Tuple, Optional
 import numpy as np
 import tensorflow as tf
 
@@ -24,16 +25,16 @@ def reset_tf_graph():
 
 
 def setup_worker_hooks(
-    model_dir,
-    task_index,
-    logging_tensor={},
-    summary_tensor={},
-    dist_sync=None,
-    metric_dir="train",
+    model_dir: str,
+    task_index: int,
+    logging_tensor: dict = {},
+    summary_tensor: dict = {},
+    dist_sync: ChiefCheckpointSaverHook = None,
+    metric_dir: str = "train",
     log_save_steps: int = 20,
     summary_save_steps: int = 100,
     profiler_save_secs: int = 180,
-):
+) -> List[tf.estimator.SessionRunHook]:
     """
     Create tensorflow session hooks.
 
@@ -82,8 +83,11 @@ def setup_worker_hooks(
 
 
 def setup_chief_only_hooks(
-    task_index, checkpoint_dir, dist_sync=None, checkpoint_save_secs: int = 3600
-):
+    task_index: int,
+    checkpoint_dir: str,
+    dist_sync: ChiefCheckpointSaverHook = None,
+    checkpoint_save_secs: int = 3600,
+) -> Optional[List[ChiefCheckpointSaverHook]]:
     """
     Create chief only hooks.
 
@@ -103,7 +107,9 @@ def setup_chief_only_hooks(
     return chief_only_hooks
 
 
-def node_embedding_to_string(embedding_tensor_list, invalid_id=-1):
+def node_embedding_to_string(
+    embedding_tensor_list: Tuple[tf.Tensor, tf.Tensor], invalid_id: int = -1
+):
     """
     Convert node embedding to output string.
 
@@ -126,7 +132,7 @@ def node_embedding_to_string(embedding_tensor_list, invalid_id=-1):
     return res
 
 
-def run_commands(commands):
+def run_commands(commands: List[str]):
     """Run commands in a separate process."""
     get_logger().info(commands)
     proc = subprocess.Popen(args=commands, shell=True)
@@ -135,7 +141,9 @@ def run_commands(commands):
     return proc.poll()
 
 
-def load_embeddings(model_dir, num_nodes, dim, fileprefix="embedding_*.tsv"):
+def load_embeddings(
+    model_dir: str, num_nodes: int, dim: int, fileprefix: str = "embedding_*.tsv"
+):
     """Load embeddings from files identified by prefix."""
     res = np.zeros((num_nodes, dim), dtype=np.float32)
     files = glob.glob(os.path.join(model_dir, fileprefix))
@@ -149,7 +157,7 @@ def load_embeddings(model_dir, num_nodes, dim, fileprefix="embedding_*.tsv"):
     return res
 
 
-def get_metrics_from_event_file(model_dir, metric_dir, metric_name):
+def get_metrics_from_event_file(model_dir: str, metric_dir: str, metric_name: str):
     """Extract a list of metric values from event file."""
     events_file_pattern = os.path.join(model_dir, metric_dir, "events*")
     events_files = sorted(glob.glob(events_file_pattern))
@@ -162,7 +170,7 @@ def get_metrics_from_event_file(model_dir, metric_dir, metric_name):
     return metric_values
 
 
-def log_model_info(model: tf.keras.Model, use_tf_compat=True):
+def log_model_info(model: tf.keras.Model, use_tf_compat: bool = True):
     """Print model's internal variables."""
     # fmt: off
     logger = get_logger()

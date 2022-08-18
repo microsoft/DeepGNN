@@ -13,13 +13,13 @@ class AttEncoder(layers.Layer):
 
     def __init__(
         self,
-        edge_type=0,
-        feature_idx=-1,
-        feature_dim=0,
-        head_num=1,
-        hidden_dim=256,
-        nb_num=5,
-        out_dim=1,
+        edge_type: int = 0,
+        feature_idx: int = -1,
+        feature_dim: int = 0,
+        head_num: int = 1,
+        hidden_dim: int = 256,
+        nb_num: int = 5,
+        out_dim: int = 1,
         **kwargs
     ):
         """Initialize encoder."""
@@ -57,7 +57,7 @@ class AttEncoder(layers.Layer):
         )
         return context
 
-    def call(self, context: QueryOutput):
+    def call(self, context: QueryOutput) -> tf.Tensor:
         """Compute embeddings."""
         seq = tf.concat(
             [context["node_feats"], context["neighbor_feats"]], 1

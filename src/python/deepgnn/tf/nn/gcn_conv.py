@@ -5,7 +5,7 @@ import tensorflow as tf
 from typing import Callable
 
 
-def gcn_norm_adj(adj):
+def gcn_norm_adj(adj: tf.Tensor) -> tf.Tensor:
     """Symmetrically normalize adjacency matrix."""
     if isinstance(adj, tf.SparseTensor):
         edges = adj.indices
@@ -59,7 +59,7 @@ class GCNConv(tf.keras.layers.Layer):
             trainable=True,
         )
 
-    def call(self, inputs, training=True):
+    def call(self, inputs: tf.Tensor, training: bool = True) -> tf.Tensor:
         """Compute embeddings."""
         x, adj = inputs
         x = tf.nn.dropout(x, rate=self.dropout)
