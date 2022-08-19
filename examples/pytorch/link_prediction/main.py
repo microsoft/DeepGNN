@@ -3,9 +3,9 @@
 
 import argparse
 import os
+import torch.optim
 
 from deepgnn import TrainMode, setup_default_logging_config
-from deepgnn.pytorch.common import create_adamw_optimizer
 from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.pytorch.common.utils import (
     get_logger,
@@ -69,8 +69,10 @@ def create_dataset(
 
 
 def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):
-    return create_adamw_optimizer(
-        model, args.weight_decay, args.learning_rate * world_size
+    return torch.optim.AdamW(
+        model.parameters(),
+        lr=args.learning_rate * world_size,
+        weight_decay=args.weight_decay,
     )
 
 

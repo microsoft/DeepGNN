@@ -192,9 +192,10 @@ class LSTMAggregator(tf.keras.layers.Layer):
         length = tf.maximum(length, tf.constant(1.0))
         length = tf.cast(length, tf.int32)
 
-        rnn_outputs = self.rnn(neig_vecs)
-        batch_size, max_len, out_size = rnn_outputs.get_shape()
-        index = tf.range(0, batch_size) * max_len + (length - 1)
+        rnn_outputs = self.rnn(neig_vecs)  # , sequence_length=length)
+        max_len = tf.shape(rnn_outputs)[1]
+        out_size = int(rnn_outputs.get_shape()[2])
+        index = tf.range(0, tf.shape(rnn_outputs)[0]) * max_len + (length - 1)
         flat = tf.reshape(rnn_outputs, [-1, out_size])
         neigh_h = tf.gather(flat, index)
 
@@ -207,9 +208,8 @@ class LSTMAggregator(tf.keras.layers.Layer):
             output = tf.add_n([from_self, from_neig])
 
         if self.enable_bias:
-            output += self.bias
-
-        if self.act:
+            output += self.vars["bias"]
+        if self.act is not None:
             output = self.act(output)
         return output
 
