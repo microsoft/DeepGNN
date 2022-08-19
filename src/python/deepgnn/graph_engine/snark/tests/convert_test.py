@@ -994,13 +994,33 @@ def test_edge_list_error_checking():
 def test_edge_list_binary_escape():
     decoder = EdgeListDecoder()
     src, dst, typ, weight, features = next(
-        decoder.decode("0,-1,0,1.0,binary,1,test\,feature")
-    )
-    assert features[0] == "test,feature"
-    src, dst, typ, weight, features = next(
         decoder.decode("0,-1,0,1.0,binary,1,test,feature")
     )
     assert features[0] == "test"
+    src, dst, typ, weight, features = next(
+        decoder.decode("0,-1,0,1.0,binary,1,test\,feature")
+    )
+    assert features[0] == "test,feature"
+    with pytest.raises(ValueError):
+        src, dst, typ, weight, features = next(
+            decoder.decode("0,-1,0,1.0,binary,1,test,feature,")
+        )
+    src, dst, typ, weight, features = next(
+        decoder.decode("0,-1,0,1.0,binary,1,test\,feature,")
+    )
+    assert features[0] == "test,feature"
+    with pytest.raises(ValueError):
+        src, dst, typ, weight, features = next(
+            decoder.decode("0,-1,0,1.0,binary,1,test,,feature")
+        )
+    src, dst, typ, weight, features = next(
+        decoder.decode("0,-1,0,1.0,binary,1,\test,\feature")
+    )
+    assert features[0] == "\test"
+    src, dst, typ, weight, features = next(
+        decoder.decode("0,-1,0,1.0,binary,1,,feature")
+    )
+    assert features[0] == ""
 
 
 def test_binary_writer_error_checking():

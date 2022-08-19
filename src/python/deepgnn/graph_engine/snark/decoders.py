@@ -174,7 +174,7 @@ class EdgeListDecoder(Decoder):
         length_single = length[0]
         if length_single == 1 and key == "binary":
             output = next(data)
-            while output[-1] == "\\":  # Escape
+            while len(output) and output[-1] == "\\":  # Escape
                 output = f"{output[:-1]}{self.delimiter}{next(data)}"
             return output
         else:
