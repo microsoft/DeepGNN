@@ -285,6 +285,17 @@ class MemoryGraph:
             "extract edge string features"
         )
 
+        self.lib.NeighborCount.argtypes = [
+            POINTER(_DEEP_GRAPH),
+            POINTER(c_int64),
+            c_size_t,
+            POINTER(c_int32),
+            c_size_t,
+            POINTER(c_uint64),
+        ]
+        self.lib.NeighborCount.restype = c_int32
+        self.lib.NeighborCount.errcheck = _ErrCallback("get neighbor counts")  # type: ignore
+
         self.lib.GetNeighbors.argtypes = [
             POINTER(_DEEP_GRAPH),
             POINTER(c_int64),
@@ -602,6 +613,35 @@ class MemoryGraph:
         )
 
         return py_cb.values, dimensions // py_cb.values.itemsize
+
+    def neighbor_counts(
+        self, nodes: np.ndarray, edge_types: Union[List[int], int]
+    ) -> np.ndarray:
+        """Retrieve degree of node with satisfying edge types.
+
+        Args:
+            nodes -- array of nodes to select neighbors
+            edge_types -- type of edges to use for selection.
+
+        Returns:
+            np.ndarray: neighbor count
+        """
+        nodes = np.array(nodes, dtype=np.int64)
+        edge_types = _make_sorted_list(edge_types)
+        TypeArray = c_int32 * len(edge_types)
+        etypes_arr = TypeArray(*edge_types)
+        counts = np.empty(len(nodes), dtype=np.uint64)
+
+        self.lib.NeighborCount(
+            self.g_,
+            nodes.ctypes.data_as(POINTER(c_int64)),
+            nodes.size,
+            etypes_arr,
+            len(edge_types),
+            counts.ctypes.data_as(POINTER(c_uint64)),
+        )
+
+        return counts
 
     def neighbors(
         self, nodes: np.ndarray, edge_types: Union[List[int], int]

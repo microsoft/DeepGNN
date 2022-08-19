@@ -15,6 +15,7 @@ service GraphEngine {
   rpc GetEdgeStringFeatures (EdgeSparseFeaturesRequest) returns (StringFeaturesReply) {}
 
   rpc GetNeighbors (GetNeighborsRequest) returns (GetNeighborsReply) {}
+  rpc GetNeighborCounts (GetNeighborsRequest) returns (GetNeighborCountsReply) {}
 
   // Sample node neighbors
   rpc WeightedSampleNeighbors (WeightedSampleNeighborsRequest) returns (WeightedSampleNeighborsReply) {}
@@ -158,6 +159,10 @@ message GetNeighborsReply {
   repeated float edge_weights = 2;
   repeated int32 edge_types = 3;
   repeated uint64 neighbor_counts = 4;
+}
+
+message GetNeighborCountsReply {
+  repeated uint64 neighbor_counts = 1;
 }
 
 message WeightedSampleNeighborsRequest {
