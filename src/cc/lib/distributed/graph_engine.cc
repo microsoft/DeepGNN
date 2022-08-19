@@ -83,12 +83,13 @@ grpc::Status GraphEngineServiceImpl::GetNodeTypes(::grpc::ServerContext *context
 
         auto index = elem->second;
         const size_t partition_count = m_counts[index];
-        int32_t result = -1;
-        for (size_t partition = 0; partition < partition_count && result == -1; ++partition, ++index)
+        Type result = snark::DEFAULT_NODE_TYPE;
+        for (size_t partition = 0; partition < partition_count && result == snark::DEFAULT_NODE_TYPE;
+             ++partition, ++index)
         {
             result = m_partitions[m_partitions_indices[index]].GetNodeType(m_internal_indices[index]);
         }
-        if (result == -1)
+        if (result == snark::DEFAULT_NODE_TYPE)
             continue;
         response->add_offsets(curr_offset);
         response->add_types(result);
@@ -125,7 +126,7 @@ grpc::Status GraphEngineServiceImpl::GetNodeFeatures(::grpc::ServerContext *cont
         auto data_span = std::span(data + feature_offset, fv_size);
         for (size_t partition = 0; partition < partition_count; ++partition, ++index)
         {
-            if (m_partitions[m_partitions_indices[index]].GetNodeType(m_internal_indices[index]) != -1)
+            if (m_partitions[m_partitions_indices[index]].HasNodeFeatures(m_internal_indices[index]))
             {
                 response->mutable_feature_values()->resize(feature_offset + fv_size);
                 m_partitions[m_partitions_indices[index]].GetNodeFeature(m_internal_indices[index], features,
@@ -350,6 +351,37 @@ grpc::Status GraphEngineServiceImpl::GetEdgeStringFeatures(::grpc::ServerContext
     }
 
     response->mutable_values()->append(std::begin(values), std::end(values));
+    return grpc::Status::OK;
+}
+
+grpc::Status GraphEngineServiceImpl::GetNeighborCounts(::grpc::ServerContext *context,
+                                                       const snark::GetNeighborsRequest *request,
+                                                       snark::GetNeighborCountsReply *response)
+{
+    const auto node_count = request->node_ids().size();
+    response->mutable_neighbor_counts()->Resize(node_count, 0);
+    auto input_edge_types = std::span(std::begin(request->edge_types()), std::end(request->edge_types()));
+
+    for (int node_index = 0; node_index < node_count; ++node_index)
+    {
+        auto internal_id = m_node_map.find(request->node_ids()[node_index]);
+        if (internal_id == std::end(m_node_map))
+        {
+            continue;
+        }
+        else
+        {
+            auto index = internal_id->second;
+            size_t partition_count = m_counts[index];
+            for (size_t partition = 0; partition < partition_count; ++partition, ++index)
+            {
+                response->mutable_neighbor_counts()->at(node_index) +=
+                    m_partitions[m_partitions_indices[index]].NeighborCount(m_internal_indices[index],
+                                                                            input_edge_types);
+            }
+        }
+    }
+
     return grpc::Status::OK;
 }
 

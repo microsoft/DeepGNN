@@ -185,7 +185,7 @@ node_features: *|type1:v1 v2;type2:v1 v2|*, Node feature vectors, type can be on
 neighbors: *| int, int, float, int, features |*, src_id, dst_id, edge_weight, edge_type and a feature vector in the same form as node_features.
 
 Generated meta.txt Format
-==========
+=========================
 
 Graph `meta.txt` is as follows with all pieces of text replaced by integers,
 

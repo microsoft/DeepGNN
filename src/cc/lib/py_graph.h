@@ -109,6 +109,9 @@ extern "C"
                                                     Type *edge_types, size_t edge_size, Feature *features,
                                                     size_t features_size, int64_t *dimensions,
                                                     GetStringFeaturesCallback callback);
+    DEEPGNN_DLL extern int32_t NeighborCount(PyGraph *py_graph, NodeID *in_node_ids, size_t in_node_ids_size,
+                                             Type *in_edge_types, size_t in_edge_types_size,
+                                             uint64_t *out_neighbor_counts);
     DEEPGNN_DLL extern int32_t GetNeighbors(PyGraph *graph, NodeID *in_node_ids, size_t in_node_ids_size,
                                             Type *in_edge_types, size_t in_edge_types_size,
                                             uint64_t *out_neighbor_counts, GetNeighborsCallback callback);

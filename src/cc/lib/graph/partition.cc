@@ -1,6 +1,5 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-
 #include <algorithm>
 #include <cassert>
 #include <cstdio>
@@ -8,18 +7,15 @@
 #include <limits>
 #include <string>
 
+#include "boost/random/binomial_distribution.hpp"
+#include "boost/random/uniform_real_distribution.hpp"
 #include "locator.h"
 #include "partition.h"
 #include "sampler.h"
-
-#include "boost/random/binomial_distribution.hpp"
-#include "boost/random/uniform_real_distribution.hpp"
 #include <glog/logging.h>
 #include <glog/raw_logging.h>
-
 namespace snark
 {
-
 namespace
 {
 struct EdgeRecord
@@ -30,7 +26,6 @@ struct EdgeRecord
     float m_weight;
 };
 } // namespace
-
 Partition::Partition(std::filesystem::path path, std::string suffix, PartitionStorageType storage_type)
     : m_metadata(path), m_storage_type(storage_type)
 {
@@ -38,7 +33,6 @@ Partition::Partition(std::filesystem::path path, std::string suffix, PartitionSt
     ReadNodeFeatures(path, suffix);
     ReadEdges(std::move(path), std::move(suffix));
 }
-
 void Partition::ReadNodeMap(std::filesystem::path path, std::string suffix)
 {
     std::shared_ptr<BaseStorage<uint8_t>> node_map;
@@ -52,10 +46,8 @@ void Partition::ReadNodeMap(std::filesystem::path path, std::string suffix)
         node_map = std::make_shared<HDFSStreamStorage<uint8_t>>(full_path.c_str(), m_metadata.m_config_path);
     }
     auto node_map_ptr = node_map->start();
-
     size_t size = node_map->size() / 20;
     m_node_types.reserve(size);
-
     for (size_t i = 0; i < size; ++i)
     {
         uint64_t pair[2];
@@ -63,7 +55,6 @@ void Partition::ReadNodeMap(std::filesystem::path path, std::string suffix)
         {
             RAW_LOG_FATAL("Failed to read pair in a node maping");
         }
-
         Type node_type;
         if (node_map->read(&node_type, 4, 1, node_map_ptr) != 1)
         {
@@ -72,7 +63,6 @@ void Partition::ReadNodeMap(std::filesystem::path path, std::string suffix)
         m_node_types.emplace_back(node_type);
     }
 }
-
 void Partition::ReadEdges(std::filesystem::path path, std::string suffix)
 {
     ReadNeighborsIndex(path, suffix);
@@ -87,7 +77,6 @@ void Partition::ReadEdges(std::filesystem::path path, std::string suffix)
         m_edge_features = std::make_shared<MemoryStorage<uint8_t>>(path, suffix, nullptr);
     }
 }
-
 void Partition::ReadNeighborsIndex(std::filesystem::path path, std::string suffix)
 {
     std::shared_ptr<BaseStorage<uint8_t>> neighbors_index;
@@ -109,7 +98,6 @@ void Partition::ReadNeighborsIndex(std::filesystem::path path, std::string suffi
         RAW_LOG_FATAL("Failed to read neighbor index file");
     }
 }
-
 void Partition::ReadEdgeIndex(std::filesystem::path path, std::string suffix)
 {
     assert(sizeof(EdgeRecord) == (sizeof(NodeId) + sizeof(uint64_t) + sizeof(Type) + sizeof(float)));
@@ -126,7 +114,6 @@ void Partition::ReadEdgeIndex(std::filesystem::path path, std::string suffix)
     auto edge_index_ptr = edge_index->start();
     size_t num_edges = edge_index->size() / sizeof(EdgeRecord);
     m_edge_weights.reserve(num_edges);
-
     size_t next = 1;
     for (size_t curr_src = 0; next < m_neighbors_index.size(); ++curr_src, ++next)
     {
@@ -138,9 +125,7 @@ void Partition::ReadEdgeIndex(std::filesystem::path path, std::string suffix)
         {
             continue;
         }
-
         Type curr_type = -1;
-
         // Accumulate weights for faster binary search in sampling
         float acc_weight = 0;
         for (size_t curr = start_offset; curr < end_offset; ++curr)
@@ -150,7 +135,6 @@ void Partition::ReadEdgeIndex(std::filesystem::path path, std::string suffix)
             {
                 RAW_LOG_FATAL("Failed to read edge index file");
             }
-
             if (edge.m_type != curr_type)
             {
                 curr_type = edge.m_type;
@@ -158,7 +142,6 @@ void Partition::ReadEdgeIndex(std::filesystem::path path, std::string suffix)
                 m_edge_type_offset.emplace_back(m_edge_destination.size());
                 acc_weight = 0;
             }
-
             m_edge_destination.push_back(edge.m_dst);
             acc_weight += edge.m_weight;
             m_edge_weights.push_back(acc_weight);
@@ -168,13 +151,11 @@ void Partition::ReadEdgeIndex(std::filesystem::path path, std::string suffix)
             }
         }
     }
-
     EdgeRecord edge;
     if (1 != edge_index->read(&edge, sizeof(EdgeRecord), 1, edge_index_ptr))
     {
         RAW_LOG_FATAL("Failed to read edge index file");
     }
-
     // Extra padding to simplify edge type count calculations.
     m_neighbors_index.back() = m_edge_types.size();
     m_edge_types.push_back(edge.m_type);
@@ -185,7 +166,6 @@ void Partition::ReadEdgeIndex(std::filesystem::path path, std::string suffix)
         m_edge_feature_offset.push_back(edge.m_feature_offset);
     }
 }
-
 void Partition::ReadNodeFeatures(std::filesystem::path path, std::string suffix)
 {
     ReadNodeIndex(path, suffix);
@@ -195,11 +175,9 @@ void Partition::ReadNodeFeatures(std::filesystem::path path, std::string suffix)
         m_node_features = std::make_shared<MemoryStorage<uint8_t>>(path, suffix, nullptr);
         return;
     }
-
     ReadNodeFeaturesIndex(path, suffix);
     ReadNodeFeaturesData(path, suffix);
 }
-
 void Partition::ReadNodeIndex(std::filesystem::path path, std::string suffix)
 {
     std::shared_ptr<BaseStorage<uint8_t>> node_index;
@@ -220,7 +198,6 @@ void Partition::ReadNodeIndex(std::filesystem::path path, std::string suffix)
         RAW_LOG_FATAL("Failed to read node index file");
     }
 }
-
 void Partition::ReadNodeFeaturesIndex(std::filesystem::path path, std::string suffix)
 {
     std::shared_ptr<BaseStorage<uint8_t>> node_features_index;
@@ -235,19 +212,15 @@ void Partition::ReadNodeFeaturesIndex(std::filesystem::path path, std::string su
         node_features_index = std::make_shared<HDFSStreamStorage<uint8_t>>(full_path.c_str(), m_metadata.m_config_path);
     }
     auto node_features_index_ptr = node_features_index->start();
-
     size_t size = node_features_index->size() / 8;
     m_node_feature_index.resize(size);
-
     if (size != node_features_index->read(m_node_feature_index.data(), 8, size, node_features_index_ptr))
     {
         RAW_LOG_FATAL("Failed to read node feature index file");
     }
 }
-
 void Partition::ReadNodeFeaturesData(std::filesystem::path path, std::string suffix)
 {
-
     if (is_hdfs_path(path))
     {
         auto full_path = path / ("node_features_" + suffix + ".data");
@@ -265,7 +238,6 @@ void Partition::ReadNodeFeaturesData(std::filesystem::path path, std::string suf
             std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix), &open_node_features_data);
     }
 }
-
 void Partition::ReadEdgeFeaturesIndex(std::filesystem::path path, std::string suffix)
 {
     std::shared_ptr<BaseStorage<uint8_t>> edge_features_index;
@@ -288,12 +260,11 @@ void Partition::ReadEdgeFeaturesIndex(std::filesystem::path path, std::string su
         RAW_LOG_FATAL("Failed to read node feature index file");
     }
 }
-
 void Partition::ReadEdgeFeaturesData(std::filesystem::path path, std::string suffix)
 {
     if (is_hdfs_path(path))
     {
-        auto full_path = path / ("edge_features" + suffix + ".data");
+        auto full_path = path / ("edge_features_" + suffix + ".data");
         m_edge_features = std::make_shared<HDFSStorage<uint8_t>>(full_path.c_str(), m_metadata.m_config_path,
                                                                  std::move(suffix), &open_edge_features_data);
     }
@@ -308,36 +279,36 @@ void Partition::ReadEdgeFeaturesData(std::filesystem::path path, std::string suf
             std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix), &open_edge_features_data);
     }
 }
-
 Type Partition::GetNodeType(uint64_t internal_node_id) const
 {
     return m_node_types[internal_node_id];
 }
 
+bool Partition::HasNodeFeatures(uint64_t internal_node_id) const
+{
+    return GetNodeType(internal_node_id) != snark::DEFAULT_NODE_TYPE;
+}
+
 bool Partition::GetNodeFeature(uint64_t internal_id, std::span<snark::FeatureMeta> features,
                                std::span<uint8_t> output) const
 {
-    if (GetNodeType(internal_id) == -1)
+    if (!HasNodeFeatures(internal_id))
         return false;
 
     auto file_ptr = m_node_features->start();
     auto curr = std::begin(output);
-
     auto feature_index_offset = m_node_index[internal_id];
     auto next_offset = m_node_index[internal_id + 1];
-
     for (const auto &feature : features)
     {
         const auto feature_id = feature.first;
         const auto feature_size = feature.second;
-
         // Requested feature_id is larger than known features, fill with 0s.
         if (next_offset - feature_index_offset <= uint64_t(feature_id) || m_node_feature_index.empty())
         {
             curr = std::fill_n(curr, feature_size, 0);
             continue;
         }
-
         const auto data_offset = m_node_feature_index[feature_index_offset + feature_id];
         const auto stored_size = m_node_feature_index[feature_index_offset + feature_id + 1] - data_offset;
         curr = m_node_features->read(data_offset, std::min<uint64_t>(feature_size, stored_size), curr, file_ptr);
@@ -355,15 +326,13 @@ bool Partition::GetNodeSparseFeature(uint64_t internal_node_id, std::span<const 
                                      std::vector<std::vector<int64_t>> &out_indices,
                                      std::vector<std::vector<uint8_t>> &out_values) const
 {
-    if (GetNodeType(internal_node_id) == -1)
+    if (!HasNodeFeatures(internal_node_id))
         return false;
 
     assert(features.size() == out_dimensions.size());
     auto file_ptr = m_node_features->start();
-
     auto feature_index_offset = m_node_index[internal_node_id];
     auto next_offset = m_node_index[internal_node_id + 1];
-
     for (size_t feature_index = 0; feature_index < features.size(); ++feature_index)
     {
         const auto feature = features[feature_index];
@@ -372,7 +341,6 @@ bool Partition::GetNodeSparseFeature(uint64_t internal_node_id, std::span<const 
         {
             continue;
         }
-
         const auto data_offset = m_node_feature_index[feature_index_offset + feature];
         const auto stored_size = m_node_feature_index[feature_index_offset + feature + 1] - data_offset;
         // Check if the feature is empty
@@ -399,14 +367,12 @@ bool Partition::GetNodeSparseFeature(uint64_t internal_node_id, std::span<const 
         auto indices_dim_output = std::span(reinterpret_cast<uint8_t *>(&indices_dim), 4);
         m_node_features->read(data_offset + 4, indices_dim_output.size(), std::begin(indices_dim_output), file_ptr);
         out_dimensions[feature_index] = int64_t(indices_dim);
-
         assert(indices_size % indices_dim == 0);
         size_t num_values = indices_size / indices_dim;
         const auto old_len = out_indices[feature_index].size();
         out_indices[feature_index].resize(old_len + indices_size + num_values, prefix);
         auto output = std::span(reinterpret_cast<uint8_t *>(out_indices[feature_index].data()) + old_len * 8,
                                 (indices_size + num_values) * 8);
-
         // Read expected feature_dim indices in bytes
         size_t indices_offset = data_offset + 8;
         auto curr = std::begin(output);
@@ -416,7 +382,6 @@ bool Partition::GetNodeSparseFeature(uint64_t internal_node_id, std::span<const 
             curr = m_node_features->read(indices_offset, indices_dim * 8, curr, file_ptr);
             indices_offset += 8 * indices_dim;
         }
-
         // Read values
         const auto values_length = stored_size - indices_size * 8 - 8;
         const auto old_values_length = out_values[feature_index].size();
@@ -431,15 +396,13 @@ bool Partition::GetNodeSparseFeature(uint64_t internal_node_id, std::span<const 
 bool Partition::GetNodeStringFeature(uint64_t internal_node_id, std::span<const snark::FeatureId> features,
                                      std::span<int64_t> out_dimensions, std::vector<uint8_t> &out_values) const
 {
-    if (GetNodeType(internal_node_id) == -1)
+    if (!HasNodeFeatures(internal_node_id))
         return false;
 
     assert(features.size() == out_dimensions.size());
     auto file_ptr = m_node_features->start();
-
     auto feature_index_offset = m_node_index[internal_node_id];
     auto next_offset = m_node_index[internal_node_id + 1];
-
     for (size_t feature_index = 0; feature_index < features.size(); ++feature_index)
     {
         const auto feature = features[feature_index];
@@ -448,7 +411,6 @@ bool Partition::GetNodeStringFeature(uint64_t internal_node_id, std::span<const 
         {
             continue;
         }
-
         const auto data_offset = m_node_feature_index[feature_index_offset + feature];
         const auto stored_size = m_node_feature_index[feature_index_offset + feature + 1] - data_offset;
         // Check if the feature is empty
@@ -467,9 +429,11 @@ bool Partition::GetNodeStringFeature(uint64_t internal_node_id, std::span<const 
     return true;
 }
 
-size_t Partition::FullNeighbor(uint64_t internal_id, std::span<const Type> edge_types,
-                               std::vector<NodeId> &out_neighbors_ids, std::vector<Type> &out_edge_types,
-                               std::vector<float> &out_edge_weights) const
+template <class F>
+size_t NeighborIndexIterator(uint64_t internal_id, std::span<const Type> edge_types, F func,
+                             const std::vector<uint64_t> &m_neighbors_index, const std::vector<Type> &m_edge_types,
+                             const std::vector<uint64_t> &m_edge_type_offset)
+
 {
     const auto offset = m_neighbors_index[internal_id];
     const auto nb_count = m_neighbors_index[internal_id + 1] - offset;
@@ -498,28 +462,50 @@ size_t Partition::FullNeighbor(uint64_t internal_id, std::span<const Type> edge_
         {
             break;
         }
+        // Find satisfying edge type, if exists
         if (m_edge_types[i] == edge_types[curr_type])
         {
             const auto start = m_edge_type_offset[i];
             const auto last = m_edge_type_offset[i + 1];
-            result += last - start;
 
-            // m_edge_destination[last-1]+1 - take the last element and then advance the pointer
-            // to imitate std::end, otherwise we'll have an out of range exception.
-            out_neighbors_ids.insert(std::end(out_neighbors_ids), &m_edge_destination[start],
-                                     &m_edge_destination[last - 1] + 1);
-            auto original_type_size = out_edge_types.size();
-            out_edge_types.resize(original_type_size + last - start, m_edge_types[i]);
-            out_edge_weights.reserve(out_edge_weights.size() + last - start);
-            for (size_t index = start; index < last; ++index)
-            {
-                out_edge_weights.emplace_back(index > start ? m_edge_weights[index] - m_edge_weights[index - 1]
-                                                            : m_edge_weights[start]);
-            }
+            result += last - start;
+            func(start, last, i);
         }
     }
     return result;
 }
+
+size_t Partition::NeighborCount(uint64_t internal_id, std::span<const Type> edge_types) const
+{
+    auto lambda = [](const auto start, const auto last, const auto i) {};
+
+    return NeighborIndexIterator(internal_id, edge_types, std::move(lambda), m_neighbors_index, m_edge_types,
+                                 m_edge_type_offset);
+}
+
+size_t Partition::FullNeighbor(uint64_t internal_id, std::span<const Type> edge_types,
+                               std::vector<NodeId> &out_neighbors_ids, std::vector<Type> &out_edge_types,
+                               std::vector<float> &out_edge_weights) const
+{
+    auto lambda = [&out_neighbors_ids, &out_edge_types, &out_edge_weights, this](auto start, auto last, int i) {
+        // m_edge_destination[last-1]+1 - take the last element and then advance the pointer
+        // to imitate std::end, otherwise we'll have an out of range exception.
+        out_neighbors_ids.insert(std::end(out_neighbors_ids), &m_edge_destination[start],
+                                 &m_edge_destination[last - 1] + 1);
+        auto original_type_size = out_edge_types.size();
+        out_edge_types.resize(original_type_size + last - start, m_edge_types[i]);
+        out_edge_weights.reserve(out_edge_weights.size() + last - start);
+        for (size_t index = start; index < last; ++index)
+        {
+            out_edge_weights.emplace_back(index > start ? m_edge_weights[index] - m_edge_weights[index - 1]
+                                                        : m_edge_weights[start]);
+        }
+    };
+
+    return NeighborIndexIterator(internal_id, edge_types, std::move(lambda), m_neighbors_index, m_edge_types,
+                                 m_edge_type_offset);
+}
+
 bool Partition::GetEdgeFeature(uint64_t internal_src_node_id, NodeId input_edge_dst, Type input_edge_type,
                                std::span<snark::FeatureMeta> features, std::span<uint8_t> output) const
 {
@@ -614,17 +600,14 @@ bool Partition::GetEdgeSparseFeature(uint64_t internal_src_node_id, NodeId input
                                      std::vector<std::vector<uint8_t>> &out_values) const
 {
     assert(features.size() == out_dimensions.size());
-
     auto file_ptr = m_edge_features->start();
     const auto offset = m_neighbors_index[internal_src_node_id];
     const auto nb_count = m_neighbors_index[internal_src_node_id + 1] - offset;
-
     // Check if node doesn't have any neighbors
     if (nb_count == 0)
     {
         return false;
     }
-
     auto type_offset = std::numeric_limits<size_t>::max();
     for (size_t i = offset; i < offset + nb_count; ++i)
     {
@@ -651,11 +634,9 @@ bool Partition::GetEdgeSparseFeature(uint64_t internal_src_node_id, NodeId input
     {
         return true;
     }
-
     auto edge_offset = it - std::begin(m_edge_destination);
     auto feature_index_offset = m_edge_feature_offset[edge_offset];
     auto next_offset = m_edge_feature_offset[edge_offset + 1];
-
     for (size_t feature_index = 0; feature_index < features.size(); ++feature_index)
     {
         const auto feature = features[feature_index];
@@ -664,10 +645,8 @@ bool Partition::GetEdgeSparseFeature(uint64_t internal_src_node_id, NodeId input
         {
             continue;
         }
-
         const auto data_offset = m_edge_feature_index[feature_index_offset + feature];
         const auto stored_size = m_edge_feature_index[feature_index_offset + feature + 1] - data_offset;
-
         // Check if the feature is empty
         if (stored_size == 0)
         {
