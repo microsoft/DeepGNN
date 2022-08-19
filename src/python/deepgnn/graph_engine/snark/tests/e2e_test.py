@@ -328,10 +328,11 @@ def test_multithreaded_calls(multi_partition_graph_data, storage_type):
 def test_node_sampler_graph_multiple_partitions(
     multi_partition_graph_data, storage_type
 ):
-    cl = client.MemoryGraph(multi_partition_graph_data, [0], storage_type)
-    sampler = client.NodeSampler(cl, np.array([2]))
-    nodes = sampler.sample(3, 42)
-    npt.assert_equal(nodes, [5, 5, 5])
+    cl = client.MemoryGraph(multi_partition_graph_data, [0, 1], storage_type)
+    ns = client.NodeSampler(cl, [2])
+    v, t = ns.sample(size=3, seed=1)
+    npt.assert_array_equal(v, [5, 5, 5])
+    npt.assert_array_equal(t, [2, 2, 2])
 
 
 @pytest.mark.parametrize(
