@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch_geometric.nn as pyg_nn
 
-from deepgnn.graph_engine import Graph, FeatureType, QueryOutput
+from deepgnn.graph_engine import Graph, FeatureType
 from deepgnn.pytorch.common import BaseMetric, MRR
 from deepgnn.pytorch.modeling import BaseSupervisedModel
 from deepgnn.pytorch.encoding import FeatureEncoder
@@ -98,7 +98,7 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         context["out_2"] = n2_out.shape[0]  # Number of output nodes of layer 2
         return context
 
-    def get_score(self, context: QueryOutput) -> torch.Tensor:
+    def get_score(self, context: dict) -> torch.Tensor:  # type: ignore[override]
         """Generate scores for a list of nodes."""
         self.encode_feature(context)
         embeds = self.get_embedding(context)
@@ -109,7 +109,7 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         """Metric used for training."""
         return self.metric.name()
 
-    def get_embedding(self, context: QueryOutput) -> torch.Tensor:
+    def get_embedding(self, context: dict) -> torch.Tensor:  # type: ignore[override]
         """Generate embedding."""
         out_1 = context["out_1"]
         out_2 = context["out_2"]
