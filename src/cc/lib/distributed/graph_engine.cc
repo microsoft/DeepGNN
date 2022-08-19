@@ -324,6 +324,37 @@ grpc::Status GraphEngineServiceImpl::GetEdgeStringFeatures(::grpc::ServerContext
     return grpc::Status::OK;
 }
 
+grpc::Status GraphEngineServiceImpl::GetNeighborCounts(::grpc::ServerContext *context,
+                                                       const snark::GetNeighborsRequest *request,
+                                                       snark::GetNeighborCountsReply *response)
+{
+    const auto node_count = request->node_ids().size();
+    response->mutable_neighbor_counts()->Resize(node_count, 0);
+    auto input_edge_types = std::span(std::begin(request->edge_types()), std::end(request->edge_types()));
+
+    for (int node_index = 0; node_index < node_count; ++node_index)
+    {
+        auto internal_id = m_node_map.find(request->node_ids()[node_index]);
+        if (internal_id == std::end(m_node_map))
+        {
+            continue;
+        }
+        else
+        {
+            auto index = internal_id->second;
+            size_t partition_count = m_counts[index];
+            for (size_t partition = 0; partition < partition_count; ++partition, ++index)
+            {
+                response->mutable_neighbor_counts()->at(node_index) +=
+                    m_partitions[m_partitions_indices[index]].NeighborCount(m_internal_indices[index],
+                                                                            input_edge_types);
+            }
+        }
+    }
+
+    return grpc::Status::OK;
+}
+
 grpc::Status GraphEngineServiceImpl::GetNeighbors(::grpc::ServerContext *context,
                                                   const snark::GetNeighborsRequest *request,
                                                   snark::GetNeighborsReply *response)
