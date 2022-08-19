@@ -16,7 +16,6 @@
 """PyTorch optimization for BERT model."""
 
 import math
-from typing import Callable, Iterable, Tuple, Optional
 
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LambdaLR
