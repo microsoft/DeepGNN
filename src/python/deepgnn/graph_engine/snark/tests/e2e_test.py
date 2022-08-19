@@ -11,6 +11,8 @@ import time
 from pathlib import Path
 import platform
 from typing import List, Tuple
+import socket
+from contextlib import closing
 
 import numpy as np
 import numpy.testing as npt
@@ -24,10 +26,6 @@ import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.dispatcher as dispatcher
 import deepgnn.graph_engine.snark._lib as lib
-
-
-import socket
-from contextlib import closing
 
 
 def find_free_port():
