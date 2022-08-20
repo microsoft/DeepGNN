@@ -175,7 +175,11 @@ class EdgeListDecoder(Decoder):
         if length_single == 1 and key == "binary":
             output = next(data)
             while len(output) and output[-1] == "\\":  # Escape
-                output = f"{output[:-1]}{self.delimiter}{next(data)}"
+                output = output[:-1]
+                try:
+                    output += f"{self.delimiter}{next(data)}"
+                except StopIteration:
+                    break
             return output
         else:
             return np.fromiter(data, count=length_single, dtype=key)  # type: ignore
