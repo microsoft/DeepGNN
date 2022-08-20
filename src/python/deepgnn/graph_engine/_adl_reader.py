@@ -362,7 +362,7 @@ class TextFileIterator:
             raise StopIteration
 
         buf: List[str] = []
-        head: dict
+        head: dict = {}
         while len(buf) < self.batch_size:
             # try to get lines from existing remain_lines
             if len(self.remain_lines) > 0:
