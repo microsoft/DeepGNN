@@ -151,6 +151,7 @@ class EdgeListDecoder(Decoder):
 
         self.delimiter = delimiter
         self.length_delimiter = length_delimiter
+        self.escape = r"\\"[0]
 
     def _get_feature(
         self, key: str, length: List[int], data: Iterator
@@ -174,7 +175,11 @@ class EdgeListDecoder(Decoder):
         length_single = length[0]
         if length_single == 1 and key == "binary":
             output = next(data)
-            while len(output) and output[-1] == "\\":  # Escape
+            output_len = len(output)
+            while (
+                output_len
+                and output.replace(f"{self.escape}{self.escape}", "")[-1] == self.escape
+            ):
                 output = output[:-1]
                 try:
                     output += f"{self.delimiter}{next(data)}"
@@ -225,18 +230,18 @@ class EdgeListDecoder(Decoder):
             else:
                 key, length = None, None  # type: ignore
 
-            try:
-                if key is None:
+            if key is None:
+                try:
                     key = next(data)
-                    try:
-                        int(key)
-                        raise ValueError("Expected feature vector key is str.")
-                    except ValueError:
-                        pass
-                if length is None:
-                    length = list(map(int, next(data).split(self.length_delimiter)))
-            except StopIteration:
-                break
+                except StopIteration:
+                    break
+                try:
+                    int(key)
+                    raise ValueError("Expected feature vector key is str.")
+                except ValueError:
+                    pass
+            if length is None:
+                length = list(map(int, next(data).split(self.length_delimiter)))
 
             features.append(self._get_feature(key, length, data))
 
