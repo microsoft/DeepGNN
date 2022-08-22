@@ -1002,13 +1002,13 @@ def test_edge_list_binary_escape():
     )
     assert features[0] == "test,feature"
     src, dst, typ, weight, features = next(
-        decoder.decode("0,-1,0,1.0,binary,1,test\\,feature")
+        decoder.decode(r"0,-1,0,1.0,binary,1,test\\,feature")
     )
-    assert features[0] == "test,feature"
+    assert features[0] == r"test\,feature"
     src, dst, typ, weight, features = next(
-        decoder.decode("0,-1,0,1.0,binary,1,test\\\,feature")
+        decoder.decode(r"0,-1,0,1.0,binary,1,test\\\,feature")
     )
-    assert features[0] == "test\,feature"
+    assert features[0] == r"test\\,feature"
     with pytest.raises(ValueError):
         src, dst, typ, weight, features = next(
             decoder.decode("0,-1,0,1.0,binary,1,test,feature,")
@@ -1017,18 +1017,21 @@ def test_edge_list_binary_escape():
         decoder.decode("0,-1,0,1.0,binary,1,test\,feature,")
     )
     assert features[0] == "test,feature"
+    assert len(features) == 1
     src, dst, typ, weight, features = next(
-        decoder.decode("0,-1,0,1.0,binary,1,test\,feature\\")
+        decoder.decode(r"0,-1,0,1.0,binary,1,test\,feature\\")
     )
-    assert features[0] == "test,feature"
+    assert features[0] == r"test,feature" + r"\\"[0]
     src, dst, typ, weight, features = next(
         decoder.decode("0,-1,0,1.0,binary,1,test\,feature\,")
     )
     assert features[0] == "test,feature,"
+    assert len(features) == 1
     src, dst, typ, weight, features = next(
         decoder.decode("0,-1,0,1.0,binary,1,test\,\,feature\,")
     )
     assert features[0] == "test,,feature,"
+    assert len(features) == 1
     with pytest.raises(ValueError):
         src, dst, typ, weight, features = next(
             decoder.decode("0,-1,0,1.0,binary,1,test,,feature")
@@ -1037,10 +1040,12 @@ def test_edge_list_binary_escape():
         decoder.decode("0,-1,0,1.0,binary,1,\test,\feature")
     )
     assert features[0] == "\test"
+    assert len(features) == 1
     src, dst, typ, weight, features = next(
         decoder.decode("0,-1,0,1.0,binary,1,\test,\\feature")
     )
     assert features[0] == "\test"
+    assert len(features) == 1
     src, dst, typ, weight, features = next(
         decoder.decode("0,-1,0,1.0,binary,1,\,feature")
     )
@@ -1049,6 +1054,7 @@ def test_edge_list_binary_escape():
         decoder.decode("0,-1,0,1.0,binary,1,,feature")
     )
     assert features[0] == ""
+    assert len(features) == 1
 
 
 def test_binary_writer_error_checking():
