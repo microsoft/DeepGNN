@@ -9,7 +9,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from deepgnn.graph_engine import Graph, FeatureType
 from deepgnn import get_logger
-from deepgnn.pytorch.modeling.base_model import BaseModel
 
 
 class SageEncoder(nn.Module):
@@ -31,7 +30,7 @@ class SageEncoder(nn.Module):
         embed_dim: int = 256,
         edge_type: int = 0,
         activation_fn: Callable = F.relu,
-        base_model: Optional[BaseModel] = None,
+        base_model: Optional[object] = None,
     ):
         """Initialize SageEncoder.
 
