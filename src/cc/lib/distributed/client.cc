@@ -149,8 +149,11 @@ void GetSparseFeature(const SparseRequest &request,
                 if (out_dimensions[feature_index] != 0 && reply.dimensions(feature_index) != 0 &&
                     out_dimensions[feature_index] != reply.dimensions(feature_index))
                 {
-                    RAW_LOG_FATAL("Dimensions do not match for sparse feature %ld. %ld != %ld", feature_index,
-                                  out_dimensions[feature_index], reply.dimensions(feature_index));
+                    auto feature_str = std::to_string(feature_index);
+                    auto client_dimension_str = std::to_string(out_dimensions[feature_index]);
+                    auto server_dimension_str = std::to_string(reply.dimensions(feature_index));
+                    RAW_LOG_FATAL("Dimensions do not match for sparse feature %s. %s != %s", feature_str.c_str(),
+                                  client_dimension_str.c_str(), server_dimension_str.c_str());
                 }
 
                 out_dimensions[feature_index] = reply.dimensions(feature_index);
