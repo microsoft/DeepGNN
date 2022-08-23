@@ -675,10 +675,12 @@ void GRPCClient::FullNeighbor(std::span<const NodeId> node_ids, std::span<const 
                     const auto &reply = replies[reply_index];
                     if (size_t(reply.neighbor_counts().size()) <= curr_node)
                     {
+                        auto expected = std::to_string(output_neighbor_counts.size());
+                        auto received = std::to_string(reply.neighbor_counts().size());
                         // In case of a short reply, we can skip processing. Log error if it happens.
                         RAW_LOG_ERROR(
-                            "Received short list of neighbor counts: %d. Expected: %ld. Assuming no neighbors.",
-                            reply.neighbor_counts().size(), int64_t(output_neighbor_counts.size()));
+                            "Received short list of neighbor counts: %s. Expected: %s. Assuming no neighbors.",
+                            received.c_str(), expected.c_str());
                         continue;
                     }
 
