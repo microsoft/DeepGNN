@@ -21,7 +21,7 @@ def masked_accuracy(
     preds: tf.Tensor,
     labels: tf.Tensor,
     mask: tf.Tensor = None,
-    dtype: tf.dtype = tf.float32,
+    dtype: tf.dtypes.DType = tf.float32,
 ) -> tf.Tensor:
     """Accuracy with masking."""
     if mask is not None:
