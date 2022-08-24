@@ -107,7 +107,7 @@ class GraphSAGELinkPrediction(tf.keras.Model):
         self.dropout = dropout
         self.identity_embed_shape = identity_embed_shape
         self.concat = concat
-        self.inference_node: str
+        self.inference_node: str = ""
 
         # fmt: off
         # init src|dst aggregate layer.
