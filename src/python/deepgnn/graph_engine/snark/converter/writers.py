@@ -67,6 +67,7 @@ class BinaryWriter:
         self.node_type_count: typing.List[int] = []
         self.edge_weight: typing.List[float] = []
         self.edge_type_count: typing.List[int] = []
+        self.prev_node_id: typing.Optional[int] = None
 
     def add(self, data: typing.Iterator[typing.Tuple[int, int, int, float, list]]):
         """
@@ -74,12 +75,14 @@ class BinaryWriter:
 
         args:
             data: Iterable[(int, int, int, float, list)] Data for a node first, then all of
-                its edges in order of dst. Each entry for a node/edge is,
+                its edges in order of type then dst. All of the node's outgoing edges do not need to go to the same writer.
+                Each entry for a node/edge is,
                 (node_id/src, -1/dst, type, weight, [ndarray for each feature vector or None in order of feature index]).
         """
         for src, dst, typ, weight, features in data:
             type_num_value = typ + 1
             if dst == -1:
+                self.prev_node_id = src
                 if type_num_value > self.node_type_num:
                     for _ in range(type_num_value - self.node_type_num):
                         self.node_alias.add_type()
@@ -93,6 +96,10 @@ class BinaryWriter:
                 self.node_type_count[typ] += 1
                 self.node_count += 1
             else:
+                if src != self.prev_node_id or self.prev_node_id is None:
+                    self.node_writer.add(src, -1, [])
+                    self.edge_writer.add_node()
+                    self.prev_node_id = src
                 if type_num_value > self.edge_type_num:
                     for _ in range(type_num_value - self.edge_type_num):
                         self.edge_alias.add_type()
@@ -265,6 +272,7 @@ class EdgeWriter:
         """Append edges starting at node to the output.
 
         Args:
+            src: int
             dst: int
             tp: int
             weight: float

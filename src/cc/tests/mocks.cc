@@ -22,9 +22,11 @@ snark::Partition convert(std::filesystem::path path, std::string suffix, MemoryG
             node_map.write(reinterpret_cast<const char *>(&n.m_id), sizeof(snark::NodeId));
             node_map.write(reinterpret_cast<const char *>(&counter), sizeof(int64_t));
             node_map.write(reinterpret_cast<const char *>(&n.m_type), sizeof(snark::Type));
-            node_type_weights[n.m_type] += n.m_weight;
-
-            ++node_type_counts[n.m_type];
+            if (n.m_type >= 0)
+            {
+                node_type_weights[n.m_type] += n.m_weight;
+                ++node_type_counts[n.m_type];
+            }
             ++counter;
             nb_index.push_back(edge_index.size());
             for (auto &nb : n.m_neighbors)
