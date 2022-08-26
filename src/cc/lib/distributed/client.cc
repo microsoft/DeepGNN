@@ -1113,6 +1113,7 @@ void GRPCClient::WriteMetadata(std::filesystem::path path)
 
     call->callback = [&reply, &path]() {
         Metadata meta;
+        meta.m_version = reply.version();
         meta.m_node_count = reply.nodes();
         meta.m_edge_count = reply.edges();
         meta.m_node_type_count = reply.node_types();

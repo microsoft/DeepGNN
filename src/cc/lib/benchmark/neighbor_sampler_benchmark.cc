@@ -134,6 +134,7 @@ snark::Graph create_graph(size_t num_types, size_t num_nodes_per_partition, size
 
     {
         std::ofstream meta(path / "meta.txt");
+        meta << "v" << snark::MINIMUM_SUPPORTED_VERSION << "\n";
         meta << num_nodes << "\n";
         meta << num_edges << "\n";
 

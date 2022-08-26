@@ -178,7 +178,7 @@ class SnarkDistributedBackend(GraphEngineBackend):
                 # Use a simple heuristic: number of original partitions, but cap it at 4
                 # to avoid extreme cases. Partition count is written on 7th line.
                 lines = meta.readlines()
-                options.num_ge = min(int(lines[6]), 4)
+                options.num_ge = min(int(lines[7]), 4)
 
         # Use explicitly set index if it was provided
         if options.server_idx is not None:

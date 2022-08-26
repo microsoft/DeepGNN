@@ -46,7 +46,7 @@ class Server:
         with open(os.path.join(data_path, "meta.txt"), "r") as meta:
             # TODO(alsamylk): expose graph metadata reader in snark.
             # Based on snark.client._read_meta() method
-            skip_lines = 6
+            skip_lines = 7
             for _ in range(skip_lines):
                 meta.readline()
             partition_count = int(meta.readline())
