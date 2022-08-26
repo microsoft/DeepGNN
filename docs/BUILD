@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 load("@rules_python//python:defs.bzl", "py_binary", "py_test")
+load("@doc_deps//:requirements.bzl", doc_requirement = "requirement")
 load("@pip_deps//:requirements.bzl", "requirement")
 
 py_test(
@@ -251,23 +252,25 @@ py_binary(
         "torch/node_class.rst",
     ],
     deps = [
-        requirement("alabaster"),
-        requirement("sphinx"),
-        requirement("docutils"),
-        requirement("imagesize"),
-        requirement("sphinxcontrib-websupport"),
-        requirement("sphinxcontrib-serializinghtml"),
-        requirement("sphinxcontrib-applehelp"),
-        requirement("sphinxcontrib-devhelp"),
-        requirement("sphinxcontrib-jsmath"),
-        requirement("sphinxcontrib-htmlhelp"),
-        requirement("sphinxcontrib-qthelp"),
-        requirement("sphinx-copybutton"),
-        requirement("Jinja2"),
-        requirement("Pygments"),
-        requirement("snowballstemmer"),
-        requirement("requests"),
-        requirement("packaging"),
-        requirement("importlib-metadata"),
+        doc_requirement("alabaster"),
+        doc_requirement("sphinx"),
+        doc_requirement("docutils"),
+        doc_requirement("imagesize"),
+        doc_requirement("importlib-metadata"),
+        doc_requirement("Jinja2"),
+        doc_requirement("packaging"),
+        doc_requirement("Pygments"),
+        doc_requirement("pyparsing"),
+        doc_requirement("requests"),
+        doc_requirement("six"),
+        doc_requirement("snowballstemmer"),
+        doc_requirement("sphinxcontrib-websupport"),
+        doc_requirement("sphinxcontrib-serializinghtml"),
+        doc_requirement("sphinxcontrib-applehelp"),
+        doc_requirement("sphinxcontrib-devhelp"),
+        doc_requirement("sphinxcontrib-jsmath"),
+        doc_requirement("sphinxcontrib-htmlhelp"),
+        doc_requirement("sphinxcontrib-qthelp"),
+        doc_requirement("sphinx-copybutton"),
     ],
 )

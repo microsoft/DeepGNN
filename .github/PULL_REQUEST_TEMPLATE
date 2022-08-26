@@ -1,7 +1,7 @@
 - [ ] Forked repo is synced with upstream -> github shows no code delta outside of the desired.
     https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/syncing-a-fork
 - [ ] Tests are passing? https://github.com/microsoft/DeepGNN/blob/main/CONTRIBUTING.md#run-tests
-- [ ] Documentation is added or updated to reflect new code in the same format as the rest of the repo.
+- [ ] Changelog and documentation updated.
 - [ ] PR is labeled using the label menu on the right side.
 
 Previous Behavior
