@@ -6,7 +6,7 @@ import tensorflow as tf
 
 from deepgnn.tf.nn import sage_conv
 from deepgnn import get_logger
-from typing import List
+from typing import List, Optional
 
 from deepgnn.graph_engine import Graph
 from sage import SAGEQuery, SAGEQueryParameter  # type: ignore
@@ -107,7 +107,7 @@ class GraphSAGELinkPrediction(tf.keras.Model):
         self.dropout = dropout
         self.identity_embed_shape = identity_embed_shape
         self.concat = concat
-        self.inference_node: str = ""
+        self.inference_node: Optional[str] = None
 
         # fmt: off
         # init src|dst aggregate layer.
