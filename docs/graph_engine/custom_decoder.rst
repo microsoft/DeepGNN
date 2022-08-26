@@ -33,24 +33,29 @@ number of indexable feature vectors.
     ... {"name": "dst",  "type": "int"},
     ... {"name": "type", "type": "int"},
     ... {"name": "weight", "type": "float"},
-    ... {"name": "float_feature", "type": ["bytes", "null"]},
-    ... {"name": "int_feature", "type": ["bytes", "null"]}
+    ... {"name": "float_feature", "type": {"type": "array", "items": "float", "default": []}},
+    ... {"name": "sparse_int16_coords", "type": {"type": "array", "items": "int", "default": []}},
+    ... {"name": "sparse_int16_feature", "type": {"type": "array", "items": "int", "default": []}}
     ... ]}""")
 
     >>> import numpy as np
     >>> writer = DataFileWriter(open(raw_file, "wb"), DatumWriter(), schema)
     >>> writer.append({"src": 0, "dst": -1, "type": 0, "weight": 1.0,
-    ...     "float_feature": np.array([3.5, 6.], dtype=np.float32).tobytes(),
-    ...     "int_feature": np.array([0], dtype=np.int64).tobytes()})
+    ...     "float_feature": [3.5, 6.],
+    ...     "sparse_int16_coords": [7, 3],
+    ...     "sparse_int16_feature": [255, 16]})
     >>> writer.append({"src": 0, "dst": 1, "type": 0, "weight": 1.0,
-    ...     "float_feature": np.array([4., 7.], dtype=np.float32).tobytes(),
-    ...     "int_feature": np.array([5], dtype=np.int64).tobytes()})
+    ...     "float_feature": [4., 7.],
+    ...     "sparse_int16_coords": [5, 1],
+    ...     "sparse_int16_feature": [16, 244]})
     >>> writer.append({"src": 1, "dst": -1, "type": 0, "weight": 1.0,
-    ...     "float_feature": np.array([2., 3.], dtype=np.float32).tobytes(),
-    ...     "int_feature": np.array([1], dtype=np.int64).tobytes()})
+    ...     "float_feature": [2., 3.],
+    ...     "sparse_int16_coords": [6, 3],
+    ...     "sparse_int16_feature": [100, 101]})
     >>> writer.append({"src": 1, "dst": 0, "type": 0, "weight": 1.0,
-    ...     "float_feature": np.array([5., 1.], dtype=np.float32).tobytes(),
-    ...     "int_feature": np.array([7], dtype=np.int64).tobytes()})
+    ...     "float_feature": [5., 1.],
+    ...     "sparse_int16_coords": [2, 3],
+    ...     "sparse_int16_feature": [51, 255]})
     >>> writer.close()
 
 Next we write the AvroDecoder that will be used to decode our input file
@@ -81,7 +86,7 @@ index 0 and 2 but skip index 1.
     ...         # For a node we will yield: (node_id, -1, node_type, node_weight, [feature_0, ...])
     ...         # For an edge: (src_id, dst_id, edge_type, edge_weight, [feature_0, ...])
     ...         # We can return multiple items per line, but the order of the file, described above, must be maintained.
-    ...         yield int(line["src"]), int(line["dst"]), int(line["type"]), float(line["weight"]), [np.frombuffer(line["float_feature"], dtype=np.float32), np.frombuffer(line["int_feature"], dtype=np.int64)]
+    ...         yield int(line["src"]), int(line["dst"]), int(line["type"]), float(line["weight"]), [np.array(line["float_feature"], dtype=np.float32), (np.array(line["sparse_int16_coords"], dtype=np.int64), np.array(line["sparse_int16_feature"], dtype=np.int16))]
 
 Finally, we convert our input file to binaries using an Avro reader, a BinaryWriter and the AvroDecoder.
 Here we only have one partition and therefore one binary writer, it is okay to have multiple binary writers
@@ -125,6 +130,13 @@ We load the generated binaries into a graph engine and demonstrate it working.
     >>> cl.node_features(nodes=[0, 1], features=[[0, 2]], dtype=np.float32)
     array([[3.5, 6. ],
            [2. , 3. ]], dtype=float32)
-    >>> cl.node_features(nodes=[0, 1], features=[[1, 1]], dtype=np.int64)
-    array([[0],
-           [1]])
+    >>> indices, values, dimensions = cl.node_sparse_features(nodes=[0, 1], features=np.array([1], dtype=np.int32), dtype=np.int16)
+    >>> indices
+    [array([[0, 7],
+           [0, 3],
+           [1, 6],
+           [1, 3]])]
+    >>> values
+    [array([255,  16, 100, 101], dtype=int16)]
+    >>> dimensions
+    array([1])
