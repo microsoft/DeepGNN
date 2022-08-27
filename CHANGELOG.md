@@ -6,10 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.55] - 2022-08-26
+
 ### Added
 - Support nodes and their outgoing edges on different partitions.
 
 - Adds neighbor count method to graph.
+
+### Fixed
+- Return empty indices and values for missing sparse features.
 
 ## [0.1.54] - 2022-08-04
 

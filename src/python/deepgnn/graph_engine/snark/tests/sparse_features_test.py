@@ -175,8 +175,8 @@ def test_multiple_edges_sparse_features(graph_with_sparse_features):
     )
 
     npt.assert_equal(dimensions, [0])
-    assert len(indices) == 0
-    assert len(values) == 0
+    assert len(indices) == 1
+    assert len(values) == 1
 
 
 @pytest.mark.parametrize("graph_with_sparse_features", [1, 2], indirect=True)
@@ -246,8 +246,8 @@ def test_distributed_node_with_empty_sparse_features(
         dtype=np.float32,
     )
 
-    assert len(indices) == 0
-    assert len(values) == 0
+    assert len(indices) == 1
+    assert len(values) == 1
     assert dimensions == [0]
 
 
@@ -264,8 +264,8 @@ def test_distributed_node_with_wrong_id_sparse_features(
         dtype=np.float32,
     )
 
-    assert len(indices) == 0
-    assert len(values) == 0
+    assert len(indices) == 2
+    assert len(values) == 2
     npt.assert_equal(dimensions, [0, 0])
 
 
@@ -300,15 +300,16 @@ def test_distributed_multiple_edges_multiple_sparse_features(
         edge_src=np.array([9, 5, 0], dtype=np.int64),
         edge_dst=np.array([0, 9, 5], dtype=np.int64),
         edge_tp=np.array([0, 1, 1], dtype=np.int32),
-        features=np.array([4, 1], dtype=np.int32),
+        features=np.array([4, 13, 1], dtype=np.int32),
         dtype=np.int16,
     )
 
-    npt.assert_equal(dimensions, [1, 3])
-    assert len(indices) == 2
+    npt.assert_equal(dimensions, [1, 0, 3])
+    assert len(indices) == 3
     npt.assert_equal(indices[0], [[0, 7], [0, 3], [2, 17], [2, 13]])
-    npt.assert_equal(indices[1], [[0, 12, 5, 3], [2, 18, 15, 12]])
-    npt.assert_equal(values, [[255, 16, 2, 4], [5, 1024]])
+    npt.assert_equal(indices[1], [])
+    npt.assert_equal(indices[2], [[0, 12, 5, 3], [2, 18, 15, 12]])
+    npt.assert_equal(values, [[255, 16, 2, 4], [], [5, 1024]])
 
 
 # We'll use this class for deterministic partitioning
