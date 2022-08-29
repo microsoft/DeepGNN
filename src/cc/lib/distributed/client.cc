@@ -14,6 +14,7 @@
 #include <numeric>
 #include <random>
 #include <thread>
+#include <type_traits>
 
 #include "src/cc/lib/distributed/call_data.h"
 #include "src/cc/lib/graph/xoroshiro.h"
@@ -30,6 +31,22 @@
 
 namespace
 {
+using grpc::ClientContext;
+using grpc::Status;
+// Client queue item with information about request.
+struct AsyncClientCall
+{
+    ClientContext context;
+
+    // Status is shared accross all types of requests
+    Status status;
+
+    // Callback to execute after recieving response from the server.
+    std::function<void()> callback;
+
+    // Promise set by the client after executing callback.
+    std::promise<void> promise;
+};
 
 // Index to look up feature coordinates to return them in sorted order.
 // shard, index offset, index count, value offset, value count
@@ -80,6 +97,159 @@ void ExtractStringFeatures(const std::vector<std::pair<size_t, size_t>> &respons
                     std::back_inserter(out_values));
     }
 }
+
+template <typename SparseRequest, typename NextCompletionQueue>
+void GetSparseFeature(const SparseRequest &request,
+                      std::vector<std::unique_ptr<snark::GraphEngine::Stub>> &engine_stubs, size_t input_size,
+                      size_t feature_count, std::span<int64_t> out_dimensions,
+                      std::vector<std::vector<int64_t>> &out_indices, std::vector<std::vector<uint8_t>> &out_values,
+                      NextCompletionQueue next_completion_queue)
+{
+    std::vector<std::future<void>> futures;
+    futures.reserve(engine_stubs.size());
+    std::vector<snark::SparseFeaturesReply> replies(engine_stubs.size());
+    std::vector<std::vector<SparseFeatureIndex>> response_index(input_size,
+                                                                std::vector<SparseFeatureIndex>(feature_count));
+
+    for (size_t shard = 0; shard < engine_stubs.size(); ++shard)
+    {
+        auto *call = new AsyncClientCall();
+        std::unique_ptr<grpc::ClientAsyncResponseReader<snark::SparseFeaturesReply>> response_reader;
+        if constexpr (std::is_same<SparseRequest, snark::NodeSparseFeaturesRequest>::value)
+        {
+            response_reader = engine_stubs[shard]->PrepareAsyncGetNodeSparseFeatures(&call->context, request,
+                                                                                     next_completion_queue());
+        }
+        else if constexpr (std::is_same<SparseRequest, snark::EdgeSparseFeaturesRequest>::value)
+        {
+            response_reader = engine_stubs[shard]->PrepareAsyncGetEdgeSparseFeatures(&call->context, request,
+                                                                                     next_completion_queue());
+        }
+        else
+        {
+            throw std::runtime_error("Unknown request type for GetSparseFeature");
+        }
+
+        call->callback = [&reply = replies[shard], &response_index, shard, out_dimensions]() {
+            if (reply.indices().empty())
+            {
+                return;
+            }
+            int64_t node_offset = 0;
+            int64_t value_offset = 0;
+            int64_t node_cummulative_count = 0;
+            for (int64_t feature_index = 0; feature_index < reply.dimensions().size(); ++feature_index)
+            {
+                const auto feature_dim = reply.dimensions(feature_index) + 1;
+                if (feature_dim == 1)
+                {
+                    continue;
+                }
+
+                if (out_dimensions[feature_index] != 0 && reply.dimensions(feature_index) != 0 &&
+                    out_dimensions[feature_index] != reply.dimensions(feature_index))
+                {
+                    auto feature_str = std::to_string(feature_index);
+                    auto client_dimension_str = std::to_string(out_dimensions[feature_index]);
+                    auto server_dimension_str = std::to_string(reply.dimensions(feature_index));
+                    RAW_LOG_FATAL("Dimensions do not match for sparse feature %s. %s != %s", feature_str.c_str(),
+                                  client_dimension_str.c_str(), server_dimension_str.c_str());
+                }
+
+                out_dimensions[feature_index] = reply.dimensions(feature_index);
+                const size_t value_increment =
+                    (reply.values_counts(feature_index) * feature_dim) / reply.indices_counts(feature_index);
+                node_cummulative_count += reply.indices_counts(feature_index);
+                for (; node_offset < node_cummulative_count;
+                     node_offset += feature_dim, value_offset += value_increment)
+                {
+                    const auto item_index = reply.indices(node_offset);
+                    int64_t count = std::get<2>(response_index[item_index][feature_index]);
+                    if (count == 0)
+                    {
+                        std::get<0>(response_index[item_index][feature_index]) = shard;
+                        std::get<1>(response_index[item_index][feature_index]) = node_offset;
+                        std::get<3>(response_index[item_index][feature_index]) = value_offset;
+                    }
+                    std::get<2>(response_index[item_index][feature_index]) += feature_dim;
+                    std::get<4>(response_index[item_index][feature_index]) += value_increment;
+                }
+            }
+        };
+
+        // Order is important: call variable can be deleted before futures can be
+        // obtained.
+        futures.emplace_back(call->promise.get_future());
+        response_reader->StartCall();
+        response_reader->Finish(&replies[shard], &call->status, static_cast<void *>(call));
+    }
+
+    WaitForFutures(futures);
+    ExtractFeatures(response_index, replies, out_dimensions, out_indices, out_values, input_size);
+}
+
+template <typename SparseRequest, typename NextCompletionQueue>
+void GetStringFeature(const SparseRequest &request,
+                      std::vector<std::unique_ptr<snark::GraphEngine::Stub>> &engine_stubs, size_t input_size,
+                      size_t feature_count, std::span<int64_t> out_dimensions, std::vector<uint8_t> &out_values,
+                      NextCompletionQueue next_completion_queue)
+{
+    std::vector<std::future<void>> futures;
+    futures.reserve(engine_stubs.size());
+    std::vector<snark::StringFeaturesReply> replies(engine_stubs.size());
+    std::vector<std::pair<size_t, size_t>> response_index(input_size * feature_count);
+
+    for (size_t shard = 0; shard < engine_stubs.size(); ++shard)
+    {
+        auto *call = new AsyncClientCall();
+        std::unique_ptr<grpc::ClientAsyncResponseReader<snark::StringFeaturesReply>> response_reader;
+        if constexpr (std::is_same<SparseRequest, snark::NodeSparseFeaturesRequest>::value)
+        {
+            response_reader = engine_stubs[shard]->PrepareAsyncGetNodeStringFeatures(&call->context, request,
+                                                                                     next_completion_queue());
+        }
+        else if constexpr (std::is_same<SparseRequest, snark::EdgeSparseFeaturesRequest>::value)
+        {
+            response_reader = engine_stubs[shard]->PrepareAsyncGetEdgeStringFeatures(&call->context, request,
+                                                                                     next_completion_queue());
+        }
+        else
+        {
+            throw std::runtime_error("Unknown request type for GetStringFeature");
+        }
+
+        call->callback = [&reply = replies[shard], &response_index, shard, out_dimensions]() {
+            if (reply.values().empty())
+            {
+                return;
+            }
+            int64_t value_offset = 0;
+            for (int64_t feature_index = 0; feature_index < reply.dimensions().size(); ++feature_index)
+            {
+                const auto dim = reply.dimensions(feature_index);
+                if (dim == 0)
+                {
+                    continue;
+                }
+
+                // it is ok to not to synchronize here, because feature data is the same across shards.
+                response_index[feature_index] = {shard, value_offset};
+                out_dimensions[feature_index] = dim;
+                value_offset += dim;
+            }
+        };
+
+        // Order is important: call variable can be deleted before futures can be
+        // obtained.
+        futures.emplace_back(call->promise.get_future());
+        response_reader->StartCall();
+        response_reader->Finish(&replies[shard], &call->status, static_cast<void *>(call));
+    }
+
+    WaitForFutures(futures);
+    ExtractStringFeatures(response_index, replies, out_dimensions, out_values);
+}
+
 } // namespace
 
 namespace snark
@@ -110,21 +280,6 @@ GRPCClient::GRPCClient(std::vector<std::shared_ptr<grpc::Channel>> channels, uin
     }
 }
 
-// Client queue item with information about request.
-struct AsyncClientCall
-{
-    ClientContext context;
-
-    // Status is shared accross all types of requests
-    Status status;
-
-    // Callback to execute after recieving response from the server.
-    std::function<void()> callback;
-
-    // Promise set by the client after executing callback.
-    std::promise<void> promise;
-};
-
 std::function<void()> GRPCClient::AsyncCompleteRpc(size_t index)
 {
     return [&queue = m_completion_queue[index]]() {
@@ -138,8 +293,16 @@ std::function<void()> GRPCClient::AsyncCompleteRpc(size_t index)
 
             if (call->status.ok())
             {
-                call->callback();
-                call->promise.set_value();
+                try
+                {
+                    call->callback();
+                    call->promise.set_value();
+                }
+                catch (const std::exception &e)
+                {
+                    RAW_LOG_ERROR("Client failed to process request. Exception: %s", e.what());
+                    call->promise.set_exception(std::current_exception());
+                }
             }
             else
             {
@@ -372,66 +535,9 @@ void GRPCClient::GetNodeSparseFeature(std::span<const NodeId> node_ids, std::spa
     NodeSparseFeaturesRequest request;
     *request.mutable_node_ids() = {std::begin(node_ids), std::end(node_ids)};
     *request.mutable_feature_ids() = {std::begin(features), std::end(features)};
-    std::vector<std::future<void>> futures;
-    futures.reserve(m_engine_stubs.size());
-    std::vector<SparseFeaturesReply> replies(m_engine_stubs.size());
 
-    const auto feature_count = features.size();
-    std::vector<std::vector<SparseFeatureIndex>> response_index(node_ids.size(),
-                                                                std::vector<SparseFeatureIndex>(feature_count));
-
-    for (size_t shard = 0; shard < m_engine_stubs.size(); ++shard)
-    {
-        auto *call = new AsyncClientCall();
-
-        auto response_reader =
-            m_engine_stubs[shard]->PrepareAsyncGetNodeSparseFeatures(&call->context, request, NextCompletionQueue());
-
-        call->callback = [&reply = replies[shard], &response_index, shard, out_dimensions]() {
-            if (reply.indices().empty())
-            {
-                return;
-            }
-            int64_t node_offset = 0;
-            int64_t value_offset = 0;
-            int64_t node_cummulative_count = 0;
-            for (int64_t feature_index = 0; feature_index < reply.dimensions().size(); ++feature_index)
-            {
-                const auto feature_dim = reply.dimensions(feature_index) + 1;
-                if (feature_dim == 1)
-                {
-                    continue;
-                }
-                out_dimensions[feature_index] = reply.dimensions(feature_index);
-                const size_t value_increment =
-                    (reply.values_counts(feature_index) * feature_dim) / reply.indices_counts(feature_index);
-                node_cummulative_count += reply.indices_counts(feature_index);
-                for (; node_offset < node_cummulative_count;
-                     node_offset += feature_dim, value_offset += value_increment)
-                {
-                    const auto node_index = reply.indices(node_offset);
-                    int64_t count = std::get<2>(response_index[node_index][feature_index]);
-                    if (count == 0)
-                    {
-                        std::get<0>(response_index[node_index][feature_index]) = shard;
-                        std::get<1>(response_index[node_index][feature_index]) = node_offset;
-                        std::get<3>(response_index[node_index][feature_index]) = value_offset;
-                    }
-                    std::get<2>(response_index[node_index][feature_index]) += feature_dim;
-                    std::get<4>(response_index[node_index][feature_index]) += value_increment;
-                }
-            }
-        };
-
-        // Order is important: call variable can be deleted before futures can be
-        // obtained.
-        futures.emplace_back(call->promise.get_future());
-        response_reader->StartCall();
-        response_reader->Finish(&replies[shard], &call->status, static_cast<void *>(call));
-    }
-
-    WaitForFutures(futures);
-    ExtractFeatures(response_index, replies, out_dimensions, out_indices, out_values, node_ids.size());
+    GetSparseFeature(request, m_engine_stubs, node_ids.size(), features.size(), out_dimensions, out_indices, out_values,
+                     std::bind(&GRPCClient::NextCompletionQueue, this));
 }
 
 void GRPCClient::GetEdgeSparseFeature(std::span<const NodeId> edge_src_ids, std::span<const NodeId> edge_dst_ids,
@@ -449,66 +555,8 @@ void GRPCClient::GetEdgeSparseFeature(std::span<const NodeId> edge_src_ids, std:
     request.mutable_types()->Add(std::begin(edge_types), std::end(edge_types));
     *request.mutable_feature_ids() = {std::begin(features), std::end(features)};
 
-    std::vector<std::future<void>> futures;
-    futures.reserve(m_engine_stubs.size());
-    std::vector<SparseFeaturesReply> replies(m_engine_stubs.size());
-
-    // Index to look up feature coordinates to return them in sorted order.
-    const auto feature_count = features.size();
-    std::vector<std::vector<SparseFeatureIndex>> response_index(len, std::vector<SparseFeatureIndex>(feature_count));
-
-    for (size_t shard = 0; shard < m_engine_stubs.size(); ++shard)
-    {
-        auto *call = new AsyncClientCall();
-
-        auto response_reader =
-            m_engine_stubs[shard]->PrepareAsyncGetEdgeSparseFeatures(&call->context, request, NextCompletionQueue());
-
-        call->callback = [&reply = replies[shard], &response_index, shard, out_dimensions]() {
-            if (reply.indices().empty())
-            {
-                return;
-            }
-            int64_t edge_offset = 0;
-            int64_t value_offset = 0;
-            int64_t edge_cummulative_count = 0;
-            for (int64_t feature_index = 0; feature_index < reply.dimensions().size(); ++feature_index)
-            {
-                const auto feature_dim = reply.dimensions(feature_index) + 1;
-                if (feature_dim == 1)
-                {
-                    continue;
-                }
-                out_dimensions[feature_index] = reply.dimensions(feature_index);
-                const size_t value_increment =
-                    (reply.values_counts(feature_index) * feature_dim) / reply.indices_counts(feature_index);
-                edge_cummulative_count += reply.indices_counts(feature_index);
-                for (; edge_offset < edge_cummulative_count;
-                     edge_offset += feature_dim, value_offset += value_increment)
-                {
-                    const auto node_index = reply.indices(edge_offset);
-                    int64_t count = std::get<2>(response_index[node_index][feature_index]);
-                    if (count == 0)
-                    {
-                        std::get<0>(response_index[node_index][feature_index]) = shard;
-                        std::get<1>(response_index[node_index][feature_index]) = edge_offset;
-                        std::get<3>(response_index[node_index][feature_index]) = value_offset;
-                    }
-                    std::get<2>(response_index[node_index][feature_index]) += feature_dim;
-                    std::get<4>(response_index[node_index][feature_index]) += value_increment;
-                }
-            }
-        };
-
-        // Order is important: call variable can be deleted before futures can be
-        // obtained.
-        futures.emplace_back(call->promise.get_future());
-        response_reader->StartCall();
-        response_reader->Finish(&replies[shard], &call->status, static_cast<void *>(call));
-    };
-
-    WaitForFutures(futures);
-    ExtractFeatures(response_index, replies, out_dimensions, out_indices, out_values, len);
+    GetSparseFeature(request, m_engine_stubs, len, features.size(), out_dimensions, out_indices, out_values,
+                     std::bind(&GRPCClient::NextCompletionQueue, this));
 }
 
 void GRPCClient::GetNodeStringFeature(std::span<const NodeId> node_ids, std::span<const FeatureId> features,
@@ -517,50 +565,8 @@ void GRPCClient::GetNodeStringFeature(std::span<const NodeId> node_ids, std::spa
     NodeSparseFeaturesRequest request;
     *request.mutable_node_ids() = {std::begin(node_ids), std::end(node_ids)};
     *request.mutable_feature_ids() = {std::begin(features), std::end(features)};
-    std::vector<std::future<void>> futures;
-    futures.reserve(m_engine_stubs.size());
-    std::vector<StringFeaturesReply> replies(m_engine_stubs.size());
-
-    const auto feature_count = features.size();
-    std::vector<std::pair<size_t, size_t>> response_index(node_ids.size() * feature_count);
-
-    for (size_t shard = 0; shard < m_engine_stubs.size(); ++shard)
-    {
-        auto *call = new AsyncClientCall();
-
-        auto response_reader =
-            m_engine_stubs[shard]->PrepareAsyncGetNodeStringFeatures(&call->context, request, NextCompletionQueue());
-
-        call->callback = [&reply = replies[shard], &response_index, shard, out_dimensions]() {
-            if (reply.values().empty())
-            {
-                return;
-            }
-            int64_t value_offset = 0;
-            for (int64_t feature_index = 0; feature_index < reply.dimensions().size(); ++feature_index)
-            {
-                const auto dim = reply.dimensions(feature_index);
-                if (dim == 0)
-                {
-                    continue;
-                }
-
-                // it is ok to not to synchronize here, because feature data is the same across shards.
-                response_index[feature_index] = {shard, value_offset};
-                out_dimensions[feature_index] = dim;
-                value_offset += dim;
-            }
-        };
-
-        // Order is important: call variable can be deleted before futures can be
-        // obtained.
-        futures.emplace_back(call->promise.get_future());
-        response_reader->StartCall();
-        response_reader->Finish(&replies[shard], &call->status, static_cast<void *>(call));
-    }
-
-    WaitForFutures(futures);
-    ExtractStringFeatures(response_index, replies, out_dimensions, out_values);
+    GetStringFeature(request, m_engine_stubs, node_ids.size(), features.size(), out_dimensions, out_values,
+                     std::bind(&GRPCClient::NextCompletionQueue, this));
 }
 
 void GRPCClient::GetEdgeStringFeature(std::span<const NodeId> edge_src_ids, std::span<const NodeId> edge_dst_ids,
@@ -577,51 +583,8 @@ void GRPCClient::GetEdgeStringFeature(std::span<const NodeId> edge_src_ids, std:
     request.mutable_types()->Add(std::begin(edge_types), std::end(edge_types));
     *request.mutable_feature_ids() = {std::begin(features), std::end(features)};
 
-    std::vector<std::future<void>> futures;
-    futures.reserve(m_engine_stubs.size());
-    std::vector<StringFeaturesReply> replies(m_engine_stubs.size());
-
-    // Index to look up feature coordinates to return them in sorted order.
-    const auto feature_count = features.size();
-    std::vector<std::pair<size_t, size_t>> response_index(len * feature_count);
-
-    for (size_t shard = 0; shard < m_engine_stubs.size(); ++shard)
-    {
-        auto *call = new AsyncClientCall();
-
-        auto response_reader =
-            m_engine_stubs[shard]->PrepareAsyncGetEdgeStringFeatures(&call->context, request, NextCompletionQueue());
-
-        call->callback = [&reply = replies[shard], &response_index, shard, out_dimensions]() {
-            if (reply.values().empty())
-            {
-                return;
-            }
-            int64_t value_offset = 0;
-            for (int64_t feature_index = 0; feature_index < reply.dimensions().size(); ++feature_index)
-            {
-                const auto dim = reply.dimensions(feature_index);
-                if (dim == 0)
-                {
-                    continue;
-                }
-
-                // it is ok to not to synchronize here, because feature data is the same across shards.
-                response_index[feature_index] = {shard, value_offset};
-                out_dimensions[feature_index] = dim;
-                value_offset += dim;
-            }
-        };
-
-        // Order is important: call variable can be deleted before futures can be
-        // obtained.
-        futures.emplace_back(call->promise.get_future());
-        response_reader->StartCall();
-        response_reader->Finish(&replies[shard], &call->status, static_cast<void *>(call));
-    }
-
-    WaitForFutures(futures);
-    ExtractStringFeatures(response_index, replies, out_dimensions, out_values);
+    GetStringFeature(request, m_engine_stubs, len, features.size(), out_dimensions, out_values,
+                     std::bind(&GRPCClient::NextCompletionQueue, this));
 }
 
 void GRPCClient::NeighborCount(std::span<const NodeId> node_ids, std::span<const Type> edge_types,
@@ -710,11 +673,23 @@ void GRPCClient::FullNeighbor(std::span<const NodeId> node_ids, std::span<const 
                 for (size_t reply_index = 0; reply_index < std::size(replies); ++reply_index)
                 {
                     const auto &reply = replies[reply_index];
+                    if (size_t(reply.neighbor_counts().size()) <= curr_node)
+                    {
+                        auto expected = std::to_string(output_neighbor_counts.size());
+                        auto received = std::to_string(reply.neighbor_counts().size());
+                        // In case of a short reply, we can skip processing. Log error if it happens.
+                        RAW_LOG_ERROR(
+                            "Received short list of neighbor counts: %s. Expected: %s. Assuming no neighbors.",
+                            received.c_str(), expected.c_str());
+                        continue;
+                    }
+
                     const auto count = reply.neighbor_counts(curr_node);
                     if (count == 0)
                     {
                         continue;
                     }
+
                     output_neighbor_counts[curr_node] += count;
                     const auto offset = reply_offsets[reply_index];
                     auto node_ids_start = reply.node_ids().begin() + offset;

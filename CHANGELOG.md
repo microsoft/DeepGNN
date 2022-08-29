@@ -5,16 +5,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-
-### Added
-- Adds neighbor count method to graph.
-
 - Support nodes and their outgoing edges on different partitions.
 
 - Add new converter input format "EdgeList" with EdgeListDecoder. Format has nodes and edges on separate lines, is smaller and faster to convert.
 
 ### Fixed
 - Fill dimensions with 0 for missing features.
+
+## [0.1.55] - 2022-08-26
+
+### Added
+- Support nodes and their outgoing edges on different partitions.
+
+- Adds neighbor count method to graph.
+
+### Fixed
+- Return empty indices and values for missing sparse features.
 
 ## [0.1.54] - 2022-08-04
 

@@ -19,7 +19,15 @@ def create_tf_dataset(
     # parameters to initialize samplers
     **kwargs,
 ):
-    """Create DeepGNNDataset."""
+    """Create DeepGNNDataset.
+
+    DeepGNNDataset initializes and executes a node or edge sampler given as
+    sampler_class. For every batch of data requested, batch_size items are sampled
+    from the sampler and passed to the given query_fn which pulls all necessaary
+    information about the samples using the graph engine API. The output from
+    the query function is passed to the trainer worker as the input to the
+    model forward function.
+    """
 
     def _get_tf_dtypes(tensor_list):
         tf_types = []
