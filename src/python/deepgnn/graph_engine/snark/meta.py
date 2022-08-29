@@ -10,7 +10,7 @@ from deepgnn.graph_engine.snark._lib import _get_c_lib
 import platform
 
 """Version of binary files produced by converters to communicate breaking changes requiring regeneration of binary files."""
-VERSION = "v1"
+BINARY_DATA_VERSION = "v1"
 
 
 # Use custom separators in case we want to download data from remote filesystems.

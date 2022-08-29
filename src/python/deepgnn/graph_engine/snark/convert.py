@@ -15,7 +15,7 @@ from deepgnn.graph_engine.snark.dispatcher import (
     PipeDispatcher,
     Dispatcher,
 )
-from deepgnn.graph_engine.snark.meta import VERSION
+from deepgnn.graph_engine.snark.meta import BINARY_DATA_VERSION
 
 
 class MultiWorkersConverter:
@@ -130,7 +130,7 @@ class MultiWorkersConverter:
         ) as mtxt:
             mtxt.writelines(
                 [
-                    str(VERSION),
+                    str(BINARY_DATA_VERSION),
                     "\n",
                     str(d.prop("node_count")),
                     "\n",

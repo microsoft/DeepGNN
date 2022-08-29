@@ -15,7 +15,7 @@ import numpy.testing as npt
 import deepgnn.graph_engine.snark.convert as convert
 from deepgnn.graph_engine.snark.decoders import JsonDecoder, TsvDecoder
 from deepgnn.graph_engine.snark.dispatcher import QueueDispatcher
-from deepgnn.graph_engine.snark.meta import VERSION
+from deepgnn.graph_engine.snark.meta import BINARY_DATA_VERSION
 
 
 def triangle_graph_json(folder):
@@ -300,7 +300,7 @@ def test_sanity_metadata(triangle_graph):
         result = ni.readlines()
 
         assert len(result) == 19
-        assert result[0].strip() == VERSION
+        assert result[0].strip() == BINARY_DATA_VERSION
         assert int(result[1]) == 3
         assert int(result[2]) == 3
         assert int(result[3]) == 3
