@@ -104,7 +104,7 @@ void Graph::GetNodeType(std::span<const NodeId> node_ids, std::span<Type> output
             for (size_t partition = 0; partition < partition_count; ++partition, ++index)
             {
                 *curr_type = m_partitions[m_partitions_indices[index]].GetNodeType(m_internal_indices[index]);
-                if (*curr_type != snark::DEFAULT_NODE_TYPE)
+                if (*curr_type != snark::PLACEHOLDER_NODE_TYPE)
                     break;
             }
         }

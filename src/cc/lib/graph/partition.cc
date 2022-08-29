@@ -286,7 +286,7 @@ Type Partition::GetNodeType(uint64_t internal_node_id) const
 
 bool Partition::HasNodeFeatures(uint64_t internal_node_id) const
 {
-    return GetNodeType(internal_node_id) != snark::DEFAULT_NODE_TYPE;
+    return GetNodeType(internal_node_id) != snark::PLACEHOLDER_NODE_TYPE;
 }
 
 bool Partition::GetNodeFeature(uint64_t internal_id, std::span<snark::FeatureMeta> features,
