@@ -1052,6 +1052,7 @@ struct SamplerData
             }
             {
                 auto meta = fopen((path / "meta.txt").string().c_str(), "w+");
+                fprintf(meta, "v%ld\n", snark::MINIMUM_SUPPORTED_VERSION);
                 fprintf(meta, "%ld\n", num_nodes_in_server);
                 fprintf(meta, "%ld\n", num_edge_records_in_server / 2);
                 fprintf(meta, "1\n");                        // node_types_count

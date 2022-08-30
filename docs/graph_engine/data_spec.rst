@@ -119,6 +119,7 @@ Graph `meta.txt` is as follows with all pieces of text replaced by integers,
 
 .. code-block:: text
 
+	binary_data_version
 	node_count
 	edge_count
 	node_type_count

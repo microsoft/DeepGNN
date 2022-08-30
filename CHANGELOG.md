@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Breaking. Added version checks for binary data. Requires to convert graph data or add v1 at the top of meta files.
+
 ## [0.1.55] - 2022-08-26
 
 ### Added

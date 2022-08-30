@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 #include "src/cc/tests/mocks.h"
+#include "src/cc/lib/graph/metadata.h"
 
 #include <fstream>
 
@@ -94,6 +95,7 @@ snark::Partition convert(std::filesystem::path path, std::string suffix, MemoryG
     }
     {
         std::ofstream meta(path / "meta.txt");
+        meta << "v" << snark::MINIMUM_SUPPORTED_VERSION << "\n";
         meta << counter << "\n";
         meta << nb_index.size() << "\n";
 

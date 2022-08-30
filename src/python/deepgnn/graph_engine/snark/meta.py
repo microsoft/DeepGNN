@@ -9,6 +9,9 @@ from ctypes import c_char_p
 from deepgnn.graph_engine.snark._lib import _get_c_lib
 import platform
 
+"""Version of binary files produced by converters to communicate breaking changes requiring regeneration of binary files."""
+BINARY_DATA_VERSION = "v1"
+
 
 # Use custom separators in case we want to download data from remote filesystems.
 def _get_meta_path(path: str, sep=os.path.sep) -> str:
@@ -140,6 +143,7 @@ class Meta:
 
         meta = open(_get_meta_path(path), "r")  # type: ignore
 
+        self.version = str(meta.readline().strip())
         self.node_count = int(meta.readline())
         self.edge_count = int(meta.readline())
         self.node_type_count = int(meta.readline())

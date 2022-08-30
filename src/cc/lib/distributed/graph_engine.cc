@@ -511,6 +511,7 @@ grpc::Status GraphEngineServiceImpl::UniformSampleNeighbors(::grpc::ServerContex
 grpc::Status GraphEngineServiceImpl::GetMetadata(::grpc::ServerContext *context, const snark::EmptyMessage *request,
                                                  snark::MetadataReply *response)
 {
+    response->set_version(m_metadata.m_version);
     response->set_nodes(m_metadata.m_node_count);
     response->set_edges(m_metadata.m_edge_count);
     response->set_node_types(m_metadata.m_node_type_count);
