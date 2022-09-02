@@ -165,6 +165,7 @@ void BM_DISTRIBUTED_SAMPLER_MULTIPLE_SERVERS(benchmark::State &state)
         }
         {
             std::ofstream meta(path / "meta.txt");
+            meta << "v" << snark::MINIMUM_SUPPORTED_VERSION << "\n";
             meta << num_nodes_in_server << "\n";
             meta << 0 << "\n";                   // num edges
             meta << 1 << "\n";                   // node_types_count

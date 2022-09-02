@@ -15,6 +15,7 @@ import numpy.testing as npt
 import deepgnn.graph_engine.snark.convert as convert
 from deepgnn.graph_engine.snark.decoders import JsonDecoder, TsvDecoder
 from deepgnn.graph_engine.snark.dispatcher import QueueDispatcher
+from deepgnn.graph_engine.snark.meta import BINARY_DATA_VERSION
 
 
 def triangle_graph_json(folder):
@@ -298,29 +299,30 @@ def test_sanity_metadata(triangle_graph):
     with open("{}/meta.txt".format(output.name), "r") as ni:
         result = ni.readlines()
 
-        assert len(result) == 18
-        assert int(result[0]) == 3
+        assert len(result) == 19
+        assert result[0].strip() == BINARY_DATA_VERSION
         assert int(result[1]) == 3
         assert int(result[2]) == 3
-        assert int(result[3]) == 2
+        assert int(result[3]) == 3
         assert int(result[4]) == 2
         assert int(result[5]) == 2
+        assert int(result[6]) == 2
 
         # partition information
-        assert int(result[6]) == 1
-        assert int(result[7]) == 0
-        assert float(result[8]) == 1
+        assert int(result[7]) == 1
+        assert int(result[8]) == 0
         assert float(result[9]) == 1
         assert float(result[10]) == 1
-        assert float(result[11]) == 0.5
-        assert float(result[12]) == 1.7
+        assert float(result[11]) == 1
+        assert float(result[12]) == 0.5
+        assert float(result[13]) == 1.7
 
         # type counts
-        assert int(result[13]) == 1
         assert int(result[14]) == 1
         assert int(result[15]) == 1
         assert int(result[16]) == 1
-        assert int(result[17]) == 2
+        assert int(result[17]) == 1
+        assert int(result[18]) == 2
 
 
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)

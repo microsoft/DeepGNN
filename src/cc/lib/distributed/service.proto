@@ -58,6 +58,7 @@ message MetadataReply {
   repeated float edge_partition_weights = 9;
   repeated uint64 node_count_per_type = 10;
   repeated uint64 edge_count_per_type = 11;
+  uint64 version = 12;
 }
 
 message CreateSamplerReply {
