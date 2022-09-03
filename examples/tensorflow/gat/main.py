@@ -19,7 +19,7 @@ from contextlib import closing
 from deepgnn.tf import common
 from deepgnn.tf.common.dataset import create_tf_dataset, get_distributed_dataset
 from deepgnn.tf.common.trainer_factory import get_trainer
-from gat import GAT, GATQuery, GATQueryParameter
+from gat import GAT, GATQuery, GATQueryParameter  # type: ignore
 
 
 # fmt: off

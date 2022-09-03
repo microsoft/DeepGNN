@@ -77,7 +77,7 @@ class BaseTFTrainer(Trainer):
             np.random.seed(seed)
             random.seed(seed)
 
-    def tf_device(self):
+    def tf_device(self) -> tf.device:
         """Return current device."""
         return tf.compat.v1.device(
             tf.compat.v1.train.replica_device_setter(cluster=None)
@@ -448,7 +448,9 @@ class BaseTFTrainer(Trainer):
         )
         return hooks
 
-    def make_dataset_iterator(self, graph_dataset, epochs: int = 1):
+    def make_dataset_iterator(
+        self, graph_dataset: tf.data.Dataset, epochs: int = 1
+    ) -> tf.data.Iterator:
         """Create iterator from a dataset."""
         if epochs > 1:
             graph_dataset = graph_dataset.repeat(epochs)

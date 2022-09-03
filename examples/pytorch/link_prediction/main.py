@@ -17,9 +17,9 @@ from deepgnn.pytorch.encoding import get_feature_encoder
 from deepgnn.pytorch.modeling import BaseModel
 from deepgnn.pytorch.training import run_dist
 from deepgnn.graph_engine import TextFileSampler, GraphEngineBackend
-from args import init_args
-from consts import DEFAULT_VOCAB_CHAR_INDEX
-from model import LinkPredictionModel
+from args import init_args  # type: ignore
+from consts import DEFAULT_VOCAB_CHAR_INDEX  # type: ignore
+from model import LinkPredictionModel  # type: ignore
 
 
 def create_model(args: argparse.Namespace):
@@ -35,8 +35,8 @@ def create_model(args: argparse.Namespace):
         feature_dim=args.feature_dim,
         feature_idx=args.feature_idx,
         feature_type=get_feature_type(args.feature_type),
-        feature_enc=feature_enc[0],
-        vocab_index=feature_enc[1][DEFAULT_VOCAB_CHAR_INDEX],
+        feature_enc=feature_enc[0],  # type: ignore
+        vocab_index=feature_enc[1][DEFAULT_VOCAB_CHAR_INDEX],  # type: ignore
     )
 
 

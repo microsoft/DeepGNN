@@ -6,10 +6,10 @@ import tensorflow as tf
 
 from deepgnn.tf.nn import sage_conv
 from deepgnn import get_logger
-from typing import List
+from typing import List, Optional
 
 from deepgnn.graph_engine import Graph
-from sage import SAGEQuery, SAGEQueryParameter
+from sage import SAGEQuery, SAGEQueryParameter  # type: ignore
 
 
 class SAGELinkPredictionQuery(SAGEQuery):
@@ -21,7 +21,7 @@ class SAGELinkPredictionQuery(SAGEQuery):
 
     def query_training(
         self, graph: Graph, inputs: np.ndarray, return_shape: bool = False
-    ):
+    ) -> tuple:
         """Fetch data to train model."""
         # fmt: off
         seed_edges = inputs  # [Batch_size, 3]
@@ -31,10 +31,7 @@ class SAGELinkPredictionQuery(SAGEQuery):
 
         edge_label = graph.edge_features(seed_edges, self.label_meta, self.param.label_type)
 
-        graph_tensor = [src_graph_nodes, dst_graph_nodes, edge_label]
-        graph_tensor.extend(src_neighbor_list_idx)
-        graph_tensor.extend(dst_neighbor_list_idx)
-        graph_tensor = tuple(graph_tensor)
+        graph_tensor = tuple([src_graph_nodes, dst_graph_nodes, edge_label] + src_neighbor_list_idx + dst_neighbor_list_idx)
 
         if return_shape:
             # N is the number of `nodes`, which is variable because `inputs` nodes are different.
@@ -56,7 +53,7 @@ class SAGELinkPredictionQuery(SAGEQuery):
 
     def query_inference(
         self, graph: Graph, inputs: np.ndarray, return_shape: bool = False
-    ):
+    ) -> tuple:
         """Inference `inputs` is different with train `inputs`.
 
         * for training job, `inputs` are edges.
@@ -66,9 +63,7 @@ class SAGELinkPredictionQuery(SAGEQuery):
         seed_nodes = inputs
         graph_nodes, neighbor_list_idx = self._query_neighbor(graph, seed_nodes)
 
-        graph_tensor = [graph_nodes]
-        graph_tensor.extend(neighbor_list_idx)
-        graph_tensor = tuple(graph_tensor)
+        graph_tensor = tuple([graph_nodes] + neighbor_list_idx)
 
         if return_shape:
             # N is the number of `nodes`, which is variable because `inputs` nodes are different.
@@ -96,7 +91,7 @@ class GraphSAGELinkPrediction(tf.keras.Model):
         num_samples: List[int],
         dropout: float = 0.0,
         agg_type: str = "mean",
-        identity_embed_shape: List[int] = None,
+        identity_embed_shape: List[int] = [],
         concat: bool = True,
     ):
         """Initialize model."""
@@ -112,7 +107,7 @@ class GraphSAGELinkPrediction(tf.keras.Model):
         self.dropout = dropout
         self.identity_embed_shape = identity_embed_shape
         self.concat = concat
-        self.inference_node = None
+        self.inference_node: Optional[str] = None
 
         # fmt: off
         # init src|dst aggregate layer.

@@ -85,11 +85,11 @@ Windows(in powershell):
 $env:PATH+=";"+${env:ProgramFiles(x86)}+"\Microsoft Visual Studio\2019\Enterprise\VC\Tools\Llvm\bin"
 ```
 
-Install and run linters(same on both systems):
+Install and run linters(same on all systems):
 ```sh
 pip install --upgrade pip
 pip install -r tests/requirements.txt
-pip install wheel pre-commit==2.17.0 mypy==0.780
+pip install wheel pre-commit==2.17.0 mypy==0.971 numpy==1.21.6 torch==1.11.0 tensorflow==2.7.2
 pre-commit install
 pre-commit run --all-files
 ```

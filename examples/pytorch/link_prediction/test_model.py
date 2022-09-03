@@ -38,8 +38,8 @@ from deepgnn.graph_engine import (
     create_backend,
 )
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
-from args import init_args
-from model import LinkPredictionModel
+from args import init_args  # type: ignore
+from model import LinkPredictionModel  # type: ignore
 from deepgnn.graph_engine.test_adl_reader import IS_ADL_CONFIG_VALID
 
 pytestmark = pytest.mark.skipif(not IS_ADL_CONFIG_VALID, reason="Invalid adl config.")
@@ -52,7 +52,7 @@ class MockBackend(GraphEngineBackend):
         if MockBackend._backend is None:
             MockBackend._backend = object.__new__(cls)
             np.random.RandomState(seed=1)
-            MockBackend._backend._graph = None
+            MockBackend._backend._graph = None  # type: ignore
 
         return MockBackend._backend
 

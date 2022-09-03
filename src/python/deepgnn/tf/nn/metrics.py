@@ -6,7 +6,7 @@ import tensorflow as tf
 
 def masked_softmax_cross_entropy(
     preds: tf.Tensor, labels: tf.Tensor, mask: tf.Tensor = None
-):
+) -> tf.Tensor:
     """Softmax cross-entropy loss with masking."""
     if mask is not None:
         preds = preds[mask]
@@ -18,8 +18,11 @@ def masked_softmax_cross_entropy(
 
 
 def masked_accuracy(
-    preds: tf.Tensor, labels: tf.Tensor, mask: tf.Tensor = None, dtype=tf.float32
-):
+    preds: tf.Tensor,
+    labels: tf.Tensor,
+    mask: tf.Tensor = None,
+    dtype: tf.dtypes.DType = tf.float32,
+) -> tf.Tensor:
     """Accuracy with masking."""
     if mask is not None:
         preds = preds[mask]

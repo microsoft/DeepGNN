@@ -13,7 +13,7 @@ class LightGCNEncoder(nn.Module):
         """Initialize underlying nn.Module."""
         super(LightGCNEncoder, self).__init__()
 
-    def forward(self, context: dict):
+    def forward(self, context: dict) -> torch.Tensor:
         """Evaluate encoder."""
         samples = context[INPUTS]
         fanouts = context[FANOUTS]

@@ -14,7 +14,7 @@ def _sample_neighbors(
     count: int,
     sampling_strategy: str,
     default_node: int,
-):
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     nbs, weights, types, _ = graph.sample_neighbors(
         nodes, edge_types, count, strategy=sampling_strategy, default_node=default_node
     )
@@ -68,7 +68,9 @@ def sample_fanout(
     return neighbors_list, weights_list, types_list
 
 
-def _full_neighbor(graph: Graph, nodes: np.ndarray, hop_edge_types: np.ndarray):
+def _full_neighbor(
+    graph: Graph, nodes: np.ndarray, hop_edge_types: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     if len(nodes) == 0:
         return (
             np.array([], dtype=np.int64),

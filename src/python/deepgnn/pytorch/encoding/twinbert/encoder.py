@@ -175,7 +175,7 @@ class TwinBERTEncoder(nn.Module):
         return collections.OrderedDict(res)
 
     @classmethod
-    def init_config_from_file(cls, filename):
+    def init_config_from_file(cls, filename: str) -> dict:
         config = {}
         with open(filename, "r", encoding="utf-8") as fin:
             config = json.load(fin)

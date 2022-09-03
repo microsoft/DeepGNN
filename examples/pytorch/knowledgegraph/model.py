@@ -120,7 +120,7 @@ class KGEModel(BaseModel):
         )
         self.step = 0
 
-    def query(self, graph: Graph, inputs: np.ndarray):
+    def query(self, graph: Graph, inputs: np.ndarray) -> dict:
         """Fetch data from graph for training."""
         context = {"inputs": inputs}
 
@@ -174,7 +174,7 @@ class KGEModel(BaseModel):
         context["negs"] = np.array(all_negative_list)
         return context
 
-    def query_eval(self, graph: Graph, inputs: np.ndarray):
+    def query_eval(self, graph: Graph, inputs: np.ndarray) -> dict:
         """Fetch data from graph for evaluation."""
         context = {}
         inputs[0][:, 2] = inputs[1][:, 0].astype("int64")
@@ -228,7 +228,7 @@ class KGEModel(BaseModel):
 
     def get_score(  # type: ignore
         self, sample: Union[torch.Tensor, Tuple[torch.Tensor]], mode=Mode.Single
-    ):
+    ) -> torch.Tensor:
         """Calculate score according to model_name."""
         # 0: head-batch; 1: tail-batch; 2:single
         if mode == Mode.Single:
@@ -373,7 +373,7 @@ class KGEModel(BaseModel):
         score = self.gamma.item() - score.sum(dim=2)
         return score
 
-    def forward(self, context: dict):
+    def forward(self, context: dict):  # type: ignore[override]
         """Calculate loss."""
         if "bias" in context.keys():
             return self.loss_eval(context)

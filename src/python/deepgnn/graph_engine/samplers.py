@@ -6,7 +6,7 @@ import glob
 import math
 import random
 
-from typing import Callable, List
+from typing import Callable, List, Tuple, Union
 import csv
 from deepgnn import get_logger
 import numpy as np
@@ -16,7 +16,7 @@ from deepgnn.graph_engine._adl_reader import TextFileIterator
 INVALID_NODE_ID = -1
 
 
-def get_files(filenames, worker_index, num_workers):
+def get_files(filenames: str, worker_index: int, num_workers: int) -> List[str]:
     """Parition sampler files across workers."""
     files = sorted(glob.glob(filenames))
     if len(files) < num_workers:
@@ -29,14 +29,43 @@ def get_files(filenames, worker_index, num_workers):
     return sample_files
 
 
-def get_feature_type(feature_type):
+def get_feature_type(feature_type: np.dtype) -> type:
     """Map numpy to python types."""
-    if feature_type not in [np.float32, np.int64]:
-        raise RuntimeError("unknown feature_type: {}".format(str(feature_type)))
     if feature_type == np.float32:
         return float
     elif feature_type == np.int64:
         return int
+    raise RuntimeError("unknown feature_type: {}".format(str(feature_type)))
+
+
+class _GEIterator:
+    """Iterable component to iterate using graph API.
+
+    For example, if the func is graph.sample_nodes,
+    each next() function will return a list of nodes queried
+    from graph engine servers.
+    """
+
+    def __init__(
+        self,
+        batch_size: int,
+        item_type: np.ndarray,
+        count: int,
+        strategy: SamplingStrategy,
+        func: Callable[..., np.ndarray],
+    ):
+        self.batch_size = batch_size
+        self.item_type = item_type
+        self.count = count
+        self.func = func
+        self.strategy = strategy
+
+    def __next__(self):
+        self.count -= 1
+        if self.count < 0:
+            raise StopIteration
+
+        return self.func(self.batch_size, self.item_type, strategy=self.strategy)
 
 
 class BaseSampler(object):
@@ -44,11 +73,11 @@ class BaseSampler(object):
 
     def __init__(
         self,
-        batch_size,
-        epochs,
-        shuffle,
-        sample_num=-1,
-        prefetch_size=4,
+        batch_size: int,
+        epochs: int,
+        shuffle: bool,
+        sample_num: int = -1,
+        prefetch_size: int = 4,
         data_parallel_num: int = 1,
         data_parallel_index: int = 0,
     ):
@@ -62,15 +91,15 @@ class BaseSampler(object):
         self._data_parallel_index = data_parallel_index
         self.logger = get_logger()
 
-    def __iter__(self):
+    def __iter__(self) -> _GEIterator:
         """Must be implemented in derived classes."""
         raise NotImplementedError()
 
-    def __count__(self):
+    def __count__(self) -> int:
         """Must be implemented in derived classes."""
         raise NotImplementedError()
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Must be implemented in derived classes."""
         raise NotImplementedError()
 
@@ -99,48 +128,18 @@ class BaseSampler(object):
         self._data_parallel_num = value
 
 
-class _GEIterator:
-    """Iterable component to iterate using graph API.
-
-    For example, if the func is graph.sample_nodes,
-    each next() function will return a list of nodes queried
-    from graph engine servers.
-    """
-
-    def __init__(
-        self,
-        batch_size: int,
-        item_type: np.ndarray,
-        count: int,
-        strategy: SamplingStrategy,
-        func: Callable[[int, int], np.ndarray],
-    ):
-        self.batch_size = batch_size
-        self.item_type = item_type
-        self.count = count
-        self.func = func
-        self.strategy = strategy
-
-    def __next__(self):
-        self.count -= 1
-        if self.count < 0:
-            raise StopIteration
-
-        return self.func(self.batch_size, self.item_type, strategy=self.strategy)
-
-
 class GENodeSampler(BaseSampler):
     """Sampler to query node ids from graph engine."""
 
     def __init__(
         self,
         graph: Graph,
-        node_types,
-        batch_size,
-        epochs,
-        sample_num=-1,
-        num_workers=1,
-        strategy=SamplingStrategy.Weighted,
+        node_types: Union[int, List[int]],
+        batch_size: int,
+        epochs: int,
+        sample_num: int = -1,
+        num_workers: int = 1,
+        strategy: SamplingStrategy = SamplingStrategy.Weighted,
         data_parallel_num: int = 1,
         data_parallel_index: int = 0,
     ):
@@ -171,7 +170,7 @@ class GENodeSampler(BaseSampler):
         # return original output if node_types is an integer
         return self.graph.sample_nodes(*args, **kwargs)
 
-    def __iter__(self):
+    def __iter__(self) -> _GEIterator:
         """Create a graph engine iterator."""
         return _GEIterator(
             self.batch_size,
@@ -181,7 +180,7 @@ class GENodeSampler(BaseSampler):
             self._strip_types,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Total number of minibatches in this sampler."""
         return self.count
 
@@ -192,12 +191,12 @@ class GEEdgeSampler(BaseSampler):
     def __init__(
         self,
         graph: Graph,
-        edge_types,
-        batch_size,
-        epochs,
-        sample_num=-1,
-        num_workers=1,
-        strategy=SamplingStrategy.Weighted,
+        edge_types: Union[int, List[int]],
+        batch_size: int,
+        epochs: int,
+        sample_num: int = -1,
+        num_workers: int = 1,
+        strategy: SamplingStrategy = SamplingStrategy.Weighted,
         data_parallel_num: int = 1,
         data_parallel_index: int = 0,
     ):
@@ -222,7 +221,7 @@ class GEEdgeSampler(BaseSampler):
             / (self.batch_size * num_workers * data_parallel_num)
         )
 
-    def __iter__(self):
+    def __iter__(self) -> _GEIterator:
         """Create a graph engine iterator."""
         return _GEIterator(
             self.batch_size,
@@ -232,9 +231,80 @@ class GEEdgeSampler(BaseSampler):
             self.graph.sample_edges,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Total number of minibatches in this sampler."""
         return self.count
+
+
+class _NumpyIterator(_GEIterator):
+    """Private iterable component to iterate numpy array."""
+
+    def __init__(
+        self,
+        data: List[np.ndarray],
+        batch_size: int,
+        epochs: int = 1,
+        shuffle: bool = False,
+        backfill: List[int] = [],
+        drop_last: bool = False,
+        data_parallel_num: int = 1,
+        data_parallel_index: int = 0,
+    ):
+        """Initialize iterator."""
+        self.length = len(data[0])
+        assert self.length > 0
+        if len(data) > 1:
+            for item in data:
+                assert len(item) == self.length
+        self.epochs = epochs
+        self.data = data
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.backfill = backfill
+        self.drop_last = drop_last
+        self.idx = self.__build_index(epochs, self.length)
+        self.data_parallel_num = data_parallel_num
+        self.offset = data_parallel_index * self.batch_size
+
+    def __build_index(self, epochs: int, length: int) -> np.ndarray:
+        idx = np.empty(epochs * length, np.int64)
+        for i in range(epochs):
+            t = np.random.permutation(length) if self.shuffle else np.arange(length)
+            idx[i * length : (i + 1) * length] = t
+        return idx
+
+    def __iter__(self):
+        """Skip, because this is a private iterator called only from sampler."""
+        return self
+
+    def __next__(self) -> List[np.ndarray]:
+        """Retrieve next elements."""
+        if self.offset >= self.epochs * self.length:
+            raise StopIteration
+
+        end_idx = self.offset + self.batch_size
+        if end_idx <= self.epochs * self.length:
+            idx_slice = self.idx[self.offset : end_idx]
+            res = [d[idx_slice] for d in self.data]
+        else:
+            if self.drop_last:
+                raise StopIteration
+            idx_slice = self.idx[self.offset :]
+            res = [d[idx_slice] for d in self.data]
+            last_batch = []
+            for i in range(len(res)):
+                shape = list(res[i].shape)
+                shape[0] = self.batch_size
+                v = np.full(shape, self.backfill[i], dtype=res[i].dtype)
+                v[: len(res[i])] = res[i]
+                last_batch.append(v)
+            res = last_batch
+
+        self.offset += self.data_parallel_num * self.batch_size
+
+        if len(res) == 1:
+            return res[0]
+        return res
 
 
 class FileEdgeSampler(BaseSampler):
@@ -247,18 +317,18 @@ class FileEdgeSampler(BaseSampler):
 
     def __init__(
         self,
-        edge_type,
-        sample_files,
-        batch_size,
-        epochs=1,
-        shuffle=False,
-        delimeter="\t",
-        feature_dim=0,
-        feature_type=np.float32,
-        drop_last=False,
-        backfill_id=INVALID_NODE_ID,
-        worker_index=0,
-        num_workers=1,
+        edge_type: Union[int, List[int]],
+        sample_files: str,
+        batch_size: int,
+        epochs: int = 1,
+        shuffle: bool = False,
+        delimeter: str = "\t",
+        feature_dim: int = 0,
+        feature_type: np.dtype = np.float32,
+        drop_last: bool = False,
+        backfill_id: int = INVALID_NODE_ID,
+        worker_index: int = 0,
+        num_workers: int = 1,
         data_parallel_num: int = 1,
         data_parallel_index: int = 0,
     ):
@@ -296,7 +366,7 @@ class FileEdgeSampler(BaseSampler):
         filelist = get_files(sample_files, worker_index, num_workers)
         self._load_edge_files(filelist, delimeter)
 
-    def _load_edge_files(self, filelist, delimeter):
+    def _load_edge_files(self, filelist: List[str], delimeter: str):
         self.logger.info("Edge Sample files: {0}".format(", ".join(filelist)))
         edges = []
         features = []
@@ -318,7 +388,7 @@ class FileEdgeSampler(BaseSampler):
             self.features = np.array(features, dtype=self.feature_type)
         self.logger.info("total #edges: {0}".format(len(self.edges)))
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Total number of minibatches in this sampler."""
         if self.drop_last:
             return math.floor(
@@ -333,7 +403,7 @@ class FileEdgeSampler(BaseSampler):
                 / (self.batch_size * self.data_parallel_num)
             )
 
-    def __iter__(self):
+    def __iter__(self) -> _NumpyIterator:
         """Create a numpy based iterator."""
         if self.feature_dim == 0:
             return _NumpyIterator(
@@ -368,77 +438,6 @@ class FileEdgeSampler(BaseSampler):
         )
 
 
-class _NumpyIterator:
-    """Private iterable component to iterate numpy array."""
-
-    def __init__(
-        self,
-        data: List[np.ndarray],
-        batch_size,
-        epochs=1,
-        shuffle=False,
-        backfill=[],
-        drop_last=False,
-        data_parallel_num: int = 1,
-        data_parallel_index: int = 0,
-    ):
-        """Initialize iterator."""
-        self.length = len(data[0])
-        assert self.length > 0
-        if len(data) > 1:
-            for item in data:
-                assert len(item) == self.length
-        self.epochs = epochs
-        self.data = data
-        self.batch_size = batch_size
-        self.shuffle = shuffle
-        self.backfill = backfill
-        self.drop_last = drop_last
-        self.idx = self.__build_index(epochs, self.length)
-        self.data_parallel_num = data_parallel_num
-        self.offset = data_parallel_index * self.batch_size
-
-    def __build_index(self, epochs, length):
-        idx = np.empty(epochs * length, np.int64)
-        for i in range(epochs):
-            t = np.random.permutation(length) if self.shuffle else np.arange(length)
-            idx[i * length : (i + 1) * length] = t
-        return idx
-
-    def __iter__(self):
-        """Skip, because this is a private iterator called only from sampler."""
-        return self
-
-    def __next__(self):
-        """Retrieve next elements."""
-        if self.offset >= self.epochs * self.length:
-            raise StopIteration
-
-        end_idx = self.offset + self.batch_size
-        if end_idx <= self.epochs * self.length:
-            idx_slice = self.idx[self.offset : end_idx]
-            res = [d[idx_slice] for d in self.data]
-        else:
-            if self.drop_last:
-                raise StopIteration
-            idx_slice = self.idx[self.offset :]
-            res = [d[idx_slice] for d in self.data]
-            last_batch = []
-            for i in range(len(res)):
-                shape = list(res[i].shape)
-                shape[0] = self.batch_size
-                v = np.full(shape, self.backfill[i], dtype=res[i].dtype)
-                v[: len(res[i])] = res[i]
-                last_batch.append(v)
-            res = last_batch
-
-        self.offset += self.data_parallel_num * self.batch_size
-
-        if len(res) == 1:
-            return res[0]
-        return res
-
-
 class FileNodeSampler(BaseSampler):
     r"""
     Loading all files and generate node samples.
@@ -449,14 +448,14 @@ class FileNodeSampler(BaseSampler):
 
     def __init__(
         self,
-        sample_files,
-        batch_size,
-        epochs=1,
-        shuffle=False,
-        drop_last=False,
-        backfill_id=INVALID_NODE_ID,
-        worker_index=0,
-        num_workers=1,
+        sample_files: str,
+        batch_size: int,
+        epochs: int = 1,
+        shuffle: bool = False,
+        drop_last: bool = False,
+        backfill_id: int = INVALID_NODE_ID,
+        worker_index: int = 0,
+        num_workers: int = 1,
         data_parallel_num: int = 1,
         data_parallel_index: int = 0,
     ):
@@ -489,7 +488,7 @@ class FileNodeSampler(BaseSampler):
             [np.fromfile(f, dtype=np.int64, sep="\n") for f in filelist]
         )
 
-    def __iter__(self):
+    def __iter__(self) -> _NumpyIterator:
         """Return numpy iterator over file data."""
         return _NumpyIterator(
             data=[self.nodes],
@@ -502,7 +501,7 @@ class FileNodeSampler(BaseSampler):
             data_parallel_index=self.data_parallel_index,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Total number of minibatches in this sampler."""
         if self.drop_last:
             return math.floor(
@@ -518,7 +517,7 @@ class FileNodeSampler(BaseSampler):
             )
 
 
-class _RangeNodeIterator:
+class _RangeNodeIterator(_GEIterator):
     """Private iterable component to iterate a range."""
 
     def __init__(
@@ -540,7 +539,7 @@ class _RangeNodeIterator:
         self.data_parallel_index = data_parallel_index
         self.data_parallel_num = data_parallel_num
 
-    def __next__(self):
+    def __next__(self) -> np.ndarray:
         """Create a new range and increment offset."""
         if self.first >= self.last:
             raise StopIteration
@@ -584,7 +583,7 @@ class RangeNodeSampler(BaseSampler):
         self.num_workers = num_workers
         self.backfill_id = backfill_id
 
-    def __iter__(self):
+    def __iter__(self) -> _RangeNodeIterator:
         """Return a new range iterator."""
         return _RangeNodeIterator(
             self.start_id,
@@ -596,7 +595,7 @@ class RangeNodeSampler(BaseSampler):
             data_parallel_index=self.data_parallel_index,
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Total number of minibatches in this sampler."""
         res = math.ceil(
             (self.last - self.start_id)
@@ -633,7 +632,7 @@ class _RangeEdgeIterator(_RangeNodeIterator):
             (self.batch_size // 2, 1), edge_type, dtype=np.int64
         )
 
-    def __next__(self):
+    def __next__(self) -> np.ndarray:
         # generate node list, shape (2 * batch_size,)
         nodes = super().__next__()
         nodes = nodes.reshape(-1, 2)
@@ -647,13 +646,13 @@ class RangeEdgeSampler(RangeNodeSampler):
 
     def __init__(
         self,
-        edge_type,
-        first,
-        last,
-        batch_size,
-        worker_index,
-        num_workers,
-        backfill_id,
+        edge_type: Union[int, List[int]],
+        first: int,
+        last: int,
+        batch_size: int,
+        worker_index: int,
+        num_workers: int,
+        backfill_id: int,
         data_parallel_num: int = 1,
         data_parallel_index: int = 0,
     ):
@@ -670,7 +669,7 @@ class RangeEdgeSampler(RangeNodeSampler):
         )
         self.edge_type = edge_type
 
-    def __iter__(self):
+    def __iter__(self) -> _RangeEdgeIterator:
         """Return a new edge iterator."""
         return _RangeEdgeIterator(
             self.edge_type,
@@ -723,7 +722,7 @@ class CSVNodeSampler(BaseSampler):
         """No-op."""
         return self
 
-    def __next__(self):
+    def __next__(self) -> np.ndarray:
         """Implement iterator interface."""
         start_pos = (
             self.cur_batch * self.batch_size * self.data_parallel_num
@@ -740,7 +739,7 @@ class CSVNodeSampler(BaseSampler):
             end_pos = len(self.node_list)
         return np.array(self.node_list[start_pos : end_pos : self.data_parallel_num])
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Total number of minibatches in this sampler."""
         return self.count
 
@@ -755,14 +754,14 @@ class FileTupleSampler(BaseSampler):
 
     def __init__(
         self,
-        filename,
-        batch_size,
-        epochs=1,
-        shuffle=False,
-        drop_last=False,
-        backfill=INVALID_NODE_ID,
-        worker_index=0,
-        num_workers=1,
+        filename: str,
+        batch_size: int,
+        epochs: int = 1,
+        shuffle: bool = False,
+        drop_last: bool = False,
+        backfill: int = INVALID_NODE_ID,
+        worker_index: int = 0,
+        num_workers: int = 1,
         data_parallel_num: int = 1,
         data_parallel_index: int = 0,
     ):
@@ -793,7 +792,7 @@ class FileTupleSampler(BaseSampler):
         self.data = self._load_tuple_file(filename, worker_index, num_workers)
 
     @staticmethod
-    def _tuple_parse_func(line):
+    def _tuple_parse_func(line: str) -> Tuple[int, int]:
         cols = line.split("\t")
         assert len(cols) == 2
         nid, ntype = int(cols[0]), int(cols[1])
@@ -811,7 +810,7 @@ class FileTupleSampler(BaseSampler):
         self.logger.info("total #tuple: {}".format(len(data)))
         return data
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Total number of minibatches in this sampler."""
         if self.drop_last:
             return math.floor(
@@ -826,7 +825,7 @@ class FileTupleSampler(BaseSampler):
                 / (self.batch_size * self.data_parallel_num)
             )
 
-    def __iter__(self):
+    def __iter__(self) -> _NumpyIterator:
         """Create a new numpy based iterator from this sampler."""
         return _NumpyIterator(
             [self.data],
@@ -845,18 +844,18 @@ class TextFileSampler(BaseSampler):
 
     def __init__(
         self,
-        store_name,
-        filename,
-        adl_config=None,
-        batch_size=512,
-        buffer_size=1024,
-        epochs=1,
-        shuffle=False,
-        drop_last=False,
-        worker_index=0,
-        num_workers=1,
-        read_block_in_M=50,
-        buffer_queue_size=3,
+        store_name: str,
+        filename: str,
+        adl_config: str = None,
+        batch_size: int = 512,
+        buffer_size: int = 1024,
+        epochs: int = 1,
+        shuffle: bool = False,
+        drop_last: bool = False,
+        worker_index: int = 0,
+        num_workers: int = 1,
+        read_block_in_M: int = 50,
+        buffer_queue_size: int = 3,
         data_parallel_num: int = 1,
         data_parallel_index: int = 0,
     ):
@@ -894,7 +893,7 @@ class TextFileSampler(BaseSampler):
             )
         self.end = False
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Raise error, because data is streamed."""
         raise NotImplementedError
 
@@ -907,7 +906,7 @@ class TextFileSampler(BaseSampler):
         """Stop iteration."""
         self.file_iter.join()
 
-    def __next__(self):
+    def __next__(self) -> List[str]:
         """Load next elements from file."""
         if self.end and len(self.buf) == 0:
             raise StopIteration
@@ -940,7 +939,9 @@ class TextFileSampler(BaseSampler):
         self.end = False
 
 
-def _node_label_feature_parser_func(line):
+def _node_label_feature_parser_func(
+    line: str,
+) -> Tuple[np.int64, np.float32, np.ndarray]:
     r"""
     Tab separated lines.
 
@@ -965,15 +966,17 @@ class FileTupleSamplerV2(BaseSampler):
 
     def __init__(
         self,
-        filename,
-        batch_size,
-        epochs=1,
-        shuffle=False,
-        drop_last=False,
-        backfill=INVALID_NODE_ID,
-        worker_index=0,
-        num_workers=1,
-        line_parser_func=_node_label_feature_parser_func,
+        filename: str,
+        batch_size: int,
+        epochs: int = 1,
+        shuffle: bool = False,
+        drop_last: bool = False,
+        backfill: int = INVALID_NODE_ID,
+        worker_index: int = 0,
+        num_workers: int = 1,
+        line_parser_func: Callable[
+            [str], Tuple[np.int64, np.int32, np.ndarray]
+        ] = _node_label_feature_parser_func,
         data_parallel_num: int = 1,
         data_parallel_index: int = 0,
     ):
@@ -1005,8 +1008,14 @@ class FileTupleSamplerV2(BaseSampler):
             filename, worker_index, num_workers, line_parser_func
         )
 
-    def _load_tuple_file(self, filename, worker_index, num_workers, parse_func):
-        raw_data = []
+    def _load_tuple_file(
+        self,
+        filename: str,
+        worker_index: int,
+        num_workers: int,
+        parse_func: Callable[[str], tuple],
+    ) -> List[np.ndarray]:
+        raw_data: List[List[tuple]] = []
         self.logger.info("Load tuple file: {}".format(filename))
         for cnt, l in enumerate(open(filename)):
             if cnt % num_workers == worker_index:
@@ -1026,7 +1035,7 @@ class FileTupleSamplerV2(BaseSampler):
         )
         return data
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return number of minibatches in this sampler."""
         if self.drop_last:
             return math.floor(
@@ -1041,7 +1050,7 @@ class FileTupleSamplerV2(BaseSampler):
                 / (self.batch_size * self.data_parallel_num)
             )
 
-    def __iter__(self):
+    def __iter__(self) -> _NumpyIterator:
         """Create a new iterator."""
         return _NumpyIterator(
             self.data,

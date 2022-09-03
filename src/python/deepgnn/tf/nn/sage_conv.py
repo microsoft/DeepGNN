@@ -46,7 +46,7 @@ class MeanAggregator(tf.keras.layers.Layer):
                 trainable=True,
             )
 
-    def call(self, inputs):
+    def call(self, inputs: tf.Tensor) -> tf.Tensor:
         """Evaluate aggregator."""
         self_vecs, neig_vecs = inputs
 
@@ -116,7 +116,7 @@ class MaxPoolingAggregator(tf.keras.layers.Layer):
                 trainable=True,
             )
 
-    def call(self, inputs):
+    def call(self, inputs: tf.Tensor) -> tf.Tensor:
         """Evaluate aggregator."""
         self_vecs, neig_vecs = inputs  # [N, in_dim], [N, num_nb, in_dim]
         neigh_h = neig_vecs
@@ -183,7 +183,7 @@ class LSTMAggregator(tf.keras.layers.Layer):
         self.lstm_cell = tf.keras.layers.LSTMCell(self.hidden_dim)
         self.rnn = tf.keras.layers.RNN(self.lstm_cell, return_sequences=True)
 
-    def call(self, inputs):
+    def call(self, inputs: tf.Tensor) -> tf.Tensor:
         """Evaluate aggregator."""
         self_vecs, neig_vecs = inputs  # [N, in_dim], [N, num_nb, in_dim]
 
@@ -239,7 +239,13 @@ def init_aggregators(
     return agg_layers
 
 
-def aggregate(hidden, agg_layers, num_samples, dims, concat=True):
+def aggregate(
+    hidden: tf.Tensor,
+    agg_layers: List[tf.keras.layers.Layer],
+    num_samples: List[int],
+    dims: tuple,
+    concat: bool = True,
+) -> tf.Tensor:
     """SAGE aggregation."""
     N = len(num_samples)
     for layer in range(N):
