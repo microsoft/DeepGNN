@@ -41,15 +41,17 @@ class Server:
         storage_type: client.PartitionStorageType = client.PartitionStorageType.memory,
         config_path: str = "",
         stream: bool = False,
+        partition_count: int = 0,
     ):
         """Init snark server."""
-        with open(os.path.join(data_path, "meta.txt"), "r") as meta:
-            # TODO(alsamylk): expose graph metadata reader in snark.
-            # Based on snark.client._read_meta() method
-            skip_lines = 7
-            for _ in range(skip_lines):
-                meta.readline()
-            partition_count = int(meta.readline())
+        if not data_path.startswith("adl://") and not data_path.startswith("hdfs://"):
+            with open(os.path.join(data_path, "meta.txt"), "r") as meta:
+                # TODO(alsamylk): expose graph metadata reader in snark.
+                # Based on snark.client._read_meta() method
+                skip_lines = 7
+                for _ in range(skip_lines):
+                    meta.readline()
+                partition_count = int(meta.readline())
 
         ssl_config = None
         if ssl_key is not None:
