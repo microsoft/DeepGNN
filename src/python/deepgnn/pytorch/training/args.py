@@ -44,6 +44,7 @@ def init_trainer_args(parser: argparse.ArgumentParser):
     group.add_argument("--stream", action="store_true", default=False, help="If ADL data path, stream directly to memory or download to disk first.")
     group.add_argument("--partition_count", type=int, default=0, help="Graph data partition count.")
 
+
 def init_fp16_args(parser: argparse.ArgumentParser):
     """Configure arguments for training with half-precision floats."""
     group = parser.add_argument_group("FP16 Parameters")
