@@ -4,6 +4,7 @@
 """Functions to start distributed training."""
 
 import argparse
+import platform
 import torch
 from typing import Optional, Callable, List
 from deepgnn import TrainerType
@@ -117,7 +118,7 @@ def run_dist(
 
     num_workers = (
         0
-        if issubclass(dataset.sampler_class, (GENodeSampler, GEEdgeSampler))
+        if issubclass(dataset.sampler_class, (GENodeSampler, GEEdgeSampler)) or platform.system() == "Windows"
         else args.data_parallel_num
     )
 
