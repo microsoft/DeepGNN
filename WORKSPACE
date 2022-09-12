@@ -152,9 +152,9 @@ boost_deps()
 http_archive(
     name = "jvm",
     build_file = "//config:jvm.BUILD",
-    sha256 = "fb4bcb0d21ec332b086ce07f62cc7eda7f0099855d7eb53880fc4b275ecc1ceb",
-    strip_prefix = "openlogic-openjdk-8u272-b10-linux-x64",
-    urls = ["https://builds.openlogic.com/downloadJDK/openlogic-openjdk/8u272-b10/openlogic-openjdk-8u272-b10-linux-x64.tar.gz"],
+    sha256 = "457774fcca714385f43fe93ad484274ce30643384fdd3232eefa8c3f834bcca9",
+    strip_prefix = "microsoft-jdk-17.0.4.1-linux-x64",
+    urls = ["https://aka.ms/download-jdk/microsoft-jdk-17.0.4.1-linux-x64.tar.gz"],
 )
 
 http_archive(
