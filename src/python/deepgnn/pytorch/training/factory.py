@@ -118,7 +118,8 @@ def run_dist(
 
     num_workers = (
         0
-        if issubclass(dataset.sampler_class, (GENodeSampler, GEEdgeSampler)) or platform.system() == "Windows"
+        if issubclass(dataset.sampler_class, (GENodeSampler, GEEdgeSampler))
+        or platform.system() == "Windows"
         else args.data_parallel_num
     )
 
