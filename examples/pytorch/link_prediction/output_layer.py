@@ -5,12 +5,12 @@ import torch.nn as nn
 
 from deepgnn.pytorch.encoding.twinbert.pooler import WeightPooler
 from deepgnn.pytorch.encoding.twinbert.encoder import TwinBERTEncoder
-from deepgnn.pytorch.encoding.twinbert.deepspeed.nvidia_modeling import (
+from deepgnn.pytorch.encoding.twinbert.deepspeed.nvidia_modeling import (  # type: ignore
     BertEncoder,
     BertConfig,
 )
 from deepgnn.pytorch.encoding.twinbert.configuration import DeepSpeedArgs
-from consts import (
+from consts import (  # type: ignore
     SIM_TYPE_COSINE,
     SIM_TYPE_MAXFEEDFORWARD,
     SIM_TYPE_MAXRESLAYER,
@@ -20,7 +20,7 @@ from consts import (
     HIDDEN_SIZE,
     SIM_TYPE_COSINE_WITH_RNS,
 )
-from poolers import (
+from poolers import (  # type: ignore
     feedforwardpooler,
     maxfeedforwardpooler,
     reslayerpooler,

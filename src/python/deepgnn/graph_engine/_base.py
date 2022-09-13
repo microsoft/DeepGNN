@@ -5,9 +5,12 @@
 
 import fsspec
 import numpy as np
-from typing import Tuple, Union
+from typing import Tuple, Union, Iterator
 from enum import Enum, IntEnum
 from fsspec.utils import infer_storage_options
+
+
+QueryOutput = Union[dict, tuple, np.ndarray, list]
 
 
 class FeatureType(Enum):
@@ -38,11 +41,11 @@ class Graph:
     ALL_NODE_TYPE = -1
     ALL_EDGE_TYPE = -1
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator:
         """Node or Edge iterator."""
         raise NotImplementedError
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the number of nodes or edges in the graph."""
         raise NotImplementedError
 

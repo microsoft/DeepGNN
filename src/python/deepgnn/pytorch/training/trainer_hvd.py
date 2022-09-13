@@ -2,9 +2,9 @@
 # Licensed under the MIT License.
 """Distributed training with horovod."""
 
+from typing import Tuple
 import argparse
 import torch
-from torch.nn import Module
 from torch.optim import Optimizer
 from deepgnn.pytorch.training.trainer_fp16 import FP16Trainer, BaseModel
 from deepgnn.pytorch.training.utils import disable_infini_band
@@ -19,7 +19,7 @@ class HVDTrainer(FP16Trainer):
         super().__init__(args)
         self._init_hvd()
 
-    def _evaluate(self, model: Module):
+    def _evaluate(self, model: BaseModel) -> Tuple[torch.Tensor, torch.Tensor]:
         metric, loss = super()._evaluate(model)
         metric = hvd.allreduce(metric)
         loss = hvd.allreduce(loss)
@@ -42,12 +42,12 @@ class HVDTrainer(FP16Trainer):
             f" world_size:{self.world_size}"
         )
 
-    def _init_model(self, model: BaseModel):
+    def _init_model(self, model: BaseModel) -> BaseModel:
         model = super()._init_model(model)
         hvd.broadcast_parameters(model.state_dict(), root_rank=0)
         return model
 
-    def _init_optimizer(self, optimizer: Optimizer):
+    def _init_optimizer(self, optimizer: Optimizer) -> Optimizer:
         optimizer = super()._init_optimizer(optimizer)
         hvd.broadcast_optimizer_state(optimizer, root_rank=0)
         compression = (
@@ -60,17 +60,17 @@ class HVDTrainer(FP16Trainer):
             op=hvd.Average,
         )
 
-    def _train_one_epoch(self, model: Module, epoch: int):
+    def _train_one_epoch(self, model: BaseModel, epoch: int):
         super()._train_one_epoch(model, epoch)
         hvd.join()
 
-    def _inference(self, model: Module):
+    def _inference(self, model: BaseModel):
         super()._inference(model)
         hvd.join()
 
     def _apex_backward(self, scaled_loss: torch.Tensor):
         scaled_loss.backward()
-        self.optimizer.synchronize()
+        self.optimizer.synchronize()  # type: ignore
 
     def _apex_step(self):
         with self.optimizer.skip_synchronize():

@@ -12,7 +12,7 @@ runs:
     - run: brew install clang-format
       shell: bash
       if: runner.os == 'macOS'
-    - run: pip install wheel pre-commit==2.17.0 mypy==0.780 numpy==1.21.6
+    - run: pip install wheel pre-commit==2.17.0 mypy==0.971 numpy==1.21.6 torch==1.11.0 tensorflow==2.7.2
       shell: bash
       name: install dependencies
     - run: pre-commit install

@@ -13,6 +13,7 @@ from deepgnn.graph_engine._base import get_fs
 
 # Fields            Description             Action
 # ====================================================
+# v1                binary version          equal
 # 2708              node_count              additive
 # 10556             edge_count              additive
 # 4                 node_type_num           equal
@@ -47,7 +48,8 @@ class Meta:
         self._from_file()
 
     def _from_file(self):
-        with self.fs.open(self.path, "rb") as meta:
+        with self.fs.open(self.path, "r") as meta:
+            self.version = meta.readline().strip()
             self.node_count = int(meta.readline())
             self.edge_count = int(meta.readline())
             self.node_type_num = int(meta.readline())
@@ -98,8 +100,13 @@ class Meta:
 def merge(fs, output_dir: str, meta_list: List[Meta]):
     """Merge meta files."""
     with fs.open("{}/meta.txt".format(output_dir), "w") as mtxt:
+        assert all(
+            map(lambda x: x.version == meta_list[0].version, meta_list)
+        ), "All partitions must have the same binary version"
         mtxt.writelines(
             [
+                str(meta_list[0].version),
+                "\n",
                 str(sum([i.node_count for i in meta_list])),
                 "\n",
                 str(sum([i.edge_count for i in meta_list])),

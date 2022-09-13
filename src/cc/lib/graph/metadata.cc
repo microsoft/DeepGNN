@@ -37,7 +37,20 @@ Metadata::Metadata(std::filesystem::path path, std::string config_path)
     }
 #endif
 
-    auto meta = open_meta(std::move(path), "r");
+    auto meta = open_meta(std::move(path), "rt");
+    if (fscanf(meta, "v%zu\n", &m_version) <= 0)
+    {
+        RAW_LOG_ERROR(
+            "Failed to read binary data version from meta file. Please use latest deepgnn package to convert data.");
+        exit(errno);
+    }
+
+    if (m_version < MINIMUM_SUPPORTED_VERSION)
+    {
+        RAW_LOG_FATAL("Unsupported version of binary data %zu. Minimum supported version is %zu. Please use latest "
+                      "deepgnn package to convert data.",
+                      m_version, MINIMUM_SUPPORTED_VERSION);
+    }
 
     if (fscanf(meta, "%zu\n", &m_node_count) <= 0)
     {
@@ -124,6 +137,10 @@ Metadata::Metadata(std::filesystem::path path, std::string config_path)
 void Metadata::Write(std::filesystem::path path) const
 {
     auto meta = open_meta(std::move(path), "w+");
+    if (fprintf(meta, "v%zu\n", m_version) <= 0)
+    {
+        exit(errno);
+    }
     if (fprintf(meta, "%zu\n", m_node_count) <= 0)
     {
         exit(errno);

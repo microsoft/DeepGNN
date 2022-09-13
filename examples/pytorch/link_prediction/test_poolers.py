@@ -43,9 +43,9 @@ from examples.pytorch.link_prediction.consts import (
 )
 from deepgnn.pytorch.encoding import MultiTypeFeatureEncoder
 from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
-from model import LinkPredictionModel
-from output_layer import OutputLayer
-from test_model import (  # noqa: F401
+from model import LinkPredictionModel  # type: ignore
+from output_layer import OutputLayer  # type: ignore
+from test_model import (  # type: ignore
     train_linkprediction_model_gat,
     train_linkprediction_model_hetgnn,
     lp_mock_graph,

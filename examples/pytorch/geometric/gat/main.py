@@ -13,7 +13,7 @@ from deepgnn.pytorch.modeling import BaseModel
 from deepgnn.pytorch.training import run_dist
 
 from deepgnn.graph_engine import FileNodeSampler, GraphEngineBackend
-from model_geometric import GAT, GATQueryParameter
+from model_geometric import GAT, GATQueryParameter  # type: ignore
 
 
 # fmt: off

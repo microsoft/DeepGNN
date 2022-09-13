@@ -21,7 +21,7 @@ from examples.pytorch.conftest import (  # noqa: F401
 )
 from deepgnn.graph_engine import FeatureType
 
-from model import PTGSupervisedGraphSage
+from model import PTGSupervisedGraphSage  # type: ignore
 
 
 @pytest.fixture(scope="module")

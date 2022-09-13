@@ -16,7 +16,7 @@ import tempfile
 from torch.utils.data import IterableDataset
 
 from deepgnn.graph_engine import Graph, FeatureType, SamplingStrategy
-from model import KGEModel
+from model import KGEModel  # type: ignore
 
 
 class MockEdgeDataLoader(IterableDataset):

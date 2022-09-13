@@ -40,7 +40,7 @@ class GCNQuery:
 
     def query_training(
         self, graph: Graph, inputs: np.ndarray, return_shape: bool = False
-    ):
+    ) -> tuple:
         """Query function to train a GCN model."""
         nodes, edges, src_idx = graph_ops.sub_graph(
             graph=graph,

@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 """Reference: https://dl.acm.org/doi/pdf/10.1145/3219819.3219947."""
+from typing import Callable, List
 import torch
 import torch.nn as nn
 from deepgnn.pytorch.common.consts import (
@@ -21,11 +22,11 @@ class LgclEncoder(nn.Module):
 
     def __init__(
         self,
-        in_features,
-        largest_k_list,
-        hidden_dims,
-        residual=MODEL_RESIDUAL_ADD,
-        acts=None,
+        in_features: int,
+        largest_k_list: List[int],
+        hidden_dims: List[int],
+        residual: str = MODEL_RESIDUAL_ADD,
+        acts: List[Callable[[torch.Tensor], torch.Tensor]] = [],
     ):
         """Initialize encoder."""
         super(LgclEncoder, self).__init__()
@@ -72,7 +73,7 @@ class LgclEncoder(nn.Module):
                 f"{LgclEncoder.OUTPUT}", nn.Linear(in_features, self.hidden_dims[-1])
             )
 
-    def forward(self, context: dict):
+    def forward(self, context: dict) -> torch.Tensor:
         """Evaluate encoder."""
         samples = context[INPUTS]
         fanouts = context[FANOUTS]

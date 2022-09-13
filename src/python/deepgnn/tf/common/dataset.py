@@ -1,16 +1,18 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 """Commmon functions to create datasets in TF."""
+from typing import Tuple, Optional
 from deepgnn import get_logger
 import tensorflow as tf
 from deepgnn.graph_engine.backends.common import GraphEngineBackend
 from deepgnn.graph_engine.graph_dataset import DeepGNNDataset
+from deepgnn.graph_engine.samplers import BaseSampler
 from typing import Callable
 
 
 def create_tf_dataset(
-    sampler_class,
-    query_fn: Callable = None,
+    sampler_class: BaseSampler,
+    query_fn: Callable,
     backend: GraphEngineBackend = None,
     num_workers: int = 1,
     worker_index: int = 0,
@@ -18,7 +20,7 @@ def create_tf_dataset(
     enable_prefetch: bool = False,
     # parameters to initialize samplers
     **kwargs,
-):
+) -> Tuple[tf.data.Dataset, Optional[int]]:
     """Create DeepGNNDataset.
 
     DeepGNNDataset initializes and executes a node or edge sampler given as
@@ -91,7 +93,7 @@ def create_tf_dataset(
     )
 
 
-def get_distributed_dataset(func: Callable):
+def get_distributed_dataset(func: Callable) -> tf.data.Dataset:
     """Generate distributed dataset from function.
 
     Distribute_datasets_from_function is introduced in tensorflow 2.4. For other tensorflow versions >= 2 and < 2.4,

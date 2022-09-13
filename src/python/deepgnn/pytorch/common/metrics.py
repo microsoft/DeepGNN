@@ -10,11 +10,11 @@ from sklearn.metrics import f1_score, roc_auc_score, accuracy_score
 class BaseMetric(object):
     """Base class for metrics."""
 
-    def name(self):
+    def name(self) -> str:
         """Return name of the metric."""
         return self.__class__.__name__
 
-    def compute(self, scores: torch.Tensor, labels: torch.Tensor):
+    def compute(self, scores: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         """Compute metric value based on model scores and expected labels."""
         raise NotImplementedError
 
@@ -22,7 +22,7 @@ class BaseMetric(object):
 class F1Score(BaseMetric):
     """F1 score implementation."""
 
-    def compute(self, scores: torch.Tensor, labels: torch.Tensor):
+    def compute(self, scores: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         """Passthrough to scikit."""
         return torch.tensor(
             f1_score(labels.squeeze(), scores.detach().cpu().numpy(), average="micro")
@@ -32,7 +32,7 @@ class F1Score(BaseMetric):
 class Accuracy(BaseMetric):
     """Accuracy classification score."""
 
-    def compute(self, scores: torch.Tensor, labels: torch.Tensor):
+    def compute(self, scores: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         """Passthrough to scikit."""
         return torch.tensor(
             accuracy_score(y_true=labels.cpu(), y_pred=scores.detach().cpu().numpy())
@@ -42,7 +42,7 @@ class Accuracy(BaseMetric):
 class MRR(BaseMetric):
     """MRR score implementation."""
 
-    def __init__(self, rank_in_ascending_order=False) -> None:
+    def __init__(self, rank_in_ascending_order: bool = False):
         """
         Initialize MRR metric.
 
@@ -54,7 +54,7 @@ class MRR(BaseMetric):
         super().__init__()
         self.rank_in_ascending_order = rank_in_ascending_order
 
-    def compute(self, scores: torch.Tensor, labels: torch.Tensor):
+    def compute(self, scores: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         """Compute metric based on logit scores."""
         assert len(scores.shape) > 1
         assert scores.size() == labels.size()
@@ -74,6 +74,6 @@ class MRR(BaseMetric):
 class ROC(BaseMetric):
     """ROC score implementation with scikit."""
 
-    def compute(self, scores: torch.Tensor, labels: torch.Tensor):
+    def compute(self, scores: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         """Compute metric value based on model scores and expected labels."""
         return torch.tensor(roc_auc_score(labels.cpu(), scores.cpu().detach().numpy()))

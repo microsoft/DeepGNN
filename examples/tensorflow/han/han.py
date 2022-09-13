@@ -36,7 +36,7 @@ class HANQuery:
 
     def query_trainning(
         self, graph: Graph, inputs: np.ndarray, return_shape: bool = False
-    ):
+    ) -> tuple:
         """Generate data to train model."""
         if self.param.label_idx == -1:
             label = np.empty([len(inputs), self.param.label_dim], np.int32)

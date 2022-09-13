@@ -65,6 +65,7 @@ increment relevant counters for each node and edge for each processed node. When
 .. code-block:: python
 
     >>> import itertools
+    >>> from deepgnn.graph_engine.snark.meta import BINARY_DATA_VERSION
     >>> class PartitionMeta:
     ...     def __init__(self, partition_id:int):
     ...         self.node_count = 0
@@ -92,7 +93,8 @@ increment relevant counters for each node and edge for each processed node. When
     ...     def close(self, binary_dir: str):
     ...         with open(os.path.join(binary_dir, "meta_%d.txt" % self.partition_ids[0]), "w+") as f:
     ...             contents = "\n".join(list(map(str, itertools.chain(
-    ...                 [self.node_count,
+    ...                 [BINARY_DATA_VERSION,
+    ...                 self.node_count,
     ...                 self.edge_count,
     ...                 self.node_type_count,
     ...                 self.edge_type_count,
