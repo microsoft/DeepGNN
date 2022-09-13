@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 
 """Conversion functions to internal binary format."""
-from typing import Optional
+from typing import Optional, Type
 import multiprocessing as mp
 import math
 from operator import add
@@ -36,6 +36,7 @@ class MultiWorkersConverter:
         dispatcher: Dispatcher = None,
         skip_node_sampler: bool = False,
         skip_edge_sampler: bool = False,
+        iterator_class: Type[TextFileIterator] = TextFileIterator,
     ):
         """Run multi worker converter in multi process.
 
@@ -66,6 +67,7 @@ class MultiWorkersConverter:
         self.buffer_queue_size = queue_size
         self.thread_count = thread_count
         self.dispatcher = dispatcher
+        self.iterator_class = iterator_class
 
         self.fs, _ = get_fs(graph_path)
 
@@ -102,7 +104,7 @@ class MultiWorkersConverter:
         )
 
         d = self.dispatcher
-        dataset = TextFileIterator(
+        dataset = self.iterator_class(
             filename=self.graph_path,
             store_name=None,
             batch_size=self.record_per_step,
