@@ -40,7 +40,7 @@ runs:
         bazel test -c dbg //examples/tensorflow/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
       shell: bash
       name: run python tests in examples folder
-      if: runner.os = 'Linux'
+      if: runner.os == 'Linux'
     - run: |
         bazel test -c dbg //docs:* --test_output=all --config=linux --disk_cache=~/bazel-cache
         bazel run -c dbg //docs:make_docs --config=linux
