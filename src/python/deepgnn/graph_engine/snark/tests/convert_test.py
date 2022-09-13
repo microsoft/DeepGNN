@@ -1123,7 +1123,7 @@ def test_edge_list_binary_escape():
     src, dst, typ, weight, features = next(
         decoder.decode(r"0,-1,0,1.0,binary,1,test\,\,feature\,,binary,1,\\")
     )
-    assert features[1] == "\\"
+    assert features[1] == r"\\"
 
 
 def test_binary_writer_error_checking():

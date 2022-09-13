@@ -156,6 +156,11 @@ class EdgeListDecoder(Decoder):
     def _get_feature(
         self, key: str, length: List[int], data: Iterator
     ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray], None]:
+        def _str_get(item, idx):
+            if not len(item):
+                return ""
+            return item[idx]
+
         if not length[0]:
             return None
 
@@ -178,7 +183,8 @@ class EdgeListDecoder(Decoder):
             output_len = len(output)
             while (
                 output_len
-                and output.replace(f"{self.escape}{self.escape}", "")[-1] == self.escape
+                and _str_get(output.replace(f"{self.escape}{self.escape}", ""), -1)
+                == self.escape
             ):
                 output = output[:-1]
                 try:
