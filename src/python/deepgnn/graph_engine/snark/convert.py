@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 
 """Conversion functions to internal binary format."""
-from typing import Optional, Type
+from typing import Optional
 import multiprocessing as mp
 import math
 from operator import add
@@ -36,7 +36,7 @@ class MultiWorkersConverter:
         dispatcher: Dispatcher = None,
         skip_node_sampler: bool = False,
         skip_edge_sampler: bool = False,
-        iterator_class: Type[TextFileIterator] = TextFileIterator,
+        file_iterator: Optional[TextFileIterator] = None,
     ):
         """Run multi worker converter in multi process.
 
@@ -54,6 +54,7 @@ class MultiWorkersConverter:
             dispatcher: dispatcher type when generating bin files.
             skip_node_sampler(bool): skip generation of node alias tables.
             skip_edge_sampler(bool): skip generation of edge alias tables.
+            file_iterator(TextFileIterator): Iterator to yield lines of the input text file.
         """
         if decoder is None:
             decoder = JsonDecoder()  # type: ignore
@@ -67,7 +68,7 @@ class MultiWorkersConverter:
         self.buffer_queue_size = queue_size
         self.thread_count = thread_count
         self.dispatcher = dispatcher
-        self.iterator_class = iterator_class
+        self.file_iterator = file_iterator
 
         self.fs, _ = get_fs(graph_path)
 
@@ -104,19 +105,20 @@ class MultiWorkersConverter:
         )
 
         d = self.dispatcher
-        dataset = self.iterator_class(
-            filename=self.graph_path,
-            store_name=None,
-            batch_size=self.record_per_step,
-            epochs=1,
-            read_block_in_M=self.read_block_in_M,
-            buffer_queue_size=self.buffer_queue_size,
-            thread_count=self.thread_count,
-            worker_index=self.worker_index,
-            num_workers=self.worker_count,
-        )
+        if self.file_iterator is None:
+            self.file_iterator = TextFileIterator(
+                filename=self.graph_path,
+                store_name=None,
+                batch_size=self.record_per_step,
+                epochs=1,
+                read_block_in_M=self.read_block_in_M,
+                buffer_queue_size=self.buffer_queue_size,
+                thread_count=self.thread_count,
+                worker_index=self.worker_index,
+                num_workers=self.worker_count,
+            )
 
-        for _, data in enumerate(dataset):
+        for _, data in enumerate(self.file_iterator):
             for line in data:
                 d.dispatch(line)
 
