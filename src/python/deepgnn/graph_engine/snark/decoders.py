@@ -58,7 +58,8 @@ class EdgeListDecoder(Decoder):
         features[dense]: dtype_name length v1 v2 ... dtype_name2 length2 v1 v2 ...
         features[sparse with 2 dim coordinates vector]: dtype_name values.size,coords.shape[1] c1 c2 ... v1 v2 ...
         features[sparse with 1 dim coordinates vector]: dtype_name values.size,0 c1 c2 ... v1 v2 ...
-        * Nodes must be sorted by node_id, edges sorted by type first then dst.
+        * Sort file as node, then all of the nodes outgoing edges sorted by type then dst.
+        * The first node given will be given interal id 0 and so on.
         * Feature vectors are given indicies based on the order they appear in the line, the first feature vector is index 0.
         A feature index can be skipped by giving a 0 length vector.
 
@@ -161,6 +162,12 @@ class EdgeListDecoder(Decoder):
                 return ""
             return item[idx]
 
+        try:
+            int(key)
+            raise ValueError("Expected feature vector key is str.")
+        except ValueError:
+            pass
+
         if not length[0]:
             return None
 
@@ -241,11 +248,6 @@ class EdgeListDecoder(Decoder):
                     key = next(data)
                 except StopIteration:
                     break
-                try:
-                    int(key)
-                    raise ValueError("Expected feature vector key is str.")
-                except ValueError:
-                    pass
             if length is None:
                 length = list(map(int, next(data).split(self.length_delimiter)))
 
