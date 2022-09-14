@@ -3,12 +3,15 @@
 
 """Snark districuted client implementation."""
 from typing import List, Dict
-import os
+import tempfile
 
 import deepgnn.graph_engine.snark.client as client
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.local as ge_snark
+from ctypes import c_char_p
 from deepgnn import get_logger
+from deepgnn.graph_engine.snark.meta import _set_hadoop_classpath, _get_meta_path
+from deepgnn.graph_engine.snark._lib import _get_c_lib
 
 
 class Client(ge_snark.Client):
@@ -41,17 +44,46 @@ class Server:
         storage_type: client.PartitionStorageType = client.PartitionStorageType.memory,
         config_path: str = "",
         stream: bool = False,
-        partition_count: int = 0,
     ):
         """Init snark server."""
-        if not data_path.startswith("adl://") and not data_path.startswith("hdfs://"):
-            with open(os.path.join(data_path, "meta.txt"), "r") as meta:
-                # TODO(alsamylk): expose graph metadata reader in snark.
-                # Based on snark.client._read_meta() method
-                skip_lines = 7
-                for _ in range(skip_lines):
-                    meta.readline()
-                partition_count = int(meta.readline())
+        path = data_path
+
+        if (
+            path.startswith("hdfs://")
+            or path.startswith("adl://")
+            or path.startswith("file:///")
+        ):
+            _set_hadoop_classpath(config_path)
+
+            class _ErrCallback:  # Copied from client.py
+                def __init__(self, method: str):
+                    self.method = method
+
+                # We have to use mypy ignore, to reuse this callable object across
+                # all C function call because they have different signatures.
+                def __call__(self, result, func, arguments):
+                    if result != 0:
+                        raise Exception(f"Failed to {self.method}")
+
+            lib = _get_c_lib()
+            lib.HDFSMoveMeta.errcheck = _ErrCallback("hdfs move meta")  # type: ignore
+
+            hdfs_path = path
+            temp_dir = tempfile.TemporaryDirectory()
+            path = temp_dir.name
+            lib.HDFSMoveMeta(
+                c_char_p(bytes(_get_meta_path(hdfs_path), "utf-8")),
+                c_char_p(bytes(_get_meta_path(path), "utf-8")),
+                c_char_p(bytes(config_path, "utf-8")),
+            )
+
+        with open(_get_meta_path(path), "r") as meta:
+            # TODO(alsamylk): expose graph metadata reader in snark.
+            # Based on snark.client._read_meta() method
+            skip_lines = 7
+            for _ in range(skip_lines):
+                meta.readline()
+            partition_count = int(meta.readline())
 
         ssl_config = None
         if ssl_key is not None:

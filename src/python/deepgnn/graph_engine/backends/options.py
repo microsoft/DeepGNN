@@ -43,7 +43,6 @@ class BackendOptions:
         self.storage_type = PartitionStorageType.memory
         self.config_path = ""
         self.stream = False
-        self.partition_count = 0
 
         # sometimes user need to implement their own backend, using this custom
         # field, user can start graph engine using their own code.

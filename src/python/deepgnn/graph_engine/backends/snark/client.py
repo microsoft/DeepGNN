@@ -116,7 +116,6 @@ class SnarkDistributedBackend(GraphEngineBackend):
                 storage_type=options.storage_type,
                 config_path=options.config_path,
                 stream=options.stream,
-                partition_count=options.partition_count,
             )
         assert client_rank is not None, "Client rank should be always initialized"
         self._client = SynchronizedClient(  # type: ignore

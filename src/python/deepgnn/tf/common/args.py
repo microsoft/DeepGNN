@@ -34,7 +34,6 @@ def define_param_common(parser):
     group.add_argument("--storage_type", type=lambda type: PartitionStorageType[type], default=PartitionStorageType.memory, choices=list(PartitionStorageType.__members__.keys()) + list(PartitionStorageType), help="Partition storage backing to use, eg memory or disk.")
     group.add_argument("--config_path", type=str, default="", help="Directory where HDFS or other config files are stored.")
     group.add_argument("--stream", action="store_true", default=False, help="If ADL data path, stream directly to memory or download to disk first.")
-    group.add_argument("--partition_count", type=int, default=0, help="Graph data partition count.")
 
 
 def define_param_ps_dist_training(parser):
