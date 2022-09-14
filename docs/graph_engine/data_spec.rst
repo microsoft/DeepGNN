@@ -44,8 +44,9 @@ edge_info: src,dst,edge_type,edge_weight,<features>
 features[dense]: dtype_name,length,v1,v2,...,dtype_name2,length2,v1,v2,...
 features[sparse with 2 dim coordinates vector]: dtype_name,values.size/coords.shape[1],c1,c2,...,v1,v2,...
 features[sparse with 1 dim coordinates vector]: dtype_name,values.size/0,c1,c2,...,v1,v2,...
-* Sort file as node, then all of the nodes outgoing edges sorted by type then dst.
-* The first node given will be given interal id 0 and so on.
+* The file should be sorted so the first line has info on the first node, the next few lines contain
+all of this node's outgoing edges sorted by type then dst. The next line should have the second
+node and so on.
 * Feature vectors are given indicies based on the order they appear in the line, the first feature vector is index 0.
 A feature index can be skipped by giving a 0 length vector.
 
