@@ -36,6 +36,7 @@ py_test(
     deps = [
         ":example_torch_graphsage",
         requirement("numpy"),
+        requirement("ray"),
         requirement("pytest"),
         requirement("scikit-learn"),
         requirement("torch"),

@@ -3,13 +3,14 @@
 
 import pytest
 import sys
+import os
+import platform
 from typing import Dict
 
+import numpy as np
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
-from torchvision import datasets
-from torchvision.transforms import ToTensor
+from torch.utils.data import Dataset, DataLoader
 
 import ray
 import ray.train as train
@@ -17,21 +18,26 @@ from ray.train.torch import TorchTrainer
 from ray.air import session
 from ray.air.config import ScalingConfig
 
-# Download training data from open datasets.
-training_data = datasets.FashionMNIST(
-    root="~/data",
-    train=True,
-    download=True,
-    transform=ToTensor(),
-)
+import deepgnn.graph_engine.snark._lib as lib
+from deepgnn.graph_engine.snark.local import Client
 
-# Download test data from open datasets.
-test_data = datasets.FashionMNIST(
-    root="~/data",
-    train=False,
-    download=True,
-    transform=ToTensor(),
-)
+
+feature_idx = 1
+feature_dim = 50
+label_idx = 0
+label_dim = 121
+
+class CoraDataset(Dataset):
+    def __init__(self):
+        self.g = Client("/tmp/cora", [0, 1])
+
+    def __len__(self):
+        return self.g.node_count(np.array([0, 1, 2]))
+
+    def __getitem__(self, idx):
+        if isinstance(idx, (int, float)):
+            idx = [idx]
+        return self.g.node_features(idx, np.array([[feature_idx, feature_dim]]), feature_type=np.float32), torch.Tensor([0])
 
 
 # Define model
@@ -40,7 +46,7 @@ class NeuralNetwork(nn.Module):
         super(NeuralNetwork, self).__init__()
         self.flatten = nn.Flatten()
         self.linear_relu_stack = nn.Sequential(
-            nn.Linear(28 * 28, 512),
+            nn.Linear(feature_dim, 512),
             nn.ReLU(),
             nn.Linear(512, 512),
             nn.ReLU(),
@@ -60,7 +66,8 @@ def train_epoch(dataloader, model, loss_fn, optimizer):
     for batch, (X, y) in enumerate(dataloader):
         # Compute prediction error
         pred = model(X)
-        loss = loss_fn(pred, y)
+        print(pred.shape, y.shape, "OUTPUTTTT")
+        loss = loss_fn(pred, y.squeeze().long())
 
         # Backpropagation
         optimizer.zero_grad()
@@ -99,12 +106,14 @@ def train_func(config: Dict):
 
     worker_batch_size = batch_size // session.get_world_size()
 
+    training_data = CoraDataset()
+
     # Create data loaders.
     train_dataloader = DataLoader(training_data, batch_size=worker_batch_size)
-    test_dataloader = DataLoader(test_data, batch_size=worker_batch_size)
+    #test_dataloader = DataLoader(test_data, batch_size=worker_batch_size)
 
     train_dataloader = train.torch.prepare_data_loader(train_dataloader)
-    test_dataloader = train.torch.prepare_data_loader(test_dataloader)
+    #test_dataloader = train.torch.prepare_data_loader(test_dataloader)
 
     # Create model.
     model = NeuralNetwork()
@@ -117,12 +126,10 @@ def train_func(config: Dict):
 
     for _ in range(epochs):
         train_epoch(train_dataloader, model, loss_fn, optimizer)
-        loss = validate_epoch(test_dataloader, model, loss_fn)
-        loss_results.append(loss)
-        session.report(dict(loss=loss))
+        #loss = validate_epoch(test_dataloader, model, loss_fn)
+        #loss_results.append(loss)
+        #session.report(dict(loss=loss))
 
-    # return required for backwards compatibility with the old API
-    # TODO(team-ml) clean up and remove return
     return loss_results
 
 
@@ -134,6 +141,16 @@ def train_fashion_mnist(num_workers=2, use_gpu=False):
     )
     result = trainer.fit()
     print(f"Results: {result.metrics}")
+
+
+def setup_module(module):
+    lib_name = "libwrapper.so"
+    if platform.system() == "Windows":
+        lib_name = "wrapper.dll"
+
+    os.environ[lib._SNARK_LIB_PATH_ENV_KEY] = os.path.join(
+        os.path.dirname(__file__), "..", "..", "..", "src", "cc", "lib", lib_name
+    )
 
 
 def test_graphsage_ppi_hvd_trainer():
