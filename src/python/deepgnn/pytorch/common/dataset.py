@@ -3,18 +3,30 @@
 """Dataset implementation for torch models."""
 
 import torch
-from deepgnn.graph_engine import DeepGNNDataset, GraphEngineBackend
+from deepgnn.graph_engine import (
+    DeepGNNDataset,
+    GraphEngineBackend,
+    Generator,
+)
 from torch.utils.data import IterableDataset
-from typing import Callable
+from typing import Callable, Union
 
 
 class TorchDeepGNNDataset(IterableDataset, DeepGNNDataset):
-    """Implementation of DeepGNNDataset and IterableDataset for torch models."""
+    """Implementation of TorchDeepGNNDataset for use in a Torch Dataloader.
+
+    TorchDeepGNNDataset initializes and executes a node or edge sampler given as
+    sampler_class. For every batch of data requested, batch_size items are sampled
+    from the sampler and passed to the given query_fn which pulls all necessaary
+    information about the samples using the graph engine API. The output from
+    the query function is passed to the trainer worker as the input to the
+    model forward function.
+    """
 
     def __init__(
         self,
         sampler_class,
-        query_fn: Callable = None,
+        query_fn: Callable,
         backend: GraphEngineBackend = None,
         num_workers: int = 1,
         worker_index: int = 0,
@@ -69,7 +81,7 @@ class TorchDeepGNNDataset(IterableDataset, DeepGNNDataset):
             )
         super().init_sampler()
 
-    def __iter__(self):
+    def __iter__(self) -> Union[Generator, DeepGNNDataset._DeepGNNDatasetIterator]:
         """Create sampler and start iteration."""
         self._torch_init_sampler()
         return DeepGNNDataset.__iter__(self)

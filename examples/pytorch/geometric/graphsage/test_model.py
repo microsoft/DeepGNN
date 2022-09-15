@@ -20,7 +20,7 @@ from examples.pytorch.conftest import (  # noqa: F401
     prepare_local_test_files,
 )
 
-from model import PTGSupervisedGraphSage
+from model import PTGSupervisedGraphSage  # type: ignore
 
 
 @pytest.fixture(scope="module")

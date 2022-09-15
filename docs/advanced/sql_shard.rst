@@ -63,6 +63,7 @@ In this example we'll use sqlite3 module to connect to a database and fetch feat
     ...    def GetMetadata(self, request, context):
     ...        """Global information about graph. Needed to initialize client."""
     ...        return service_pb2.MetadataReply(
+    ...            version=1,
     ...            nodes=1,
     ...            edges=0,
     ...            node_types=1,

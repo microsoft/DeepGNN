@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 """Various encoders implementations."""
-from typing import Callable
+from typing import Callable, Optional, Union
 
 import numpy as np
 import torch
@@ -16,8 +16,13 @@ class SageEncoder(nn.Module):
 
     def __init__(
         self,
-        features,
-        query_func,
+        features: Callable[[torch.Tensor], torch.Tensor],
+        query_func: Optional[
+            Union[
+                Callable[[np.ndarray, Graph, FeatureType, int, int], dict],
+                Callable[[torch.Tensor], torch.Tensor],
+            ]
+        ],
         feature_dim: int,
         aggregator: nn.Module,
         num_sample: int,
@@ -25,7 +30,7 @@ class SageEncoder(nn.Module):
         embed_dim: int = 256,
         edge_type: int = 0,
         activation_fn: Callable = F.relu,
-        base_model=None,
+        base_model: Optional[object] = None,
     ):
         """Initialize SageEncoder.
 
@@ -48,6 +53,10 @@ class SageEncoder(nn.Module):
         if base_model:
             self.base_model = base_model
         self.features = features
+        self.query_func: Union[
+            Callable[[np.ndarray, Graph, FeatureType, int, int], dict],
+            Callable[[torch.Tensor], torch.Tensor],
+        ]
         if query_func is None:
             self.query_func = self.query_feature
         else:
@@ -69,7 +78,7 @@ class SageEncoder(nn.Module):
         feature_idx: int,
         feature_dim: int,
         neigh_nodes: np.ndarray = None,
-    ):
+    ) -> dict:
         """Query graph for training data."""
         context = {}
         if neigh_nodes is None:
@@ -79,17 +88,17 @@ class SageEncoder(nn.Module):
         neigh_nodes_unique, idx = np.unique(neigh_nodes, return_inverse=True)
 
         context["node_feats"] = self.query_func(
-            nodes,
+            nodes,  # type: ignore
             graph,
             feature_type,
             feature_idx,
             feature_dim,
             neigh_nodes=neigh_nodes,
-        )
+        )  # type: ignore
 
         neigh_feats_unique = self.query_func(
             neigh_nodes_unique, graph, feature_type, feature_idx, feature_dim
-        )
+        )  # type: ignore
 
         if isinstance(neigh_feats_unique, dict):
             neigh_feats_unique["neighbor_feats"] = neigh_feats_unique[
@@ -104,7 +113,7 @@ class SageEncoder(nn.Module):
             }
         else:
             context["neighbor_feats"] = neigh_feats_unique[idx]
-        context["node_count"] = len(nodes)
+        context["node_count"] = len(nodes)  # type: ignore
         return context
 
     def query_feature(
@@ -115,14 +124,14 @@ class SageEncoder(nn.Module):
         feature_idx: int,
         feature_dim: int,
         neigh_nodes: np.ndarray = None,
-    ):
+    ) -> np.ndarray:
         """Fetch features."""
         features = graph.node_features(
             nodes, np.array([[feature_idx, feature_dim]]), feature_type
         )
         return features
 
-    def forward(self, context: dict):
+    def forward(self, context: dict) -> torch.Tensor:
         """Generate embeddings for a batch of nodes."""
         neigh_feats = self.aggregator.forward(
             context["neighbor_feats"], context["node_count"][0]

@@ -37,7 +37,7 @@ class GATQuery:
         self.label_meta = np.array([[p.label_idx, p.label_dim]], np.int32)
         self.feat_meta = np.array([[p.feature_idx, p.feature_dim]], np.int32)
 
-    def query_training(self, graph: Graph, inputs):
+    def query_training(self, graph: Graph, inputs: np.ndarray) -> tuple:
         """Fetch training data."""
         nodes, edges, src_idx = graph_ops.sub_graph(
             graph,
@@ -66,12 +66,12 @@ class GAT(BaseModel):
     def __init__(
         self,
         in_dim: int,
+        q_param: GATQueryParameter,
         head_num: List = [8, 1],
         hidden_dim: int = 8,
         num_classes: int = -1,
         ffd_drop: float = 0.0,
         attn_drop: float = 0.0,
-        q_param: GATQueryParameter = None,
     ):
         """Initialize model."""
         self.q = GATQuery(q_param)

@@ -306,10 +306,6 @@ Prepare default command line arguments.
 
 .. code-block:: python
 
-	>>> try:
-	...     init_args_base
-	... except NameError:
-	...     init_args_base = init_args
 	>>> MODEL_DIR = f"~/tmp/gat_{np.random.randint(9999999)}"
 	>>> arg_list = [
 	...     "--data_dir", "/tmp/caveman",
@@ -333,13 +329,6 @@ Prepare default command line arguments.
 	...     "--metric_dir", MODEL_DIR,
 	...     "--save_path", MODEL_DIR,
 	... ]
-	>>> def init_args_wrap(init_args_base):
-	...     def init_args_new(parser):
-	...         init_args_base(parser)
-	...         parse_args = parser.parse_args
-	...         parser.parse_args = lambda: parse_args(arg_list)
-	...     return init_args_new
-	>>> init_args = init_args_wrap(init_args_base)
 
 
 Train
@@ -354,4 +343,5 @@ Finally we train the model to predict whether an edge exists between any two nod
 	...     init_dataset_fn=create_dataset,
 	...     init_optimizer_fn=create_optimizer,
 	...     init_args_fn=init_args,
+	...     run_args=arg_list,
 	... )

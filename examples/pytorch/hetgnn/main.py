@@ -10,9 +10,9 @@ from deepgnn.pytorch.modeling import BaseModel
 from deepgnn.pytorch.training import run_dist
 from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.graph_engine import CSVNodeSampler, GraphEngineBackend
-from args import init_args
-from model import HetGnnModel
-from sampler import HetGnnDataSampler
+from args import init_args  # type: ignore
+from model import HetGnnModel  # type: ignore
+from sampler import HetGnnDataSampler  # type: ignore
 
 
 def create_model(args: argparse.Namespace):

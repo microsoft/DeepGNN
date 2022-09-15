@@ -621,6 +621,41 @@ int32_t GetNeighborsInternal(PyGraph *py_graph, NodeID *in_node_ids, size_t in_n
     return 0;
 }
 
+int32_t NeighborCount(PyGraph *py_graph, NodeID *in_node_ids, size_t in_node_ids_size, Type *in_edge_types,
+                      size_t in_edge_types_size, uint64_t *out_neighbor_counts)
+{
+    if (py_graph->graph == nullptr)
+    {
+        RAW_LOG_ERROR("Internal graph is not initialized");
+        return 1;
+    }
+
+    if (py_graph->graph->graph)
+    {
+        py_graph->graph->graph->NeighborCount(
+            std::span(reinterpret_cast<snark::NodeId *>(in_node_ids), in_node_ids_size),
+            std::span(reinterpret_cast<snark::Type *>(in_edge_types), in_edge_types_size),
+            std::span(out_neighbor_counts, in_node_ids_size));
+        return 0;
+    }
+
+    try
+    {
+        py_graph->graph->client->NeighborCount(
+            std::span(reinterpret_cast<snark::NodeId *>(in_node_ids), in_node_ids_size),
+            std::span(reinterpret_cast<snark::Type *>(in_edge_types), in_edge_types_size),
+            std::span(out_neighbor_counts, in_node_ids_size));
+        return 0;
+    }
+    catch (const std::exception &e)
+    {
+        RAW_LOG_ERROR("Exception while fetching neighbor counts: %s", e.what());
+        return 1;
+    }
+
+    return 0;
+}
+
 int32_t GetNeighbors(PyGraph *py_graph, NodeID *in_node_ids, size_t in_node_ids_size, Type *in_edge_types,
                      size_t in_edge_types_size, uint64_t *out_neighbor_counts, GetNeighborsCallback callback)
 {

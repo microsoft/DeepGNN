@@ -22,7 +22,7 @@ class MeanAggregator(nn.Module):
 
         self.features = features
 
-    def forward(self, neighs: torch.Tensor, node_count: int):
+    def forward(self, neighs: torch.Tensor, node_count: int) -> torch.Tensor:
         """
         Propagate node features to NN Layer.
 

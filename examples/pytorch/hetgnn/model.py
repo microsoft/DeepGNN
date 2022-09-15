@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 """HetGnn model implementation."""
 
-from typing import List, Any, Dict, Union
+from typing import List, Any, Dict, Union, Tuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -74,7 +74,7 @@ class HetGnnModel(BaseUnsupervisedModel):
                 nn.init.xavier_normal_(m.weight.data)
                 m.bias.data.fill_(0.1)
 
-    def get_score(self, context: dict):
+    def get_score(self, context: dict) -> torch.Tensor:  # type: ignore[override]
         """Calculate scores for central, positive and negative nodes."""
         c_out, p_out, n_out = self.aggregate_all(context)
         return c_out, p_out, n_out
@@ -214,7 +214,7 @@ class HetGnnModel(BaseUnsupervisedModel):
 
         return loss_sum.mean(), scores, labels
 
-    def forward(self, context: dict):
+    def forward(self, context: dict) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:  # type: ignore[override]
         """Calculate score based on inputs in the context and return loss."""
         feature_list = context["encoder"]
         inputs = context["inputs"]
@@ -239,7 +239,7 @@ class HetGnnModel(BaseUnsupervisedModel):
 
         return self.cross_entropy_loss(c_out, p_out, n_out, self.embed_d)
 
-    def get_embedding(self, context: dict):
+    def get_embedding(self, context: dict) -> torch.Tensor:  # type: ignore[override]
         """Calculate embedding."""
         context["encoder"]["node_type"] = int(context["node_type"])
         return self.node_het_agg(context["encoder"])
@@ -285,7 +285,7 @@ class HetGnnModel(BaseUnsupervisedModel):
 
         return context
 
-    def query(self, graph: Graph, inputs: List):
+    def query(self, graph: Graph, inputs: np.ndarray) -> dict:
         """Query graph for training data."""
         context = {"inputs": inputs}
         triple_context: List[Union[Dict, List]] = []
@@ -301,7 +301,7 @@ class HetGnnModel(BaseUnsupervisedModel):
         context["encoder"] = triple_context
         return context
 
-    def query_inference(self, graph: Graph, inputs: List):
+    def query_inference(self, graph: Graph, inputs: np.ndarray) -> dict:
         """Query graph to generate embeddings."""
         context = {}
         context["inputs"] = inputs[:, 0]

@@ -83,12 +83,12 @@ class MockModel(torch.nn.Module):
         input = data["inputs"]
         return input * self.a + self.b
 
-    def get_embedding(self, data: dict):
+    def get_embedding(self, data: dict) -> torch.Tensor:
         result = self.predict(data).unsqueeze(-1)
         return torch.cat([result, result], -1)
 
     # dump embeddings to a file.
-    def output_embedding(self, output, context: dict, embeddings):
+    def output_embedding(self, output, context, embeddings):
         embeddings = embeddings.data.cpu().numpy()
         inputs = context["inputs"].squeeze(0)
         for k in range(len(embeddings)):

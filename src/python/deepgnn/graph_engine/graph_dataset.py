@@ -4,7 +4,7 @@
 
 from enum import Enum
 from inspect import signature
-from typing import Callable
+from typing import Callable, Union
 from deepgnn.graph_engine._base import Graph
 from deepgnn.graph_engine.backends.common import GraphEngineBackend
 from deepgnn.graph_engine.prefetch import Generator
@@ -32,9 +32,12 @@ class BackendType(Enum):
 class DeepGNNDataset:
     """Unified dataset shared by both TF and Torch.
 
-    A typical dataset consists of:
-        sampler which is used to sample seeds.
-        query_fn which is a callback to generate batches.
+    DeepGNNDataset initializes and executes a node or edge sampler given as
+    sampler_class. For every batch of data requested, batch_size items are sampled
+    from the sampler and passed to the given query_fn which pulls all necessaary
+    information about the samples using the graph engine API. The output from
+    the query function is passed to the trainer worker as the input to the
+    model forward function.
     """
 
     class _DeepGNNDatasetIterator:
@@ -54,8 +57,8 @@ class DeepGNNDataset:
 
     def __init__(
         self,
-        sampler_class,
-        query_fn: Callable = None,
+        sampler_class: BaseSampler,
+        query_fn: Callable,
         backend: GraphEngineBackend = None,
         num_workers: int = 1,
         worker_index: int = 0,
@@ -79,8 +82,8 @@ class DeepGNNDataset:
         self.enable_prefetch = enable_prefetch
         self.collate_fn = collate_fn
         self.kwargs = kwargs
-        self.graph = None
-        self.sampler = None
+        self.graph: Graph
+        self.sampler: BaseSampler
 
         self.init_graph_client()
         self.init_sampler()
@@ -109,7 +112,7 @@ class DeepGNNDataset:
 
         self.sampler = self.sampler_class(**sampler_args)
 
-    def __iter__(self):
+    def __iter__(self) -> Union[Generator, _DeepGNNDatasetIterator]:
         """Create an iterator for graph."""
         if self.enable_prefetch:
             prefetch_size = (
@@ -124,9 +127,9 @@ class DeepGNNDataset:
             )
 
             return Generator(
-                graph=self.graph,  # type: ignore
+                graph=self.graph,
                 sampler=self.sampler,
-                model_query_fn=self.query_fn,  # type: ignore
+                model_query_fn=self.query_fn,
                 prefetch_size=prefetch_size,
                 max_parallel=max_parallel,
                 collate_fn=self.collate_fn,
@@ -136,12 +139,14 @@ class DeepGNNDataset:
                 graph=self.graph, sampler=self.sampler, query_fn=self.query_fn
             )
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return number of elements in the sampler."""
         return len(self.sampler)
 
 
-def create_backend(backend_options: BackendOptions, is_leader: bool = False):
+def create_backend(
+    backend_options: BackendOptions, is_leader: bool = False
+) -> GraphEngineBackend:
     """Entry function to initialize backends."""
     backend_type = backend_options.backend
     if backend_type == BackendType.CUSTOM:

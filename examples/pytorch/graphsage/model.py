@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 
 """Collection of graphsage based models."""
-from typing import Optional
+from typing import Optional, Tuple
 
 import torch
 import numpy as np
@@ -84,7 +84,7 @@ class SupervisedGraphSage(BaseSupervisedModel):
         self.metric = metric
         nn.init.xavier_uniform_(self.weight)
 
-    def query(self, graph: Graph, inputs: np.ndarray):
+    def query(self, graph: Graph, inputs: np.ndarray) -> dict:
         """Fetch training data from graph."""
         context = {"inputs": inputs}
         context["label"] = graph.node_features(
@@ -102,7 +102,7 @@ class SupervisedGraphSage(BaseSupervisedModel):
         self.transform(context)
         return context
 
-    def get_score(self, context: dict):
+    def get_score(self, context: dict) -> torch.Tensor:  # type: ignore[override]
         """Generate scores for a list of nodes."""
         self.encode_feature(context)
         embeds = self.enc(context["encoder"])
@@ -114,7 +114,7 @@ class SupervisedGraphSage(BaseSupervisedModel):
         """Metric used for model evaluation."""
         return self.metric.name()
 
-    def get_embedding(self, context: dict):
+    def get_embedding(self, context: dict) -> torch.Tensor:  # type: ignore[override]
         """Generate embedding."""
         return self.enc(context["encoder"])
 
@@ -196,7 +196,7 @@ class UnSupervisedGraphSage(BaseUnsupervisedModel):
         nn.init.xavier_uniform_(self.weight)
         self.bce_loss = torch.nn.BCEWithLogitsLoss()
 
-    def query(self, graph: Graph, inputs: np.ndarray):
+    def query(self, graph: Graph, inputs: np.ndarray) -> dict:
         """Fetch training data from graph."""
         context = {"inputs": inputs}
         context["encoder"] = self.enc.query(
@@ -220,18 +220,18 @@ class UnSupervisedGraphSage(BaseUnsupervisedModel):
         self.transform(context)
         return context
 
-    def get_embedding(self, context: dict):
+    def get_embedding(self, context: dict) -> torch.Tensor:  # type: ignore[override]
         """Generate embedding."""
         return self.enc(context["encoder"])
 
-    def get_score(self, context: dict):
+    def get_score(self, context: dict) -> torch.Tensor:  # type: ignore[override]
         """Generate predictions for the list of nodes."""
         self.encode_feature(context)
         embeds = self.enc(context)
         scores = torch.matmul(embeds, self.weight)
         return scores
 
-    def forward(self, context: dict):
+    def forward(self, context: dict) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:  # type: ignore[override]
         """Loss for list of nodes using binary cross entropy."""
         scores = self.get_score(context["encoder"])
         neg_embed = self.get_score(context["encoder_neg"])

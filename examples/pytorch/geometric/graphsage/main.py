@@ -19,7 +19,7 @@ from deepgnn.graph_engine import (
     GENodeSampler,
     GraphEngineBackend,
 )
-from model import PTGSupervisedGraphSage
+from model import PTGSupervisedGraphSage  # type: ignore
 
 
 # fmt: off

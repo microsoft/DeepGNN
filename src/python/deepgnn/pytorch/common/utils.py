@@ -6,6 +6,7 @@ import numpy as np
 import os
 import random
 import re
+from typing import Tuple, List
 import torch
 
 from pathlib import Path
@@ -77,7 +78,7 @@ def to_cuda(context):
                 context[i] = data.cuda()
 
 
-def get_store_name_and_path(input_path: str):
+def get_store_name_and_path(input_path: str) -> Tuple[str, str]:
     """
     Get store name and relative path if input path is adl path, or return input_path directly.
 
@@ -115,7 +116,7 @@ def tally_parameters(model: torch.nn.Module):
     get_logger().info(f"parameter count: {n_params}")
 
 
-def dump_gpu_memory(prefix=""):
+def dump_gpu_memory(prefix="") -> str:
     """Return GPU memory usage statistics."""
     MB = 1024 * 1024
     return (
@@ -128,7 +129,7 @@ def dump_gpu_memory(prefix=""):
 
 def get_sorted_checkpoints(
     model_dir: str, perfix: str = PREFIX_CHECKPOINT, sort_ckpt_by_mtime: bool = False
-):
+) -> List[str]:
     """Return model checkpoints."""
     ordering_and_checkpoint_path = []
 

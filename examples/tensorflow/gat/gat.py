@@ -37,7 +37,7 @@ class GATQuery:
 
     def query_training(
         self, graph: Graph, inputs: np.ndarray, return_shape: bool = False
-    ):
+    ) -> tuple:
         """Query to fetch training data."""
         nodes, edges, src_idx = graph_ops.sub_graph(
             graph=graph,

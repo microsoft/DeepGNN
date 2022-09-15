@@ -93,20 +93,18 @@ class SAGEQuery:
 
     def query_training(
         self, graph: Graph, inputs: np.ndarray, return_shape: bool = False
-    ):
+    ) -> tuple:
         """Fetch training data from graph."""
         # fmt: off
         seed_nodes = inputs
         all_nodes, neighbor_list_idx = self._query_neighbor(graph, seed_nodes)
         label = graph.node_features(seed_nodes, self.label_meta, self.param.label_type)
         if self.param.identity_feature:
-            graph_tensor = [all_nodes, label]
+            graph_tensor = tuple([all_nodes, label] + neighbor_list_idx)
         else:
             feat = graph.node_features(all_nodes, self.feat_meta, self.param.feature_type)
-            graph_tensor = [all_nodes, feat, label]
+            graph_tensor = tuple([all_nodes, feat, label] + neighbor_list_idx)
 
-        graph_tensor.extend(neighbor_list_idx)
-        graph_tensor = tuple(graph_tensor)
         if return_shape:
             # N is the number of `nodes`, which is variable because `inputs` nodes are different.
             N = None
@@ -143,7 +141,7 @@ class GraphSAGE(tf.keras.Model):
         loss_name: str = "softmax",
         agg_type: str = "mean",
         weight_decay: float = 0.0,
-        identity_embed_shape: List[int] = None,
+        identity_embed_shape: List[int] = [],
         concat: bool = True,
     ):
         """Initialize model."""

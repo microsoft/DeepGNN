@@ -4,7 +4,7 @@ Preparing Graph Data
 
 DeepGNN supports both homogeneous and heterogeneous graphs. Nodes and Edges support the following attributes,
 
-  * Node/Edge Type: `int`.
+  * Node/Edge Type: `int, >= 0`.
   * Node/Edge Weight: `float`.
   * Node/Edge Features: `float/uint64/string`.
 
@@ -32,7 +32,7 @@ The JSON format supports heterogeneous and homegeneous graphs.
 
 	{
 	"node_id": "int",
-	"node_type": "int",
+	"node_type": "int, >= 0",
 	"node_weight": "float",
 	"neighbor": {"edge type": {"neighbor_id": "weight(float)", "...": "..."}, "...": "..."},
 	"uint64_feature": {"feature_id": ["int", "..."], "...": "..."},
@@ -41,7 +41,7 @@ The JSON format supports heterogeneous and homegeneous graphs.
 	"edge":[{
 		"src_id": "int",
 		"dst_id": "int",
-		"edge_type": "int",
+		"edge_type": "int, >= 0",
 		"weight": "float",
 		"uint64_feature": {"feature_id": ["int", "..."], "...": ["int", "..."]},
 		"float_feature": {"feature_id": ["float", "..."], "...": ["float", "..."]},
@@ -113,12 +113,13 @@ node_features: *|type1:v1 v2;type2:v1 v2|*, Node feature vectors, type can be on
 neighbors: *| int, int, float, int, features |*, src_id, dst_id, edge_weight, edge_type and a feature vector in the same form as node_features.
 
 Generated meta.txt Format
-==========
+=========================
 
 Graph `meta.txt` is as follows with all pieces of text replaced by integers,
 
 .. code-block:: text
 
+	binary_data_version
 	node_count
 	edge_count
 	node_type_count

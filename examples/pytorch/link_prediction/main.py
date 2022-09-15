@@ -3,9 +3,9 @@
 
 import argparse
 import os
+import torch.optim
 
 from deepgnn import TrainMode, setup_default_logging_config
-from deepgnn.pytorch.common import create_adamw_optimizer
 from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.pytorch.common.utils import (
     get_logger,
@@ -17,9 +17,9 @@ from deepgnn.pytorch.encoding import get_feature_encoder
 from deepgnn.pytorch.modeling import BaseModel
 from deepgnn.pytorch.training import run_dist
 from deepgnn.graph_engine import TextFileSampler, GraphEngineBackend
-from args import init_args
-from consts import DEFAULT_VOCAB_CHAR_INDEX
-from model import LinkPredictionModel
+from args import init_args  # type: ignore
+from consts import DEFAULT_VOCAB_CHAR_INDEX  # type: ignore
+from model import LinkPredictionModel  # type: ignore
 
 
 def create_model(args: argparse.Namespace):
@@ -35,8 +35,8 @@ def create_model(args: argparse.Namespace):
         feature_dim=args.feature_dim,
         feature_idx=args.feature_idx,
         feature_type=get_python_type(args.feature_type),
-        feature_enc=feature_enc[0],
-        vocab_index=feature_enc[1][DEFAULT_VOCAB_CHAR_INDEX],
+        feature_enc=feature_enc[0],  # type: ignore
+        vocab_index=feature_enc[1][DEFAULT_VOCAB_CHAR_INDEX],  # type: ignore
     )
 
 
@@ -69,8 +69,10 @@ def create_dataset(
 
 
 def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):
-    return create_adamw_optimizer(
-        model, args.weight_decay, args.learning_rate * world_size
+    return torch.optim.AdamW(
+        model.parameters(),
+        lr=args.learning_rate * world_size,
+        weight_decay=args.weight_decay,
     )
 
 

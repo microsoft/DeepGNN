@@ -11,6 +11,8 @@ import time
 from pathlib import Path
 import platform
 from typing import List, Tuple
+import socket
+from contextlib import closing
 
 import numpy as np
 import numpy.testing as npt
@@ -24,87 +26,104 @@ import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.dispatcher as dispatcher
 import deepgnn.graph_engine.snark._lib as lib
+from deepgnn.graph_engine.snark.converter.writers import BinaryWriter
+
+
+nodes = [
+    {
+        "node_id": 9,
+        "node_type": 0,
+        "node_weight": 1,
+        "uint64_feature": {"2": [13, 17]},
+        "float_feature": {"0": [0, 1], "1": [-0.01, -0.02]},
+        "binary_feature": {},
+        "edge": [],
+    },
+    {
+        "node_id": 0,
+        "node_type": 1,
+        "node_weight": 1,
+        "uint64_feature": {},
+        "float_feature": {"0": [1], "1": [-0.03, -0.04]},
+        "binary_feature": {"3": "abcd"},
+        "edge": [],
+    },
+    {
+        "node_id": 5,
+        "node_type": 2,
+        "node_weight": 1,
+        "float_feature": {"0": [1, 1], "1": [-0.05, -0.06]},
+        "binary_feature": {},
+        "uint8_feature": {"4": [5, 6, 7]},
+        "int8_feature": {"5": [15, 16, 17]},
+        "uint16_feature": {"6": [25, 26, 27]},
+        "int16_feature": {"7": [35, 36, 37]},
+        "uint32_feature": {"8": [45, 46, 47]},
+        "int32_feature": {"9": [55, 56, 57]},
+        "uint64_feature": {"10": [65, 66, 67]},
+        "int64_feature": {"11": [75, 76, 77]},
+        "double_feature": {"12": [85, 86, 87]},
+        "float16_feature": {"13": [95, 96, 97], "14": [105, 106, 107]},
+        "edge": [],
+    },
+]
+edges = [
+    {
+        "src_id": 9,
+        "dst_id": 0,
+        "edge_type": 0,
+        "weight": 0.5,
+        "uint64_feature": {"0": [1, 2, 3]},
+        "float_feature": {},
+        "binary_feature": {},
+    },
+    {
+        "src_id": 0,
+        "dst_id": 5,
+        "edge_type": 1,
+        "weight": 1,
+        "uint64_feature": {},
+        "float_feature": {"1": [3, 4]},
+        "binary_feature": {},
+    },
+    {
+        "src_id": 5,
+        "dst_id": 9,
+        "edge_type": 1,
+        "weight": 0.7,
+        "float_feature": {},
+        "binary_feature": {"2": "hello"},
+        "uint8_feature": {"4": [5, 6, 7]},
+        "int8_feature": {"5": [15, 16, 17]},
+        "uint16_feature": {"6": [25, 26, 27]},
+        "int16_feature": {"7": [35, 36, 37]},
+        "uint32_feature": {"8": [45, 46, 47]},
+        "int32_feature": {"9": [55, 56, 57]},
+        "uint64_feature": {"10": [65, 66, 67]},
+        "int64_feature": {"11": [75, 76, 77]},
+        "double_feature": {"12": [85, 86, 87]},
+        "float16_feature": {"13": [95, 96, 97], "14": [105, 106, 107]},
+    },
+]
+
+
+def find_free_port():
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(("", 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return s.getsockname()[1]
 
 
 def triangle_graph_json(folder):
-    data = open(os.path.join(folder, "graph.json"), "w+")
+    nodes[0]["edge"] = [edges[0]]
+    nodes[1]["edge"] = [edges[1]]
+    nodes[2]["edge"] = [edges[2]]
     graph = [
-        {
-            "node_id": 9,
-            "node_type": 0,
-            "node_weight": 1,
-            "uint64_feature": {"2": [13, 17]},
-            "float_feature": {"0": [0, 1], "1": [-0.01, -0.02]},
-            "binary_feature": {},
-            "edge": [
-                {
-                    "src_id": 9,
-                    "dst_id": 0,
-                    "edge_type": 0,
-                    "weight": 0.5,
-                    "uint64_feature": {"0": [1, 2, 3]},
-                    "float_feature": {},
-                    "binary_feature": {},
-                }
-            ],
-        },
-        {
-            "node_id": 0,
-            "node_type": 1,
-            "node_weight": 1,
-            "uint64_feature": {},
-            "float_feature": {"0": [1], "1": [-0.03, -0.04]},
-            "binary_feature": {"3": "abcd"},
-            "edge": [
-                {
-                    "src_id": 0,
-                    "dst_id": 5,
-                    "edge_type": 1,
-                    "weight": 1,
-                    "uint64_feature": {},
-                    "float_feature": {"1": [3, 4]},
-                    "binary_feature": {},
-                }
-            ],
-        },
-        {
-            "node_id": 5,
-            "node_type": 2,
-            "node_weight": 1,
-            "float_feature": {"0": [1, 1], "1": [-0.05, -0.06]},
-            "binary_feature": {},
-            "uint8_feature": {"4": [5, 6, 7]},
-            "int8_feature": {"5": [15, 16, 17]},
-            "uint16_feature": {"6": [25, 26, 27]},
-            "int16_feature": {"7": [35, 36, 37]},
-            "uint32_feature": {"8": [45, 46, 47]},
-            "int32_feature": {"9": [55, 56, 57]},
-            "uint64_feature": {"10": [65, 66, 67]},
-            "int64_feature": {"11": [75, 76, 77]},
-            "double_feature": {"12": [85, 86, 87]},
-            "float16_feature": {"13": [95, 96, 97]},
-            "edge": [
-                {
-                    "src_id": 5,
-                    "dst_id": 9,
-                    "edge_type": 1,
-                    "weight": 0.7,
-                    "float_feature": {},
-                    "binary_feature": {"2": "hello"},
-                    "uint8_feature": {"4": [5, 6, 7]},
-                    "int8_feature": {"5": [15, 16, 17]},
-                    "uint16_feature": {"6": [25, 26, 27]},
-                    "int16_feature": {"7": [35, 36, 37]},
-                    "uint32_feature": {"8": [45, 46, 47]},
-                    "int32_feature": {"9": [55, 56, 57]},
-                    "uint64_feature": {"10": [65, 66, 67]},
-                    "int64_feature": {"11": [75, 76, 77]},
-                    "double_feature": {"12": [85, 86, 87]},
-                    "float16_feature": {"13": [95, 96, 97]},
-                }
-            ],
-        },
+        nodes[0],
+        nodes[1],
+        nodes[2],
     ]
+    data = open(os.path.join(folder, "graph.json"), "w+")
     for el in graph:
         json.dump(el, data)
         data.write("\n")
@@ -231,39 +250,149 @@ class Counter:
         return self.count % 2
 
 
+def linearize(value):
+    def get_features(item):
+        output = []
+        for feature_key, feature_dict in item.items():
+            if "feature" not in feature_key:
+                continue
+            for key, v in feature_dict.items():
+                while int(key) + 1 > len(output):
+                    output.append(None)
+                if feature_key == "binary_feature":
+                    vv = v
+                elif "sparse" in feature_key:
+                    vv = (
+                        np.array(v["coordinates"], dtype=np.int64),
+                        np.array(
+                            v["values"],
+                            dtype=JsonDecoder.convert_map[
+                                feature_key.replace("sparse_", "")
+                            ],
+                        ),
+                    )
+                else:
+                    vv = np.array(v, dtype=JsonDecoder.convert_map[feature_key])
+                output[int(key)] = vv
+        return output
+
+    if "node_id" in value:
+        return (
+            value["node_id"],
+            -1,
+            value["node_type"],
+            value["node_weight"],
+            get_features(value),
+        )
+    else:
+        return (
+            value["src_id"],
+            value["dst_id"],
+            value["edge_type"],
+            value["weight"],
+            get_features(value),
+        )
+
+
+def write_multi_binary(output_dir, partitions):
+    partition_meta = ""
+    for i, p in enumerate(partitions):
+        writer = BinaryWriter(output_dir, i)
+        for v in p:
+            writer.add([linearize(v)])
+        writer.close()
+        nf = "\n".join(map(str, writer.node_type_count))
+        ef = "\n".join(map(str, writer.edge_type_count))
+        if nf == "":
+            nf = "0\n0\n0"
+        if ef == "":
+            ef = "0\n0"
+        partition_meta += f"{i}\n3\n3\n3\n2\n2\n{nf}\n{ef}\n"
+    meta = open(os.path.join(output_dir, "meta.txt"), "w+")
+    meta.write(f"3\n3\n3\n2\n15\n15\n2\n")
+    meta.write(partition_meta)
+    meta.close()
+
+
 @pytest.fixture(scope="module")
-def multi_partition_graph_data():
+def multi_partition_graph_data(request):
     output = tempfile.TemporaryDirectory()
-    data_name = triangle_graph_json(output.name)
-    d = dispatcher.QueueDispatcher(Path(output.name), 2, Counter(), JsonDecoder())
-    convert.MultiWorkersConverter(
-        graph_path=data_name,
-        partition_count=2,
-        output_dir=output.name,
-        decoder=JsonDecoder(),
-        dispatcher=d,
-    ).convert()
+    if request.param == "original":
+        data_name = triangle_graph_json(output.name)
+        d = dispatcher.QueueDispatcher(Path(output.name), 2, Counter(), JsonDecoder())
+        convert.MultiWorkersConverter(
+            graph_path=data_name,
+            partition_count=2,
+            output_dir=output.name,
+            decoder=JsonDecoder(),
+            dispatcher=d,
+        ).convert()
+    elif request.param == "nodes_p0":
+        partitions = [
+            nodes,
+            edges,
+        ]
+        write_multi_binary(output.name, partitions)
+    elif request.param == "nodes_p1":
+        partitions = [
+            edges,
+            nodes,
+        ]
+        write_multi_binary(output.name, partitions)
     yield output.name
+
+
+param = ["original", "nodes_p0", "nodes_p1"]
 
 
 @pytest.mark.parametrize(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_memory_graph_metadata(multi_partition_graph_data, storage_type):
     cl = client.MemoryGraph(multi_partition_graph_data, [0, 1], storage_type)
     assert cl.meta.node_count == 3
     assert cl.meta.edge_count == 3
     assert cl.meta.node_type_count == 3
     assert cl.meta.edge_type_count == 2
-    assert cl.meta._node_feature_count == 14
-    assert cl.meta._edge_feature_count == 14
+    assert cl.meta._node_feature_count == 15
+    assert cl.meta._edge_feature_count == 15
 
 
 @pytest.mark.parametrize(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+def test_memory_graph_neighbors(multi_partition_graph_data, storage_type):
+    cl = client.MemoryGraph(multi_partition_graph_data, [0, 1], storage_type)
+    node_ids, weights, edge_types, result_counts = cl.neighbors(
+        np.array([9, 0], dtype=np.int64),
+        np.array([0, 1, 2], dtype=np.int32),
+    )
+    npt.assert_equal(node_ids, np.array([0, 5], dtype=np.int64))
+    npt.assert_almost_equal(weights, np.array([0.5, 1.0], dtype=np.float32))
+    npt.assert_equal(edge_types, np.array([0, 1], dtype=np.int32))
+    npt.assert_equal(result_counts, np.array([1, 1], dtype=np.int64))
+
+
+@pytest.mark.parametrize(
+    "storage_type",
+    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
+)
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+def test_memory_graph_node_types(multi_partition_graph_data, storage_type):
+    cl = client.MemoryGraph(multi_partition_graph_data, [0, 1], storage_type)
+    types = cl.node_types(np.array([9, 5, 0], dtype=np.int64), -2)
+    npt.assert_equal(types, np.array([0, 2, 1], dtype=np.int32))
+
+
+@pytest.mark.parametrize(
+    "storage_type",
+    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
+)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_memory_graph_type_counts(multi_partition_graph_data, storage_type):
     cl = client.MemoryGraph(multi_partition_graph_data, [0, 1], storage_type)
     assert cl.get_node_type_count([0]) == 1
@@ -286,6 +415,7 @@ def test_memory_graph_type_counts(multi_partition_graph_data, storage_type):
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_multithreaded_calls(multi_partition_graph_data, storage_type):
     cl = client.MemoryGraph(multi_partition_graph_data, [0, 1], storage_type)
     num_calls = 100
@@ -325,19 +455,22 @@ def test_multithreaded_calls(multi_partition_graph_data, storage_type):
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
-def test_node_features_graph_multiple_partitions(
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
+def test_node_sampler_graph_multiple_partitions(
     multi_partition_graph_data, storage_type
 ):
-    cl = client.MemoryGraph(multi_partition_graph_data, [0], storage_type)
-    sampler = client.NodeSampler(cl, np.array([2]))
-    nodes = sampler.sample(3, 42)
-    npt.assert_equal(nodes, [5, 5, 5])
+    cl = client.MemoryGraph(multi_partition_graph_data, [0, 1], storage_type)
+    ns = client.NodeSampler(cl, [2])
+    v, t = ns.sample(size=3, seed=1)
+    npt.assert_array_equal(v, [5, 5, 5])
+    npt.assert_array_equal(t, [2, 2, 2])
 
 
 @pytest.mark.parametrize(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_node_string_features_graph_multiple_partitions(
     multi_partition_graph_data, storage_type
 ):
@@ -351,6 +484,7 @@ def test_node_string_features_graph_multiple_partitions(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_node_features_graph_multiple_partitions(
     multi_partition_graph_data, storage_type
 ):
@@ -395,6 +529,7 @@ def test_node_features_graph_multiple_partitions(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_node_extra_features_graph_multiple_partitions(
     multi_partition_graph_data, storage_type
 ):
@@ -430,6 +565,7 @@ def test_node_extra_features_graph_multiple_partitions(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_edge_features_missing_feature_id(multi_partition_graph_data, storage_type):
     cl = client.MemoryGraph(multi_partition_graph_data, [0, 1], storage_type)
     v = cl.edge_features(
@@ -448,6 +584,7 @@ def test_edge_features_missing_feature_id(multi_partition_graph_data, storage_ty
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_edge_extra_features_graph_multiple_partitions(
     multi_partition_graph_data, storage_type
 ):
@@ -481,6 +618,7 @@ def test_edge_extra_features_graph_multiple_partitions(
         feature_id += 1
 
 
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_node_sampling_graph_multiple_partitions(multi_partition_graph_data):
     g = client.MemoryGraph(multi_partition_graph_data, [0, 1])
     ns = client.NodeSampler(g, [0, 2])
@@ -489,12 +627,14 @@ def test_node_sampling_graph_multiple_partitions(multi_partition_graph_data):
     npt.assert_array_equal(t, [0, 0, 2, 2, 2])
 
 
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_node_sampling_graph_with_only_missing_type(multi_partition_graph_data):
     g = client.MemoryGraph(multi_partition_graph_data, [0])
     with pytest.raises(AssertionError):
         client.NodeSampler(g, [4])
 
 
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_node_sampling_graph_ok_with_extra_missing_type(multi_partition_graph_data):
     g = client.MemoryGraph(multi_partition_graph_data, [0, 1])
     ns = client.NodeSampler(g, [0, 4])
@@ -503,6 +643,7 @@ def test_node_sampling_graph_ok_with_extra_missing_type(multi_partition_graph_da
     npt.assert_array_equal(t, [0, 0, 0])
 
 
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_edge_sampling_non_repeating_defaults(multi_partition_graph_data):
     g = client.MemoryGraph(multi_partition_graph_data, [0, 1])
     es = client.EdgeSampler(g, [0, 1])
@@ -515,6 +656,7 @@ def test_edge_sampling_non_repeating_defaults(multi_partition_graph_data):
     )
 
 
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_edge_sampling_graph_multiple_partitions(multi_partition_graph_data):
     g = client.MemoryGraph(multi_partition_graph_data, [0, 1])
     es = client.EdgeSampler(g, [0, 1])
@@ -524,6 +666,7 @@ def test_edge_sampling_graph_multiple_partitions(multi_partition_graph_data):
     npt.assert_array_equal(t, [0, 1, 1, 1, 1])
 
 
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_edge_sampling_without_replacement_graph_multiple_partitions(
     multi_partition_graph_data,
 ):
@@ -535,6 +678,7 @@ def test_edge_sampling_without_replacement_graph_multiple_partitions(
     npt.assert_array_equal(t, [0, 1, 1, 1, 1])
 
 
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_uniform_edge_sampling_graph_multiple_partitions(multi_partition_graph_data):
     g = client.MemoryGraph(multi_partition_graph_data, [0, 1])
     es = client.EdgeSampler(g, [0, 1], "uniform")
@@ -577,6 +721,7 @@ def test_edge_sampling_graph_single_partition_raises_empty_types(triangle_graph_
         client.EdgeSampler(g, [10])
 
 
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_feature_extraction_after_reset(multi_partition_graph_data):
     cl = client.MemoryGraph(multi_partition_graph_data, [0])
     cl.reset()
@@ -588,6 +733,7 @@ def test_feature_extraction_after_reset(multi_partition_graph_data):
         )
 
 
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_edge_sampler_creation(multi_partition_graph_data):
     cl = client.MemoryGraph(multi_partition_graph_data, [0])
     cl.reset()
@@ -595,6 +741,7 @@ def test_edge_sampler_creation(multi_partition_graph_data):
         client.EdgeSampler(cl, [0])
 
 
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_node_sampler_creation(multi_partition_graph_data):
     cl = client.MemoryGraph(multi_partition_graph_data, [0])
     cl.reset()
@@ -602,6 +749,7 @@ def test_node_sampler_creation(multi_partition_graph_data):
         client.NodeSampler(cl, [0])
 
 
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_edge_sampler_reset(multi_partition_graph_data):
     cl = client.MemoryGraph(multi_partition_graph_data, [0])
     es = client.EdgeSampler(cl, [0])
@@ -610,6 +758,7 @@ def test_edge_sampler_reset(multi_partition_graph_data):
         es.sample(5)
 
 
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_node_sampler_reset(multi_partition_graph_data):
     cl = client.MemoryGraph(multi_partition_graph_data, [0])
     ns = client.NodeSampler(cl, [0])
@@ -622,12 +771,11 @@ def test_node_sampler_reset(multi_partition_graph_data):
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_remote_client_node_features_single_server(
     multi_partition_graph_data, storage_type
 ):
-    address = ["localhost:9999"]
-    if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+    address = [f"localhost:{find_free_port()}"]
     s = server.Server(
         multi_partition_graph_data, [0], address[0], storage_type=storage_type
     )
@@ -647,11 +795,9 @@ def test_remote_client_node_features_single_server(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_distributed_graph_metadata(multi_partition_graph_data, storage_type):
-    address = ["localhost:2234", "localhost:2235"]
-    if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
-
+    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
     s1 = server.Server(
         multi_partition_graph_data, [0], address[0], storage_type=storage_type
     )
@@ -664,8 +810,8 @@ def test_distributed_graph_metadata(multi_partition_graph_data, storage_type):
     assert cl.meta.edge_count == 3
     assert cl.meta.node_type_count == 3
     assert cl.meta.edge_type_count == 2
-    assert cl.meta._node_feature_count == 14
-    assert cl.meta._edge_feature_count == 14
+    assert cl.meta._node_feature_count == 15
+    assert cl.meta._edge_feature_count == 15
     s1.reset()
     s2.reset()
 
@@ -674,10 +820,9 @@ def test_distributed_graph_metadata(multi_partition_graph_data, storage_type):
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_distributed_graph_type_counts(multi_partition_graph_data, storage_type):
-    address = ["localhost:12234", "localhost:12235"]
-    if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
     s1 = server.Server(
         multi_partition_graph_data, [0], address[0], storage_type=storage_type
     )
@@ -709,12 +854,11 @@ def test_distributed_graph_type_counts(multi_partition_graph_data, storage_type)
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_remote_client_node_features_multiple_servers(
     multi_partition_graph_data, storage_type
 ):
-    address = ["localhost:1234", "localhost:1235"]
-    if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
     s1 = server.Server(
         multi_partition_graph_data, [0], address[0], storage_type=storage_type
     )
@@ -739,12 +883,11 @@ def test_remote_client_node_features_multiple_servers(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_remote_client_node_string_features_multiple_servers(
     multi_partition_graph_data, storage_type
 ):
-    address = ["localhost:1234", "localhost:1235"]
-    if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
     s1 = server.Server(
         multi_partition_graph_data, [0], address[0], storage_type=storage_type
     )
@@ -765,10 +908,9 @@ def test_remote_client_node_string_features_multiple_servers(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_remote_client_node_extra_features(multi_partition_graph_data, storage_type):
-    address = ["localhost:11234", "localhost:11235"]
-    if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
     s1 = server.Server(
         multi_partition_graph_data, [0], address[0], storage_type=storage_type
     )
@@ -811,12 +953,11 @@ def test_remote_client_node_extra_features(multi_partition_graph_data, storage_t
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_remote_client_edge_extra_features_graph_multiple_partitions(
     multi_partition_graph_data, storage_type
 ):
-    address = ["localhost:9234", "localhost:9235"]
-    if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
     s1 = server.Server(
         multi_partition_graph_data, [0], address[0], storage_type=storage_type
     )
@@ -860,12 +1001,11 @@ def test_remote_client_edge_extra_features_graph_multiple_partitions(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_remote_client_missing_edge_features_graph_multiple_partitions(
     multi_partition_graph_data, storage_type
 ):
-    address = ["localhost:9234", "localhost:9235"]
-    if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
     s1 = server.Server(
         multi_partition_graph_data, [0], address[0], storage_type=storage_type
     )
@@ -891,12 +1031,11 @@ def test_remote_client_missing_edge_features_graph_multiple_partitions(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_remote_client_missing_edge_string_features_graph_multiple_partitions(
     multi_partition_graph_data, storage_type
 ):
-    address = ["localhost:9236", "localhost:9237"]
-    if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
     s1 = server.Server(
         multi_partition_graph_data, [0], address[0], storage_type=storage_type
     )
@@ -923,12 +1062,11 @@ def test_remote_client_missing_edge_string_features_graph_multiple_partitions(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_remote_client_node_features_multiple_servers_same_data_tst(
     multi_partition_graph_data, storage_type
 ):
-    address = ["localhost:1236", "localhost:1237"]
-    if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
     s1 = server.Server(
         multi_partition_graph_data, [0, 1], address[0], storage_type=storage_type
     )
@@ -952,12 +1090,11 @@ def test_remote_client_node_features_multiple_servers_same_data_tst(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_remote_client_node_features_multiple_servers_connection_loss(
     multi_partition_graph_data, storage_type
 ):
-    address = ["localhost:1238", "localhost:1239"]
-    if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
     s1 = server.Server(
         multi_partition_graph_data, [0], hostname=address[0], storage_type=storage_type
     )
@@ -990,12 +1127,11 @@ def test_remote_client_node_features_multiple_servers_connection_loss(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_node_sampling_distributed_graph_multiple_partitions(
     multi_partition_graph_data, storage_type
 ):
-    address = ["localhost:1240", "localhost:1241"]
-    if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
     s1 = server.Server(multi_partition_graph_data, [0], hostname=address[0])
     s2 = server.Server(multi_partition_graph_data, [1], hostname=address[1])
 
@@ -1013,12 +1149,11 @@ def test_node_sampling_distributed_graph_multiple_partitions(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_node_sampling_distributed_graph_multiple_partitions_raises_empty_types(
     multi_partition_graph_data, storage_type
 ):
-    address = ["localhost:12409", "localhost:12419"]
-    if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
     s1 = server.Server(
         multi_partition_graph_data, [0], hostname=address[0], storage_type=storage_type
     )
@@ -1033,30 +1168,91 @@ def test_node_sampling_distributed_graph_multiple_partitions_raises_empty_types(
     s2.reset()
 
 
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_edge_sampling_distributed_graph_multiple_partitions(
     multi_partition_graph_data,
 ):
-    _ = server.Server(multi_partition_graph_data, [0], hostname="localhost:1243")
-    _ = server.Server(multi_partition_graph_data, [1], hostname="localhost:1244")
+    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
+    s1 = server.Server(multi_partition_graph_data, [0], hostname=address[0])
+    s2 = server.Server(multi_partition_graph_data, [1], hostname=address[1])
 
-    cl = client.DistributedGraph(["localhost:1243", "localhost:1244"])
+    cl = client.DistributedGraph([address[0], address[1]])
     es = client.EdgeSampler(cl, [0, 1])
     s, d, t = es.sample(size=5, seed=2)
     npt.assert_array_equal(s, [0, 0, 5, 5, 5])
     npt.assert_array_equal(d, [5, 5, 9, 9, 9])
     npt.assert_array_equal(t, [1, 1, 1, 1, 1])
+    s1.reset()
+    s2.reset()
 
 
 @pytest.mark.parametrize(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+def test_distributed_graph_neighbors(multi_partition_graph_data, storage_type):
+    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
+    s1 = server.Server(
+        multi_partition_graph_data, [0], hostname=address[0], storage_type=storage_type
+    )
+    s2 = server.Server(
+        multi_partition_graph_data, [1], hostname=address[1], storage_type=storage_type
+    )
+    cl = client.DistributedGraph(address)
+    node_ids, weights, edge_types, result_counts = cl.neighbors(
+        np.array([9, 0], dtype=np.int64),
+        np.array([0, 1, 2], dtype=np.int32),
+    )
+    npt.assert_equal(node_ids, np.array([0, 5], dtype=np.int64))
+    npt.assert_almost_equal(weights, np.array([0.5, 1.0], dtype=np.float32))
+    npt.assert_equal(edge_types, np.array([0, 1], dtype=np.int32))
+    npt.assert_equal(result_counts, np.array([1, 1], dtype=np.int64))
+    s1.reset()
+    s2.reset()
+
+
+@pytest.mark.parametrize(
+    "storage_type",
+    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
+)
+@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+def test_distributed_graph_node_types(multi_partition_graph_data, storage_type):
+    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
+    s1 = server.Server(
+        multi_partition_graph_data, [0], hostname=address[0], storage_type=storage_type
+    )
+    s2 = server.Server(
+        multi_partition_graph_data, [1], hostname=address[1], storage_type=storage_type
+    )
+    cl = client.DistributedGraph(address)
+    types = cl.node_types(np.array([9, 5, 0], dtype=np.int64), -1)
+    npt.assert_equal(types, np.array([0, 2, 1], dtype=np.int32))
+    s1.reset()
+    s2.reset()
+
+    address = [f"localhost:{find_free_port()}"]
+    s1 = server.Server(
+        multi_partition_graph_data,
+        [0, 1],
+        hostname=address[0],
+        storage_type=storage_type,
+    )
+    cl = client.DistributedGraph(address)
+    types = cl.node_types(np.array([9, 5, 0], dtype=np.int64), -1)
+    npt.assert_equal(types, np.array([0, 2, 1], dtype=np.int32))
+    s1.reset()
+
+
+@pytest.mark.parametrize(
+    "storage_type",
+    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
+)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_edge_sampling_distributed_graph_multiple_partitions_raises_empty_types(
     multi_partition_graph_data, storage_type
 ):
-    address = ["localhost:12439", "localhost:12449"]
-    if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
     s1 = server.Server(
         multi_partition_graph_data, [0], hostname=address[0], storage_type=storage_type
     )
@@ -1075,12 +1271,11 @@ def test_edge_sampling_distributed_graph_multiple_partitions_raises_empty_types(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_node_sampling_distributed_graph_multiple_partitions_server_down(
     multi_partition_graph_data, storage_type
 ):
-    address = ["localhost:1250", "localhost:1251"]
-    if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
     s1 = server.Server(
         multi_partition_graph_data, [0], hostname=address[0], storage_type=storage_type
     )
@@ -1102,12 +1297,11 @@ def test_node_sampling_distributed_graph_multiple_partitions_server_down(
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_edge_sampling_distributed_graph_multiple_partitions_server_down(
     multi_partition_graph_data, storage_type
 ):
-    address = ["localhost:1253", "localhost:1254"]
-    if platform.system() != "Darwin":
-        address = [a + f"{int(storage_type)}" for a in address]
+    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
     s1 = server.Server(
         multi_partition_graph_data, [0], hostname=address[0], storage_type=storage_type
     )
@@ -1157,12 +1351,11 @@ class _TrainingWorker:
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_servers_stay_alive_on_client_disconnects(
     multi_partition_graph_data, storage_type
 ):
-    addresses = ["localhost:1255", "localhost:1256"]
-    if platform.system() != "Darwin":
-        addresses = [a + f"{int(storage_type)}" for a in addresses]
+    addresses = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
     s1 = server.Server(
         multi_partition_graph_data,
         [0],
@@ -1351,10 +1544,11 @@ def in_memory_no_features_graph(no_features_graph):
 
 @pytest.fixture(scope="module")
 def multi_server_no_features_graph(no_features_graph):
-    s1 = server.Server(no_features_graph, [0], hostname="localhost:1255")
-    s2 = server.Server(no_features_graph, [1], hostname="localhost:1256")
+    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
+    s1 = server.Server(no_features_graph, [0], hostname=address[0])
+    s2 = server.Server(no_features_graph, [1], hostname=address[1])
 
-    yield client.DistributedGraph(["localhost:1255", "localhost:1256"])
+    yield client.DistributedGraph([address[0], address[1]])
 
     s1.reset()
     s2.reset()
@@ -1413,8 +1607,9 @@ def test_node_types_distributed(multi_server_no_features_graph):
 
 
 def test_health_check(no_features_graph):
-    s = server.Server(no_features_graph, [0], hostname="localhost:1257")
-    channel = grpc.insecure_channel("localhost:1257")
+    address = f"localhost:{find_free_port()}"
+    s = server.Server(no_features_graph, [0], hostname=address)
+    channel = grpc.insecure_channel(address)
     stub = health_pb2_grpc.HealthStub(channel)
     response = stub.Check(health_pb2.HealthCheckRequest(service=""))
     assert str(response) == "status: SERVING\n"
