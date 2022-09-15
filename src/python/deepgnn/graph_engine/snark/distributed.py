@@ -3,12 +3,13 @@
 
 """Snark districuted client implementation."""
 from typing import List, Dict
-import os
+import tempfile
 
 import deepgnn.graph_engine.snark.client as client
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.local as ge_snark
 from deepgnn import get_logger
+from deepgnn.graph_engine.snark.meta import download_meta
 
 
 class Client(ge_snark.Client):
@@ -43,7 +44,11 @@ class Server:
         stream: bool = False,
     ):
         """Init snark server."""
-        with open(os.path.join(data_path, "meta.txt"), "r") as meta:
+        temp_dir = tempfile.TemporaryDirectory()
+        temp_path = temp_dir.name
+        meta_path = download_meta(data_path, temp_path, config_path)
+
+        with open(meta_path, "r") as meta:
             # TODO(alsamylk): expose graph metadata reader in snark.
             # Based on snark.client._read_meta() method
             skip_lines = 7

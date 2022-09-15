@@ -102,6 +102,45 @@ def _set_hadoop_classpath(config_dir):
     os.environ["CLASSPATH"] = f"{config_dir}:{':'.join(paths)}"
 
 
+def download_meta(
+    src_path: str,
+    dest_path: str,
+    config_path: str,
+) -> str:
+    """Get meta.txt path based on the local or remote path."""
+    path = src_path
+
+    if (
+        src_path.startswith("hdfs://")
+        or src_path.startswith("adl://")
+        or src_path.startswith("file:///")
+    ):
+        _set_hadoop_classpath(config_path)
+
+        class _ErrCallback:  # Copied from client.py
+            def __init__(self, method: str):
+                self.method = method
+
+            # We have to use mypy ignore, to reuse this callable object across
+            # all C function call because they have different signatures.
+            def __call__(self, result, func, arguments):
+                if result != 0:
+                    raise Exception(f"Failed to {self.method}")
+
+        lib = _get_c_lib()
+        lib.HDFSMoveMeta.errcheck = _ErrCallback("hdfs move meta")  # type: ignore
+
+        hdfs_path = src_path
+        lib.HDFSMoveMeta(
+            c_char_p(bytes(_get_meta_path(hdfs_path), "utf-8")),
+            c_char_p(bytes(_get_meta_path(dest_path), "utf-8")),
+            c_char_p(bytes(config_path, "utf-8")),
+        )
+        path = dest_path
+
+    return _get_meta_path(path)
+
+
 class Meta:
     """General information about the graph: number of node, edges, types, partititons, etc."""
 
@@ -112,36 +151,11 @@ class Meta:
         Args:
             path (str): location of graph binary files.
         """
-        if (
-            path.startswith("hdfs://")
-            or path.startswith("adl://")
-            or path.startswith("file:///")
-        ):
-            _set_hadoop_classpath(config_path)
+        temp_dir = tempfile.TemporaryDirectory()
+        temp_path = temp_dir.name
+        meta_path = download_meta(path, temp_path, config_path)
 
-            class _ErrCallback:  # Copied from client.py
-                def __init__(self, method: str):
-                    self.method = method
-
-                # We have to use mypy ignore, to reuse this callable object across
-                # all C function call because they have different signatures.
-                def __call__(self, result, func, arguments):
-                    if result != 0:
-                        raise Exception(f"Failed to {self.method}")
-
-            lib = _get_c_lib()
-            lib.HDFSMoveMeta.errcheck = _ErrCallback("hdfs move meta")  # type: ignore
-
-            hdfs_path = path
-            temp_dir = tempfile.TemporaryDirectory()
-            path = temp_dir.name
-            lib.HDFSMoveMeta(
-                c_char_p(bytes(_get_meta_path(hdfs_path), "utf-8")),
-                c_char_p(bytes(_get_meta_path(path), "utf-8")),
-                c_char_p(bytes(config_path, "utf-8")),
-            )
-
-        meta = open(_get_meta_path(path), "r")  # type: ignore
+        meta = open(meta_path, "r")  # type: ignore
 
         self.version = str(meta.readline().strip())
         self.node_count = int(meta.readline())
