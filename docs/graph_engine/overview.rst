@@ -40,7 +40,7 @@ Here are the descriptions of the functions that are part of the API:
   and in case of nodes without any neighbors node ids will be `-1`. The existing algorithms don't have explcit
   requirement to use unique nodes.
 
-- :code:`node_features(nodes: np.array, features: List[(id, dim)], feature_type: FeatureType) -> np.array`
+- :code:`node_features(nodes: np.array, features: List[(id, dim)], feature_type: dtype) -> np.array`
 
   Fetch node features specified by ids. All the features should share the same type. The return type is an array
   of shape `(len(nodes), sum(map(lambda f: f[1], features)))` where features values are placed in the same order
@@ -55,12 +55,12 @@ Here are the descriptions of the functions that are part of the API:
 
       >>> nodes = graph.sample_nodes(10, 0)
       >>> weights = np.random.rand(64,32)
-      >>> features = graph.node_features(nodes, [(0, 64), (1, 32)], FeatureType.float)
+      >>> features = graph.node_features(nodes, [(0, 64), (1, 32)], np.float32)
       >>> embed = torch.mm(features[:,0:64], weights)
       >>> result = torch.mm(embed, features[:, 64:])
 
 
-- :code:`edge_features(edges: np.array, features: List[(id, dim)], feature_type: FeatureType) -> np.array`
+- :code:`edge_features(edges: np.array, features: List[(id, dim)], feature_type: dtype) -> np.array`
 
   Similar function to node_features, but for edges.
 

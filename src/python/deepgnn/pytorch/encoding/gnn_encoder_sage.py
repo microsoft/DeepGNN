@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from deepgnn.graph_engine import Graph, FeatureType
+from deepgnn.graph_engine import Graph
 from deepgnn import get_logger
 
 
@@ -74,7 +74,7 @@ class SageEncoder(nn.Module):
         self,
         nodes: np.ndarray,
         graph: Graph,
-        feature_type: FeatureType,
+        feature_type: np.dtype,
         feature_idx: int,
         feature_dim: int,
         neigh_nodes: np.ndarray = None,
@@ -120,7 +120,7 @@ class SageEncoder(nn.Module):
         self,
         nodes: np.ndarray,
         graph: Graph,
-        feature_type: FeatureType,
+        feature_type: np.dtype,
         feature_idx: int,
         feature_dim: int,
         neigh_nodes: np.ndarray = None,
