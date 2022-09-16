@@ -3,21 +3,12 @@
 """Graph engine configuration."""
 import argparse
 from deepgnn.arg_types import str2bool
-from deepgnn.graph_engine.backends.options import GraphType
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
-from deepgnn.graph_engine.graph_dataset import BackendType
 
 
 def define_param_graph_engine(parser: argparse.ArgumentParser):
     """Define command line arguments for graph engine."""
     group = parser.add_argument_group("Graph Client Parameters")
-    group.add_argument(
-        "--graph_type",
-        type=GraphType,
-        default=GraphType.LOCAL,
-        choices=list(GraphType),
-        help="create local/remote graph client.",
-    )
     group.add_argument(
         "--data_dir",
         type=str,

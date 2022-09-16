@@ -7,7 +7,6 @@ import pytest
 import numpy as np
 
 from deepgnn.graph_engine._base import Graph
-from deepgnn.graph_engine.samplers import RangeNodeSampler, BaseSampler
 from deepgnn.graph_engine import prefetch
 
 

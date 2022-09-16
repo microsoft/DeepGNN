@@ -14,7 +14,6 @@ from deepgnn.pytorch.common import init_common_args
 from deepgnn.pytorch.training.args import init_trainer_args, init_fp16_args
 from deepgnn.pytorch.training.trainer import Trainer
 from deepgnn.graph_engine import create_backend, BackendOptions
-from deepgnn.graph_engine.samplers import GENodeSampler, GEEdgeSampler
 
 
 def get_args(init_arg_fn: Optional[Callable] = None, run_args: Optional[List] = None):

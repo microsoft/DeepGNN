@@ -11,7 +11,6 @@ import concurrent.futures.thread
 from typing import Callable, Tuple, Optional
 from queue import Queue
 from concurrent.futures import ThreadPoolExecutor
-from deepgnn.graph_engine.samplers import BaseSampler
 from deepgnn.graph_engine._base import Graph
 from deepgnn.graph_engine._adl_reader import FetchDone
 from deepgnn import get_logger

@@ -27,20 +27,23 @@ feature_dim = 50
 label_idx = 0
 label_dim = 121
 
+
 class CoraDataset(Dataset):
-    def __init__(self):
+    def __init__(self, node_types):
         self.g = Client("/tmp/cora", [0, 1])
+        self.node_types = np.array(node_types)
+        self.count = self.g.node_count(self.node_types)
 
     def __len__(self):
-        return self.g.node_count(np.array([0, 1, 2]))
+        return self.count
 
-    def __getitem__(self, idx):
-        if isinstance(idx, (int, float)):
-            idx = [idx]
+    def __getitem__(self, sampler_idx):
+        if isinstance(sampler_idx, (int, float)):
+            sampler_idx = [sampler_idx]
+        idx = sampler_idx# self.g.convert()
         return self.g.node_features(idx, np.array([[feature_idx, feature_dim]]), feature_type=np.float32), torch.Tensor([0])
 
 
-# Define model
 class NeuralNetwork(nn.Module):
     def __init__(self):
         super(NeuralNetwork, self).__init__()
@@ -106,7 +109,7 @@ def train_func(config: Dict):
 
     worker_batch_size = batch_size // session.get_world_size()
 
-    training_data = CoraDataset()
+    training_data = CoraDataset([0])
 
     # Create data loaders.
     train_dataloader = DataLoader(training_data, batch_size=worker_batch_size)
