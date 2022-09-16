@@ -10,7 +10,7 @@ from typing import Dict
 import numpy as np
 import torch
 from torch import nn
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, Sampler
 
 import ray
 import ray.train as train
@@ -18,7 +18,7 @@ from ray.train.torch import TorchTrainer
 from ray.air import session
 from ray.air.config import ScalingConfig
 
-import deepgnn.graph_engine.snark._lib as lib
+from deepgnn.graph_engine import SamplingStrategy
 from deepgnn.graph_engine.snark.local import Client
 
 
@@ -28,7 +28,9 @@ label_idx = 0
 label_dim = 121
 
 
+'''
 class CoraDataset(Dataset):
+    """Cora dataset with base torch sampler."""
     def __init__(self, node_types):
         self.g = Client("/tmp/cora", [0, 1])
         self.node_types = np.array(node_types)
@@ -40,8 +42,71 @@ class CoraDataset(Dataset):
     def __getitem__(self, sampler_idx):
         if isinstance(sampler_idx, (int, float)):
             sampler_idx = [sampler_idx]
-        idx = sampler_idx# self.g.convert()
+        idx = sampler_idx# self.g.type_remap(sampler_idx)  # TODO
         return self.g.node_features(idx, np.array([[feature_idx, feature_dim]]), feature_type=np.float32), torch.Tensor([0])
+
+
+# Range sampling use this w/ SubsetRandomSampler w/ list(range(start, stop))
+'''
+'''
+class CoraDataset(Dataset):
+    """Cora dataset with file sampler."""
+    def __init__(self, node_types):
+        self.g = Client("/tmp/cora", [0, 1])  # TODO utility function for adl
+        self.node_types = np.array(node_types)
+        self.count = self.g.node_count(self.node_types)
+
+    def __len__(self):
+        return self.count
+
+    def __getitem__(self, sampler_idx):
+        if isinstance(sampler_idx, (int, float)):
+            sampler_idx = [sampler_idx]
+        idx = sampler_idx
+        return self.g.node_features(idx, np.array([[feature_idx, feature_dim]]), feature_type=np.float32), torch.Tensor([0])
+
+
+class FileSampler(Sampler[int]):  # Shouldn't need this really with quick map from torch sampler?
+    def __init__(self, filename):
+        self.filename = filename
+
+    def __len__(self) -> int:
+        raise NotImplementedError("")
+
+    def __iter__(self):
+        with open(self.filename, "r") as file:
+            for line in file.readlines():
+                yield int(line)
+'''
+class CoraDataset(Dataset):
+    """Cora dataset with file sampler."""
+    def __init__(self, node_types):
+        self.g = Client("/tmp/cora", [0])
+        self.node_types = np.array(node_types)
+        self.count = self.g.node_count(self.node_types)
+
+    def __len__(self):
+        return self.count
+
+    def __getitem__(self, sampler_idx):
+        if isinstance(sampler_idx, (int, float)):
+            sampler_idx = [sampler_idx]
+        idx = sampler_idx
+        return self.g.node_features(idx, np.array([[feature_idx, feature_dim]]), feature_type=np.float32), torch.Tensor([0])
+
+
+class WeightedSampler(Sampler[int]):  # Shouldn't need this really with quick map from torch sampler?
+    def __init__(self, graph, node_types):
+        self.g = graph
+        self.node_types = np.array(node_types)
+        self.count = self.g.node_count(self.node_types)
+
+    def __len__(self):
+        return self.count
+
+    def __iter__(self):
+        for _ in range(len(self)):
+            yield self.g.sample_nodes(1, self.node_types, SamplingStrategy.Weighted)[0]
 
 
 class NeuralNetwork(nn.Module):
@@ -112,7 +177,8 @@ def train_func(config: Dict):
     training_data = CoraDataset([0])
 
     # Create data loaders.
-    train_dataloader = DataLoader(training_data, batch_size=worker_batch_size)
+    #train_dataloader = DataLoader(training_data, sampler=FileSampler("/tmp/cora/train.nodes"), batch_size=worker_batch_size)
+    train_dataloader = DataLoader(training_data, sampler=WeightedSampler(training_data.g, [0]), batch_size=worker_batch_size)
     #test_dataloader = DataLoader(test_data, batch_size=worker_batch_size)
 
     train_dataloader = train.torch.prepare_data_loader(train_dataloader)
@@ -147,6 +213,8 @@ def train_fashion_mnist(num_workers=2, use_gpu=False):
 
 
 def setup_module(module):
+    import deepgnn.graph_engine.snark._lib as lib
+
     lib_name = "libwrapper.so"
     if platform.system() == "Windows":
         lib_name = "wrapper.dll"
