@@ -12,7 +12,6 @@ py_library(
         "adl_uploader.py",
         "graph_ops.py",
         "multihop.py",
-        "prefetch.py",
         "utils.py",
     ],
     data = ["//src/cc/lib:wrapper"],
@@ -42,25 +41,6 @@ py_library(
         "//src/python/deepgnn:deepgnn",
     ],
     visibility = ["//visibility:public"],
-)
-
-py_test(
-    name = "test_prefetch",
-    srcs = ["test_prefetch.py"],
-    imports = ["../../"],
-    main = "test_prefetch.py",
-    python_version = "PY3",
-    srcs_version = "PY3",
-    deps = [
-        ":graph_engine",
-        requirement("numpy"),
-        requirement("fsspec"),
-        requirement("pytest"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("azure-datalake-store"),
-    ],
 )
 
 py_test(
