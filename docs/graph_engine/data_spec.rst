@@ -17,23 +17,24 @@ Users can generate a graph in either format then our pipeline will convert it in
 DeepGNN also supports writing custom decoders, see [the decoders file](https://github.com/microsoft/DeepGNN/blob/main/src/python/deepgnn/graph_engine/snark/decoders.py).
 Just inheret the base class Decoder, overwrite the decode function and pass the new decoder as an argument to the converter or dispatcher.
 
-1. `EdgeList <#EdgeList-format>`_: Heterogeneous or homegeneous graph.
+	1. `EdgeList <#EdgeList-format>`_: Heterogeneous or homegeneous graph.
 
-2. `JSON <#json-format>`_: Heterogeneous or homegeneous graph.
+	2. `JSON <#json-format>`_: Heterogeneous or homegeneous graph.
 
-3. `TSV <#tsv-format>`_: Homogeneous graph only.
+	3. `TSV <#tsv-format>`_: Homogeneous graph only.
 
 EdgeList Format
 ===============
 
 The EdgeList format,
-* Supports heterogeneous and homegeneous graphs.
-* Nodes and edges are on separate lines, so it may be sorted after initial conversion.
-* Small files that are fast to create and convert.
+	* Supports heterogeneous and homegeneous graphs.
+	* Nodes and edges are on separate lines, so it may be sorted after initial conversion.
+	* Small files that are fast to create and convert.
 
 `graph.csv` layout,
 
 .. code-block:: text
+
 	<node_0_info>
 	<edge_0,1_info>
 	<edge_0,2_info>
@@ -42,6 +43,7 @@ The EdgeList format,
 	...
 
 .. code-block:: text
+
 	node_info: node_id,-1,node_type,node_weight,<features>
 	edge_info: src,dst,edge_type,edge_weight,<features>
 
@@ -55,6 +57,7 @@ coming in the following formats,
 A feature index can be skipped by giving a 0 length vector.
 
 .. code-block:: text
+
 	features[dense]: dtype_name,length,v1,v2,...,dtype_name2,length2,v1,v2,...
 	features[sparse with 2 dim coordinates vector]: dtype_name,values.size/coords.shape[1],c1,c2,...,v1,v2,...
 	features[sparse with 1 dim coordinates vector]: dtype_name,values.size/0,c1,c2,...,v1,v2,...
@@ -66,12 +69,37 @@ Edges: {0 -> 1, 1 -> 0} both with type = 0, weight = .5 and a sparse feature
 vector (coords=[0, 4, 10], values=[1, 1, 1] dtype=uint8).
 
 .. code-block:: text
+
 	0,-1,1,.5,int32,3,1,1,1,float32,2,1.1,1.1
 	0,1,0,.5,uint8,3/0,0,4,10,1,1,1
 	1,-1,1,.5,int32,3,1,1,1,float32,2,1.1,1.1
 	1,0,0,.5,uint8,3/0,0,4,10,1,1,1
 
-`advanced usage`
+Delimiters
+.. code-block:: text
+
+	"," is the default column delimiter, it can be overriden with the delimiter parameter.
+	"/" is the default sparse features length delimiter, it can be overriden with the length_delimiter parameter.
+	"\" is the escape for the delimiter in "binary" features.
+
+Sorting
+-------
+
+For some users, it is better to convert all of the nodes and edges of their file into a 
+unsorted edge list first, then use an external sort function.
+Here is an examle usage of bash sort:
+
+sort edgelist.csv -t, -n -k1,1 -k3,3 -k2,2 --parallel=1 -o output.csv
+
+-t, sets the delimiter between numbers to 0.
+-n means use numeric sort not string sort.
+--parrelel to specify number threads
+-kx,x Sort by key with field_start,field_end given in order of columns needed to sort.
+
+-> To pull this off, nodes need to be written with their type == -1, then a custom decoder like so to invert!
+
+Advanced Usage
+--------------
 
 If your graph is homogeneous so all nodes and/or all edges have the same
 types, weights, feature_types or features_lens, we provide arguments to
@@ -109,31 +137,6 @@ e.g. the same graph as above with init fully filled in,
 	0,1,0,4,10,1,1,1
 	1,-1,1,1,1,1.1,1.1
 	1,0,0,4,10,1,1,1
-
-Delimiters
-.. code-block:: text
-	"," is the default column delimiter, it can be overriden with the delimiter parameter.
-	"/" is the default sparse features length delimiter, it can be overriden with the
-		length_delimiter parameter.
-	"\" is the escape for the delimiter in "binary" features.
-
-Sorting
--------
-
-For some users, it is better to convert all of the nodes and edges of their file into a 
-unsorted edge list first, then use an external sort function.
-Here is an examle usage of bash sort:
-
-sort edgelist.csv -t, -n -k1,1 -k3,3 -k2,2 --parallel=1 -o output.csv
-
--t, sets the delimiter between numbers to 0.
--n means use numeric sort not string sort.
---parrelel to specify number threads
--kx,x Sort by key with field_start,field_end given in order of columns needed to sort.
-
--> To pull this off, nodes need to be written with their type == -1, then a custom decoder like so to invert!
-
-
 
 JSON Format
 ===========
