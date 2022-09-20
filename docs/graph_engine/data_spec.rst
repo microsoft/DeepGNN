@@ -28,30 +28,39 @@ EdgeList Format
 
 The EdgeList format,
 * Supports heterogeneous and homegeneous graphs.
-* Nodes and edges are on separate lines, therefore a node and its outgoing edges may be on separate lines.
+* Nodes and edges are on separate lines, so it may be sorted after initial conversion.
 * Small files that are fast to create and convert.
 
 `graph.csv` layout,
 
 .. code-block:: text
-	<node info>
-	<edge_1_info>
-	<edge_2_info>
+	<node_0_info>
+	<edge_0,1_info>
+	<edge_0,2_info>
+	...
+	<node_1_info>
 	...
 
-node_info: node_id,-1,node_type,node_weight,<features>
-edge_info: src,dst,edge_type,edge_weight,<features>
-features[dense]: dtype_name,length,v1,v2,...,dtype_name2,length2,v1,v2,...
-features[sparse with 2 dim coordinates vector]: dtype_name,values.size/coords.shape[1],c1,c2,...,v1,v2,...
-features[sparse with 1 dim coordinates vector]: dtype_name,values.size/0,c1,c2,...,v1,v2,...
-* The file should be sorted so the first line has info on the first node, the next few lines contain
-all of this node's outgoing edges sorted by type then dst. The next line should have the second
-node and so on.
+.. code-block:: text
+	node_info: node_id,-1,node_type,node_weight,<features>
+	edge_info: src,dst,edge_type,edge_weight,<features>
+
+It is necessary that the file is sorted Sort the file so the first line has the first node's info, the next few lines have all the first node's
+outgoing edges. Then the next line will have the second node's info and so on.
+
+Feature vectors to fill <features> can be one of 3 types, and do not have to remain consistent
+accross nodes/edges.
+coming in the following formats,
 * Feature vectors are given indicies based on the order they appear in the line, the first feature vector is index 0.
 A feature index can be skipped by giving a 0 length vector.
 
-Here is a concrete example,
-A graph with 2 nodes {0, 1} each with type = 1, weight = .5 and
+.. code-block:: text
+	features[dense]: dtype_name,length,v1,v2,...,dtype_name2,length2,v1,v2,...
+	features[sparse with 2 dim coordinates vector]: dtype_name,values.size/coords.shape[1],c1,c2,...,v1,v2,...
+	features[sparse with 1 dim coordinates vector]: dtype_name,values.size/0,c1,c2,...,v1,v2,...
+
+
+Here is a concrete example, a graph with 2 nodes {0, 1} each with type = 1, weight = .5 and
 feature vectors [1, 1, 1] dtype=int32 and [1.1, 1.1] dtype=float32.
 Edges: {0 -> 1, 1 -> 0} both with type = 0, weight = .5 and a sparse feature
 vector (coords=[0, 4, 10], values=[1, 1, 1] dtype=uint8).
@@ -62,8 +71,14 @@ vector (coords=[0, 4, 10], values=[1, 1, 1] dtype=uint8).
 	1,-1,1,.5,int32,3,1,1,1,float32,2,1.1,1.1
 	1,0,0,.5,uint8,3/0,0,4,10,1,1,1
 
-Optional Graph Metadata
+`advanced usage`
+
+If your graph is homogeneous so all nodes and/or all edges have the same
+types, weights, feature_types or features_lens, we provide arguments to
+remov the need to add them at each line.
+
 The following keyword arguments can be added when creating the decoder,
+.. code-block:: text
 	default_node_type: int Type of all nodes, if set do not add node type to any nodes.
 	default_node_weight: int Weight of all nodes, if set do not add node weight to any nodes.
 	default_node_feature_types: ["dtype" or None, ...] Dtype of each feature vector.
@@ -87,7 +102,7 @@ e.g. the same graph as above with init fully filled in,
 		default_edge_feature_lens=[[3, 0]],
 	)
 
-graph.csv,
+`condensed homogeneous graph.csv`,
 
 .. code-block:: text
 	0,-1,1,1,1,1.1,1.1
@@ -96,10 +111,29 @@ graph.csv,
 	1,0,0,4,10,1,1,1
 
 Delimiters
+.. code-block:: text
 	"," is the default column delimiter, it can be overriden with the delimiter parameter.
 	"/" is the default sparse features length delimiter, it can be overriden with the
 		length_delimiter parameter.
 	"\" is the escape for the delimiter in "binary" features.
+
+Sorting
+-------
+
+For some users, it is better to convert all of the nodes and edges of their file into a 
+unsorted edge list first, then use an external sort function.
+Here is an examle usage of bash sort:
+
+sort edgelist.csv -t, -n -k1,1 -k3,3 -k2,2 --parallel=1 -o output.csv
+
+-t, sets the delimiter between numbers to 0.
+-n means use numeric sort not string sort.
+--parrelel to specify number threads
+-kx,x Sort by key with field_start,field_end given in order of columns needed to sort.
+
+-> To pull this off, nodes need to be written with their type == -1, then a custom decoder like so to invert!
+
+
 
 JSON Format
 ===========
