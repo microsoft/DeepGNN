@@ -27,9 +27,10 @@ EdgeList Format
 ===============
 
 The EdgeList format,
-	* Supports heterogeneous and homegeneous graphs.
-	* Nodes and edges are on separate lines, so it may be sorted after initial conversion.
+
+	* Nodes and edges are on separate lines, so they may be sorted after generating the file.
 	* Small files that are fast to create and convert.
+	* Supports heterogeneous and homegeneous graphs.
 
 `graph.csv` layout,
 
@@ -47,14 +48,12 @@ The EdgeList format,
 	node_info: node_id,-1,node_type,node_weight,<features>
 	edge_info: src,dst,edge_type,edge_weight,<features>
 
-It is necessary that the file is sorted Sort the file so the first line has the first node's info, the next few lines have all the first node's
+It is necessary that the file is sorted so the first line has the first node's info, the next few lines have all the first node's
 outgoing edges. Then the next line will have the second node's info and so on.
 
-Feature vectors to fill <features> can be one of 3 types, and do not have to remain consistent
-accross nodes/edges.
-coming in the following formats,
-* Feature vectors are given indicies based on the order they appear in the line, the first feature vector is index 0.
-A feature index can be skipped by giving a 0 length vector.
+Feature fectors to fill <features> can be dense or sparse. Features will be given
+indexes starting at 0 and indexes can be skipped with 0 length vectors. Each node and
+edge does not have to have the same number of features or feature types.
 
 .. code-block:: text
 
@@ -62,10 +61,9 @@ A feature index can be skipped by giving a 0 length vector.
 	features[sparse with 2 dim coordinates vector]: dtype_name,values.size/coords.shape[1],c1,c2,...,v1,v2,...
 	features[sparse with 1 dim coordinates vector]: dtype_name,values.size/0,c1,c2,...,v1,v2,...
 
-
-Here is a concrete example, a graph with 2 nodes {0, 1} each with type = 1, weight = .5 and
+Here is a concrete example: a graph with 2 nodes {0, 1} each with type = 1, weight = .5 and
 feature vectors [1, 1, 1] dtype=int32 and [1.1, 1.1] dtype=float32.
-Edges: {0 -> 1, 1 -> 0} both with type = 0, weight = .5 and a sparse feature
+Edges {0 -> 1, 1 -> 0} both with type = 0, weight = .5 and a sparse feature
 vector (coords=[0, 4, 10], values=[1, 1, 1] dtype=uint8).
 
 .. code-block:: text
@@ -76,6 +74,7 @@ vector (coords=[0, 4, 10], values=[1, 1, 1] dtype=uint8).
 	1,0,0,.5,uint8,3/0,0,4,10,1,1,1
 
 Delimiters
+
 .. code-block:: text
 
 	"," is the default column delimiter, it can be overriden with the delimiter parameter.
@@ -101,12 +100,11 @@ sort edgelist.csv -t, -n -k1,1 -k3,3 -k2,2 --parallel=1 -o output.csv
 Advanced Usage
 --------------
 
-If your graph is homogeneous so all nodes and/or all edges have the same
-types, weights, feature_types or features_lens, we provide arguments to
-remov the need to add them at each line.
+If your graph has the same types, weights, feature types or feature lengths,
+you can avoid writing this same info on every line by using the following init args,
 
-The following keyword arguments can be added when creating the decoder,
 .. code-block:: text
+
 	default_node_type: int Type of all nodes, if set do not add node type to any nodes.
 	default_node_weight: int Weight of all nodes, if set do not add node weight to any nodes.
 	default_node_feature_types: ["dtype" or None, ...] Dtype of each feature vector.
@@ -116,9 +114,10 @@ The following keyword arguments can be added when creating the decoder,
 	default_edge_feature_types: ["dtype" or None, ...] Dtype of each feature vector.
 	default_edge_feature_lens: [[int, ...] or None, ...] Length value for each feature vector.
 
-e.g. the same graph as above with init fully filled in,
+e.g. the same graph as before with init fully filled in,
 
 .. code-block:: python
+
 	EdgeListDecoder(
 		default_node_type=1,
 		default_node_weight=.5,
@@ -133,6 +132,7 @@ e.g. the same graph as above with init fully filled in,
 `condensed homogeneous graph.csv`,
 
 .. code-block:: text
+
 	0,-1,1,1,1,1.1,1.1
 	0,1,0,4,10,1,1,1
 	1,-1,1,1,1,1.1,1.1
