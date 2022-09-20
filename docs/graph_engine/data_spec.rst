@@ -84,18 +84,15 @@ Delimiters
 Sorting
 -------
 
-For some users, it is better to convert all of the nodes and edges of their file into a 
-unsorted edge list first, then use an external sort function.
-Here is an examle usage of bash sort:
+For some use cases that use the EdgeList format as an intermediate between their input format and binaries,
+it may be more efficient to first convert to EdgeList and sort it afterward.
 
-sort edgelist.csv -t, -n -k1,1 -k3,3 -k2,2 --parallel=1 -o output.csv
+Here is an example using the bash exteral sort function with N workers. In order for this to work you must
+invert the node's types when writing the file(node_type -> -node_type) and use `EdgeListDecoder(invert_node_types=True)`.
 
--t, sets the delimiter between numbers to 0.
--n means use numeric sort not string sort.
---parrelel to specify number threads
--kx,x Sort by key with field_start,field_end given in order of columns needed to sort.
+.. code-block:: text
 
--> To pull this off, nodes need to be written with their type == -1, then a custom decoder like so to invert!
+	sort edgelist.csv -t, -n -k1,1 -k3,3 -k2,2 --parallel=1 -o output.csv
 
 Advanced Usage
 --------------
