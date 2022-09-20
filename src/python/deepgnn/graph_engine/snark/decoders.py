@@ -240,7 +240,7 @@ class EdgeListDecoder(Decoder):
 
             if key is None:
                 try:
-                    key = next(data)
+                    key = next(data).strip()
                 except StopIteration:
                     break
             if length is None:
