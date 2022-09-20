@@ -128,8 +128,8 @@ class EdgeListDecoder(Decoder):
         default_edge_feature_types: Optional[List[Optional[str]]] = None,
         default_node_feature_lens: Optional[List[Optional[List[int]]]] = None,
         default_edge_feature_lens: Optional[List[Optional[List[int]]]] = None,
-        delimiter: str=",",
-        length_delimiter: str="/",
+        delimiter: str = ",",
+        length_delimiter: str = "/",
         invert_node_type: bool = False,
     ):
         """Initialize the Decoder."""

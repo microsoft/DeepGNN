@@ -1129,7 +1129,9 @@ def test_edge_list_binary_escape():
 
 def test_edge_list_binary_spaces():
     decoder = EdgeListDecoder()
-    src, dst, typ, weight, features = next(decoder.decode("0, -1, 0, 1.0, binary, 1, test, int32, 2, 1, 2"))
+    src, dst, typ, weight, features = next(
+        decoder.decode("0, -1, 0, 1.0, binary, 1, test, int32, 2, 1, 2")
+    )
     assert features[0] == " test"
     npt.assert_equal(features[1], np.array([1, 2], np.int32))
 
