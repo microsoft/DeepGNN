@@ -1134,6 +1134,12 @@ def test_edge_list_binary_spaces():
     npt.assert_equal(features[1], np.array([1, 2], np.int32))
 
 
+def test_edge_list_invert_node_type():
+    decoder = EdgeListDecoder(invert_node_type=True)
+    src, dst, typ, weight, features = next(decoder.decode("0,-1,-3,1.0"))
+    assert typ == 3
+
+
 def test_binary_writer_error_checking():
     output = tempfile.TemporaryDirectory()
     node = [(0, -1, 0, 0.1, [])]

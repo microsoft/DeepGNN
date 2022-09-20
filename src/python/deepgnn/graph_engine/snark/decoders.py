@@ -86,6 +86,8 @@ class EdgeListDecoder(Decoder):
         default_edge_weight: int Same as node except for all edges.
         default_edge_feature_types: ["dtype" or None, ...] Dtype of each feature vector.
         default_edge_feature_lens: [[int, ...] or None, ...] Length value for each feature vector.
+        invert_node_type: str = False If you inverted your node types when generating the file,
+            use this flag to uninvert them.
 
     Init Parameters Format Example
         Same graph as the previous example, just with defaults specified.
@@ -126,8 +128,9 @@ class EdgeListDecoder(Decoder):
         default_edge_feature_types: Optional[List[Optional[str]]] = None,
         default_node_feature_lens: Optional[List[Optional[List[int]]]] = None,
         default_edge_feature_lens: Optional[List[Optional[List[int]]]] = None,
-        delimiter=",",
-        length_delimiter="/",
+        delimiter: str=",",
+        length_delimiter: str="/",
+        invert_node_type: bool = False,
     ):
         """Initialize the Decoder."""
         super().__init__()
@@ -154,6 +157,8 @@ class EdgeListDecoder(Decoder):
         self.delimiter = delimiter
         self.length_delimiter = length_delimiter
         self.escape = r"\\"[0]
+
+        self.invert_node_type = invert_node_type
 
     def _get_feature(
         self, key: str, length: List[int], data: Iterator
@@ -229,6 +234,9 @@ class EdgeListDecoder(Decoder):
             typ = int(next(data))
         if weight is None:
             weight = float(next(data))
+
+        if dst == -1 and self.invert_node_type:
+            typ = -typ
 
         features: List[Union[np.ndarray, Tuple[np.ndarray, np.ndarray], None]] = []
         while True:
