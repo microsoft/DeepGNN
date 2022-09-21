@@ -147,7 +147,9 @@ def test_converter_0_workers(triangle_graph):
             graph_path=data_name,
             partition_count=1,
             output_dir=output.name,
-            decoder=JsonDecoder() if isinstance(decoder(), EdgeListDecoder) else EdgeListDecoder(),
+            decoder=JsonDecoder()
+            if isinstance(decoder(), EdgeListDecoder)
+            else EdgeListDecoder(),
             worker_count=0,
         ).convert()
 

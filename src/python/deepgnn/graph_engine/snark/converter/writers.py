@@ -148,7 +148,6 @@ class BinaryWriter:
         return getattr(self, key)
 
 
-
 class NodeWriter:
     """NodeWriter records information about nodes and adds node features to a NodeFeatureWriter."""
 

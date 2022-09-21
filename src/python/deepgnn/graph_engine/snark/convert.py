@@ -126,7 +126,9 @@ class MultiWorkersConverter:
 
             d.join()
         else:
-            assert self.partition_count == 1, "Num_workers = 0 does not support multiple partitions."
+            assert (
+                self.partition_count == 1
+            ), "Num_workers = 0 does not support multiple partitions."
             if isinstance(self.decoder, type):
                 self.decoder = self.decoder()
             writer = BinaryWriter(self.output_dir, 0)
@@ -135,7 +137,6 @@ class MultiWorkersConverter:
                     writer.add(self.decoder.decode(line))
             writer.close()
             d = writer
-
 
         fs, _ = get_fs(self.output_dir)
         with fs.open(
