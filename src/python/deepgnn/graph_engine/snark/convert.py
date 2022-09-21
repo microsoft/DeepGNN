@@ -105,8 +105,6 @@ class MultiWorkersConverter:
             f"worker {self.worker_index} try to generate partition: {self.partition_offset} - {self.partition_count + self.partition_offset}"
         )
 
-<<<<<<< Updated upstream
-        d = self.dispatcher
         if self.file_iterator is None:
             self.file_iterator = TextFileIterator(
                 filename=self.graph_path,
@@ -120,26 +118,9 @@ class MultiWorkersConverter:
                 num_workers=self.worker_count,
             )
 
-        for _, data in enumerate(self.file_iterator):
-            for line in data:
-                d.dispatch(line)
-
-        d.join()
-=======
-        dataset = TextFileIterator(
-            filename=self.graph_path,
-            store_name=None,
-            batch_size=self.record_per_step,
-            epochs=1,
-            read_block_in_M=self.read_block_in_M,
-            buffer_queue_size=self.buffer_queue_size,
-            thread_count=self.thread_count,
-            worker_index=self.worker_index,
-            num_workers=max(1, self.worker_count),
-        )
         if self.worker_count >= 1:
             d = self.dispatcher
-            for _, data in enumerate(dataset):
+            for _, data in enumerate(self.file_iterator):
                 for line in data:
                     d.dispatch(line)
 
@@ -149,13 +130,12 @@ class MultiWorkersConverter:
             if isinstance(self.decoder, type):
                 self.decoder = self.decoder()
             writer = BinaryWriter(self.output_dir, 0)
-            for _, data in enumerate(dataset):
+            for _, data in enumerate(self.file_iterator):
                 for line in data:
                     writer.add(self.decoder.decode(line))
             writer.close()
             d = writer
 
->>>>>>> Stashed changes
 
         fs, _ = get_fs(self.output_dir)
         with fs.open(
