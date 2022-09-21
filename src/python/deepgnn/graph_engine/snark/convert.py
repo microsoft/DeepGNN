@@ -11,6 +11,7 @@ from deepgnn import get_logger
 from deepgnn.graph_engine._adl_reader import TextFileIterator
 from deepgnn.graph_engine._base import get_fs
 from deepgnn.graph_engine.snark.decoders import DecoderType, JsonDecoder
+from deepgnn.graph_engine.snark.converter.writers import BinaryWriter
 from deepgnn.graph_engine.snark.dispatcher import (
     PipeDispatcher,
     Dispatcher,
@@ -73,12 +74,12 @@ class MultiWorkersConverter:
         self.fs, _ = get_fs(graph_path)
 
         # calculate the partition offset and count of this worker.
-        self.partition_count = int(math.ceil(partition_count / worker_count))
+        self.partition_count = int(math.ceil(partition_count / max(1, worker_count)))
         self.partition_offset = self.partition_count * worker_index
         if self.partition_offset + self.partition_count > partition_count:
             self.partition_count = partition_count - self.partition_offset
 
-        if self.dispatcher is None:
+        if self.dispatcher is None and self.worker_count >= 1:
             # when converting data in HDFS make sure to turn it off: https://hdfs3.readthedocs.io/en/latest/limitations.html
             use_threads = True
             if hasattr(fsspec.implementations, "hdfs") and isinstance(
@@ -104,6 +105,7 @@ class MultiWorkersConverter:
             f"worker {self.worker_index} try to generate partition: {self.partition_offset} - {self.partition_count + self.partition_offset}"
         )
 
+<<<<<<< Updated upstream
         d = self.dispatcher
         if self.file_iterator is None:
             self.file_iterator = TextFileIterator(
@@ -123,12 +125,43 @@ class MultiWorkersConverter:
                 d.dispatch(line)
 
         d.join()
+=======
+        dataset = TextFileIterator(
+            filename=self.graph_path,
+            store_name=None,
+            batch_size=self.record_per_step,
+            epochs=1,
+            read_block_in_M=self.read_block_in_M,
+            buffer_queue_size=self.buffer_queue_size,
+            thread_count=self.thread_count,
+            worker_index=self.worker_index,
+            num_workers=max(1, self.worker_count),
+        )
+        if self.worker_count >= 1:
+            d = self.dispatcher
+            for _, data in enumerate(dataset):
+                for line in data:
+                    d.dispatch(line)
+
+            d.join()
+        else:
+            assert self.partition_count == 1, "Num_workers = 0 does not support multiple partitions."
+            if isinstance(self.decoder, type):
+                self.decoder = self.decoder()
+            writer = BinaryWriter(self.output_dir, 0)
+            for _, data in enumerate(dataset):
+                for line in data:
+                    writer.add(self.decoder.decode(line))
+            writer.close()
+            d = writer
+
+>>>>>>> Stashed changes
 
         fs, _ = get_fs(self.output_dir)
         with fs.open(
             "{}/meta{}.txt".format(
                 self.output_dir,
-                "" if self.worker_count == 1 else f"_{self.worker_index}",
+                "" if max(1, self.worker_count) == 1 else f"_{self.worker_index}",
             ),
             "w",
         ) as mtxt:

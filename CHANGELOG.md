@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Breaking. Added version checks for binary data. Requires to convert graph data or add v1 at the top of meta files.
 
+- Add Debug mode to MultiWorkersConverter, using worker_count=0 will now show error messages.
+
+### Changed
+- Rename function deepgnn.graph_engine.data.to_json_node -> deepgnn.graph_engine.data.to_edge_list_node and update functionality accordingly.
+
 ## [0.1.55] - 2022-08-26
 
 ### Added

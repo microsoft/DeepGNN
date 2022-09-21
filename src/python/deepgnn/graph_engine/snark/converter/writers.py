@@ -120,6 +120,15 @@ class BinaryWriter:
         self.edge_writer.close()
         self.node_alias.close()
         self.edge_alias.close()
+        self.partitions = [self]
+        self.id = 0
+
+    def prop(self, key):
+        return getattr(self, key)
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+
 
 
 class NodeWriter:
