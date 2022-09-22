@@ -20,6 +20,7 @@ from deepgnn.graph_engine.snark.local import Client as LocalClient
 import deepgnn.graph_engine.snark.distributed as distributed
 from deepgnn.graph_engine._base import SamplingStrategy, FeatureType
 from deepgnn.graph_engine.snark.meta_merger import merge_metadata_files
+from deepgnn.graph_engine.snark.meta import Meta
 
 
 def caveman_data(partitions: int = 1, worker_count: int = 1, output_dir: str = ""):
@@ -239,6 +240,19 @@ def test_snark_backend_distributed_graph_features_missing_from_graph(distributed
 
     assert values.shape == (1, 2)
     npt.assert_equal(values, [[0, 0]])
+
+
+def test_meta_version_message():
+    working_dir = tempfile.TemporaryDirectory()
+    meta_file = working_dir.name + f"/meta.txt"
+    with open(meta_file, "w+") as f:
+        f.writelines(["15\n", "30\n", "2\n", "1\n", "2\n", "1\n"])
+    with pytest.raises(RuntimeError) as excinfo:
+        Meta(working_dir.name)
+        assert (
+            "First line in meta file should be version, please regenerate binary data"
+            in str(excinfo.value)
+        )
 
 
 if __name__ == "__main__":
