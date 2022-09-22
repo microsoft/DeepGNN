@@ -123,7 +123,7 @@ def test_converter_0_workers(triangle_graph):
         partition_count=1,
         output_dir=output.name,
         decoder=decoder(),
-        worker_count=0,
+        debug=True,
     ).convert()
 
     with open("{}/node_{}_{}.map".format(output.name, 0, 0), "rb") as nm:
@@ -148,9 +148,9 @@ def test_converter_0_workers(triangle_graph):
             partition_count=1,
             output_dir=output.name,
             decoder=JsonDecoder()
-            if isinstance(decoder(), EdgeListDecoder)
-            else EdgeListDecoder(),
-            worker_count=0,
+            if isinstance(decoder(), TsvDecoder)
+            else TsvDecoder(),
+            debug=True,
         ).convert()
 
 

@@ -38,8 +38,12 @@ class MultiWorkersConverter:
         skip_node_sampler: bool = False,
         skip_edge_sampler: bool = False,
         file_iterator: Optional[TextFileIterator] = None,
+        debug: bool = False,
     ):
         """Run multi worker converter in multi process.
+
+        * Converter may stall if an error is thrown inside of the multiprocessing.
+        In order to disable multprocessing and see the error message, use debug=True.
 
         Args:
             graph_path: the raw graph file folder.
@@ -47,7 +51,7 @@ class MultiWorkersConverter:
             decoder (Decoder): Decoder object which is used to parse the raw graph data file.
             partition_count: how many partitions will be generated.
             worker_index: the work index when running in multi worker mode.
-            worker_count: how many workers will be started to convert the data.
+            worker_count: how many workers will be started to convert the data, use 0 with 1 partition for debug mode.
             record_per_step: how many lines will be read from the raw graph file to process in each step.
             buffer_size: buffer size in MB used to process the raw graph lines.
             queue_size: the queue size when generating the bin files.
@@ -56,12 +60,14 @@ class MultiWorkersConverter:
             skip_node_sampler(bool): skip generation of node alias tables.
             skip_edge_sampler(bool): skip generation of edge alias tables.
             file_iterator(TextFileIterator): Iterator to yield lines of the input text file.
+            debug(bool, False): Enable debug mode to disable multiprocessing and see error messages, forces worker_count=1, paritition_count=1.
         """
         if decoder is None:
             decoder = JsonDecoder()  # type: ignore
+        self._debug = debug
         self.graph_path = graph_path
         self.worker_index = worker_index
-        self.worker_count = worker_count
+        self.worker_count = worker_count if not self._debug else 1
         self.output_dir = output_dir
         self.decoder = decoder
         self.record_per_step = record_per_step
@@ -74,12 +80,12 @@ class MultiWorkersConverter:
         self.fs, _ = get_fs(graph_path)
 
         # calculate the partition offset and count of this worker.
-        self.partition_count = int(math.ceil(partition_count / max(1, worker_count)))
+        self.partition_count = int(math.ceil(partition_count / worker_count)) if not self._debug else 1
         self.partition_offset = self.partition_count * worker_index
         if self.partition_offset + self.partition_count > partition_count:
             self.partition_count = partition_count - self.partition_offset
 
-        if self.dispatcher is None and self.worker_count >= 1:
+        if self.dispatcher is None and not self._debug:
             # when converting data in HDFS make sure to turn it off: https://hdfs3.readthedocs.io/en/latest/limitations.html
             use_threads = True
             if hasattr(fsspec.implementations, "hdfs") and isinstance(
@@ -118,7 +124,7 @@ class MultiWorkersConverter:
                 num_workers=self.worker_count,
             )
 
-        if self.worker_count >= 1:
+        if not self._debug:
             d = self.dispatcher
             for _, data in enumerate(self.file_iterator):
                 for line in data:
@@ -142,7 +148,7 @@ class MultiWorkersConverter:
         with fs.open(
             "{}/meta{}.txt".format(
                 self.output_dir,
-                "" if max(1, self.worker_count) == 1 else f"_{self.worker_index}",
+                "" if self.worker_count == 1 else f"_{self.worker_index}",
             ),
             "w",
         ) as mtxt:
