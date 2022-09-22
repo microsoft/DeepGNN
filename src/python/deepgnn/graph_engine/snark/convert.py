@@ -80,7 +80,9 @@ class MultiWorkersConverter:
         self.fs, _ = get_fs(graph_path)
 
         # calculate the partition offset and count of this worker.
-        self.partition_count = int(math.ceil(partition_count / worker_count)) if not self._debug else 1
+        self.partition_count = (
+            int(math.ceil(partition_count / worker_count)) if not self._debug else 1
+        )
         self.partition_offset = self.partition_count * worker_index
         if self.partition_offset + self.partition_count > partition_count:
             self.partition_count = partition_count - self.partition_offset
