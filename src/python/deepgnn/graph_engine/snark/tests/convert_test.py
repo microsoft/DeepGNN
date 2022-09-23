@@ -1017,10 +1017,11 @@ def test_edge_list_binary_escape():
         decoder.decode(r"0,-1,0,1.0,binary,1,test\,feature\\")
     )
     assert features[0] == r"test,feature\\"
-    with pytest.raises(ValueError):
-        src, dst, typ, weight, features = next(
-            decoder.decode("0,-1,0,1.0,binary,1,test,,feature")
-        )
+    src, dst, typ, weight, features = next(
+        decoder.decode("0,-1,0,1.0,binary,1,test,,feature")
+    )
+    assert len(features) == 1
+    assert features[0] == r"test"
     with pytest.raises(RuntimeError):
         src, dst, typ, weight, features = next(
             decoder.decode("0,-1,0,1.0,binary,1,\test,\feature")
@@ -1041,10 +1042,10 @@ def test_edge_list_binary_escape():
         src, dst, typ, weight, features = next(
             decoder.decode("0,-1,0,1.0,binary,1,test,feature,")
         )
-    with pytest.raises(RuntimeError):
-        src, dst, typ, weight, features = next(
-            decoder.decode("0,-1,0,1.0,binary,1,test\,feature,")
-        )
+    src, dst, typ, weight, features = next(
+        decoder.decode("0,-1,0,1.0,binary,1,test\,feature,")
+    )
+    assert features[0] == "test,feature"
     src, dst, typ, weight, features = next(
         decoder.decode("0,-1,0,1.0,binary,1,test\,feature\,")
     )
@@ -1084,10 +1085,6 @@ def test_edge_list_binary_escape():
     assert features[1] == "feature"
     with pytest.raises(ValueError):
         src, dst, typ, weight, features = next(
-            decoder.decode("0,-1,0,1.0,binary,1,test,,feature,binary,1,feature")
-        )
-    with pytest.raises(ValueError):
-        src, dst, typ, weight, features = next(
             decoder.decode("0,-1,0,1.0,binary,1,\test,\feature,binary,1,feature")
         )
     with pytest.raises(ValueError):
@@ -1106,10 +1103,6 @@ def test_edge_list_binary_escape():
     with pytest.raises(ValueError):
         src, dst, typ, weight, features = next(
             decoder.decode("0,-1,0,1.0,binary,1,test,feature,binary,1,feature,")
-        )
-    with pytest.raises(RuntimeError):
-        src, dst, typ, weight, features = next(
-            decoder.decode("0,-1,0,1.0,binary,1,test\,feature,binary,1,feature,")
         )
     src, dst, typ, weight, features = next(
         decoder.decode("0,-1,0,1.0,binary,1,test\,feature\,,binary,1,feature")

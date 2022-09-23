@@ -48,19 +48,25 @@ class EdgeListDecoder(Decoder):
 
     Edge List Format:
         ```
-        <node info>
-        <edge_1_info>
-        <edge_2_info>
+        <node_0_info>
+        <edge_0,1_info>
+        <edge_0,2_info>
+        ...
+        <node_1_info>
+        ...
         ...
         ```
         node_info: node_id -1 node_type node_weight <features>
         edge_info: src dst edge_type edge_weight <features>
+
         features[dense]: dtype_name length v1 v2 ... dtype_name2 length2 v1 v2 ...
         features[sparse with 2 dim coordinates vector]: dtype_name values.size,coords.shape[1] c1 c2 ... v1 v2 ...
         features[sparse with 1 dim coordinates vector]: dtype_name values.size,0 c1 c2 ... v1 v2 ...
-        * The file should be sorted so the first line has info on the first node, the next few lines contain
-        all of this node's outgoing edges sorted by type then dst. The next line should have the second
-        node and so on.
+
+
+        * Sort the file so the first line has the first node's info, the next few lines have all the first node's
+        outgoing edges. Then the next line will have the second node's info and so on.
+
         * Feature vectors are given indicies based on the order they appear in the line, the first feature vector is index 0.
         A feature index can be skipped by giving a 0 length vector.
 
@@ -249,6 +255,8 @@ class EdgeListDecoder(Decoder):
             if key is None:
                 try:
                     key = next(data).strip()
+                    if key == "":
+                        break
                 except StopIteration:
                     break
             if length is None:

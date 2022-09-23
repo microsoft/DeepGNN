@@ -48,7 +48,7 @@ The EdgeList format,
 	node_info: node_id,-1,node_type,node_weight,<features>
 	edge_info: src,dst,edge_type,edge_weight,<features>
 
-It is necessary that the file is sorted so the first line has the first node's info, the next few lines have all the first node's
+Sort the file so the first line has the first node's info, the next few lines have all the first node's
 outgoing edges. Then the next line will have the second node's info and so on.
 
 Feature fectors to fill <features> can be dense or sparse. Features will be given
