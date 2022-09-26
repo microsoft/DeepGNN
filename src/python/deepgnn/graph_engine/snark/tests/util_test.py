@@ -53,7 +53,7 @@ def edge_list_encode(
     )
     for edge_src, edge_dst, edge_type, edge_weight, edge_features in edges:
         buffer.write(  # type: ignore
-            f"{edge_src},{edge_dst},{edge_type},{edge_weight},{json_to_edge_list_feature(edge_features)}\n"
+            f"{edge_src},{edge_type},{edge_dst},{edge_weight},{json_to_edge_list_feature(edge_features)}\n"
         )
 
 

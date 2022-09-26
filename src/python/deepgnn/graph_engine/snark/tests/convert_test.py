@@ -877,7 +877,7 @@ def test_edge_list_header():
 
     output = tempfile.TemporaryDirectory()
     data_data = [
-        "0,-1,0,0\n0,1,0,1.5,1,2,1.1,2.2\n",
+        "0,-1,0,0\n0,0,1,1.5,1,2,1.1,2.2\n",
         "1,-1,0,0\n1,0,0,1.5,3,4,3.3,4.4\n",
         "2,-1,0,0\n2,0,0,1.5,5,6,5.5,6.6\n",
     ]
@@ -1127,12 +1127,6 @@ def test_edge_list_binary_spaces():
     )
     assert features[0] == " test"
     npt.assert_equal(features[1], np.array([1, 2], np.int32))
-
-
-def test_edge_list_invert_node_type():
-    decoder = EdgeListDecoder(invert_node_type=True)
-    src, dst, typ, weight, features = next(decoder.decode("0,-1,-3,1.0"))
-    assert typ == 3
 
 
 def test_binary_writer_error_checking():

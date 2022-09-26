@@ -46,7 +46,7 @@ The EdgeList format,
 .. code-block:: text
 
 	node_info: node_id,-1,node_type,node_weight,<features>
-	edge_info: src,dst,edge_type,edge_weight,<features>
+	edge_info: src,edge_type,dst,edge_weight,<features>
 
 Sort the file so the first line has the first node's info, the next few lines have all the first node's
 outgoing edges. Then the next line will have the second node's info and so on.
@@ -69,7 +69,7 @@ vector (coords=[0, 4, 10], values=[1, 1, 1] dtype=uint8).
 .. code-block:: text
 
 	0,-1,1,.5,int32,3,1,1,1,float32,2,1.1,1.1
-	0,1,0,.5,uint8,3/0,0,4,10,1,1,1
+	0,0,1,.5,uint8,3/0,0,4,10,1,1,1
 	1,-1,1,.5,int32,3,1,1,1,float32,2,1.1,1.1
 	1,0,0,.5,uint8,3/0,0,4,10,1,1,1
 
@@ -87,12 +87,11 @@ Sorting
 For some use cases that use the EdgeList format as an intermediate between their input format and binaries,
 it may be more efficient to first convert to EdgeList and sort it afterward.
 
-Here is an example using the bash exteral sort function with N workers. In order for this to work you must
-invert the node's types when writing the file(node_type -> -node_type) and use `EdgeListDecoder(invert_node_types=True)`.
+Here is an example using the bash exteral sort function with N workers.
 
 .. code-block:: text
 
-	sort edgelist.csv -t, -n -k1,1 -k3,3 -k2,2 --parallel=1 -o output.csv
+	sort edgelist.csv -t, -n -k1,1 -k2,2 -k3,3 --parallel=1 -o output.csv
 
 Advanced Usage
 --------------
