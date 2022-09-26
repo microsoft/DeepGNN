@@ -31,6 +31,7 @@ py_test(
     srcs_version = "PY3",
     deps = [
         ":example_torch_gat",
+        requirement("ray"),
         requirement("numpy"),
         requirement("pytest"),
         requirement("scikit-learn"),

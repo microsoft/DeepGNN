@@ -22,7 +22,7 @@ fi
 ### ===== training =======
 python ${DIR_NAME}/main.py  \
 --data_dir $GRAPH --mode train --seed 123 \
---backend snark --graph_type local --converter skip \
+--converter skip \
 --batch_size 140 --learning_rate 0.005 --num_epochs 180 \
 --sample_file /tmp/cora/train.nodes --node_type 0 \
 --model_dir $MODEL_DIR --metric_dir $MODEL_DIR --save_path $MODEL_DIR \
@@ -34,7 +34,7 @@ $PLATFORM_DEVICE
 
 python ${DIR_NAME}/main.py  \
 --data_dir $GRAPH --mode evaluate \
---backend snark --graph_type local --converter skip \
+--converter skip \
 --batch_size 1000 \
 --sample_file /tmp/cora/test.nodes --node_type 0 \
 --feature_idx 0 --feature_dim 1433 --label_idx 1 --label_dim 1 \

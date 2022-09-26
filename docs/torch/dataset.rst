@@ -188,3 +188,75 @@ will throw shape errors, here is a work around to maintain high batch sizes.
     >>> dataset = DeepGNNDataset(g.data_dir(), [0, 1, 2], [0, g.FEATURE_DIM], [1, 1], np.float32, np.float32)
 
     >>> ds = DataLoader(dataset, sampler=BatchedSampler(FileSampler(os.path.join(g.data_dir(), "train.nodes")), 140))
+
+Dataloader Workers
+================
+
+Increasing dataloader num_workers will use soft copies of the dataset and increase throughput of dataloader and potentially resolve training bottlenecks.
+
+https://stackoverflow.com/questions/62361162/is-a-pytorch-dataset-accessed-by-multiple-dataloader-workers
+
+TODO verify memroy usage in these examples is safe
+
+
+.. code-block:: python
+
+    >>> train_dataset = DeepGNNDataset("/tmp/cora", [0, 1, 2], [1, 50])
+    >>> train_dataloader = DataLoader(train_dataset, batch_size=512, num_workers=4)
+
+    >>> features, labels = next(iter(train_dataloader))
+    >>> features[0]
+    tensor([[1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
+
+    >>> labels[0]
+    tensor([0.])
+
+Remote Graph Engine
+================
+
+Graph engine supports N servers to N client connections to save memory, startup time or other gains.
+
+.. code-block:: python
+
+    >>> server = Server()
+
+    >>> class DeepGNNDataset(Dataset):
+    ...     """Cora dataset with file sampler."""
+    ...     def __init__(self, data_dir: str, node_types: List[int], feature_meta: List[int]):
+    ...         self.g = RemoteClient(data_dir, [0, 1])  # TODO use local rank
+    ...         self.node_types = np.array(node_types)
+    ...         self.feature_meta = feature_meta
+    ...         self.count = self.g.node_count(self.node_types)
+    ...
+    ...     def __len__(self):
+    ...         return self.count
+    ... 
+    ...     def __getitem__(self, idx: int) -> Tuple[Any, Any]:
+    ...         return self.g.node_features([idx], np.array([self.feature_meta]), feature_type=np.float32), torch.Tensor([0])
+
+
+    >>> class FileSampler(Sampler[int]):  # Shouldn't need this really with quick map from torch sampler?
+    ...     def __init__(self, filename: str):
+    ...         self.filename = filename
+    ... 
+    ...     def __len__(self) -> int:
+    ...         raise NotImplementedError("")
+    ... 
+    ...     def __iter__(self) -> Iterator[int]:
+    ...         with open(self.filename, "r") as file:
+    ...             while True:
+    ...                 yield int(file.readline())
+
+    >>> dataset = DeepGNNDataset("/tmp/cora", [0, 1, 2], [1, 50])
+    >>> train_dataloader = DataLoader(dataset, sampler=FileSampler("/tmp/cora/train.nodes"), batch_size=512, num_workers=4)
+
+    >>> features, labels = next(iter(train_dataloader))
+    >>> features[0]
+    tensor([[3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
+
+    >>> labels[0]
+    tensor([0.])

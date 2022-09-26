@@ -30,13 +30,6 @@ def define_param_graph_engine(parser: argparse.ArgumentParser):
         help="Server certificate path when enabling TLS.",
     )
 
-    group.add_argument(
-        "--backend",
-        type=BackendType,
-        choices=list(BackendType),
-        default=BackendType.SNARK,
-        help="Graph engine backend types.",
-    )
     parser.add_argument("--servers", nargs="+", help="Snark server list", default="")
     parser.add_argument(
         "--converter",
