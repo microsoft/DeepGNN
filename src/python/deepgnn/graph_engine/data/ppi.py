@@ -180,9 +180,9 @@ class PPI(Client):
         output = ""
         output += f"{node_id},-1,{node_type},1.0,float32,{len(label)},{','.join([str(v) for v in label])},float32,{len(feat)},{','.join([str(v) for v in feat])}\n"
         for nb in sorted(train_neighbor):
-            output += f"{node_id},{nb},0,1.0\n"
+            output += f"{node_id},0,{nb},1.0\n"
         for nb in sorted(train_removed_neighbor):
-            output += f"{node_id},{nb},1,1.0\n"
+            output += f"{node_id},1,{nb},1.0\n"
         return output
 
 

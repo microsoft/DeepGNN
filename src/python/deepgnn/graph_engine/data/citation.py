@@ -289,7 +289,7 @@ class CitationGraph(Client):
         output = ""
         output += f"{node_id},-1,{ntype},1.0,float32,{len(flt_feat)},{','.join([str(v) for v in flt_feat])},float32,1,{label}\n"
         for nb in sorted(neighbors):
-            output += f"{node_id},{nb},0,1.0\n"
+            output += f"{node_id},0,{nb},1.0\n"
         return output
 
     def _write_node_files(self, node_types: List[str], train_file: str, test_file: str):
