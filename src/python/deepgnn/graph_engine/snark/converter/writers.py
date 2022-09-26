@@ -121,32 +121,6 @@ class BinaryWriter:
         self.node_alias.close()
         self.edge_alias.close()
 
-        # For MultiWorkersConverter with 0 workers
-        self.id = 0
-        self.partitions = [self]
-
-    def prop(self, name: str) -> typing.Any:
-        """Properties relevant for conversion.
-
-        Args:
-            name (str): property name.
-
-        Returns:
-            typing.Any: property value.
-        """
-        return getattr(self, name.lower())
-
-    def __getitem__(self, key) -> typing.Any:
-        """Properties relevant for conversion.
-
-        Args:
-            name (str): property name.
-
-        Returns:
-            typing.Any: property value.
-        """
-        return getattr(self, key)
-
 
 class NodeWriter:
     """NodeWriter records information about nodes and adds node features to a NodeFeatureWriter."""

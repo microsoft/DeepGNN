@@ -133,6 +133,9 @@ class MultiWorkersConverter:
                     d.dispatch(line)
 
             d.join()
+            gettr = lambda key: d.prop(key)  # noqa: E731
+            partitions = sorted(gettr("partitions"), key=lambda x: x["id"])
+            partition_gettr = lambda p, key: p[key]  # noqa: E731
         else:
             assert (
                 self.partition_count == 1
@@ -144,7 +147,9 @@ class MultiWorkersConverter:
                 for line in data:
                     writer.add(self.decoder.decode(line))
             writer.close()
-            d = writer
+            gettr = lambda key: getattr(writer, key)  # noqa: E731
+            partitions = [writer]
+            partition_gettr = lambda p, key: getattr(p, key)  # noqa: E731
 
         fs, _ = get_fs(self.output_dir)
         with fs.open(
@@ -154,42 +159,43 @@ class MultiWorkersConverter:
             ),
             "w",
         ) as mtxt:
+
             mtxt.writelines(
                 [
                     str(BINARY_DATA_VERSION),
                     "\n",
-                    str(d.prop("node_count")),
+                    str(gettr("node_count")),
                     "\n",
-                    str(d.prop("edge_count")),
+                    str(gettr("edge_count")),
                     "\n",
-                    str(d.prop("node_type_num")),
+                    str(gettr("node_type_num")),
                     "\n",
-                    str(d.prop("edge_type_num")),
+                    str(gettr("edge_type_num")),
                     "\n",
-                    str(d.prop("node_feature_num")),
+                    str(gettr("node_feature_num")),
                     "\n",
-                    str(d.prop("edge_feature_num")),
+                    str(gettr("edge_feature_num")),
                     "\n",
-                    str(len(d.prop("partitions"))),
+                    str(len(partitions)),
                     "\n",
                 ]
             )
 
-            edge_count_per_type = [0] * int(d.prop("edge_type_num"))
-            node_count_per_type = [0] * int(d.prop("node_type_num"))
-            for p in sorted(d.prop("partitions"), key=lambda x: x["id"]):
+            edge_count_per_type = [0] * int(gettr("edge_type_num"))
+            node_count_per_type = [0] * int(gettr("node_type_num"))
+            for p in partitions:
                 edge_count_per_type = list(
-                    map(add, edge_count_per_type, p["edge_type_count"])
+                    map(add, edge_count_per_type, partition_gettr(p, "edge_type_count"))
                 )
                 node_count_per_type = list(
-                    map(add, node_count_per_type, p["node_type_count"])
+                    map(add, node_count_per_type, partition_gettr(p, "node_type_count"))
                 )
 
-                mtxt.writelines([str(p["id"]), "\n"])
-                for nw in p["node_weight"]:
+                mtxt.writelines([str(p["id"] if isinstance(p, dict) else 0), "\n"])
+                for nw in partition_gettr(p, "node_weight"):
                     mtxt.writelines([str(nw), "\n"])
 
-                for ew in p["edge_weight"]:
+                for ew in partition_gettr(p, "edge_weight"):
                     mtxt.writelines([str(ew), "\n"])
             for count in node_count_per_type:
                 mtxt.writelines([str(count), "\n"])
