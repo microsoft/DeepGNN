@@ -360,7 +360,7 @@ class HetGnnModel(BaseUnsupervisedModel):
                 self.build_triple_context(graph, np.array(triple_list_temp, np.int64))
             )
         context["encoder"] = triple_context
-        return context
+        return context, 0
 
     def query_inference(self, graph, inputs: np.ndarray) -> dict:
         """Query graph to generate embeddings."""
