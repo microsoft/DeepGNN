@@ -19,11 +19,7 @@ from model import HetGnnModel, HetGNNDataset, FileNodeSampler, BatchedSampler  #
 
 
 def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):
-    return torch.optim.Adam(
-        filter(lambda p: p.requires_grad, model.parameters()),
-        lr=config["learning_rate"] * world_size,
-        weight_decay=0,
-    )
+    return 
 
 
 import argparse
@@ -43,11 +39,11 @@ from ray.air.config import ScalingConfig
 
 def train_func(config: Dict):
     batch_size = config["batch_size"]
-    lr = config["lr"]
     epochs = config["epochs"]
+    world_size = session.get_world_size()
 
-    worker_batch_size = batch_size // session.get_world_size()
-
+    worker_batch_size = batch_size // world_size
+    num_nodes = config["max_id"] // world_size
     #get_logger().info(f"Creating HetGnnModel with seed:{config["seed}.")
     #set_seed(config["seed)
 
@@ -66,18 +62,20 @@ def train_func(config: Dict):
         train_dataloader = DataLoader(dataset, sampler=FileNodeSampler(dataset.g, config["sample_file"]), batch_size=config["batch_size"])
     else:
         dataset = HetGNNDataset(model_original.query, config["data_dir"], [config["node_type"]], [config["feature_idx"], config["feature_dim"]], [config["label_idx"], config["label_dim"]], np.float32, np.float32)
-        train_dataloader = DataLoader(dataset, sampler=HetGnnDataSampler(dataset.g, num_nodes=config["max_id"] // session.get_world_size(), batch_size=config["batch_size"], node_type_count=config["node_type_count"], walk_length=config["walk_length"]), batch_size=1)
+        train_dataloader = DataLoader(dataset, sampler=HetGnnDataSampler(dataset.g, num_nodes=num_nodes, batch_size=config["batch_size"], node_type_count=config["node_type_count"], walk_length=config["walk_length"]), batch_size=1)
 
     train_dataloader = train.torch.prepare_data_loader(train_dataloader)
 
     loss_fn = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=lr)
-
+    optimizer = torch.optim.Adam(
+        filter(lambda p: p.requires_grad, model.parameters()),
+        lr=config["learning_rate"] * world_size,
+        weight_decay=0,
+    )
     loss_results = []
 
+    model.train()
     for _ in range(epochs):
-        size = len(train_dataloader.dataset) // session.get_world_size()
-        model.train()
         for batch, (X, y) in enumerate(train_dataloader):
             loss, score, label = model(X)
             #loss = loss_fn(pred, y)
@@ -88,7 +86,7 @@ def train_func(config: Dict):
 
             if batch % 100 == 0:
                 loss, current = loss.item(), batch * len(X)
-                print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+                print(f"loss: {loss:>7f}  [{current:>5d}/{num_nodes:>5d}]")
         #session.report(dict(loss=loss))
 
     # return required for backwards compatibility with the old API
@@ -104,7 +102,6 @@ if __name__ == "__main__":
         "data_dir": "/tmp/cora",
         "mode": "train",
         "converter": "skip",
-        "lr": 1e-3,
         "batch_size": 64,
         "epochs": 4,
         "node_type": 0,
