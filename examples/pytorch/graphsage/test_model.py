@@ -2,231 +2,559 @@
 # Licensed under the MIT License.
 
 import pytest
-import sys
+import tempfile
+import time
+import numpy.testing as npt
 import os
-import platform
-from typing import Dict
-
-import numpy as np
+import sys
 import torch
-from torch import nn
-from torch.utils.data import Dataset, DataLoader, Sampler
+import argparse
+import numpy as np
+import urllib.request
+import zipfile
 
-import ray
-import ray.train as train
-from ray.train.torch import TorchTrainer
-from ray.air import session
-from ray.air.config import ScalingConfig
+from deepgnn import get_logger
+from deepgnn.pytorch.common import MRR, F1Score
+from deepgnn.pytorch.encoding.feature_encoder import (
+    TwinBERTEncoder,
+    TwinBERTFeatureEncoder,
+)
+import deepgnn.graph_engine.snark.convert as convert
+from deepgnn.graph_engine.snark.decoders import JsonDecoder
+from deepgnn.graph_engine.snark.converter.options import DataConverterType
+from model import SupervisedGraphSage, UnSupervisedGraphSage  # type: ignore
 
-from deepgnn.graph_engine import SamplingStrategy
-from deepgnn.graph_engine.snark.local import Client
-
-
-feature_idx = 1
-feature_dim = 50
-label_idx = 0
-label_dim = 121
-
-
-'''
-class CoraDataset(Dataset):
-    """Cora dataset with base torch sampler."""
-    def __init__(self, node_types):
-        self.g = Client("/tmp/cora", [0, 1])
-        self.node_types = np.array(node_types)
-        self.count = self.g.node_count(self.node_types)
-
-    def __len__(self):
-        return self.count
-
-    def __getitem__(self, sampler_idx):
-        if isinstance(sampler_idx, (int, float)):
-            sampler_idx = [sampler_idx]
-        idx = sampler_idx# self.g.type_remap(sampler_idx)  # TODO
-        return self.g.node_features(idx, np.array([[feature_idx, feature_dim]]), feature_type=np.float32), torch.Tensor([0])
+logger = get_logger()
 
 
-# Range sampling use this w/ SubsetRandomSampler w/ list(range(start, stop))
-'''
-'''
-class CoraDataset(Dataset):
-    """Cora dataset with file sampler."""
-    def __init__(self, node_types):
-        self.g = Client("/tmp/cora", [0, 1])  # TODO utility function for adl
-        self.node_types = np.array(node_types)
-        self.count = self.g.node_count(self.node_types)
+@pytest.fixture(scope="module")
+def train_supervised_graphsage(mock_graph):  # noqa: F811
+    torch.manual_seed(0)
+    np.random.seed(0)
+    num_classes = 7
+    label_dim = 7
+    label_idx = 1
+    feature_dim = 1433
+    feature_idx = 0
+    edge_type = 0
 
-    def __len__(self):
-        return self.count
+    model_path = tempfile.TemporaryDirectory()
+    model_path_name = model_path.name + "/gnnmodel.pt"
 
-    def __getitem__(self, sampler_idx):
-        if isinstance(sampler_idx, (int, float)):
-            sampler_idx = [sampler_idx]
-        idx = sampler_idx
-        return self.g.node_features(idx, np.array([[feature_idx, feature_dim]]), feature_type=np.float32), torch.Tensor([0])
-
-
-class FileSampler(Sampler[int]):  # Shouldn't need this really with quick map from torch sampler?
-    def __init__(self, filename):
-        self.filename = filename
-
-    def __len__(self) -> int:
-        raise NotImplementedError("")
-
-    def __iter__(self):
-        with open(self.filename, "r") as file:
-            for line in file.readlines():
-                yield int(line)
-'''
-class CoraDataset(Dataset):
-    """Cora dataset with file sampler."""
-    def __init__(self, node_types):
-        self.g = Client("/tmp/cora", [0])
-        self.node_types = np.array(node_types)
-        self.count = self.g.node_count(self.node_types)
-
-    def __len__(self):
-        return self.count
-
-    def __getitem__(self, sampler_idx):
-        if isinstance(sampler_idx, (int, float)):
-            sampler_idx = [sampler_idx]
-        idx = sampler_idx
-        return self.g.node_features(idx, np.array([[feature_idx, feature_dim]]), feature_type=np.float32), torch.Tensor([0])
-
-
-class WeightedSampler(Sampler[int]):  # Shouldn't need this really with quick map from torch sampler?
-    def __init__(self, graph, node_types):
-        self.g = graph
-        self.node_types = np.array(node_types)
-        self.count = self.g.node_count(self.node_types)
-
-    def __len__(self):
-        return self.count
-
-    def __iter__(self):
-        for _ in range(len(self)):
-            yield self.g.sample_nodes(1, self.node_types, SamplingStrategy.Weighted)[0]
-
-
-class NeuralNetwork(nn.Module):
-    def __init__(self):
-        super(NeuralNetwork, self).__init__()
-        self.flatten = nn.Flatten()
-        self.linear_relu_stack = nn.Sequential(
-            nn.Linear(feature_dim, 512),
-            nn.ReLU(),
-            nn.Linear(512, 512),
-            nn.ReLU(),
-            nn.Linear(512, 10),
-            nn.ReLU(),
+    graphsage = SupervisedGraphSage(
+        num_classes=num_classes,
+        metric=F1Score(),
+        label_idx=label_idx,
+        label_dim=label_dim,
+        feature_type=np.float,
+        feature_idx=feature_idx,
+        feature_dim=feature_dim,
+        edge_type=edge_type,
+        fanouts=[5, 5],
+    )
+    optimizer = torch.optim.SGD(
+        filter(lambda p: p.requires_grad, graphsage.parameters()), lr=0.7
+    )
+    times = []
+    loss_list = []
+    while True:
+        trainloader = torch.utils.data.DataLoader(
+            MockSimpleDataLoader(
+                batch_size=256, query_fn=graphsage.query, graph=mock_graph
+            )
         )
 
-    def forward(self, x):
-        x = self.flatten(x)
-        logits = self.linear_relu_stack(x)
-        return logits
+        for i, context in enumerate(trainloader):
+            start_time = time.time()
+            optimizer.zero_grad()
+            loss, _, _ = graphsage(context)
+            loss.backward()
+            optimizer.step()
+            end_time = time.time()
+            times.append(end_time - start_time)
+            logger.info("step: {}; loss: {} ".format(i, loss.data.item()))
+            loss_list.append(loss)
+
+            if len(times) == 100:
+                break
+
+        if len(times) == 100:
+            break
+
+    torch.save(graphsage.state_dict(), model_path_name)
+
+    yield {"losses": loss_list, "model_path": model_path_name, "graph": mock_graph}
+
+    model_path.cleanup()
 
 
-def train_epoch(dataloader, model, loss_fn, optimizer):
-    size = len(dataloader.dataset) // session.get_world_size()
-    model.train()
-    for batch, (X, y) in enumerate(dataloader):
-        # Compute prediction error
-        pred = model(X)
-        print(pred.shape, y.shape, "OUTPUTTTT")
-        loss = loss_fn(pred, y.squeeze().long())
+@pytest.fixture(scope="module")
+def train_unsupervised_graphsage(mock_graph):  # noqa: F811
+    np.random.seed(0)
+    torch.manual_seed(0)
+    label_dim = 7
+    feature_dim = 1433
+    feature_idx = 0
+    edge_type = 0
+    num_negs = 1
 
-        # Backpropagation
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+    model_path = tempfile.TemporaryDirectory()
+    model_path_name = model_path.name + "/gnnmodel.pt"
 
-        if batch % 100 == 0:
-            loss, current = loss.item(), batch * len(X)
-            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
-
-
-def validate_epoch(dataloader, model, loss_fn):
-    size = len(dataloader.dataset) // session.get_world_size()
-    num_batches = len(dataloader)
-    model.eval()
-    test_loss, correct = 0, 0
-    with torch.no_grad():
-        for X, y in dataloader:
-            pred = model(X)
-            test_loss += loss_fn(pred, y).item()
-            correct += (pred.argmax(1) == y).type(torch.float).sum().item()
-    test_loss /= num_batches
-    correct /= size
-    print(
-        f"Test Error: \n "
-        f"Accuracy: {(100 * correct):>0.1f}%, "
-        f"Avg loss: {test_loss:>8f} \n"
-    )
-    return test_loss
-
-
-def train_func(config: Dict):
-    batch_size = config["batch_size"]
-    lr = config["lr"]
-    epochs = config["epochs"]
-
-    worker_batch_size = batch_size // session.get_world_size()
-
-    training_data = CoraDataset([0])
-
-    # Create data loaders.
-    #train_dataloader = DataLoader(training_data, sampler=FileSampler("/tmp/cora/train.nodes"), batch_size=worker_batch_size)
-    train_dataloader = DataLoader(training_data, sampler=WeightedSampler(training_data.g, [0]), batch_size=worker_batch_size)
-    #test_dataloader = DataLoader(test_data, batch_size=worker_batch_size)
-
-    train_dataloader = train.torch.prepare_data_loader(train_dataloader)
-    #test_dataloader = train.torch.prepare_data_loader(test_dataloader)
-
-    # Create model.
-    model = NeuralNetwork()
-    model = train.torch.prepare_model(model)
-
-    loss_fn = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=lr)
-
-    loss_results = []
-
-    for _ in range(epochs):
-        train_epoch(train_dataloader, model, loss_fn, optimizer)
-        #loss = validate_epoch(test_dataloader, model, loss_fn)
-        #loss_results.append(loss)
-        #session.report(dict(loss=loss))
-
-    return loss_results
-
-
-def train_fashion_mnist(num_workers=2, use_gpu=False):
-    trainer = TorchTrainer(
-        train_func,
-        train_loop_config={"lr": 1e-3, "batch_size": 64, "epochs": 4},
-        scaling_config=ScalingConfig(num_workers=num_workers, use_gpu=use_gpu),
-    )
-    result = trainer.fit()
-    print(f"Results: {result.metrics}")
-
-
-def setup_module(module):
-    import deepgnn.graph_engine.snark._lib as lib
-
-    lib_name = "libwrapper.so"
-    if platform.system() == "Windows":
-        lib_name = "wrapper.dll"
-
-    os.environ[lib._SNARK_LIB_PATH_ENV_KEY] = os.path.join(
-        os.path.dirname(__file__), "..", "..", "..", "src", "cc", "lib", lib_name
+    graphsage = UnSupervisedGraphSage(
+        num_classes=label_dim,
+        metric=MRR(),
+        num_negs=num_negs,
+        feature_type=np.float,
+        feature_idx=feature_idx,
+        feature_dim=feature_dim,
+        edge_type=edge_type,
+        fanouts=[5, 5],
     )
 
+    optimizer = torch.optim.SGD(
+        filter(lambda p: p.requires_grad, graphsage.parameters()), lr=0.00005
+    )
 
-def test_graphsage_ppi_hvd_trainer():
-    ray.init()
-    train_fashion_mnist(num_workers=1, use_gpu=False)
+    epochs_left = 6
+    mrr_values = []
+    loss_list = []
+    while epochs_left > 0:
+        epochs_left -= 1
+        trainloader = torch.utils.data.DataLoader(
+            MockSimpleDataLoader(
+                batch_size=512, query_fn=graphsage.query, graph=mock_graph
+            )
+        )
+
+        scores = []
+        labels = []
+        for _, context in enumerate(trainloader):
+            optimizer.zero_grad()
+            loss, score, label = graphsage(context)
+            scores.append(score)
+            labels.append(label)
+            loss.backward()
+            optimizer.step()
+            loss_list.append(loss)
+
+        mrr = graphsage.compute_metric(scores, labels)
+        logger.info("MRR: {}".format(mrr.data.item()))
+        mrr_values.append(mrr)
+
+    torch.save(graphsage.state_dict(), model_path_name)
+
+    yield {
+        "losses": loss_list,
+        "model_path": model_path_name,
+        "graph": mock_graph,
+        "mrr_values": mrr_values,
+    }
+
+    model_path.cleanup()
+
+
+def test_deep_graph_on_cora(train_supervised_graphsage):
+    torch.manual_seed(0)
+    np.random.seed(0)
+    num_nodes = 2708
+    num_classes = 7
+    label_dim = 7
+    label_idx = 1
+    feature_dim = 1433
+    feature_idx = 0
+    edge_type = 0
+    train_ctx = train_supervised_graphsage
+
+    metric = F1Score()
+    g = train_ctx["graph"]
+    graphsage = SupervisedGraphSage(
+        num_classes=num_classes,
+        metric=F1Score(),
+        label_idx=label_idx,
+        label_dim=label_dim,
+        feature_type=np.float,
+        feature_idx=feature_idx,
+        feature_dim=feature_dim,
+        edge_type=edge_type,
+        fanouts=[5, 5],
+    )
+
+    graphsage.load_state_dict(torch.load(train_ctx["model_path"]))
+    graphsage.train()
+
+    # Generate validation dataset from random indices
+    rand_indices = np.random.RandomState(seed=1).permutation(num_nodes)
+    val_ref = rand_indices[1000:1500]
+    simpler = MockFixedSimpleDataLoader(val_ref, query_fn=graphsage.query, graph=g)
+    trainloader = torch.utils.data.DataLoader(simpler)
+    it = iter(trainloader)
+    val_output_ref = graphsage.get_score(it.next())
+    val_labels = g.node_features(
+        val_ref, np.array([[label_idx, label_dim]]), np.float
+    ).argmax(1)
+    f1_ref = metric.compute(val_output_ref.argmax(axis=1), val_labels)
+
+    assert 0.85 < f1_ref and f1_ref < 0.95
+
+
+def test_deep_graph_on_unsupervised_cora(train_unsupervised_graphsage):
+    np.random.seed(0)
+    torch.manual_seed(0)
+    label_dim = 7
+    feature_dim = 1433
+    feature_idx = 0
+    edge_type = 0
+    num_negs = 1
+    train_ctx = train_unsupervised_graphsage
+
+    graphsage = UnSupervisedGraphSage(
+        num_classes=label_dim,
+        metric=MRR(),
+        num_negs=num_negs,
+        feature_type=np.float,
+        feature_idx=feature_idx,
+        feature_dim=feature_dim,
+        edge_type=edge_type,
+        fanouts=[5, 5],
+    )
+    graphsage.load_state_dict(torch.load(train_ctx["model_path"]))
+    graphsage.train()
+
+    mrr_values = train_ctx["mrr_values"]
+    half = int(len(mrr_values) / 2)
+    fst = mrr_values[:half]
+    snd = mrr_values[half:]
+    avg_fst = sum(fst) / len(fst)
+    avg_snd = sum(snd) / len(snd)
+    assert avg_fst < avg_snd
+    assert avg_snd > 0.26
+
+
+# test to make sure loss decrease.
+def test_supervised_graphsage_loss(train_supervised_graphsage):
+    train_ctx = train_supervised_graphsage
+
+    # make sure the loss decreased in training.
+    assert len(train_ctx["losses"]) > 0
+    assert train_ctx["losses"][len(train_ctx["losses"]) - 1] < train_ctx["losses"][0]
+
+
+# fix the seeds to test the algo's correctness.
+def test_supervised_graphsage_model(mock_graph):  # noqa: F811
+    np.random.seed(0)
+    torch.manual_seed(0)
+
+    num_classes = 7
+    label_dim = 7
+    label_idx = 1
+    feature_dim = 1433
+    feature_idx = 0
+    edge_type = 0
+
+    # once the model's layers and random seed are fixed, output of the input
+    # is deterministic.
+    nodes = torch.as_tensor([2700])
+    expected = np.array(
+        [[0.074278, -0.069181, 0.003444, -0.008916, -0.013685, -0.036867, 0.042985]],
+        dtype=np.float32,
+    )
+    graphsage = SupervisedGraphSage(
+        num_classes=num_classes,
+        metric=F1Score(),
+        label_idx=label_idx,
+        label_dim=label_dim,
+        feature_type=np.float,
+        feature_idx=feature_idx,
+        feature_dim=feature_dim,
+        edge_type=edge_type,
+        fanouts=[5, 5],
+    )
+    simpler = MockFixedSimpleDataLoader(
+        nodes.numpy(), query_fn=graphsage.query, graph=mock_graph
+    )
+    trainloader = torch.utils.data.DataLoader(simpler)
+    it = iter(trainloader)
+    output = graphsage.get_score(it.next())
+    npt.assert_allclose(output.detach().numpy(), expected, rtol=1e-3)
+
+
+# test if computational graph is connected.
+def test_supervised_graphsage_computational_graph(mock_graph):  # noqa: F811
+    np.random.seed(0)
+    torch.manual_seed(0)
+
+    num_classes = 7
+    label_dim = 7
+    label_idx = 1
+    feature_dim = 1433
+    feature_idx = 0
+    edge_type = 0
+
+    graphsage = SupervisedGraphSage(
+        num_classes=num_classes,
+        metric=F1Score(),
+        label_idx=label_idx,
+        label_dim=label_dim,
+        feature_type=np.float,
+        feature_idx=feature_idx,
+        feature_dim=feature_dim,
+        edge_type=edge_type,
+        fanouts=[5, 5],
+    )
+
+    # use one batch to verify if computational graph is connected.
+    trainloader = torch.utils.data.DataLoader(
+        MockSimpleDataLoader(batch_size=256, query_fn=graphsage.query, graph=mock_graph)
+    )
+    it = iter(trainloader)
+    context = it.next()
+
+    # here we are using feature tensor as a proxy for node ids
+    assert torch.equal(
+        context["encoder"]["node_feats"]["neighbor_feats"],
+        context["encoder"]["neighbor_feats"]["node_feats"],
+    )
+
+
+# test the correctness of the loss function.
+def test_supervised_graphsage_loss_value(mock_graph):  # noqa: F811
+    np.random.seed(0)
+    torch.manual_seed(0)
+
+    num_classes = 7
+    label_dim = 7
+    label_idx = 1
+    feature_dim = 1433
+    feature_idx = 0
+    edge_type = 0
+
+    graphsage = SupervisedGraphSage(
+        num_classes=num_classes,
+        metric=F1Score(),
+        label_idx=label_idx,
+        label_dim=label_dim,
+        feature_type=np.float,
+        feature_idx=feature_idx,
+        feature_dim=feature_dim,
+        edge_type=edge_type,
+        fanouts=[5, 5],
+    )
+    optimizer = torch.optim.SGD(
+        filter(lambda p: p.requires_grad, graphsage.parameters()), lr=0.01
+    )
+
+    # use one batch to verify the output loss value.
+    trainloader = torch.utils.data.DataLoader(
+        MockSimpleDataLoader(batch_size=256, query_fn=graphsage.query, graph=mock_graph)
+    )
+    it = iter(trainloader)
+    optimizer.zero_grad()
+    loss, _, _ = graphsage(it.next())
+    loss.backward()
+    optimizer.step()
+    npt.assert_allclose(loss.detach().numpy(), np.array([1.930]), rtol=1e-3)
+
+
+# test the correctness of the unsupervised graphsage's model.
+def test_unsupervised_graphsage_model(mock_graph):  # noqa: F811
+    np.random.seed(0)
+    torch.manual_seed(0)
+    label_dim = 7
+    feature_dim = 1433
+    feature_idx = 0
+    edge_type = 0
+    num_negs = 1
+
+    # once the model's layers and random seed are fixed, output of the input
+    # is deterministic.
+    nodes = torch.as_tensor([2700])
+    expected = np.array(
+        [[0.074278, -0.069181, 0.003444, -0.008916, -0.013685, -0.036867, 0.042985]],
+        dtype=np.float32,
+    )
+    graphsage = UnSupervisedGraphSage(
+        num_classes=label_dim,
+        metric=MRR(),
+        num_negs=num_negs,
+        feature_type=np.float,
+        feature_idx=feature_idx,
+        feature_dim=feature_dim,
+        edge_type=edge_type,
+        fanouts=[5, 5],
+    )
+    simpler = MockFixedSimpleDataLoader(
+        nodes.numpy(), query_fn=graphsage.query, graph=mock_graph
+    )
+    trainloader = torch.utils.data.DataLoader(simpler)
+    it = iter(trainloader)
+    output = graphsage.get_score(it.next()["encoder"])
+    npt.assert_allclose(output.detach().numpy(), expected, rtol=1e-3)
+
+
+# test the correctness of the unsupervised graphsage loss function.
+def test_unsupervised_graphsage_loss_value(mock_graph):  # noqa: F811
+    np.random.seed(0)
+    torch.manual_seed(0)
+    label_dim = 7
+    feature_dim = 1433
+    feature_idx = 0
+    edge_type = 0
+    num_negs = 1
+
+    graphsage = UnSupervisedGraphSage(
+        num_classes=label_dim,
+        metric=MRR(),
+        num_negs=num_negs,
+        feature_type=np.float,
+        feature_idx=feature_idx,
+        feature_dim=feature_dim,
+        edge_type=edge_type,
+        fanouts=[5, 5],
+    )
+    optimizer = torch.optim.SGD(
+        filter(lambda p: p.requires_grad, graphsage.parameters()), lr=0.7
+    )
+
+    trainloader = torch.utils.data.DataLoader(
+        MockSimpleDataLoader(batch_size=256, query_fn=graphsage.query, graph=mock_graph)
+    )
+    it = iter(trainloader)
+    optimizer.zero_grad()
+    loss, _, _ = graphsage(it.next())
+    loss.backward()
+    optimizer.step()
+
+    # the unsupervised graphsage model use threadpool to calculate the neg/pos_embedding
+    # which cannot guarantee the order of these steps, and this disorder will lead to
+    # uncertainty of the loss. Here we temporarilly enlarge the threshold to make the case pass.
+    npt.assert_allclose(loss.detach().numpy(), np.array([0.6907]), rtol=1e-2)
+
+
+@pytest.fixture(scope="module")
+def tiny_graph():
+    graph_dir = tempfile.TemporaryDirectory()
+    name = "twinbert.zip"
+    zip_file = os.path.join(graph_dir.name, name)
+    urllib.request.urlretrieve(
+        f"https://deepgraphpub.blob.core.windows.net/public/testdata/{name}", zip_file
+    )
+    with zipfile.ZipFile(zip_file, "r") as zip_ref:
+        zip_ref.extractall(graph_dir.name)
+
+    convert.MultiWorkersConverter(
+        graph_path=os.path.join(graph_dir.name, "twinbert/tiny_graph.json"),
+        partition_count=1,
+        output_dir=graph_dir.name,
+        decoder=JsonDecoder(),
+    ).convert()
+
+    yield graph_dir.name
+    graph_dir.cleanup()
+
+
+def get_twinbert_encoder(test_rootdir, config_file, feature_type=np.uint8):
+    torch.manual_seed(0)
+    config_file = os.path.join(test_rootdir, "twinbert", config_file)
+    config = TwinBERTEncoder.init_config_from_file(config_file)
+    return TwinBERTFeatureEncoder(feature_type, config, pooler_count=2)
+
+
+@pytest.fixture(scope="module")
+def train_unsupervised_graphsage_with_feature_encoder(tiny_graph):
+    model_path = tempfile.TemporaryDirectory()
+    model_path_name = model_path.name + "/gnnmodel.pt"
+
+    graphsage = UnSupervisedGraphSage(
+        num_classes=7,
+        metric=MRR(),
+        num_negs=1,
+        feature_type=np.uint8,
+        feature_dim=0,
+        feature_idx=0,
+        edge_type=0,
+        fanouts=[2, 2],
+        feature_enc=get_twinbert_encoder(tiny_graph, "twinbert_triletter.json"),
+    )
+
+    optimizer = torch.optim.SGD(
+        filter(lambda p: p.requires_grad, graphsage.parameters()), lr=0.00005
+    )
+
+    epochs_left = 1
+    mrr_values = []
+    loss_list = []
+    while epochs_left > 0:
+        epochs_left -= 1
+
+
+        trainloader = torch.utils.data.DataLoader(
+            TorchDeepGNNDataset(
+                sampler_class=GENodeSampler,
+                backend=backend,
+                query_fn=graphsage.query,
+                prefetch_queue_size=1,
+                prefetch_worker_size=1,
+                node_types=np.array([0], dtype=np.int32),
+                sample_num=128,
+                batch_size=16,
+                sample_files=[],
+            )
+        )
+
+        scores = []
+        labels = []
+        for i, context in enumerate(trainloader):
+            optimizer.zero_grad()
+            loss, score, label = graphsage(context)
+            scores.append(score)
+            labels.append(label)
+            loss.backward()
+            optimizer.step()
+            loss_list.append(loss)
+
+        mrr = graphsage.compute_metric(scores, labels)
+        print("MRR: {}".format(mrr.data.item()))
+        mrr_values.append(mrr)
+
+    torch.save(graphsage.state_dict(), model_path_name)
+
+    yield {
+        "losses": loss_list,
+        "model_path": model_path_name,
+        "graph": tiny_graph,
+        "mrr_values": mrr_values,
+    }
+
+    model_path.cleanup()
+
+
+def test_unsupervised_graphsage_with_feature_encoder(
+    train_unsupervised_graphsage_with_feature_encoder, tiny_graph
+):
+    """This test is to go through the process of training a graphsage model with twinbert feature encoder.
+    Twinbert encoding on CPU is very time consuming, so we just run few steps with a random tiny graph,
+    and don't check exact metrics values.
+    """
+    train_ctx = train_unsupervised_graphsage_with_feature_encoder
+
+    graphsage = UnSupervisedGraphSage(
+        num_classes=7,
+        metric=MRR(),
+        num_negs=1,
+        feature_type=np.uint8,
+        feature_dim=0,
+        feature_idx=0,
+        edge_type=0,
+        fanouts=[2, 2],
+        feature_enc=get_twinbert_encoder(tiny_graph, "twinbert_triletter.json"),
+    )
+    ckpt = torch.load(train_ctx["model_path"])
+    graphsage.load_state_dict(ckpt)
+
+    mrr_values = train_ctx["mrr_values"]
+    avg_mrr = sum(mrr_values) / len(mrr_values)
+    assert avg_mrr > 0.5
 
 
 if __name__ == "__main__":

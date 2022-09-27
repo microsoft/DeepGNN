@@ -50,6 +50,7 @@ def create_model(args: argparse.Namespace):
 
 def create_dataset(
     args: argparse.Namespace,
+    model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
 ):
@@ -63,6 +64,7 @@ def create_dataset(
 
 def create_eval_dataset(
     args: argparse.Namespace,
+    model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
 ):

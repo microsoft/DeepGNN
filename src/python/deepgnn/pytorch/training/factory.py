@@ -86,6 +86,7 @@ def run_dist(
     model = init_model_fn(args)
     dataloader = init_dataset_fn(
         args=args,
+        model=model,
         rank=trainer.rank,
         world_size=trainer.world_size,
     )
@@ -94,6 +95,7 @@ def run_dist(
     if init_eval_dataset_for_training_fn is not None:
         eval_dataloader_for_training = init_eval_dataset_for_training_fn(
             args=args,
+            model=model,
             rank=trainer.rank,
             world_size=trainer.world_size,
         )

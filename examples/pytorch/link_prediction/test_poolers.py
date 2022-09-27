@@ -11,13 +11,6 @@ import argparse
 import torch
 
 from deepgnn import get_logger
-from deepgnn.graph_engine import (
-    GraphType,
-    BackendType,
-    BackendOptions,
-    TextFileSampler,
-    create_backend,
-)
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
 from examples.pytorch.conftest import MockGraph, load_data  # noqa: F401
 from deepgnn.pytorch.common.consts import (

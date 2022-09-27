@@ -2,15 +2,76 @@
 # Licensed under the MIT License.
 """HetGnn model implementation."""
 
-from typing import List, Any, Dict, Union, Tuple
+from typing import List, Any, Dict, Union, Tuple, Iterator
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
+from torch.utils.data import Dataset, Sampler
 
 from deepgnn.graph_engine import Graph
 from deepgnn.pytorch.common import MRR
 from deepgnn.pytorch.modeling import BaseUnsupervisedModel
+from deepgnn.graph_engine.snark.local import Client
+
+
+class HetGNNDataset(Dataset):
+    """Cora dataset with file sampler."""
+    def __init__(self, query_fn, data_dir: str, node_types: List[int], feature_meta: List[int], label_meta: List[int], feature_type: np.dtype, label_type: np.dtype, neighbor_edge_types: List[int] = [0], num_hops: int = 2):
+        self.query_fn = query_fn
+        self.g = Client(data_dir, [0])  # TODO parameterize partitions
+        self.node_types = np.array(node_types)
+        self.feature_meta = np.array([feature_meta])
+        self.label_meta = np.array([label_meta])
+        self.feature_type = feature_type
+        self.label_type = label_type
+        self.neighbor_edge_types = np.array(neighbor_edge_types, np.int64)
+        self.num_hops = num_hops
+        self.count = self.g.node_count(self.node_types)
+
+    def __len__(self):
+        return self.count
+
+    def __getitem__(self, idx: int) -> Tuple[Any, Any]:
+        """Query used to generate data for training."""
+        inputs = np.array(idx, np.int64)
+        return self.query_fn(self.g, inputs)
+
+
+class BatchedSampler:
+    def __init__(self, sampler, batch_size):
+        self.sampler = sampler
+        self.batch_size = batch_size
+
+    def __len__(self):
+        return len(self.sampler) // self.batch_size
+
+    def __iter__(self) -> Iterator[int]:
+        generator = iter(self.sampler)
+        x = []
+        while True:
+            try:
+                for _ in range(self.batch_size):
+                    x.append(next(generator))
+                yield np.array(x, dtype=np.int64)
+                x = []
+            except Exception:
+                break
+        if len(x):
+            yield np.array(x, dtype=np.int64)
+
+
+class FileNodeSampler(Sampler[int]):
+    def __init__(self, filename: str):
+        self.filename = filename
+
+    def __len__(self) -> int:
+        raise NotImplementedError("")
+
+    def __iter__(self) -> Iterator[int]:
+        with open(self.filename, "r") as file:
+            while True:
+                yield int(file.readline())
 
 
 class HetGnnModel(BaseUnsupervisedModel):
@@ -217,7 +278,7 @@ class HetGnnModel(BaseUnsupervisedModel):
     def forward(self, context: dict) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:  # type: ignore[override]
         """Calculate score based on inputs in the context and return loss."""
         feature_list = context["encoder"]
-        inputs = context["inputs"]
+        inputs = context["inputs"][0]
         size_array = max([len(inputs[k]) for k in range(len(inputs))])
         c_out = torch.zeros([len(feature_list), size_array, self.embed_d])
         p_out = torch.zeros([len(feature_list), size_array, self.embed_d])
@@ -244,7 +305,7 @@ class HetGnnModel(BaseUnsupervisedModel):
         context["encoder"]["node_type"] = int(context["node_type"])
         return self.node_het_agg(context["encoder"])
 
-    def build_node_context(self, id_batch, graph):
+    def build_node_context(self, graph, id_batch):
         """Fetch node features from graph."""
         context = {}
         neigh_batch = np.empty(
@@ -271,7 +332,7 @@ class HetGnnModel(BaseUnsupervisedModel):
 
         return context
 
-    def build_triple_context(self, triple_list_batch, graph):
+    def build_triple_context(self, graph, triple_list_batch):
         """Fetch features for all node triples."""
         c_id_batch = triple_list_batch[:, 0]
         pos_id_batch = triple_list_batch[:, 1]
@@ -279,13 +340,13 @@ class HetGnnModel(BaseUnsupervisedModel):
 
         context = {}
 
-        context["c"] = self.build_node_context(c_id_batch, graph)
-        context["p"] = self.build_node_context(pos_id_batch, graph)
-        context["n"] = self.build_node_context(neg_id_batch, graph)
+        context["c"] = self.build_node_context(graph, c_id_batch)
+        context["p"] = self.build_node_context(graph, pos_id_batch)
+        context["n"] = self.build_node_context(graph, neg_id_batch)
 
         return context
 
-    def query(self, graph: Graph, inputs: np.ndarray) -> dict:
+    def query(self, graph, inputs: np.ndarray) -> dict:
         """Query graph for training data."""
         context = {"inputs": inputs}
         triple_context: List[Union[Dict, List]] = []
@@ -296,15 +357,15 @@ class HetGnnModel(BaseUnsupervisedModel):
                 continue
 
             triple_context.append(
-                self.build_triple_context(np.array(triple_list_temp, np.int64), graph)
+                self.build_triple_context(graph, np.array(triple_list_temp, np.int64))
             )
         context["encoder"] = triple_context
         return context
 
-    def query_inference(self, graph: Graph, inputs: np.ndarray) -> dict:
+    def query_inference(self, graph, inputs: np.ndarray) -> dict:
         """Query graph to generate embeddings."""
         context = {}
         context["inputs"] = inputs[:, 0]
         context["node_type"] = inputs[0][1]
-        context["encoder"] = self.build_node_context(context["inputs"], graph)
+        context["encoder"] = self.build_node_context(graph, context["inputs"])
         return context
