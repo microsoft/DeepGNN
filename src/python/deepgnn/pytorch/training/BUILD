@@ -9,11 +9,6 @@ py_library(
     srcs = [
         "__init__.py",
         "args.py",
-        "factory.py",
-        "trainer_ddp.py",
-        "trainer_fp16.py",
-        "trainer_hvd.py",
-        "trainer.py",
         "utils.py",
     ],
     deps = [

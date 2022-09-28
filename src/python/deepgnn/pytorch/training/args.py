@@ -50,3 +50,36 @@ def init_fp16_args(parser: argparse.ArgumentParser):
     group.add_argument("--fp16", type=str, default=FP16_AMP, choices=[FP16_AMP, FP16_APEX, FP16_NO], help="Enable fp16 mix precision training.")
     group.add_argument("--apex_opt_level", type=str, default="O2", help="Apex FP16 mixed precision training opt level.")
 # fmt: on
+
+
+import argparse
+import platform
+import torch
+from typing import Optional, Callable, List
+from deepgnn import get_logger
+from deepgnn.pytorch.common import init_common_args
+from deepgnn.pytorch.training.args import init_trainer_args, init_fp16_args
+
+
+def get_args(init_arg_fn: Optional[Callable] = None, run_args: Optional[List] = None):
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(allow_abbrev=False)
+
+    # Initialize common parameters, including model, dataset, optimizer etc.
+    init_common_args(parser)
+
+    # Initialize trainer paramaters.
+    init_trainer_args(parser)
+
+    # Initialize fp16 related paramaters.
+    init_fp16_args(parser)
+
+    if init_arg_fn is not None:
+        init_arg_fn(parser)
+
+    args = parser.parse_args() if run_args is None else parser.parse_args(run_args)
+    for arg in dir(args):
+        if not arg.startswith("_"):
+            get_logger().info(f"{arg}={getattr(args, arg)}")
+
+    return args

@@ -82,7 +82,7 @@ def train_func(config: Dict):
 
 
 if __name__ == "__main__":
-    from deepgnn.pytorch.training.factory import get_args
+    from deepgnn.pytorch.training.args import get_args
     args = get_args(init_args, run_args=None)
 
     ray.init()
