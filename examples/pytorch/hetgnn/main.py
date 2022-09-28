@@ -1,45 +1,32 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import argparse
+from typing import Dict
+
 import numpy as np
+
 import torch
+from torch import nn
 from torch.utils.data import DataLoader
 
 import ray
+import ray.train as train
+from ray.train.torch import TorchTrainer
+from ray.air import session
+from ray.air.config import ScalingConfig, RunConfig
 
-from deepgnn import TrainMode, setup_default_logging_config
+from deepgnn import setup_default_logging_config
 from deepgnn import get_logger
 from deepgnn.pytorch.common.utils import get_python_type, set_seed
-from deepgnn.pytorch.modeling import BaseModel
-from deepgnn.pytorch.training import run_dist
+
 from args import init_args  # type: ignore
 from sampler import HetGnnDataSampler  # type: ignore
 from model import HetGnnModel, HetGNNDataset, FileNodeSampler, BatchedSampler  # type: ignore
 
 
-def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):
-    return 
-
-
-import argparse
-from typing import Dict
-from ray.air import session
-
-import torch
-from torch import nn
-from torch.utils.data import DataLoader
-from torchvision import datasets
-from torchvision.transforms import ToTensor
-
-import ray.train as train
-from ray.train.torch import TorchTrainer
-from ray.air.config import ScalingConfig
-
-
 def train_func(config: Dict):
     batch_size = config["batch_size"]
-    epochs = config["epochs"]
+    epochs = config["num_epochs"]
     world_size = session.get_world_size()
 
     worker_batch_size = batch_size // world_size
@@ -95,24 +82,14 @@ def train_func(config: Dict):
 
 
 if __name__ == "__main__":
-    import sys
-    sys_args = sys.argv[1:]
-    args = {sys_args[i * 2][2:]: int(sys_args[i * 2 + 1]) for i in range(len(sys_args) // 2)}
-    args.update({
-        "data_dir": "/tmp/cora",
-        "mode": "train",
-        "converter": "skip",
-        "batch_size": 64,
-        "epochs": 4,
-        "node_type": 0,
-        "walk_length": 2,
-        "learning_rate": 0.005,
-    })
+    from deepgnn.pytorch.training.factory import get_args
+    args = get_args(init_args, run_args=None)
 
     ray.init()
     trainer = TorchTrainer(
         train_func,
-        train_loop_config=args,
+        train_loop_config=vars(args),
+        run_config=RunConfig(verbose=1),
         scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     )
     result = trainer.fit()
