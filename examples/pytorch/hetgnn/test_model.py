@@ -2,7 +2,6 @@
 # Licensed under the MIT License.
 
 import argparse
-import csv
 import numpy as np
 import numpy.testing as npt
 import os
@@ -12,35 +11,34 @@ import random
 import tempfile
 import time
 
-from typing import Tuple
-
 import torch
 from torch.utils.data import IterableDataset
+import ray
+from ray.train.torch import TorchTrainer
+from ray.air.config import ScalingConfig
 
 from deepgnn import get_logger
-from deepgnn.graph_engine import (
-    Graph,
-    SamplingStrategy,
-)
-from deepgnn.graph_engine.snark.converter.options import DataConverterType
-from model import HetGnnModel  # type: ignore
-from sampler import HetGnnDataSampler  # type: ignore
-from conftest import (  # noqa: F401
-    load_data,
-    prepare_local_test_files,
-    init_het_input_data,
-)  # type: ignore
-import evaluation  # type: ignore
-import conftest  # type: ignore
+from deepgnn.graph_engine.data.citation import Cora
+from deepgnn.pytorch.training.args import get_args
 
-node_base_index = 1000000
+from args import init_args  # type: ignore
+from model import HetGnnModel  # type: ignore
+from main import train_func  # type: ignore
+#from sampler import HetGnnDataSampler  # type: ignore
+#from conftest import (  # noqa: F401
+#    load_data,
+#    prepare_local_test_files,
+#    init_het_input_data,
+#)  # type: ignore
+#import evaluation  # type: ignore
+#import conftest  # type: ignore
+
 
 logger = get_logger()
 
 
-def get_train_args(data_dir, model_dir, test_rootdir):
-    args = parse_training_args(
-        [
+def get_train_args(data_dir, model_dir):
+    args = [
             "--data_dir=" + data_dir,
             "--neighbor_count=10",
             "--model_dir=" + model_dir,
@@ -49,107 +47,43 @@ def get_train_args(data_dir, model_dir, test_rootdir):
             "--walk_length=5",
             "--dim=128",
             "--max_id=1024",
-            "--node_type_count=3",
+            "--node_type_count=1",
             "--neighbor_count=10",
             "--feature_dim=128",
             "--sample_file="
-            + os.path.join(test_rootdir, "academic", "a_node_list.txt"),
+            + os.path.join(data_dir, "train.nodes"),  # TODO probably need a join of all 3 files since hetgnn needs types>1
             "--feature_idx=0",
-        ]
-    )
-    return args
+    ]
+    return get_args(init_args, run_args=args)
 
 
 @pytest.fixture(scope="session")
-def train_academic_data(mock_graph):
+def train_academic_data():
     torch.manual_seed(0)
     np.random.seed(0)
+
+    data_path = tempfile.TemporaryDirectory()
     model_path = tempfile.TemporaryDirectory()
-    model_path_name = model_path.name + "/"
-    g, test_rootdir = mock_graph
+    Cora(data_path.name)
+    args = get_train_args(data_path.name, model_path.name)
 
-    args = get_train_args("", model_path_name, test_rootdir)
-
-    # train model
-    model = HetGnnModel(
-        node_type_count=args.node_type_count,
-        neighbor_count=args.neighbor_count,
-        embed_d=args.dim,
-        feature_type=np.float32,
-        feature_idx=args.feature_idx,
-        feature_dim=args.feature_dim,
+    ray.init()
+    trainer = TorchTrainer(
+        train_func,
+        train_loop_config=vars(args),
+        scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     )
+    result = trainer.fit()
 
-    optimizer = torch.optim.Adam(
-        filter(lambda p: p.requires_grad, model.parameters()),
-        lr=args.learning_rate,
-        weight_decay=0,
-    )
-
-    backend_args = argparse.Namespace(
-        data_dir="/mock/doesnt/need/physical/path",
-        backend=BackendType.CUSTOM,
-        graph_type=GraphType.LOCAL,
-        converter=DataConverterType.SKIP,
-        custom_backendclass=MockBackend,
-    )
-    backend = create_backend(BackendOptions(backend_args), is_leader=True)
-    for epoch in range(args.num_epochs):
-        # reset dataset means we can iterate the dataset in next epoch
-        ds = TorchDeepGNNDataset(
-            sampler_class=HetGnnDataSampler,
-            backend=backend,
-            query_fn=model.query,
-            prefetch_queue_size=10,
-            prefetch_worker_size=2,
-            num_nodes=args.batch_size,
-            node_type_count=args.node_type_count,
-            batch_size=args.batch_size,
-            walk_length=args.walk_length,
-        )
-        data_loader = torch.utils.data.DataLoader(ds, batch_size=None)
-
-        logger.info("Epoch {}".format(epoch))
-        times = []
-        start_time = time.time()
-        scores = []
-        labels = []
-
-        for i, context in enumerate(data_loader):
-            optimizer.zero_grad()
-            loss, score, label = model(context)
-            scores.append(score)
-            labels.append(label)
-            loss.backward()
-            optimizer.step()
-
-            if i % 20 == 0:
-                end_time = time.time()
-                logger.info(
-                    "step: {:04d}; loss: {:.4f}; time: {:.4f}s".format(
-                        i, loss.data.item(), (end_time - start_time)
-                    )
-                )
-
-                times.append(end_time - start_time)
-                start_time = time.time()
-
-        if epoch % args.save_model_freq == 0 or epoch == args.num_epochs - 1:
-            logger.info("model saved in epoch: {:04d}".format(epoch))
-            torch.save(model.state_dict(), model_path_name + "gnnmodel.pt")
-
-        metric = model.compute_metric(scores, labels)
-        logger.info("Mean epoch {}: {}".format(model.metric_name(), metric))
-
-    # trained node embedding path
-    yield model_path_name, g, model, test_rootdir
+    yield data_path.name, model_path.name, args
+    data_path.cleanup()
     model_path.cleanup()
 
 
 @pytest.fixture(scope="session")
 def save_embedding(train_academic_data):
-    model_path, graph, _, test_rootdir = train_academic_data
-    args = get_train_args("", model_path, test_rootdir)
+    data_dir, model_path, args = train_academic_data
+
     model = HetGnnModel(
         node_type_count=args.node_type_count,
         neighbor_count=args.neighbor_count,
@@ -158,11 +92,12 @@ def save_embedding(train_academic_data):
         feature_idx=args.feature_idx,
         feature_dim=args.feature_dim,
     )
+    assert False, os.listdir(model_path)
+    model.load_state_dict(torch.load(os.path.join(model_path, "gnnmodel.pt")))
+    model.eval()
+    '''
 
-    model.load_state_dict(torch.load(model_path + "gnnmodel.pt"))
-    model.train()
-
-    embed_file = open(model_path + "/node_embedding.txt", "w")
+    embed_file = open(os.path.join(model_path, "node_embedding.txt"), "w")
 
     batch_size = 200
     saving_dataset = MockHetGnnFileNodeLoader(
@@ -186,6 +121,7 @@ def save_embedding(train_academic_data):
 
     return model_path
 
+    '''
 
 def test_link_prediction_on_het_gnn(
     save_embedding, init_het_input_data, tmpdir  # noqa: F811

@@ -5,7 +5,7 @@
 import argparse
 import uuid
 from deepgnn.pytorch.common.consts import FP16_AMP, FP16_APEX, FP16_NO
-from deepgnn import TrainerType, TrainMode, get_current_user
+from deepgnn import get_current_user
 from deepgnn.graph_engine.snark.client import PartitionStorageType
 
 
@@ -13,9 +13,7 @@ from deepgnn.graph_engine.snark.client import PartitionStorageType
 def init_trainer_args(parser: argparse.ArgumentParser):
     """Configure trainer."""
     group = parser.add_argument_group("Trainer Parameters")
-    group.add_argument("--trainer", type=TrainerType, default=TrainerType.BASE, choices=[TrainerType.BASE, TrainerType.HVD, TrainerType.DDP], help="Trainer type.")
     group.add_argument("--user_name", type=str, default=get_current_user(), help="User name when running jobs.")
-    group.add_argument("--mode", type=TrainMode, default=TrainMode.TRAIN, choices=[TrainMode.TRAIN, TrainMode.EVALUATE, TrainMode.INFERENCE], help="Run mode.")
     group.add_argument("--num_epochs", default=1, type=int, help="Number of epochs for training.")
     group.add_argument("--model_dir", type=str, default="", help="path to load model checkpoint")
     group.add_argument("--save_path", type=str, default="", help="file path to save embedding or new checkpoints.")
