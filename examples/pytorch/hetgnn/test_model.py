@@ -10,6 +10,7 @@ import pytest
 import random
 import tempfile
 import time
+import platform
 
 import torch
 from torch.utils.data import IterableDataset
@@ -35,6 +36,18 @@ from main import train_func  # type: ignore
 
 
 logger = get_logger()
+
+
+def setup_module(module):
+    import deepgnn.graph_engine.snark._lib as lib
+
+    lib_name = "libwrapper.so"
+    if platform.system() == "Windows":
+        lib_name = "wrapper.dll"
+
+    os.environ[lib._SNARK_LIB_PATH_ENV_KEY] = os.path.join(
+        os.path.dirname(__file__), "..", "..", "..", "src", "cc", "lib", lib_name
+    )
 
 
 def get_train_args(data_dir, model_dir):

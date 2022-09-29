@@ -25,18 +25,6 @@ from model import HetGnnModel, HetGNNDataset  # type: ignore
 
 
 def train_func(config: Dict):
-    import os
-    import platform
-    import deepgnn.graph_engine.snark._lib as lib
-
-    lib_name = "libwrapper.so"
-    if platform.system() == "Windows":
-        lib_name = "wrapper.dll"
-
-    os.environ[lib._SNARK_LIB_PATH_ENV_KEY] = os.path.join(
-        os.path.dirname(__file__), "..", "..", "..", "src", "cc", "lib", lib_name
-    )
-
     batch_size = config["batch_size"]
     epochs = config["num_epochs"]
     world_size = session.get_world_size()
