@@ -27,3 +27,13 @@ cd examples/pytorch/graphsage
 ### Training other models
 
 Examples folder contains various models one can experiment with DeepGNN. To train models with Tensorflow you need to install `deepgnn-tf` package, `deepgnn-torch` package contains packages to train pytorch examples. Each model folder contains a shell script `run.sh` that will train a corresponding model on a toy graph, a `README.md` file with a short description of a model, reference to original paper, and explanation of command line arguments.
+
+## Migrating Scripts
+
+We provide a python module to help you upgrade your scripts to new deepgnn versions.
+
+```bash
+python -m deepgnn.migrate --script_dir .
+```
+
+See [`CHANGELOG.md`](CHANGELOG.md) for full change details.
