@@ -47,16 +47,16 @@ def train_func(config: Dict):
     #set_seed(config["seed)
 
     model_original = HetGnnModel(
-        node_type_count=1,#config["node_type_count,
-        neighbor_count=5,#config["neighbor_count,
-        embed_d=50,#config["feature_dim,  # currently feature dimention is equal to embedding dimention.
-        feature_type=np.float32,#get_python_type(config["feature_type),
-        feature_idx=1,#config["feature_idx,
-        feature_dim=50,#config["feature_dim,
+        node_type_count=config["node_type_count"],
+        neighbor_count=config["neighbor_count"],
+        embed_d=config["feature_dim"],
+        feature_type=get_python_type(config["feature_type"]),
+        feature_idx=config["feature_idx"],
+        feature_dim=config["feature_dim"],
     )
     model = train.torch.prepare_model(model_original)
 
-    if False:#config["mode == TrainMode.INFERENCE:
+    if False:#config["mode"] == TrainMode.INFERENCE:
         dataset = HetGNNDataset(model_original.query_inference, config["data_dir"], [config["node_type"]], [config["feature_idx"], config["feature_dim"]], [config["label_idx"], config["label_dim"]], np.float32, np.float32)
         train_dataloader = DataLoader(dataset, sampler=FileNodeSampler(dataset.g, config["sample_file"]), batch_size=config["batch_size"])
     else:
@@ -74,7 +74,7 @@ def train_func(config: Dict):
     loss_results = []
 
     model.train()
-    for _ in range(epochs):
+    for epoch in range(epochs):
         for batch, (X, y) in enumerate(train_dataloader):
             loss, score, label = model(X)
             #loss = loss_fn(pred, y)
@@ -87,7 +87,15 @@ def train_func(config: Dict):
                 loss, current = loss.item(), batch * len(X)
                 print(f"loss: {loss:>7f}  [{current:>5d}/{num_nodes:>5d}]")
         #session.report(dict(loss=loss))
+        torch.save(
+            {"state_dict": model_original.state_dict(), "epoch": epoch},
+            os.path.join(config["save_path"], f"gnnmodel-{epoch:03}.pt"),
+        )
 
+    torch.save(
+        model_original.state_dict(),
+        os.path.join(config["save_path"], f"gnnmodel.pt"),
+    )
     # return required for backwards compatibility with the old API
     # TODO(team-ml) clean up and remove return
     return loss_results

@@ -42,17 +42,18 @@ def get_train_args(data_dir, model_dir):
             "--data_dir=" + data_dir,
             "--neighbor_count=10",
             "--model_dir=" + model_dir,
+            "--save_path=" + model_dir,
             "--num_epochs=2",
             "--batch_size=128",
             "--walk_length=5",
-            "--dim=128",
             "--max_id=1024",
             "--node_type_count=1",
             "--neighbor_count=10",
+            "--feature_idx=0",
             "--feature_dim=128",
+            "--dim=128",
             "--sample_file="
             + os.path.join(data_dir, "train.nodes"),  # TODO probably need a join of all 3 files since hetgnn needs types>1
-            "--feature_idx=0",
     ]
     return get_args(init_args, run_args=args)
 
@@ -92,7 +93,6 @@ def save_embedding(train_academic_data):
         feature_idx=args.feature_idx,
         feature_dim=args.feature_dim,
     )
-    assert False, os.listdir(model_path)
     model.load_state_dict(torch.load(os.path.join(model_path, "gnnmodel.pt")))
     model.eval()
     '''
