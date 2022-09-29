@@ -158,6 +158,11 @@ class Meta:
         meta = open(meta_path, "r")  # type: ignore
 
         self.version = str(meta.readline().strip())
+        if self.version[0] != "v":
+            raise RuntimeError(
+                "First line in meta file should be version, please regenerate binary data"
+            )
+
         self.node_count = int(meta.readline())
         self.edge_count = int(meta.readline())
         self.node_type_count = int(meta.readline())

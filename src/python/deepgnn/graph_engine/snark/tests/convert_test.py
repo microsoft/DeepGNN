@@ -115,6 +115,46 @@ param = [JsonDecoder, TsvDecoder]
 
 
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
+def test_converter_0_workers(triangle_graph):
+    output = tempfile.TemporaryDirectory()
+    data_name, decoder = triangle_graph
+    convert.MultiWorkersConverter(
+        graph_path=data_name,
+        partition_count=1,
+        output_dir=output.name,
+        decoder=decoder(),
+        debug=True,
+    ).convert()
+
+    with open("{}/node_{}_{}.map".format(output.name, 0, 0), "rb") as nm:
+        expected_size = 3 * (2 * 8 + 4)
+        result = nm.read(expected_size + 8)
+        assert len(result) == expected_size
+        assert result[0:8] == (9).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:20] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[20:28] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[28:36] == (1).to_bytes(8, byteorder=sys.byteorder)
+        assert result[36:40] == (1).to_bytes(4, byteorder=sys.byteorder)
+        assert result[40:48] == (5).to_bytes(8, byteorder=sys.byteorder)
+        assert result[48:56] == (2).to_bytes(8, byteorder=sys.byteorder)
+        assert result[56:60] == (2).to_bytes(4, byteorder=sys.byteorder)
+
+    with pytest.raises(ValueError):
+        output = tempfile.TemporaryDirectory()
+        data_name, decoder = triangle_graph
+        convert.MultiWorkersConverter(
+            graph_path=data_name,
+            partition_count=1,
+            output_dir=output.name,
+            decoder=JsonDecoder()
+            if isinstance(decoder(), TsvDecoder)
+            else TsvDecoder(),
+            debug=True,
+        ).convert()
+
+
+@pytest.mark.parametrize("triangle_graph", param, indirect=True)
 def test_sanity_node_map(triangle_graph):
     output = tempfile.TemporaryDirectory()
     data_name, decoder = triangle_graph
