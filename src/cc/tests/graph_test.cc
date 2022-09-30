@@ -358,14 +358,18 @@ TEST_P(StorageTypeGraphTest, NodeFeaturesMultipleNodesSingleFeature)
     m.m_nodes.push_back(TestGraph::Node{.m_id = 1, .m_type = 1, .m_weight = 1.0f, .m_float_features = f2});
     auto path = std::filesystem::temp_directory_path();
     TestGraph::convert(path, "0_0", std::move(m), 2);
-    snark::Graph g(path.string(), std::vector<uint32_t>{0}, GetParam(), "");
-    std::vector<snark::NodeId> nodes = {0, 1};
-    std::vector<uint8_t> output(4 * 3 * 2);
-    std::vector<snark::FeatureMeta> features = {{0, 12}};
 
-    g.GetNodeFeature(std::span(nodes), std::span(features), std::span(output));
-    std::span res(reinterpret_cast<float *>(output.data()), output.size() / sizeof(float));
-    EXPECT_EQ(std::vector<float>(std::begin(res), std::end(res)), std::vector<float>({1, 2, 3, 5, 6, 7}));
+    for (size_t i = 0; i < 2; i++)
+    {
+        snark::Graph g(path.string(), std::vector<uint32_t>{0}, GetParam(), "", i % 2 == 0);
+        std::vector<snark::NodeId> nodes = {0, 1};
+        std::vector<uint8_t> output(4 * 3 * 2);
+        std::vector<snark::FeatureMeta> features = {{0, 12}};
+
+        g.GetNodeFeature(std::span(nodes), std::span(features), std::span(output));
+        std::span res(reinterpret_cast<float *>(output.data()), output.size() / sizeof(float));
+        EXPECT_EQ(std::vector<float>(std::begin(res), std::end(res)), std::vector<float>({1, 2, 3, 5, 6, 7}));
+    }
 }
 
 TEST_P(StorageTypeGraphTest, NodeFeaturesMultipleNodesSingleFeatureMissingNode)
@@ -375,14 +379,18 @@ TEST_P(StorageTypeGraphTest, NodeFeaturesMultipleNodesSingleFeatureMissingNode)
     m.m_nodes.push_back(TestGraph::Node{.m_id = 0, .m_type = 0, .m_weight = 1.0f, .m_float_features = f1});
     auto path = std::filesystem::temp_directory_path();
     TestGraph::convert(path, "0_0", std::move(m), 2);
-    snark::Graph g(path.string(), std::vector<uint32_t>{0}, GetParam(), "");
-    std::vector<snark::NodeId> nodes = {0, 1};
-    std::vector<uint8_t> output(4 * 3 * 2);
-    std::vector<snark::FeatureMeta> features = {{0, 12}};
 
-    g.GetNodeFeature(std::span(nodes), std::span(features), std::span(output));
-    std::span res(reinterpret_cast<float *>(output.data()), output.size() / 4);
-    EXPECT_EQ(std::vector<float>(std::begin(res), std::end(res)), std::vector<float>({1, 2, 3, 0, 0, 0}));
+    for (size_t i = 0; i < 2; i++)
+    {
+        snark::Graph g(path.string(), std::vector<uint32_t>{0}, GetParam(), "", i % 2 == 0);
+        std::vector<snark::NodeId> nodes = {0, 1};
+        std::vector<uint8_t> output(4 * 3 * 2);
+        std::vector<snark::FeatureMeta> features = {{0, 12}};
+
+        g.GetNodeFeature(std::span(nodes), std::span(features), std::span(output));
+        std::span res(reinterpret_cast<float *>(output.data()), output.size() / 4);
+        EXPECT_EQ(std::vector<float>(std::begin(res), std::end(res)), std::vector<float>({1, 2, 3, 0, 0, 0}));
+    }
 }
 
 TEST_P(StorageTypeGraphTest, NodeFeaturesMultipleNodesMissingFeature)
@@ -395,14 +403,18 @@ TEST_P(StorageTypeGraphTest, NodeFeaturesMultipleNodesMissingFeature)
     m.m_nodes.push_back(TestGraph::Node{.m_id = 2, .m_type = 1, .m_weight = 1.0f, .m_float_features = f2});
     auto path = std::filesystem::temp_directory_path();
     TestGraph::convert(path, "0_0", std::move(m), 2);
-    snark::Graph g(path.string(), std::vector<uint32_t>{0}, GetParam(), "");
-    std::vector<snark::NodeId> nodes = {0};
-    std::vector<uint8_t> large_output(4 * 3);
-    std::vector<snark::FeatureMeta> features = {{1, 12}};
 
-    g.GetNodeFeature(std::span(nodes), std::span(features), std::span(large_output));
-    std::span large_res(reinterpret_cast<float *>(large_output.data()), large_output.size() / 4);
-    EXPECT_EQ(std::vector<float>(std::begin(large_res), std::end(large_res)), std::vector<float>(3, 0.0f));
+    for (size_t i = 0; i < 2; i++)
+    {
+        snark::Graph g(path.string(), std::vector<uint32_t>{0}, GetParam(), "", i % 2 == 0);
+        std::vector<snark::NodeId> nodes = {0};
+        std::vector<uint8_t> large_output(4 * 3);
+        std::vector<snark::FeatureMeta> features = {{1, 12}};
+
+        g.GetNodeFeature(std::span(nodes), std::span(features), std::span(large_output));
+        std::span large_res(reinterpret_cast<float *>(large_output.data()), large_output.size() / 4);
+        EXPECT_EQ(std::vector<float>(std::begin(large_res), std::end(large_res)), std::vector<float>(3, 0.0f));
+    }
 }
 
 TEST_P(StorageTypeGraphTest, NodeFeaturesMultipleNodesSingleFeatureMixedSizes)
@@ -414,21 +426,26 @@ TEST_P(StorageTypeGraphTest, NodeFeaturesMultipleNodesSingleFeatureMixedSizes)
     m.m_nodes.push_back(TestGraph::Node{.m_id = 1, .m_type = 1, .m_weight = 1.0f, .m_float_features = f2});
     auto path = std::filesystem::temp_directory_path();
     TestGraph::convert(path, "0_0", std::move(m), 2);
-    snark::Graph g(path.string(), std::vector<uint32_t>{0}, GetParam(), "");
-    std::vector<snark::NodeId> nodes = {0, 1};
-    std::vector<uint8_t> large_output(4 * 3 * 2);
-    std::vector<snark::FeatureMeta> features = {{0, 12}};
 
-    g.GetNodeFeature(std::span(nodes), std::span(features), std::span(large_output));
-    std::span large_res(reinterpret_cast<float *>(large_output.data()), large_output.size() / 4);
-    EXPECT_EQ(std::vector<float>(std::begin(large_res), std::end(large_res)), std::vector<float>({1, 2, 3, 11, 12, 0}));
+    for (size_t i = 0; i < 2; i++)
+    {
+        snark::Graph g(path.string(), std::vector<uint32_t>{0}, GetParam(), "", i % 2 == 0);
+        std::vector<snark::NodeId> nodes = {0, 1};
+        std::vector<uint8_t> large_output(4 * 3 * 2);
+        std::vector<snark::FeatureMeta> features = {{0, 12}};
 
-    std::vector<uint8_t> short_output(4 * 2 * 2);
+        g.GetNodeFeature(std::span(nodes), std::span(features), std::span(large_output));
+        std::span large_res(reinterpret_cast<float *>(large_output.data()), large_output.size() / 4);
+        EXPECT_EQ(std::vector<float>(std::begin(large_res), std::end(large_res)),
+                  std::vector<float>({1, 2, 3, 11, 12, 0}));
 
-    features[0].second = 8;
-    g.GetNodeFeature(std::span(nodes), std::span(features), std::span(short_output));
-    std::span short_res(reinterpret_cast<float *>(short_output.data()), short_output.size() / 4);
-    EXPECT_EQ(std::vector<float>(std::begin(short_res), std::end(short_res)), std::vector<float>({1, 2, 11, 12}));
+        std::vector<uint8_t> short_output(4 * 2 * 2);
+
+        features[0].second = 8;
+        g.GetNodeFeature(std::span(nodes), std::span(features), std::span(short_output));
+        std::span short_res(reinterpret_cast<float *>(short_output.data()), short_output.size() / 4);
+        EXPECT_EQ(std::vector<float>(std::begin(short_res), std::end(short_res)), std::vector<float>({1, 2, 11, 12}));
+    }
 }
 
 TEST_P(StorageTypeGraphTest, NodeSparseFeaturesMultipleNodes)
@@ -446,20 +463,24 @@ TEST_P(StorageTypeGraphTest, NodeSparseFeaturesMultipleNodes)
     m.m_nodes.push_back(TestGraph::Node{.m_id = 1, .m_type = 1, .m_weight = 1.0f, .m_float_features = f2});
     auto path = std::filesystem::temp_directory_path();
     TestGraph::convert(path, "0_0", std::move(m), 2);
-    snark::Graph g(path.string(), std::vector<uint32_t>{0}, GetParam(), "");
-    std::vector<snark::NodeId> nodes = {0, 1};
-    std::vector<snark::FeatureId> features = {0};
 
-    std::vector<std::vector<uint8_t>> data(features.size());
-    std::vector<std::vector<int64_t>> indices(features.size());
-    std::vector<int64_t> dimensions = {-1};
-    g.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
-    EXPECT_EQ(indices.size(), 1);
-    EXPECT_EQ(data.size(), 1);
-    EXPECT_EQ(std::vector<int64_t>({0, 1, 13, 42, 1, 3, 8, 9, 1, 4, 3, 2}), indices.front());
-    auto tmp = reinterpret_cast<int32_t *>(data.front().data());
-    EXPECT_EQ(std::vector<int32_t>({1, 5, 42}), std::vector<int32_t>(tmp, tmp + 3));
-    EXPECT_EQ(std::vector<int64_t>({3}), dimensions);
+    for (size_t i = 0; i < 2; i++)
+    {
+        snark::Graph g(path.string(), std::vector<uint32_t>{0}, GetParam(), "", i % 2 == 0);
+        std::vector<snark::NodeId> nodes = {0, 1};
+        std::vector<snark::FeatureId> features = {0};
+
+        std::vector<std::vector<uint8_t>> data(features.size());
+        std::vector<std::vector<int64_t>> indices(features.size());
+        std::vector<int64_t> dimensions = {-1};
+        g.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
+        EXPECT_EQ(indices.size(), 1);
+        EXPECT_EQ(data.size(), 1);
+        EXPECT_EQ(std::vector<int64_t>({0, 1, 13, 42, 1, 3, 8, 9, 1, 4, 3, 2}), indices.front());
+        auto tmp = reinterpret_cast<int32_t *>(data.front().data());
+        EXPECT_EQ(std::vector<int32_t>({1, 5, 42}), std::vector<int32_t>(tmp, tmp + 3));
+        EXPECT_EQ(std::vector<int64_t>({3}), dimensions);
+    }
 }
 
 TEST_P(StorageTypeGraphTest, NodeSparseFeaturesMixedDimensions)
@@ -483,23 +504,27 @@ TEST_P(StorageTypeGraphTest, NodeSparseFeaturesMixedDimensions)
     m.m_nodes.push_back(TestGraph::Node{.m_id = 1, .m_type = 1, .m_weight = 1.0f, .m_float_features = f2});
     auto path = std::filesystem::temp_directory_path();
     TestGraph::convert(path, "0_0", std::move(m), 2);
-    snark::Graph g(path.string(), std::vector<uint32_t>{0}, GetParam(), "");
-    std::vector<snark::NodeId> nodes = {0, 1};
-    std::vector<snark::FeatureId> features = {0, 1};
 
-    std::vector<std::vector<uint8_t>> data(features.size());
-    std::vector<std::vector<int64_t>> indices(features.size());
-    std::vector<int64_t> dimensions = {-1, -1};
-    g.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
-    EXPECT_EQ(indices.size(), 2);
-    EXPECT_EQ(data.size(), 2);
-    EXPECT_EQ(std::vector<int64_t>({0, 2, 1, 6}), indices[0]);
-    EXPECT_EQ(std::vector<int64_t>({0, 1, 13, 42, 1, 3, 8, 9}), indices[1]);
-    EXPECT_EQ(std::vector<int64_t>({1, 3}), dimensions);
-    auto tmp = reinterpret_cast<int32_t *>(data[0].data());
-    EXPECT_EQ(std::vector<int32_t>({4, 5}), std::vector<int32_t>(tmp, tmp + 2));
-    tmp = reinterpret_cast<int32_t *>(data[1].data());
-    EXPECT_EQ(std::vector<int32_t>({1, 6}), std::vector<int32_t>(tmp, tmp + 2));
+    for (size_t i = 0; i < 2; i++)
+    {
+        snark::Graph g(path.string(), std::vector<uint32_t>{0}, GetParam(), "", i % 2 == 0);
+        std::vector<snark::NodeId> nodes = {0, 1};
+        std::vector<snark::FeatureId> features = {0, 1};
+
+        std::vector<std::vector<uint8_t>> data(features.size());
+        std::vector<std::vector<int64_t>> indices(features.size());
+        std::vector<int64_t> dimensions = {-1, -1};
+        g.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
+        EXPECT_EQ(indices.size(), 2);
+        EXPECT_EQ(data.size(), 2);
+        EXPECT_EQ(std::vector<int64_t>({0, 2, 1, 6}), indices[0]);
+        EXPECT_EQ(std::vector<int64_t>({0, 1, 13, 42, 1, 3, 8, 9}), indices[1]);
+        EXPECT_EQ(std::vector<int64_t>({1, 3}), dimensions);
+        auto tmp = reinterpret_cast<int32_t *>(data[0].data());
+        EXPECT_EQ(std::vector<int32_t>({4, 5}), std::vector<int32_t>(tmp, tmp + 2));
+        tmp = reinterpret_cast<int32_t *>(data[1].data());
+        EXPECT_EQ(std::vector<int32_t>({1, 6}), std::vector<int32_t>(tmp, tmp + 2));
+    }
 }
 
 TEST_P(StorageTypeGraphTest, NodeSparseFeaturesMissingFeature)
@@ -513,18 +538,22 @@ TEST_P(StorageTypeGraphTest, NodeSparseFeaturesMissingFeature)
     m.m_nodes.push_back(TestGraph::Node{.m_id = 1, .m_type = 1, .m_weight = 1.0f});
     auto path = std::filesystem::temp_directory_path();
     TestGraph::convert(path, "0_0", std::move(m), 2);
-    snark::Graph g(path.string(), std::vector<uint32_t>{0}, GetParam(), "");
-    std::vector<snark::NodeId> nodes = {0, 1};
-    std::vector<snark::FeatureId> features = {0};
 
-    std::vector<std::vector<uint8_t>> data(features.size());
-    std::vector<std::vector<int64_t>> indices(features.size());
-    std::vector<int64_t> dimensions = {-1};
-    g.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
-    EXPECT_EQ(std::vector<int64_t>({0, 1, 13, 42}), indices.front());
-    auto tmp = reinterpret_cast<int32_t *>(data.front().data());
-    EXPECT_EQ(std::vector<int32_t>({7}), std::vector<int32_t>(tmp, tmp + 1));
-    EXPECT_EQ(std::vector<int64_t>({3}), dimensions);
+    for (size_t i = 0; i < 2; i++)
+    {
+        snark::Graph g(path.string(), std::vector<uint32_t>{0}, GetParam(), "", i % 2 == 0);
+        std::vector<snark::NodeId> nodes = {0, 1};
+        std::vector<snark::FeatureId> features = {0};
+
+        std::vector<std::vector<uint8_t>> data(features.size());
+        std::vector<std::vector<int64_t>> indices(features.size());
+        std::vector<int64_t> dimensions = {-1};
+        g.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
+        EXPECT_EQ(std::vector<int64_t>({0, 1, 13, 42}), indices.front());
+        auto tmp = reinterpret_cast<int32_t *>(data.front().data());
+        EXPECT_EQ(std::vector<int32_t>({7}), std::vector<int32_t>(tmp, tmp + 1));
+        EXPECT_EQ(std::vector<int64_t>({3}), dimensions);
+    }
 }
 
 TEST_P(StorageTypeGraphTest, NodeSparseFeaturesDimensionsFill)
@@ -548,63 +577,66 @@ TEST_P(StorageTypeGraphTest, NodeSparseFeaturesDimensionsFill)
         .m_id = snark::NodeId(13979298), .m_type = 0, .m_weight = 1.0f, .m_float_features = std::move(input_features)});
     auto path = std::filesystem::temp_directory_path();
     auto partition = TestGraph::convert(path, "0_0", std::move(m), 1);
-    snark::Graph g(path.string(), std::vector<uint32_t>{0}, GetParam(), "");
 
-    std::vector<snark::NodeId> nodes = {13979298};
-    std::vector<snark::FeatureId> features = {6};
+    for (size_t i = 0; i < 2; i++)
+    {
+        snark::Graph g(path.string(), std::vector<uint32_t>{0}, GetParam(), "", i % 2 == 0);
+        std::vector<snark::NodeId> nodes = {13979298};
+        std::vector<snark::FeatureId> features = {6};
 
-    std::vector<std::vector<uint8_t>> data(features.size());
-    std::vector<std::vector<int64_t>> indices(features.size());
-    std::vector<int64_t> dimensions = {-1};
-    g.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
-    EXPECT_EQ(std::vector<int64_t>({0, 0}), indices[0]);
-    EXPECT_EQ(std::vector<int64_t>({1}), dimensions);
-    auto tmp = reinterpret_cast<float *>(data[0].data());
-    EXPECT_EQ(std::vector<float>({1.0}), std::vector<float>(tmp, tmp + 1));
+        std::vector<std::vector<uint8_t>> data(features.size());
+        std::vector<std::vector<int64_t>> indices(features.size());
+        std::vector<int64_t> dimensions = {-1};
+        g.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
+        EXPECT_EQ(std::vector<int64_t>({0, 0}), indices[0]);
+        EXPECT_EQ(std::vector<int64_t>({1}), dimensions);
+        auto tmp = reinterpret_cast<float *>(data[0].data());
+        EXPECT_EQ(std::vector<float>({1.0}), std::vector<float>(tmp, tmp + 1));
 
-    features = {1, 6};
+        features = {1, 6};
 
-    data = {{}, {}};
-    indices = {{}, {}};
-    dimensions = {-1, -1};
-    g.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
-    EXPECT_EQ(std::vector<int64_t>({}), indices[0]);
-    EXPECT_EQ(std::vector<int64_t>({0, 0}), indices[1]);
-    EXPECT_EQ(std::vector<int64_t>({0, 1}), dimensions);
-    tmp = reinterpret_cast<float *>(data[1].data());
-    EXPECT_EQ(std::vector<float>({1.0}), std::vector<float>(tmp, tmp + 1));
+        data = {{}, {}};
+        indices = {{}, {}};
+        dimensions = {-1, -1};
+        g.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
+        EXPECT_EQ(std::vector<int64_t>({}), indices[0]);
+        EXPECT_EQ(std::vector<int64_t>({0, 0}), indices[1]);
+        EXPECT_EQ(std::vector<int64_t>({0, 1}), dimensions);
+        tmp = reinterpret_cast<float *>(data[1].data());
+        EXPECT_EQ(std::vector<float>({1.0}), std::vector<float>(tmp, tmp + 1));
 
-    features = {1, 2, 5, 6};
-    data = {{}, {}, {}, {}};
-    indices = {{}, {}, {}, {}};
-    dimensions = {-1, -1, -1, -1};
-    g.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
-    EXPECT_EQ(std::vector<int64_t>({}), indices[0]);
-    EXPECT_EQ(std::vector<int64_t>({}), indices[1]);
-    EXPECT_EQ(std::vector<int64_t>({0, 17416}), indices[2]);
-    EXPECT_EQ(std::vector<int64_t>({0, 0}), indices[3]);
-    EXPECT_EQ(std::vector<int64_t>({0, 0, 1, 1}), dimensions);
-    EXPECT_EQ(0, data[0].size());
-    EXPECT_EQ(0, data[1].size());
-    tmp = reinterpret_cast<float *>(data[2].data());
-    EXPECT_EQ(std::vector<float>({1.0}), std::vector<float>(tmp, tmp + 1));
-    tmp = reinterpret_cast<float *>(data[3].data());
-    EXPECT_EQ(std::vector<float>({1.0}), std::vector<float>(tmp, tmp + 1));
+        features = {1, 2, 5, 6};
+        data = {{}, {}, {}, {}};
+        indices = {{}, {}, {}, {}};
+        dimensions = {-1, -1, -1, -1};
+        g.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
+        EXPECT_EQ(std::vector<int64_t>({}), indices[0]);
+        EXPECT_EQ(std::vector<int64_t>({}), indices[1]);
+        EXPECT_EQ(std::vector<int64_t>({0, 17416}), indices[2]);
+        EXPECT_EQ(std::vector<int64_t>({0, 0}), indices[3]);
+        EXPECT_EQ(std::vector<int64_t>({0, 0, 1, 1}), dimensions);
+        EXPECT_EQ(0, data[0].size());
+        EXPECT_EQ(0, data[1].size());
+        tmp = reinterpret_cast<float *>(data[2].data());
+        EXPECT_EQ(std::vector<float>({1.0}), std::vector<float>(tmp, tmp + 1));
+        tmp = reinterpret_cast<float *>(data[3].data());
+        EXPECT_EQ(std::vector<float>({1.0}), std::vector<float>(tmp, tmp + 1));
 
-    features = {5, 6};
-    data = {{}, {}};
-    indices = {{}, {}};
-    dimensions = {-1, -1};
-    g.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
-    EXPECT_EQ(std::vector<int64_t>({0, 17416}), indices[0]);
-    EXPECT_EQ(std::vector<int64_t>({0, 0}), indices[1]);
-    EXPECT_EQ(std::vector<int64_t>({1, 1}), dimensions);
-    EXPECT_EQ(sizeof(float), data[0].size());
-    EXPECT_EQ(sizeof(float), data[1].size());
-    tmp = reinterpret_cast<float *>(data[0].data());
-    EXPECT_EQ(std::vector<float>({1.0}), std::vector<float>(tmp, tmp + 1));
-    tmp = reinterpret_cast<float *>(data[1].data());
-    EXPECT_EQ(std::vector<float>({1.0}), std::vector<float>(tmp, tmp + 1));
+        features = {5, 6};
+        data = {{}, {}};
+        indices = {{}, {}};
+        dimensions = {-1, -1};
+        g.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
+        EXPECT_EQ(std::vector<int64_t>({0, 17416}), indices[0]);
+        EXPECT_EQ(std::vector<int64_t>({0, 0}), indices[1]);
+        EXPECT_EQ(std::vector<int64_t>({1, 1}), dimensions);
+        EXPECT_EQ(sizeof(float), data[0].size());
+        EXPECT_EQ(sizeof(float), data[1].size());
+        tmp = reinterpret_cast<float *>(data[0].data());
+        EXPECT_EQ(std::vector<float>({1.0}), std::vector<float>(tmp, tmp + 1));
+        tmp = reinterpret_cast<float *>(data[1].data());
+        EXPECT_EQ(std::vector<float>({1.0}), std::vector<float>(tmp, tmp + 1));
+    }
 }
 
 TEST_P(StorageTypeGraphTest, NodeStringFeaturesMultipleNodesSingleFeature)
@@ -617,16 +649,20 @@ TEST_P(StorageTypeGraphTest, NodeStringFeaturesMultipleNodesSingleFeature)
     m.m_nodes.push_back(TestGraph::Node{.m_id = 2, .m_type = 1, .m_weight = 1.0f, .m_float_features = f2});
     auto path = std::filesystem::temp_directory_path();
     TestGraph::convert(path, "0_0", std::move(m), 2);
-    snark::Graph g(path.string(), std::vector<uint32_t>{0}, GetParam(), "");
-    std::vector<snark::NodeId> nodes = {0, 1, 2};
-    std::vector<uint8_t> output;
-    std::vector<int64_t> dimensions(3);
-    std::vector<snark::FeatureId> features = {0};
 
-    g.GetNodeStringFeature(std::span(nodes), std::span(features), std::span(dimensions), output);
-    std::span res(reinterpret_cast<float *>(output.data()), output.size() / 4);
-    EXPECT_EQ(std::vector<float>(std::begin(res), std::end(res)), std::vector<float>({11, 12, 1, 2, 3}));
-    EXPECT_EQ(dimensions, std::vector<int64_t>({8, 0, 12}));
+    for (size_t i = 0; i < 2; i++)
+    {
+        snark::Graph g(path.string(), std::vector<uint32_t>{0}, GetParam(), "", i % 2 == 0);
+        std::vector<snark::NodeId> nodes = {0, 1, 2};
+        std::vector<uint8_t> output;
+        std::vector<int64_t> dimensions(3);
+        std::vector<snark::FeatureId> features = {0};
+
+        g.GetNodeStringFeature(std::span(nodes), std::span(features), std::span(dimensions), output);
+        std::span res(reinterpret_cast<float *>(output.data()), output.size() / 4);
+        EXPECT_EQ(std::vector<float>(std::begin(res), std::end(res)), std::vector<float>({11, 12, 1, 2, 3}));
+        EXPECT_EQ(dimensions, std::vector<int64_t>({8, 0, 12}));
+    }
 }
 
 TEST_P(StorageTypeGraphTest, NeighborSamplesWithSingleNodeNoNeighbors)
@@ -927,19 +963,22 @@ TEST(GraphTest, NodeFeaturesMultipleTypesNeighborsSpreadAcrossPartitions)
 
     TestGraph::convert(path, "0_0", std::move(m1), 3);
     TestGraph::convert(path, "1_0", std::move(m2), 3);
-    snark::Graph g(path.string(), {0, 1}, snark::PartitionStorageType::memory, "");
 
-    // 0 is a normal node
-    // 1, 2 has a parity with type = -1
-    // 3 is non existant
-    std::vector<snark::NodeId> nodes = {0, 1, 2, 3};
-    std::vector<uint8_t> output(4 * 3 * 4);
-    std::vector<snark::FeatureMeta> features = {{0, 12}};
+    for (size_t i = 0; i < 2; i++)
+    {
+        snark::Graph g(path.string(), {0, 1}, snark::PartitionStorageType::memory, "", i % 2 == 0);
+        // 0 is a normal node
+        // 1, 2 has a parity with type = -1
+        // 3 is non existant
+        std::vector<snark::NodeId> nodes = {0, 1, 2, 3};
+        std::vector<uint8_t> output(4 * 3 * 4);
+        std::vector<snark::FeatureMeta> features = {{0, 12}};
 
-    g.GetNodeFeature(std::span(nodes), std::span(features), std::span(output));
-    std::span res(reinterpret_cast<float *>(output.data()), output.size() / sizeof(float));
-    EXPECT_EQ(std::vector<float>(std::begin(res), std::end(res)),
-              std::vector<float>({1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0}));
+        g.GetNodeFeature(std::span(nodes), std::span(features), std::span(output));
+        std::span res(reinterpret_cast<float *>(output.data()), output.size() / sizeof(float));
+        EXPECT_EQ(std::vector<float>(std::begin(res), std::end(res)),
+                  std::vector<float>({1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0}));
+    }
 }
 
 TEST(GraphTest, NodeStringFeaturesMultipleTypesNeighborsSpreadAcrossPartitions)
@@ -1000,24 +1039,27 @@ TEST(GraphTest, NodeSparseFeaturesMultipleTypesNeighborsSpreadAcrossPartitions)
 
     TestGraph::convert(path, "0_0", std::move(m1), 3);
     TestGraph::convert(path, "1_0", std::move(m2), 3);
-    snark::Graph g(path.string(), {0, 1}, snark::PartitionStorageType::memory, "");
 
-    // 0 is a normal node
-    // 1, 2 has a parity with type = -1
-    // 3 is non existant
-    std::vector<snark::NodeId> nodes = {0, 1, 2, 3};
-    std::vector<snark::FeatureId> features = {0};
-    std::vector<std::vector<uint8_t>> data(features.size());
-    std::vector<std::vector<int64_t>> indices(features.size());
-    std::vector<int64_t> dimensions = {-1};
+    for (size_t i = 0; i < 2; i++)
+    {
+        snark::Graph g(path.string(), {0, 1}, snark::PartitionStorageType::memory, "", i % 2 == 0);
+        // 0 is a normal node
+        // 1, 2 has a parity with type = -1
+        // 3 is non existant
+        std::vector<snark::NodeId> nodes = {0, 1, 2, 3};
+        std::vector<snark::FeatureId> features = {0};
+        std::vector<std::vector<uint8_t>> data(features.size());
+        std::vector<std::vector<int64_t>> indices(features.size());
+        std::vector<int64_t> dimensions = {-1};
 
-    g.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
-    EXPECT_EQ(indices.size(), 1);
-    EXPECT_EQ(data.size(), 1);
-    EXPECT_EQ(std::vector<int64_t>({0, 1, 14, 20, 1, 1, 13, 42, 2, 3, 8, 9, 2, 4, 3, 2}), indices.front());
-    auto tmp = reinterpret_cast<int32_t *>(data.front().data());
-    EXPECT_EQ(std::vector<int32_t>({1, 1, 5, 42}), std::vector<int32_t>(tmp, tmp + 4));
-    EXPECT_EQ(std::vector<int64_t>({3}), dimensions);
+        g.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
+        EXPECT_EQ(indices.size(), 1);
+        EXPECT_EQ(data.size(), 1);
+        EXPECT_EQ(std::vector<int64_t>({0, 1, 14, 20, 1, 1, 13, 42, 2, 3, 8, 9, 2, 4, 3, 2}), indices.front());
+        auto tmp = reinterpret_cast<int32_t *>(data.front().data());
+        EXPECT_EQ(std::vector<int32_t>({1, 1, 5, 42}), std::vector<int32_t>(tmp, tmp + 4));
+        EXPECT_EQ(std::vector<int64_t>({3}), dimensions);
+    }
 }
 
 TEST(GraphTest, UniformNeighborSampleMultipleTypesTriggerConditionalProbabilities)

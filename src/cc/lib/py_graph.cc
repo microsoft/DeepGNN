@@ -231,14 +231,14 @@ int32_t SampleEdges(PySampler *py_sampler, int64_t seed, size_t count, NodeID *o
 }
 
 int32_t CreateLocalGraph(PyGraph *py_graph, size_t count, uint32_t *partitions, const char *filename,
-                         PyPartitionStorageType storage_type_, const char *config_path)
+                         PyPartitionStorageType storage_type_, const char *config_path, bool enable_threadpool)
 {
     snark::PartitionStorageType storage_type = static_cast<snark::PartitionStorageType>(storage_type_);
     py_graph->graph = std::make_unique<GraphInternal>();
     py_graph->graph->partitions = std::set<size_t>(partitions, partitions + count);
     py_graph->graph->graph =
         std::make_unique<snark::Graph>(std::string(filename), std::vector<uint32_t>(partitions, partitions + count),
-                                       storage_type, std::string(config_path));
+                                       storage_type, std::string(config_path), enable_threadpool);
     py_graph->graph->node_sampler_factory[SamplerType::Weighted] =
         std::make_shared<snark::WeightedNodeSamplerFactory>(filename);
     py_graph->graph->node_sampler_factory[SamplerType::Uniform] =

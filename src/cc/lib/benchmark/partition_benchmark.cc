@@ -39,7 +39,8 @@ std::string create_features_graph(const size_t num_nodes, const size_t fv_size)
     return path;
 }
 
-static void BM_NODE_FEATURES(benchmark::State &state, snark::PartitionStorageType storage_type)
+static void BM_NODE_FEATURES(benchmark::State &state, snark::PartitionStorageType storage_type,
+                             bool enable_threadpool = false)
 {
     const size_t num_nodes = 100000;
     const size_t fv_size = 602;
@@ -48,7 +49,7 @@ static void BM_NODE_FEATURES(benchmark::State &state, snark::PartitionStorageTyp
     if (state.thread_index() == 0)
     {
         path = create_features_graph(num_nodes, fv_size);
-        g_client = std::make_shared<snark::Graph>(snark::Graph(path, {0}, storage_type, ""));
+        g_client = std::make_shared<snark::Graph>(snark::Graph(path, {0}, storage_type, "", enable_threadpool));
     }
     const auto total_nodes = num_nodes;
     std::vector<snark::NodeId> input_nodes(total_nodes);
@@ -123,6 +124,11 @@ static void BM_NODE_FEATURES_MEMORY(benchmark::State &state)
     BM_NODE_FEATURES(state, snark::PartitionStorageType::memory);
 }
 
+static void BM_NODE_FEATURES_MEMORY_THREADPOOL(benchmark::State &state)
+{
+    BM_NODE_FEATURES(state, snark::PartitionStorageType::memory, true);
+}
+
 static void BM_NODE_STRING_FEATURES_MEMORY(benchmark::State &state)
 {
     BM_NODE_STRING_FEATURES(state, snark::PartitionStorageType::memory);
@@ -130,6 +136,7 @@ static void BM_NODE_STRING_FEATURES_MEMORY(benchmark::State &state)
 
 BENCHMARK(BM_NODE_FEATURES_DISK)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(1);
 BENCHMARK(BM_NODE_FEATURES_MEMORY)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(1);
+BENCHMARK(BM_NODE_FEATURES_MEMORY_THREADPOOL)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(1);
 BENCHMARK(BM_NODE_FEATURES_DISK)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(2);
 BENCHMARK(BM_NODE_FEATURES_MEMORY)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(2);
 BENCHMARK(BM_NODE_FEATURES_DISK)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(4);

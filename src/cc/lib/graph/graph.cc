@@ -39,9 +39,14 @@ bool check_sorted_unique_types(const Type *in_edge_types, size_t count)
 } // namespace
 
 Graph::Graph(std::string path, std::vector<uint32_t> partitions, PartitionStorageType storage_type,
-             std::string config_path)
+             std::string config_path, bool enable_threadpool)
     : m_metadata(path, config_path)
 {
+    if (enable_threadpool)
+    {
+        m_threadPool = std::make_shared<ThreadPool>();
+    }
+
     std::vector<std::string> suffixes;
     absl::flat_hash_set<uint32_t> partition_set(std::begin(partitions), std::end(partitions));
     // Go through the path folder with graph binary files.
@@ -121,28 +126,52 @@ void Graph::GetNodeFeature(std::span<const NodeId> node_ids, std::span<snark::Fe
            output.size());
 
     const size_t feature_size = output.size() / node_ids.size();
-    size_t feature_offset = 0;
-    for (auto node : node_ids)
-    {
-        auto internal_id = m_node_map.find(node);
-        if (internal_id == std::end(m_node_map))
-        {
-            std::fill_n(std::begin(output) + feature_offset, feature_size, 0);
-        }
-        else
-        {
-            auto output_span = output.subspan(feature_offset, feature_size);
 
-            auto index = internal_id->second;
-            size_t partition_count = m_counts[index];
-            bool found = false;
-            for (size_t partition = 0; partition < partition_count && !found; ++partition, ++index)
+    // callback function to calculate a portion of the nodes in the full node_ids and then
+    // process these nodes.
+    auto func = [this, feature_size, &node_ids, &features](
+                    const std::size_t &start_node_id, const std::size_t &end_node_id, std::span<uint8_t> &sub_span) {
+        size_t feature_offset = 0;
+        for (auto k = start_node_id; k < end_node_id; k++)
+        {
+            auto node = node_ids[k];
+            auto internal_id = m_node_map.find(node);
+            if (internal_id == std::end(m_node_map))
             {
-                found = m_partitions[m_partitions_indices[index]].GetNodeFeature(m_internal_indices[index], features,
-                                                                                 output_span);
+                std::fill_n(std::begin(sub_span) + feature_offset, feature_size, 0);
             }
+            else
+            {
+                auto output_span = sub_span.subspan(feature_offset, feature_size);
+
+                auto index = internal_id->second;
+                size_t partition_count = m_counts[index];
+                bool found = false;
+                for (size_t partition = 0; partition < partition_count && !found; ++partition, ++index)
+                {
+                    found = m_partitions[m_partitions_indices[index]].GetNodeFeature(m_internal_indices[index],
+                                                                                     features, output_span);
+                }
+            }
+            feature_offset += feature_size;
         }
-        feature_offset += feature_size;
+    };
+
+    if (!m_threadPool)
+    {
+        // process the full node list if no thread pool is used.
+        func(0, node_ids.size(), output);
+    }
+    else
+    {
+        // split node list into sevaral parts and calculate each part in parallel.
+        RunParallel(
+            node_ids.size(), [](const std::size_t &) {},
+            [this, &output, func, feature_size](const std::size_t & /*index*/, const std::size_t &start_node_id,
+                                                const std::size_t &end_node_id) {
+                auto sub_span = output.subspan(start_node_id * feature_size, end_node_id * feature_size);
+                func(start_node_id, end_node_id, sub_span);
+            });
     }
 }
 
@@ -156,22 +185,70 @@ void Graph::GetNodeSparseFeature(std::span<const NodeId> node_ids, std::span<con
 
     // Fill out_dimensions in case nodes don't have some features.
     std::fill(std::begin(out_dimensions), std::end(out_dimensions), 0);
-    const int64_t len = node_ids.size();
-    for (int64_t node_index = 0; node_index < len; ++node_index)
-    {
-        auto internal_id = m_node_map.find(node_ids[node_index]);
-        if (internal_id == std::end(m_node_map))
-        {
-            continue;
-        }
 
-        auto index = internal_id->second;
-        size_t partition_count = m_counts[index];
-        bool found = false;
-        for (size_t partition = 0; partition < partition_count && !found; ++partition, ++index)
+    // callback function to calculate part of the full node list.
+    // sub_out_indices & sub_out_data is used to get the results for a specific part,
+    // after all parallel job finishes, these sub_out_indices & sub_out_data will be combined.
+    auto func = [this, &node_ids, &features, &out_dimensions, &out_indices,
+                 &out_data](const int64_t &start_node_id, const int64_t &end_node_id,
+                            std::vector<std::vector<int64_t>> &sub_out_indices,
+                            std::vector<std::vector<uint8_t>> &sub_out_data) {
+        for (int64_t node_index = start_node_id; node_index < end_node_id; ++node_index)
         {
-            found = m_partitions[m_partitions_indices[index]].GetNodeSparseFeature(
-                m_internal_indices[index], features, node_index, out_dimensions, out_indices, out_data);
+            auto internal_id = m_node_map.find(node_ids[node_index]);
+            if (internal_id == std::end(m_node_map))
+            {
+                continue;
+            }
+
+            auto index = internal_id->second;
+            size_t partition_count = m_counts[index];
+            bool found = false;
+            for (size_t partition = 0; partition < partition_count && !found; ++partition, ++index)
+            {
+                found = m_partitions[m_partitions_indices[index]].GetNodeSparseFeature(
+                    m_internal_indices[index], features, node_index, out_dimensions, sub_out_indices, sub_out_data);
+            }
+        }
+    };
+
+    if (!m_threadPool)
+    {
+        func(0, node_ids.size(), out_indices, out_data);
+    }
+    else
+    {
+        // data_sections structure:
+        //  - job index
+        //      - feature_index
+        //          - feature_values
+        std::vector<std::vector<std::vector<int64_t>>> indice_sections;
+        std::vector<std::vector<std::vector<uint8_t>>> data_sections;
+
+        RunParallel(
+            node_ids.size(),
+            [&indice_sections, &data_sections](const std::size_t &count) {
+                // resize the containers so each job can access its corresponding items.
+                // this callback is run only once.
+                indice_sections.resize(count);
+                data_sections.resize(count);
+            },
+            [this, &indice_sections, &data_sections, func,
+             &features](const std::size_t &index, const std::size_t &start_node_id, const std::size_t &end_node_id) {
+                indice_sections[index].resize(features.size());
+                data_sections[index].resize(features.size());
+                func(start_node_id, end_node_id, indice_sections[index], data_sections[index]);
+            });
+
+        // merge out indices and data from each thread.
+        assert(indice_sections.size() == data_sections.size());
+        for (std::size_t i = 0; i < indice_sections.size(); i++)
+        {
+            for (size_t j = 0; j < features.size(); j++)
+            {
+                out_indices[j].insert(out_indices[j].end(), indice_sections[i][j].begin(), indice_sections[i][j].end());
+                out_data[j].insert(out_data[j].end(), data_sections[i][j].begin(), data_sections[i][j].end());
+            }
         }
     }
 }
@@ -182,24 +259,52 @@ void Graph::GetNodeStringFeature(std::span<const NodeId> node_ids, std::span<con
     const auto features_size = features.size();
     assert(out_dimensions.size() == features_size * node_ids.size());
 
-    const int64_t len = node_ids.size();
-    for (int64_t node_index = 0; node_index < len; ++node_index)
-    {
-        auto internal_id = m_node_map.find(node_ids[node_index]);
-        if (internal_id == std::end(m_node_map))
+    // callback function to calculate part of the full node list.
+    auto func = [this, &node_ids, features_size, &features, &out_dimensions](
+                    const std::size_t &start_node_id, const std::size_t &end_node_id, std::vector<uint8_t> &sub_data) {
+        for (std::size_t node_index = start_node_id; node_index < end_node_id; ++node_index)
         {
-            continue;
+            auto internal_id = m_node_map.find(node_ids[node_index]);
+            if (internal_id == std::end(m_node_map))
+            {
+                continue;
+            }
+
+            auto dims_span = out_dimensions.subspan(features_size * node_index, features_size);
+
+            auto index = internal_id->second;
+            size_t partition_count = m_counts[index];
+            bool found = false;
+            for (size_t partition = 0; partition < partition_count && !found; ++partition, ++index)
+            {
+                found = m_partitions[m_partitions_indices[index]].GetNodeStringFeature(m_internal_indices[index],
+                                                                                       features, dims_span, sub_data);
+            }
         }
+    };
 
-        auto dims_span = out_dimensions.subspan(features_size * node_index, features_size);
+    if (!m_threadPool)
+    {
+        func(0, node_ids.size(), out_data);
+    }
+    else
+    {
+        // data_sections structure:
+        //  - job index
+        //      - feature values
+        std::vector<std::vector<uint8_t>> data_sections;
 
-        auto index = internal_id->second;
-        size_t partition_count = m_counts[index];
-        bool found = false;
-        for (size_t partition = 0; partition < partition_count && !found; ++partition, ++index)
+        RunParallel(
+            node_ids.size(), [&data_sections](const std::size_t &count) { data_sections.resize(count); },
+            [this, &data_sections, func, &features](const std::size_t &index, const std::size_t &start_node_id,
+                                                    const std::size_t &end_node_id) {
+                func(start_node_id, end_node_id, data_sections[index]);
+            });
+
+        // merge out indices and data from each thread.
+        for (std::size_t i = 0; i < data_sections.size(); i++)
         {
-            found = m_partitions[m_partitions_indices[index]].GetNodeStringFeature(m_internal_indices[index], features,
-                                                                                   dims_span, out_data);
+            out_data.insert(out_data.end(), data_sections[i].begin(), data_sections[i].end());
         }
     }
 }
@@ -214,33 +319,55 @@ void Graph::GetEdgeFeature(std::span<const NodeId> input_edge_src, std::span<con
            output.size());
 
     const size_t feature_size = output.size() / input_edge_src.size();
-    size_t feature_offset = 0;
-    size_t edge_offset = 0;
-    for (auto src_node : input_edge_src)
-    {
-        auto internal_id = m_node_map.find(src_node);
-        if (internal_id == std::end(m_node_map))
+
+    // callback function to calculate a part of the input_edge_src list.
+    auto func = [this, &input_edge_src, feature_size, &input_edge_dst, &input_edge_type, &features](
+                    const std::size_t &start_node_id, const std::size_t &end_node_id, std::span<uint8_t> sub_output) {
+        size_t feature_offset = 0;
+        size_t edge_offset = start_node_id;
+        for (std::size_t node_index = start_node_id; node_index < end_node_id; ++node_index)
         {
-            std::fill_n(std::begin(output) + feature_offset, feature_size, 0);
-        }
-        else
-        {
-            auto index = internal_id->second;
-            size_t partition_count = m_counts[index];
-            for (size_t partition = 0; partition < partition_count; ++partition, ++index)
+            auto src_node = input_edge_src[node_index];
+            auto internal_id = m_node_map.find(src_node);
+            if (internal_id == std::end(m_node_map))
             {
-                auto found = m_partitions[m_partitions_indices[index]].GetEdgeFeature(
-                    m_internal_indices[index], input_edge_dst[edge_offset], input_edge_type[edge_offset], features,
-                    output.subspan(feature_offset, feature_size));
-                if (found)
+                std::fill_n(std::begin(sub_output) + feature_offset, feature_size, 0);
+            }
+            else
+            {
+                auto index = internal_id->second;
+                size_t partition_count = m_counts[index];
+                for (size_t partition = 0; partition < partition_count; ++partition, ++index)
                 {
-                    break;
+                    auto found = m_partitions[m_partitions_indices[index]].GetEdgeFeature(
+                        m_internal_indices[index], input_edge_dst[edge_offset], input_edge_type[edge_offset], features,
+                        sub_output.subspan(feature_offset, feature_size));
+                    if (found)
+                    {
+                        break;
+                    }
                 }
             }
-        }
 
-        feature_offset += feature_size;
-        ++edge_offset;
+            feature_offset += feature_size;
+            ++edge_offset;
+        }
+    };
+
+    if (!m_threadPool)
+    {
+        func(0, input_edge_src.size(), output);
+    }
+    else
+    {
+        // divide the output into sevaral parts and each part is processed in one task.
+        RunParallel(
+            input_edge_src.size(), [](const std::size_t &) {},
+            [&output, func, feature_size](const std::size_t & /*index*/, const std::size_t &start_node_id,
+                                          const std::size_t &end_node_id) {
+                auto sub_output = output.subspan(start_node_id * feature_size, end_node_id * feature_size);
+                func(start_node_id, end_node_id, sub_output);
+            });
     }
 }
 
@@ -253,27 +380,71 @@ void Graph::GetEdgeSparseFeature(std::span<const NodeId> input_edge_src, std::sp
     assert(features.size() == out_indices.size());
     assert(features.size() == out_values.size());
 
-    int64_t edge_offset = 0;
-    for (auto src_node : input_edge_src)
-    {
-        auto internal_id = m_node_map.find(src_node);
-        if (internal_id != std::end(m_node_map))
+    // callback function to calculate a part of the full input_edge_src list.
+    auto func = [this, &input_edge_src, &input_edge_dst, &input_edge_type, &features,
+                 &out_dimensions](const std::size_t &start_node_id, const std::size_t &end_node_id,
+                                  std::vector<std::vector<int64_t>> &sub_out_indices,
+                                  std::vector<std::vector<uint8_t>> &sub_out_data) {
+        for (std::size_t node_index = start_node_id; node_index < end_node_id; ++node_index)
         {
-            auto index = internal_id->second;
-            size_t partition_count = m_counts[index];
-            for (size_t partition = 0; partition < partition_count; ++partition, ++index)
+            auto src_node = input_edge_src[node_index];
+            auto internal_id = m_node_map.find(src_node);
+            if (internal_id != std::end(m_node_map))
             {
-                auto found = m_partitions[m_partitions_indices[index]].GetEdgeSparseFeature(
-                    m_internal_indices[index], input_edge_dst[edge_offset], input_edge_type[edge_offset], features,
-                    edge_offset, out_dimensions, out_indices, out_values);
-                if (found)
+                auto index = internal_id->second;
+                size_t partition_count = m_counts[index];
+                for (size_t partition = 0; partition < partition_count; ++partition, ++index)
                 {
-                    break;
+                    auto found = m_partitions[m_partitions_indices[index]].GetEdgeSparseFeature(
+                        m_internal_indices[index], input_edge_dst[node_index], input_edge_type[node_index], features,
+                        node_index, out_dimensions, sub_out_indices, sub_out_data);
+                    if (found)
+                    {
+                        break;
+                    }
                 }
             }
         }
+    };
 
-        ++edge_offset;
+    if (!m_threadPool)
+    {
+        func(0, input_edge_src.size(), out_indices, out_values);
+    }
+    else
+    {
+        // data_sections structure:
+        //  - job index
+        //      - feature index
+        //          - feature values
+        std::vector<std::vector<std::vector<int64_t>>> indice_sections;
+        std::vector<std::vector<std::vector<uint8_t>>> data_sections;
+
+        // get edge features in parallel.
+        RunParallel(
+            input_edge_src.size(),
+            [&data_sections, &indice_sections](const std::size_t &count) {
+                // prepare sub containers for each task.
+                indice_sections.resize(count);
+                data_sections.resize(count);
+            },
+            [&indice_sections, &data_sections, func,
+             &features](const std::size_t &index, const std::size_t &start_node_id, const std::size_t &end_node_id) {
+                indice_sections[index].resize(features.size());
+                data_sections[index].resize(features.size());
+                func(start_node_id, end_node_id, indice_sections[index], data_sections[index]);
+            });
+
+        // merge out indices and data from each thread.
+        assert(indice_sections.size() == data_sections.size());
+        for (std::size_t i = 0; i < indice_sections.size(); i++)
+        {
+            for (size_t j = 0; j < features.size(); j++)
+            {
+                out_indices[j].insert(out_indices[j].end(), indice_sections[i][j].begin(), indice_sections[i][j].end());
+                out_values[j].insert(out_values[j].end(), data_sections[i][j].begin(), data_sections[i][j].end());
+            }
+        }
     }
 }
 
@@ -284,27 +455,58 @@ void Graph::GetEdgeStringFeature(std::span<const NodeId> input_edge_src, std::sp
     const auto features_size = features.size();
     assert(features_size * input_edge_src.size() == out_dimensions.size());
 
-    int64_t edge_offset = 0;
-    for (auto src_node : input_edge_src)
-    {
-        auto internal_id = m_node_map.find(src_node);
-        if (internal_id != std::end(m_node_map))
+    // callback function to calculate a part of the full input_edge_src list.
+    auto func = [this, &input_edge_src, &input_edge_dst, &input_edge_type, &features, features_size,
+                 &out_dimensions](const std::size_t &start_node_id, const std::size_t &end_node_id,
+                                  std::vector<uint8_t> &sub_out_values) {
+        for (std::size_t node_index = start_node_id; node_index < end_node_id; ++node_index)
         {
-            auto index = internal_id->second;
-            size_t partition_count = m_counts[index];
-            for (size_t partition = 0; partition < partition_count; ++partition, ++index)
+            auto src_node = input_edge_src[node_index];
+            auto internal_id = m_node_map.find(src_node);
+            if (internal_id != std::end(m_node_map))
             {
-                auto found = m_partitions[m_partitions_indices[index]].GetEdgeStringFeature(
-                    m_internal_indices[index], input_edge_dst[edge_offset], input_edge_type[edge_offset], features,
-                    out_dimensions.subspan(edge_offset * features_size, features_size), out_values);
-                if (found)
+                auto index = internal_id->second;
+                size_t partition_count = m_counts[index];
+                for (size_t partition = 0; partition < partition_count; ++partition, ++index)
                 {
-                    break;
+                    auto found = m_partitions[m_partitions_indices[index]].GetEdgeStringFeature(
+                        m_internal_indices[index], input_edge_dst[node_index], input_edge_type[node_index], features,
+                        out_dimensions.subspan(node_index * features_size, features_size), sub_out_values);
+                    if (found)
+                    {
+                        break;
+                    }
                 }
             }
         }
+    };
 
-        ++edge_offset;
+    if (!m_threadPool)
+    {
+        func(0, input_edge_src.size(), out_values);
+    }
+    else
+    {
+        // data_sections structure:
+        //  - job index
+        //      - feature values
+        std::vector<std::vector<uint8_t>> data_sections;
+        RunParallel(
+            input_edge_src.size(),
+            [&data_sections](const std::size_t &count) {
+                // prepare the sub containers for each task.
+                data_sections.resize(count);
+            },
+            [&data_sections, func](const std::size_t &index, const std::size_t &start_node_id,
+                                   const std::size_t &end_node_id) {
+                func(start_node_id, end_node_id, data_sections[index]);
+            });
+
+        // merge all sub data containers.
+        for (std::size_t i = 0; i < data_sections.size(); i++)
+        {
+            out_values.insert(out_values.end(), data_sections[i].begin(), data_sections[i].end());
+        }
     }
 }
 
@@ -439,6 +641,38 @@ void Graph::UniformSampleNeighbor(bool without_replacement, int64_t seed, std::s
 Metadata Graph::GetMetadata() const
 {
     return m_metadata;
+}
+
+void Graph::RunParallel(
+    const std::size_t &size, std::function<void(const std::size_t &count)> preCallback,
+    std::function<void(const std::size_t &index, const std::size_t &start_offset, const std::size_t &end_offset)>
+        callback) const
+{
+    auto concurrency = std::thread::hardware_concurrency();
+    size_t parallel_count = size / concurrency;
+    concurrency = (parallel_count == 0) ? 1 : concurrency;
+
+    preCallback(concurrency);
+
+    std::vector<std::future<void>> results;
+    for (unsigned int i = 0; i < concurrency; ++i)
+    {
+        auto sub_span_len = parallel_count;
+        if (i == (concurrency - 1))
+        {
+            sub_span_len = size - (parallel_count * i);
+        }
+
+        results.emplace_back(m_threadPool->Submit([this, callback, i, parallel_count, sub_span_len]() {
+            auto start_id = parallel_count * i;
+            callback(i, start_id, start_id + sub_span_len);
+        }));
+    }
+
+    for (auto &res : results)
+    {
+        res.get();
+    }
 }
 
 void Graph::ReadNodeMap(std::filesystem::path path, std::string suffix, uint32_t index)
