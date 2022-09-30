@@ -132,13 +132,14 @@ grpc::Status GraphEngineServiceImpl::GetNodeFeatures(::grpc::ServerContext *cont
 
             auto index = internal_id->second;
             const size_t partition_count = m_counts[index];
-            sub_data.resize(feature_offset + fv_size);
-            auto data = reinterpret_cast<uint8_t *>(sub_data.data());
-            auto data_span = std::span(data + feature_offset, fv_size);
             for (size_t partition = 0; partition < partition_count; ++partition, ++index)
             {
                 if (m_partitions[m_partitions_indices[index]].HasNodeFeatures(m_internal_indices[index]))
                 {
+                    sub_data.resize(feature_offset + fv_size);
+                    auto data = reinterpret_cast<uint8_t *>(sub_data.data());
+                    auto data_span = std::span(data + feature_offset, fv_size);
+
                     m_partitions[m_partitions_indices[index]].GetNodeFeature(m_internal_indices[index], features,
                                                                              data_span);
                     sub_offset.push_back(node_offset);
@@ -341,15 +342,20 @@ grpc::Status GraphEngineServiceImpl::GetNodeSparseFeatures(::grpc::ServerContext
             });
     }
 
-    for (size_t k = 0; k < indices.size(); ++k)
+    for (size_t i = 0; i < features.size(); ++i)
     {
-        for (size_t i = 0; i < features.size(); ++i)
+        std::size_t indices_sum = 0;
+        std::size_t values_sum = 0;
+        for (size_t k = 0; k < indices.size(); ++k)
         {
             response->mutable_indices()->Add(std::begin(indices[k][i]), std::end(indices[k][i]));
             response->mutable_values()->append(std::begin(values[k][i]), std::end(values[k][i]));
-            response->mutable_indices_counts()->Add(indices[k][i].size());
-            response->mutable_values_counts()->Add(values[k][i].size());
+            indices_sum += indices[k][i].size();
+            values_sum += values[k][i].size();
         }
+
+        response->mutable_indices_counts()->Add(indices_sum);
+        response->mutable_values_counts()->Add(values_sum);
     }
 
     return grpc::Status::OK;
