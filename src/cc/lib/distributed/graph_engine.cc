@@ -118,9 +118,8 @@ grpc::Status GraphEngineServiceImpl::GetNodeFeatures(::grpc::ServerContext *cont
 
     // callback function to calculate a portion of the nodes in the full node_ids and then
     // process these nodes.
-    auto func = [this, request, response, fv_size,
-                 &features](const std::size_t &start_node_id, const std::size_t &end_node_id,
-                            std::vector<int> &sub_offset, std::vector<uint8_t> &sub_data) {
+    auto func = [this, request, fv_size, &features](const std::size_t &start_node_id, const std::size_t &end_node_id,
+                                                    std::vector<int> &sub_offset, std::vector<uint8_t> &sub_data) {
         size_t feature_offset = 0;
         for (std::size_t node_offset = start_node_id; node_offset < end_node_id; ++node_offset)
         {
@@ -489,8 +488,8 @@ grpc::Status GraphEngineServiceImpl::GetNodeStringFeatures(::grpc::ServerContext
         RunParallel(
             request->node_ids().size(),
             [&sub_values](const std::size_t &concurrency) { sub_values.resize(concurrency); },
-            [&sub_values, func, &features](const std::size_t &index, const std::size_t &start_node_id,
-                                           const std::size_t &end_node_id) {
+            [&sub_values, func](const std::size_t &index, const std::size_t &start_node_id,
+                                const std::size_t &end_node_id) {
                 func(start_node_id, end_node_id, sub_values[index]);
             });
     }
@@ -552,10 +551,8 @@ grpc::Status GraphEngineServiceImpl::GetEdgeStringFeatures(::grpc::ServerContext
     {
         RunParallel(
             len, [&values](const std::size_t &concurrency) { values.resize(concurrency); },
-            [&values, func, &features](const std::size_t &index, const std::size_t &start_node_id,
-                                       const std::size_t &end_node_id) {
-                func(start_node_id, end_node_id, values[index]);
-            });
+            [&values, func](const std::size_t &index, const std::size_t &start_node_id,
+                            const std::size_t &end_node_id) { func(start_node_id, end_node_id, values[index]); });
     }
 
     for (size_t k = 0; k < values.size(); ++k)
@@ -773,7 +770,7 @@ void GraphEngineServiceImpl::RunParallel(
             sub_span_len = node_ids_size - (parallel_count * i);
         }
 
-        results.emplace_back(m_threadPool->Submit([this, callback, i, parallel_count, sub_span_len]() {
+        results.emplace_back(m_threadPool->Submit([callback, i, parallel_count, sub_span_len]() {
             auto start_id = parallel_count * i;
             callback(i, start_id, start_id + sub_span_len);
         }));
