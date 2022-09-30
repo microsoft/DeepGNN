@@ -169,7 +169,8 @@ void Graph::GetNodeFeature(std::span<const NodeId> node_ids, std::span<snark::Fe
             node_ids.size(), [](const std::size_t &) {},
             [&output, func, feature_size](const std::size_t & /*index*/, const std::size_t &start_node_id,
                                           const std::size_t &end_node_id) {
-                auto sub_span = output.subspan(start_node_id * feature_size, end_node_id * feature_size);
+                auto sub_span =
+                    output.subspan(start_node_id * feature_size, (end_node_id - start_node_id) * feature_size);
                 func(start_node_id, end_node_id, sub_span);
             });
     }
@@ -364,7 +365,8 @@ void Graph::GetEdgeFeature(std::span<const NodeId> input_edge_src, std::span<con
             input_edge_src.size(), [](const std::size_t &) {},
             [&output, func, feature_size](const std::size_t & /*index*/, const std::size_t &start_node_id,
                                           const std::size_t &end_node_id) {
-                auto sub_output = output.subspan(start_node_id * feature_size, end_node_id * feature_size);
+                auto sub_output =
+                    output.subspan(start_node_id * feature_size, (end_node_id - start_node_id) * feature_size);
                 func(start_node_id, end_node_id, sub_output);
             });
     }
