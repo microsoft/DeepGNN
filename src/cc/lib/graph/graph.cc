@@ -167,8 +167,8 @@ void Graph::GetNodeFeature(std::span<const NodeId> node_ids, std::span<snark::Fe
         // split node list into sevaral parts and calculate each part in parallel.
         RunParallel(
             node_ids.size(), [](const std::size_t &) {},
-            [this, &output, func, feature_size](const std::size_t & /*index*/, const std::size_t &start_node_id,
-                                                const std::size_t &end_node_id) {
+            [&output, func, feature_size](const std::size_t & /*index*/, const std::size_t &start_node_id,
+                                          const std::size_t &end_node_id) {
                 auto sub_span = output.subspan(start_node_id * feature_size, end_node_id * feature_size);
                 func(start_node_id, end_node_id, sub_span);
             });
@@ -189,10 +189,9 @@ void Graph::GetNodeSparseFeature(std::span<const NodeId> node_ids, std::span<con
     // callback function to calculate part of the full node list.
     // sub_out_indices & sub_out_data is used to get the results for a specific part,
     // after all parallel job finishes, these sub_out_indices & sub_out_data will be combined.
-    auto func = [this, &node_ids, &features, &out_dimensions, &out_indices,
-                 &out_data](const int64_t &start_node_id, const int64_t &end_node_id,
-                            std::vector<std::vector<int64_t>> &sub_out_indices,
-                            std::vector<std::vector<uint8_t>> &sub_out_data) {
+    auto func = [this, &node_ids, &features, &out_dimensions](const int64_t &start_node_id, const int64_t &end_node_id,
+                                                              std::vector<std::vector<int64_t>> &sub_out_indices,
+                                                              std::vector<std::vector<uint8_t>> &sub_out_data) {
         for (int64_t node_index = start_node_id; node_index < end_node_id; ++node_index)
         {
             auto internal_id = m_node_map.find(node_ids[node_index]);
@@ -233,7 +232,7 @@ void Graph::GetNodeSparseFeature(std::span<const NodeId> node_ids, std::span<con
                 indice_sections.resize(count);
                 data_sections.resize(count);
             },
-            [this, &indice_sections, &data_sections, func,
+            [&indice_sections, &data_sections, func,
              &features](const std::size_t &index, const std::size_t &start_node_id, const std::size_t &end_node_id) {
                 indice_sections[index].resize(features.size());
                 data_sections[index].resize(features.size());
@@ -296,8 +295,8 @@ void Graph::GetNodeStringFeature(std::span<const NodeId> node_ids, std::span<con
 
         RunParallel(
             node_ids.size(), [&data_sections](const std::size_t &count) { data_sections.resize(count); },
-            [this, &data_sections, func, &features](const std::size_t &index, const std::size_t &start_node_id,
-                                                    const std::size_t &end_node_id) {
+            [&data_sections, func](const std::size_t &index, const std::size_t &start_node_id,
+                                   const std::size_t &end_node_id) {
                 func(start_node_id, end_node_id, data_sections[index]);
             });
 
@@ -663,7 +662,7 @@ void Graph::RunParallel(
             sub_span_len = size - (parallel_count * i);
         }
 
-        results.emplace_back(m_threadPool->Submit([this, callback, i, parallel_count, sub_span_len]() {
+        results.emplace_back(m_threadPool->Submit([callback, i, parallel_count, sub_span_len]() {
             auto start_id = parallel_count * i;
             callback(i, start_id, start_id + sub_span_len);
         }));
