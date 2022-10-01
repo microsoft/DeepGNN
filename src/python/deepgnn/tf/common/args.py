@@ -34,6 +34,13 @@ def define_param_common(parser):
     group.add_argument("--storage_type", type=lambda type: PartitionStorageType[type], default=PartitionStorageType.memory, choices=list(PartitionStorageType.__members__.keys()) + list(PartitionStorageType), help="Partition storage backing to use, eg memory or disk.")
     group.add_argument("--config_path", type=str, default="", help="Directory where HDFS or other config files are stored.")
     group.add_argument("--stream", action="store_true", default=False, help="If ADL data path, stream directly to memory or download to disk first.")
+
+    # Note: 'enable_threadpool' is used to create a thread pool when starting the
+    # GE servers, and use this thread pool to get features in parallel.
+    # This flag is OFF by default which means when client submit a get feature request,
+    # server will use single thread to iterate each node/edge and get its feature.
+    # When this flag is enabled, server will split node/edge into several groups and use
+    # thread pool to get the feautres.
     group.add_argument("--enable_threadpool", action="store_true", default=False, help="Whether or not to enable server thread pool.")
 
 

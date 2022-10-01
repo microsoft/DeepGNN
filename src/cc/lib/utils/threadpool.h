@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#ifndef THREAD_POOL_H
-#define THREAD_POOL_H
+#ifndef SNARK_THREAD_POOL_H
+#define SNARK_THREAD_POOL_H
 
 #include <condition_variable>
 #include <functional>
@@ -10,7 +10,6 @@
 #include <memory>
 #include <mutex>
 #include <queue>
-#include <stdexcept>
 #include <thread>
 #include <vector>
 
@@ -20,101 +19,29 @@ namespace snark
 class ThreadPool
 {
   public:
+    // default constructor will create threads using hardware concurrency.
     ThreadPool();
-    ThreadPool(size_t);
 
-    template <class F, class... Args> decltype(auto) Submit(F &&f, Args &&...args);
+    // user can specify the thread count.
+    ThreadPool(std::size_t thread_count);
 
+    // stop all worker thread.
     ~ThreadPool();
 
+    // submit a job to the thread pool, user can use promise to wait the job
+    // to be finished.
+    std::shared_ptr<std::promise<void>> Submit(std::function<void()> callback);
+
   private:
-    void Initialize(size_t threads);
+    // create threads in the pool.
+    void Initialize(std::size_t thread_count);
 
     std::vector<std::thread> m_workers;
     std::queue<std::function<void()>> m_tasks;
-    std::mutex m_queue_mutex;
+    std::mutex m_mutex;
     std::condition_variable m_condition;
     bool m_stop;
 };
-
-inline ThreadPool::ThreadPool() : m_stop(false)
-{
-    Initialize(0);
-}
-
-inline ThreadPool::ThreadPool(size_t threads) : m_stop(false)
-{
-    Initialize(threads);
-}
-
-inline void ThreadPool::Initialize(size_t threads)
-{
-    if (threads == 0)
-    {
-        threads = std::thread::hardware_concurrency();
-    }
-
-    for (size_t i = 0; i < threads; ++i)
-    {
-        m_workers.emplace_back([this] {
-            for (;;)
-            {
-                std::function<void()> task;
-
-                {
-                    std::unique_lock<std::mutex> lock(m_queue_mutex);
-                    m_condition.wait(lock, [this] { return m_stop || !m_tasks.empty(); });
-                    if (m_stop && m_tasks.empty())
-                    {
-                        return;
-                    }
-
-                    task = std::move(m_tasks.front());
-                    m_tasks.pop();
-                }
-
-                task();
-            }
-        });
-    }
-}
-
-template <class F, class... Args> decltype(auto) ThreadPool::Submit(F &&f, Args &&...args)
-{
-    using return_type = decltype(f(args...));
-
-    auto task =
-        std::make_shared<std::packaged_task<return_type()>>(std::bind(std::forward<F>(f), std::forward<Args>(args)...));
-
-    std::future<return_type> res = task->get_future();
-    {
-        std::unique_lock<std::mutex> lock(m_queue_mutex);
-        if (m_stop)
-        {
-            throw std::runtime_error("Submit on stopped ThreadPool");
-        }
-
-        m_tasks.emplace([task]() { (*task)(); });
-    }
-
-    m_condition.notify_one();
-    return res;
-}
-
-inline ThreadPool::~ThreadPool()
-{
-    {
-        std::unique_lock<std::mutex> lock(m_queue_mutex);
-        m_stop = true;
-    }
-
-    m_condition.notify_all();
-
-    for (auto &worker : m_workers)
-    {
-        worker.join();
-    }
-}
 
 } // namespace snark
 

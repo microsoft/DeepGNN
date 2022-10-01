@@ -655,7 +655,7 @@ void Graph::RunParallel(
 
     preCallback(concurrency);
 
-    std::vector<std::future<void>> results;
+    std::vector<std::shared_ptr<std::promise<void>>> results;
     for (unsigned int i = 0; i < concurrency; ++i)
     {
         auto sub_span_len = parallel_count;
@@ -672,7 +672,7 @@ void Graph::RunParallel(
 
     for (auto &res : results)
     {
-        res.get();
+        res->get_future().get();
     }
 }
 

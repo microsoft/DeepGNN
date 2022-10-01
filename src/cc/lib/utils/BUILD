@@ -8,11 +8,16 @@ cc_library(
     hdrs = [
         "threadpool.h",
     ],
+    srcs = [
+        "threadpool.cc",
+    ],
     copts = CXX_OPTS,
     linkopts = select({
         "@platforms//os:linux": ["-ldl"],
         "//conditions:default": [],
     }),
+    features = ["fully_static_link"],
+    linkstatic = True,
     visibility = ["//visibility:public"],
     deps = [
     ],
