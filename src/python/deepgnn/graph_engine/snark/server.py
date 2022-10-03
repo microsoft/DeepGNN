@@ -190,16 +190,16 @@ if __name__ == "__main__":
     )
 
     # Note: 'enable_threadpool' is used to create a thread pool when starting the
-    # GE servers, and use this thread pool to get features in parallel.
+    # graph engine, and use this thread pool to get features in parallel.
     # This flag is OFF by default which means when client submit a get feature request,
-    # server will use single thread to iterate each node/edge and get its feature.
-    # When this flag is enabled, server will split node/edge into several groups and use
+    # graph engine will use single thread to iterate each node/edge and get its feature.
+    # When this flag is enabled, graph engine will split node/edge into several groups and use
     # thread pool to get the feautres.
     parser.add_argument(
         "--enable_threadpool",
         action="store_true",
         default=False,
-        help="Whether or not to enable server thread pool.",
+        help="Whether or not to enable thread pool in graph engine.",
     )
 
     args, _ = parser.parse_known_args()
