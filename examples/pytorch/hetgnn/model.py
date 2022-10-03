@@ -332,4 +332,4 @@ class HetGnnModel(BaseUnsupervisedModel):
         context["inputs"] = inputs[:, 0]
         context["node_type"] = inputs[0][1]
         context["encoder"] = self.build_node_context(graph, context["inputs"])
-        return context
+        return context, 0
