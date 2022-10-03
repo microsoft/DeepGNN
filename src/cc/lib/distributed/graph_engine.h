@@ -9,9 +9,9 @@
 #include <grpcpp/channel.h>
 #include <memory>
 
+#include "boost/asio.hpp"
 #include "src/cc/lib/distributed/service.grpc.pb.h"
 #include "src/cc/lib/graph/graph.h"
-#include "src/cc/lib/utils/threadpool.h"
 
 namespace snark
 {
@@ -72,7 +72,7 @@ class GraphEngineServiceImpl final : public snark::GraphEngine::Service
     std::vector<uint64_t> m_internal_indices;
     std::vector<uint32_t> m_counts;
     Metadata m_metadata;
-    std::shared_ptr<ThreadPool> m_threadPool;
+    std::shared_ptr<boost::asio::thread_pool> m_threadPool;
 };
 
 } // namespace snark

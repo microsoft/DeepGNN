@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cassert>
 #include <span>
+#include <thread>
 
 #include "absl/container/flat_hash_set.h"
 #include <glog/logging.h>
@@ -30,7 +31,8 @@ GraphEngineServiceImpl::GraphEngineServiceImpl(std::string path, std::vector<uin
 {
     if (enable_threadpool)
     {
-        m_threadPool = std::make_shared<ThreadPool>();
+        auto concurrency = std::thread::hardware_concurrency();
+        m_threadPool = std::make_shared<boost::asio::thread_pool>(concurrency);
     }
 
     std::vector<std::string> suffixes;
@@ -770,10 +772,13 @@ void GraphEngineServiceImpl::RunParallel(
             sub_span_len = node_ids_size - (parallel_count * i);
         }
 
-        results.emplace_back(m_threadPool->Submit([callback, i, parallel_count, sub_span_len]() {
+        auto p = std::make_shared<std::promise<void>>();
+        results.push_back(p);
+        boost::asio::post(*m_threadPool, [p, callback, i, parallel_count, sub_span_len]() {
             auto start_id = parallel_count * i;
             callback(i, start_id, start_id + sub_span_len);
-        }));
+            p->set_value();
+        });
     }
 
     for (auto &res : results)

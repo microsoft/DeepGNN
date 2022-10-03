@@ -50,6 +50,7 @@ cc_library(
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",
         "@boost//:random",
+        "@boost//:asio",
         ":service_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_benchmark//:benchmark",

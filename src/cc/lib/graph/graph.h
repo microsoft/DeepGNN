@@ -13,8 +13,7 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
-#include "src/cc/lib/utils/threadpool.h"
-
+#include "boost/asio.hpp"
 #include "partition.h"
 #include "sampler.h"
 #include "types.h"
@@ -95,7 +94,7 @@ class Graph
     std::vector<uint64_t> m_internal_indices;
     std::vector<uint32_t> m_counts;
     Metadata m_metadata;
-    std::shared_ptr<ThreadPool> m_threadPool;
+    std::shared_ptr<boost::asio::thread_pool> m_threadPool;
 };
 
 } // namespace snark
