@@ -216,15 +216,6 @@ Model Init
 ==========
 We need to implement `create_model` and `create_optimizer` functions to allow distributed workers initialize model and optimizer.
 
-.. code-block:: python
-
-    >>> def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):
-    ...     return torch.optim.Adam(
-    ...         filter(lambda p: p.requires_grad, model.parameters()),
-    ...         lr=args.learning_rate * world_size,
-    ...         weight_decay=0.0005,
-    ...     )
-
 Dataset
 =======
 `create_dataset` function allows parameterization torch of the training data used by workers.
@@ -311,10 +302,11 @@ Finally we can train the model with `run_dist` function. We expect the loss to d
     ...     train_dataloader = train.torch.prepare_data_loader(train_dataloader)
     ...
     ...     loss_fn = nn.CrossEntropyLoss()
+    ...
     ...     optimizer = torch.optim.Adam(
     ...         filter(lambda p: p.requires_grad, model.parameters()),
     ...         lr=config["learning_rate"] * world_size,
-    ...         weight_decay=0,
+    ...         weight_decay=0.0005,
     ...     )
     ...     loss_results = []
     ...
