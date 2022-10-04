@@ -1120,6 +1120,60 @@ def test_edge_list_binary_escape():
     assert features[1] == r"\\"
 
 
+def test_edge_list_sparse_parse():
+    decoder = EdgeListDecoder()
+
+    src, dst, typ, weight, ((coords, values),) = next(
+        decoder.decode("0,-1,0,1.0,int64,2/0,1,1,2,2")
+    )
+    npt.assert_equal(coords, np.array([1, 1]))
+    npt.assert_equal(values, np.array([2, 2]))
+
+    src, dst, typ, weight, features = next(decoder.decode("0,-1,0,1.0,int64,0/0,"))
+    assert features == [None]
+    src, dst, typ, weight, features = next(decoder.decode("0,-1,0,1.0,int64,0/1,"))
+    assert features == [None]
+    src, dst, typ, weight, features = next(decoder.decode("0,-1,0,1.0,int64,0/2,"))
+    assert features == [None]
+
+    src, dst, typ, weight, ((coords, values),) = next(
+        decoder.decode("0,-1,0,1.0,int64,2/1,1,1,2,2")
+    )
+    npt.assert_equal(coords, np.array([[1], [1]]))
+    npt.assert_equal(values, np.array([2, 2]))
+
+    src, dst, typ, weight, ((coords, values),) = next(
+        decoder.decode("0,-1,0,1.0,int64,2/2,1,1,2,2,3,3")
+    )
+    npt.assert_equal(coords, np.array([[1, 1], [2, 2]]))
+    npt.assert_equal(values, np.array([3, 3]))
+
+    src, dst, typ, weight, ((coords, values),) = next(
+        decoder.decode("0,-1,0,1.0,int64,1/3,1,1,1,2")
+    )
+    npt.assert_equal(coords, np.array([[1, 1, 1]]))
+    npt.assert_equal(values, np.array([2]))
+
+    with pytest.raises(ValueError):
+        src, dst, typ, weight, ((coords, values),) = next(
+            decoder.decode("0,-1,0,1.0,int64,2/0,1.5,1.0,2,2")
+        )
+
+    src, dst, typ, weight, ((coords, values),) = next(
+        decoder.decode("0,-1,0,1.0,float32,2/0,1,1,2.2,2.2")
+    )
+    npt.assert_equal(coords, np.array([1, 1]))
+    npt.assert_almost_equal(values, np.array([2.2, 2.2]))
+    assert values.dtype == np.float32
+
+    src, dst, typ, weight, ((coords, values),) = next(
+        decoder.decode("0,-1,0,1.0,uint8,2/0,1,1,2,2")
+    )
+    npt.assert_equal(coords, np.array([1, 1]))
+    npt.assert_equal(values, np.array([2, 2]))
+    assert values.dtype == np.uint8
+
+
 def test_edge_list_binary_spaces():
     decoder = EdgeListDecoder()
     src, dst, typ, weight, features = next(
