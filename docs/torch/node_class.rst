@@ -69,6 +69,9 @@ Query
 Query is the interface between the model and graph engine. It is used by the trainer to fetch contexts which will be passed as input to the model forward function. Since query is a separate function, the trainer may pre-fetch contexts allowing graph engine operations and model training to occur in parallel.
 In the GAT model, query samples neighbors repeatedly `num_hops` times in order to generate a sub-graph. All node and edge features in this sub-graph are pulled and added to the context.
 
+`create_dataset` function allows parameterization torch of the training data used by workers.
+Notably we use the `FileNodeSampler` here which loads `sample_files` and generates samples from them, otherwise in our `link prediction example <link_pred.html>`_ we use `GEEdgeSampler` which uses the backend to generate samples.
+
 .. code-block:: python
 
     >>> class GATDataset(Dataset):
@@ -212,61 +215,6 @@ In the GAT model, forward pass uses two of our built-in `GATConv layers <https:/
     ...         loss = self.xent(scores, labels)
     ...         return loss, pred, labels
 
-Model Init
-==========
-We need to implement `create_model` and `create_optimizer` functions to allow distributed workers initialize model and optimizer.
-
-Dataset
-=======
-`create_dataset` function allows parameterization torch of the training data used by workers.
-Notably we use the `FileNodeSampler` here which loads `sample_files` and generates samples from them, otherwise in our `link prediction example <link_pred.html>`_ we use `GEEdgeSampler` which uses the backend to generate samples.
-
-.. code-block:: python
-
-Arguments
-=========
-`init_args` registers any model specific arguments.
-
-.. code-block:: python
-
-    >>> def init_args(parser):
-    ...     parser.add_argument("--head_num", type=str2list_int, default="8,1", help="the number of attention headers.")
-    ...     parser.add_argument("--hidden_dim", type=int, default=8, help="hidden layer dimension.")
-    ...     parser.add_argument("--num_classes", type=int, default=-1, help="number of classes for category")
-    ...     parser.add_argument("--ffd_drop", type=float, default=0.0, help="feature dropout rate.")
-    ...     parser.add_argument("--attn_drop", type=float, default=0.0, help="attention layer dropout rate.")
-    ...     parser.add_argument("--l2_coef", type=float, default=0.0005, help="l2 loss")
-    ...     parser.add_argument("--neighbor_edge_types", type=str2list_int, default="0", help="Graph Edge for attention encoder.",)
-    ...     parser.add_argument("--eval_file", default="", type=str, help="")
-
-NOTE Below code block is for jupyter notebooks only.
-
-.. code-block:: python
-
-    >>> model_dir = tempfile.TemporaryDirectory()
-    >>> MODEL_DIR = model_dir.name
-    >>> arg_list = [
-    ...     "--data_dir", "/tmp/cora",
-    ...     "--converter", "skip",
-    ...     "--sample_file", "/tmp/cora/train.nodes",
-    ...     "--node_type", "0",
-    ...     "--feature_idx", "0",
-    ...     "--feature_dim", "1433",
-    ...     "--label_idx", "1",
-    ...     "--label_dim", "1",
-    ...     "--num_classes", "7",
-    ...     "--batch_size", "140",
-    ...     "--learning_rate", ".005",
-    ...     "--num_epochs", "20",
-    ...     "--log_by_steps", "10",
-    ...     "--use_per_step_metrics",
-    ...     "--data_parallel_num", "0",
-    ...     "--model_dir", MODEL_DIR,
-    ...     "--metric_dir", MODEL_DIR,
-    ...     "--save_path", MODEL_DIR,
-    ...     "--max_id", "2708",
-    ... ]
-
 Train
 =====
 Finally we can train the model with `run_dist` function. We expect the loss to decrease with every epoch:
@@ -274,76 +222,34 @@ Finally we can train the model with `run_dist` function. We expect the loss to d
 .. code-block:: python
 
     >>> def train_func(config: Dict):
-    ...     batch_size = config["batch_size"]
-    ...     epochs = config["num_epochs"]
-    ...     world_size = session.get_world_size()
+    ...     model = GAT(in_dim=1433, num_classes=7)
+    ...     model = train.torch.prepare_model(model)
     ...
-    ...     worker_batch_size = batch_size // world_size
-    ...     num_nodes = config["max_id"] // world_size
-    ...     #get_logger().info(f"Creating HetGnnModel with seed:{config["seed}.")
-    ...     #set_seed(config["seed)
-    ...
-    ...     model_original = GAT(
-    ...         in_dim=config["feature_dim"],
-    ...         head_num=config["head_num"],
-    ...         hidden_dim=config["hidden_dim"],
-    ...         num_classes=config["num_classes"],
-    ...         ffd_drop=config["ffd_drop"],
-    ...         attn_drop=config["attn_drop"],
-    ...     )
-    ...     model = train.torch.prepare_model(model_original)
-    ...
-    ...     dataset = GATDataset(config["data_dir"], [config["node_type"]], [config["feature_idx"], config["feature_dim"]], [config["label_idx"], config["label_dim"]], np.float32, np.float32)
-    ...     train_dataloader = DataLoader(
+    ...     dataset = GATDataset("/tmp/cora", [0], [0, 1433], [1, 1], np.float32, np.float32)
+    ...     dataloader = DataLoader(
     ...         dataset,
-    ...         sampler=BatchedSampler(FileNodeSampler(config["sample_file"]), config["batch_size"]),
-    ...         num_workers=2,
+    ...         sampler=BatchedSampler(FileNodeSampler("/tmp/cora/train.nodes"), 140),
     ...     )
-    ...     train_dataloader = train.torch.prepare_data_loader(train_dataloader)
+    ...     dataloader = train.torch.prepare_data_loader(dataloader)
     ...
+    ...     optimizer = torch.optim.Adam(model.parameters(), lr=.005, weight_decay=0.0005)
     ...     loss_fn = nn.CrossEntropyLoss()
     ...
-    ...     optimizer = torch.optim.Adam(
-    ...         filter(lambda p: p.requires_grad, model.parameters()),
-    ...         lr=config["learning_rate"] * world_size,
-    ...         weight_decay=0.0005,
-    ...     )
-    ...     loss_results = []
-    ...
     ...     model.train()
-    ...     for epoch in range(epochs):
-    ...         for batch, (X, y) in enumerate(train_dataloader):
+    ...     for epoch in range(20):
+    ...         for batch, (X, y) in enumerate(dataloader):
     ...             loss, score, label = model(X)
-    ...             #loss = loss_fn(pred, y)
-    ...
     ...             optimizer.zero_grad()
     ...             loss.backward()
     ...             optimizer.step()
-    ...
-    ...             if batch % 100 == 0:
-    ...                 loss, current = loss.item(), batch * len(X)
-    ...                 print(f"loss: {loss:>7f}  [{current:>5d}/{num_nodes:>5d}]")
-    ...         #session.report(dict(loss=loss))
-    ...         torch.save(
-    ...             {"state_dict": model_original.state_dict(), "epoch": epoch},
-    ...             os.path.join(config["save_path"], f"gnnmodel-{epoch:03}.pt"),
-    ...         )
-    ...     torch.save(
-    ...         model_original.state_dict(),
-    ...         os.path.join(config["save_path"], f"gnnmodel.pt"),
-    ...     )
-    ...     return loss_results
 
-    >>> from deepgnn.pytorch.training.args import get_args
-    >>> args = get_args(init_args, run_args=arg_list)
     >>> ray.init()
     RayContext(...)
     >>> trainer = TorchTrainer(
     ...     train_func,
-    ...     train_loop_config=vars(args),
-    ...     run_config=RunConfig(verbose=1),
+    ...     train_loop_config={},
+    ...     run_config=RunConfig(verbose=0),
     ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     ... )
     >>> result = trainer.fit()
-    == Status ==...
-    >>> model_dir.cleanup()
+    Trial TorchTrainer_...
