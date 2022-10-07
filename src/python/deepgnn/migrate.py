@@ -15,7 +15,10 @@ if __name__ == "__main__":
         "--script_dir", type=str, required=True, help="Directory to migrate."
     )
     parser.add_argument(
-        "--start_version", type=str, required=True, help="Version of DeepGNN used in script_dir."
+        "--start_version",
+        type=str,
+        required=True,
+        help="Version of DeepGNN used in script_dir.",
     )
     args = parser.parse_args()
 
