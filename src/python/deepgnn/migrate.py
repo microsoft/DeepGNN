@@ -14,10 +14,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--script_dir", type=str, required=True, help="Directory to migrate."
     )
+    parser.add_argument(
+        "--start_version", type=str, required=True, help="Version of DeepGNN used in script_dir."
+    )
     args = parser.parse_args()
 
     for filename in Path(args.script_dir).glob("**/*.py"):
-        if filename.name.endswith("migrate.py"):
+        if filename.name.endswith("src/python/deepgnn/migrate.py"):
             continue
 
         with open(filename, "r") as file:
