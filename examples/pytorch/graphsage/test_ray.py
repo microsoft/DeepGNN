@@ -22,13 +22,14 @@ from deepgnn.graph_engine import SamplingStrategy
 from deepgnn.graph_engine.snark.local import Client
 
 
+import pandas as pd
+
 feature_idx = 1
 feature_dim = 50
 label_idx = 0
 label_dim = 121
 
 
-'''
 class CoraDataset(Dataset):
     """Cora dataset with base torch sampler."""
     def __init__(self, node_types):
@@ -39,15 +40,11 @@ class CoraDataset(Dataset):
     def __len__(self):
         return self.count
 
-    def __getitem__(self, sampler_idx):
-        if isinstance(sampler_idx, (int, float)):
-            sampler_idx = [sampler_idx]
-        idx = sampler_idx# self.g.type_remap(sampler_idx)  # TODO
-        return self.g.node_features(idx, np.array([[feature_idx, feature_dim]]), feature_type=np.float32), torch.Tensor([0])
-
+    def __getitem__(self, idx):
+        return {"features": self.g.node_features(idx, np.array([[feature_idx, feature_dim]]), feature_type=np.float32), "labels": np.ones((len(idx)))}
 
 # Range sampling use this w/ SubsetRandomSampler w/ list(range(start, stop))
-'''
+
 '''
 class CoraDataset(Dataset):
     """Cora dataset with file sampler."""
@@ -78,6 +75,7 @@ class FileSampler(Sampler[int]):  # Shouldn't need this really with quick map fr
             for line in file.readlines():
                 yield int(line)
 '''
+'''
 class CoraDataset(Dataset):
     """Cora dataset with file sampler."""
     def __init__(self, node_types):
@@ -107,6 +105,7 @@ class WeightedSampler(Sampler[int]):  # Shouldn't need this really with quick ma
     def __iter__(self):
         for _ in range(len(self)):
             yield self.g.sample_nodes(1, self.node_types, SamplingStrategy.Weighted)[0]
+'''
 
 
 class NeuralNetwork(nn.Module):
@@ -129,42 +128,21 @@ class NeuralNetwork(nn.Module):
 
 
 def train_epoch(dataloader, model, loss_fn, optimizer):
-    size = len(dataloader.dataset) // session.get_world_size()
+    size = dataloader.count() // session.get_world_size()
     model.train()
-    for batch, (X, y) in enumerate(dataloader):
+    for i, batch in enumerate(dataloader.iter_torch_batches()):
         # Compute prediction error
-        pred = model(X)
-        print(pred.shape, y.shape, "OUTPUTTTT")
-        loss = loss_fn(pred, y.squeeze().long())
+        pred = model(batch["features"])
+        loss = loss_fn(pred, batch["labels"].squeeze().long())
 
         # Backpropagation
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        if batch % 100 == 0:
-            loss, current = loss.item(), batch * len(X)
+        if i % 100 == 0:
+            loss, current = loss.item(), i * len(batch["labels"])
             print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
-
-
-def validate_epoch(dataloader, model, loss_fn):
-    size = len(dataloader.dataset) // session.get_world_size()
-    num_batches = len(dataloader)
-    model.eval()
-    test_loss, correct = 0, 0
-    with torch.no_grad():
-        for X, y in dataloader:
-            pred = model(X)
-            test_loss += loss_fn(pred, y).item()
-            correct += (pred.argmax(1) == y).type(torch.float).sum().item()
-    test_loss /= num_batches
-    correct /= size
-    print(
-        f"Test Error: \n "
-        f"Accuracy: {(100 * correct):>0.1f}%, "
-        f"Avg loss: {test_loss:>8f} \n"
-    )
-    return test_loss
 
 
 def train_func(config: Dict):
@@ -174,15 +152,20 @@ def train_func(config: Dict):
 
     worker_batch_size = batch_size // session.get_world_size()
 
-    training_data = CoraDataset([0])
+    #training_data = CoraDataset([0])
 
-    # Create data loaders.
+    ds = ray.data.range(2708)
+    def transform_batch(df: pd.DataFrame) -> pd.DataFrame:
+        cora_dataset = CoraDataset([0])
+        return cora_dataset.__getitem__(df)
+    train_dataloader = ds.map_batches(transform_batch)
+
+    #print(ds.show())
+    #train_dataloader = DataLoader(train_dataloader, batch_size=worker_batch_size)
     #train_dataloader = DataLoader(training_data, sampler=FileSampler("/tmp/cora/train.nodes"), batch_size=worker_batch_size)
-    train_dataloader = DataLoader(training_data, sampler=WeightedSampler(training_data.g, [0]), batch_size=worker_batch_size)
-    #test_dataloader = DataLoader(test_data, batch_size=worker_batch_size)
+    #train_dataloader = DataLoader(training_data, sampler=WeightedSampler(training_data.g, [0]), batch_size=worker_batch_size)
 
-    train_dataloader = train.torch.prepare_data_loader(train_dataloader)
-    #test_dataloader = train.torch.prepare_data_loader(test_dataloader)
+    #train_dataloader = train.torch.prepare_data_loader(train_dataloader)
 
     # Create model.
     model = NeuralNetwork()
