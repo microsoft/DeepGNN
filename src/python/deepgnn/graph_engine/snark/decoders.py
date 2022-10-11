@@ -66,8 +66,11 @@ class EdgeListDecoder(Decoder):
         edge does not have to have the same number of features or feature types.
 
         features[dense]: dtype_name,length,v1,v2,...,dtype_name2,length2,v1,v2,...
-        features[sparse with 2 dim coordinates vector]: dtype_name,values.size/coords.shape[1],c1,c2,...,v1,v2,...
-        features[sparse with 1 dim coordinates vector]: dtype_name,values.size/0,c1,c2,...,v1,v2,...
+        features[sparse]: dtype_name,values_length/coords_dim,c1,c2,...,v1,v2,...
+
+        This sparse feature representation will generate a values vector with shape (values_length) and coordinates vector
+        with shape (values_length, coords_dim). If coordinates vector should be flat, use values_length/0 to get the
+        coordinates vector shape (values_length).
 
     Edge List Format Example
         A graph with 2 nodes {0, 1} each with type = 1, weight = .5 and
@@ -118,7 +121,8 @@ class EdgeListDecoder(Decoder):
         "," is the default column delimiter, it can be overriden with the delimiter parameter.
         "/" is the default sparse features length delimiter, it can be overriden with the
             length_delimiter parameter.
-        "\" is the escape for the delimiter in "binary" features.
+        "\" is the escape for the delimiter in "binary" features, it can be overriden with
+            the binary_escape parameter.
     """
 
     def __init__(
