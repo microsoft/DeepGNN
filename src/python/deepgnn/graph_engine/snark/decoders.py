@@ -133,6 +133,7 @@ class EdgeListDecoder(Decoder):
         default_edge_feature_lens: Optional[List[Optional[List[int]]]] = None,
         delimiter: str = ",",
         length_delimiter: str = "/",
+        binary_escape: str = r"\\"[0],
     ):
         """Initialize the Decoder."""
         super().__init__()
@@ -158,7 +159,11 @@ class EdgeListDecoder(Decoder):
 
         self.delimiter = delimiter
         self.length_delimiter = length_delimiter
-        self.escape = r"\\"[0]
+        self.escape = binary_escape
+        assert len(self.delimiter) and len(self.length_delimiter) and len(self.escape)
+        assert self.delimiter != self.length_delimiter
+        assert self.length_delimiter != self.escape
+        assert self.escape != self.delimiter
 
     def _get_feature(
         self, key: str, length: List[int], data: Iterator
