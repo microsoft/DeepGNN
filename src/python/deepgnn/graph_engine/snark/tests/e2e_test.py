@@ -21,12 +21,13 @@ import grpc
 from grpc_health.v1 import health_pb2, health_pb2_grpc
 
 import deepgnn.graph_engine.snark.client as client
-from deepgnn.graph_engine.snark.decoders import JsonDecoder
+from deepgnn.graph_engine.snark.decoders import JsonDecoder, EdgeListDecoder
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.dispatcher as dispatcher
 import deepgnn.graph_engine.snark._lib as lib
 from deepgnn.graph_engine.snark.converter.writers import BinaryWriter
+from util_test import json_to_edge_list_feature
 
 
 nodes = [
@@ -250,56 +251,20 @@ class Counter:
         return self.count % 2
 
 
-def linearize(value):
-    def get_features(item):
-        output = []
-        for feature_key, feature_dict in item.items():
-            if "feature" not in feature_key:
-                continue
-            for key, v in feature_dict.items():
-                while int(key) + 1 > len(output):
-                    output.append(None)
-                if feature_key == "binary_feature":
-                    vv = v
-                elif "sparse" in feature_key:
-                    vv = (
-                        np.array(v["coordinates"], dtype=np.int64),
-                        np.array(
-                            v["values"],
-                            dtype=JsonDecoder.convert_map[
-                                feature_key.replace("sparse_", "")
-                            ],
-                        ),
-                    )
-                else:
-                    vv = np.array(v, dtype=JsonDecoder.convert_map[feature_key])
-                output[int(key)] = vv
-        return output
-
-    if "node_id" in value:
-        return (
-            value["node_id"],
-            -1,
-            value["node_type"],
-            value["node_weight"],
-            get_features(value),
-        )
-    else:
-        return (
-            value["src_id"],
-            value["dst_id"],
-            value["edge_type"],
-            value["weight"],
-            get_features(value),
-        )
-
-
 def write_multi_binary(output_dir, partitions):
+    def json_to_edge_list_helper(json_input):
+        features = json_to_edge_list_feature(JsonDecoder()._pull_features(json_input))
+        if "node_id" in json_input:
+            return f"{json_input['node_id']},-1,{json_input['node_type']},{json_input['node_weight']},{features}"
+        else:
+            return f"{json_input['src_id']},{json_input['dst_id']},{json_input['edge_type']},{json_input['weight']},{features}"
+
     partition_meta = ""
     for i, p in enumerate(partitions):
+        decoder = EdgeListDecoder()
         writer = BinaryWriter(output_dir, i)
         for v in p:
-            writer.add([linearize(v)])
+            writer.add(decoder.decode(json_to_edge_list_helper(v)))
         writer.close()
         nf = "\n".join(map(str, writer.node_type_count))
         ef = "\n".join(map(str, writer.edge_type_count))
