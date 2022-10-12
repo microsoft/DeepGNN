@@ -3,6 +3,7 @@
 """Simple converter from kg to json format for deepgnn."""
 import json
 import sys
+from typing import Dict, Any
 
 
 def main(root_path: str):
@@ -26,7 +27,7 @@ def main(root_path: str):
             cols = line.split("\t")
             relations_dict[cols[1]] = int(cols[0])
 
-    nodes_dict = {}
+    nodes_dict: Dict[int, list] = {}
     count_ = {}
     start_ = 4
     with open(train_path, "r") as f:
@@ -64,14 +65,14 @@ def main(root_path: str):
 
     nodes = []
     for k in nodes_dict.keys():
-        node = {}
+        node: Dict[str, Any] = {}
         node["node_id"] = int(k)
         node["node_type"] = 0
         node["node_weight"] = 1
         node["uint64_feature"] = {}
         node["float_feature"] = {}
         node["binary_feature"] = {}
-        neighbors = {}
+        neighbors: Dict[int, Dict[int, int]] = {}
         edges = []
 
         for entity in nodes_dict[int(k)]:

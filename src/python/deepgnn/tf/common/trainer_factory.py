@@ -1,10 +1,12 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 """Main entry point to create TF trainers."""
+import argparse
 from deepgnn import TrainerType, get_logger
+from deepgnn.tf.common.base_trainer import Trainer
 
 
-def get_trainer(param):
+def get_trainer(param: argparse.Namespace) -> Trainer:
     """Create trainer from command line arguments."""
     if param.eager:
         # Current TF2 Trainer only use 2.x code.

@@ -8,18 +8,18 @@ from deepgnn.tf import layers
 
 from .att_encoder import AttEncoder
 
-from typing import Tuple
+from typing import Tuple, Union
 
 
 class SimpleAttLayer(tf.keras.layers.Layer):
     """Reference: https://github.com/Jhy1993/HAN/blob/master/utils/layers.py#L132."""
 
-    def __init__(self, attention_size):
+    def __init__(self, attention_size: int):
         """Initialize encoder."""
         super().__init__()
         self.att_size = attention_size
 
-    def build(self, input_shape):
+    def build(self, input_shape: Tuple[int, int, int]):
         """Create internal variables."""
         hidden_size = input_shape[2].value  # D value - hidden size of the RNN layer
         # Trainable parameters
@@ -29,7 +29,9 @@ class SimpleAttLayer(tf.keras.layers.Layer):
         self.u_omega = tf.Variable(tf.random.normal([self.att_size], stddev=0.1), name="u_omega")
         # fmt:on
 
-    def call(self, inputs, time_major=False, return_alphas=False):
+    def call(
+        self, inputs, time_major: bool = False, return_alphas: bool = False
+    ) -> Union[tf.Tensor, Tuple[tf.Tensor, tf.Tensor]]:
         """Compute embeddings."""
         if time_major:
             # (T,B,D) => (B,T,D)
@@ -62,10 +64,10 @@ class HANEncoder(AttEncoder):
         head_num: list,
         hidden_dim: list,
         nb_num: list,
-        feature_idx=-1,
-        feature_dim=0,
-        max_id=-1,
-        out_dim=128,
+        feature_idx: int = -1,
+        feature_dim: int = 0,
+        max_id: int = -1,
+        out_dim: int = 128,
         **kwargs
     ):
         """Initialize encoder."""
@@ -107,7 +109,9 @@ class HANEncoder(AttEncoder):
                         layers.AttentionHeader(self.hidden_dim[layer_id], act=tf.nn.elu)
                     )
 
-    def _multi_head_layer(self, inputs: tf.Tensor, metapath_id: int, layer_id: int):
+    def _multi_head_layer(
+        self, inputs: tf.Tensor, metapath_id: int, layer_id: int
+    ) -> tf.Tensor:
         hidden = []
         for i in range(0, self.head_num[layer_id]):
             hidden_val = self.att_headers[metapath_id][layer_id][i](inputs)
@@ -120,7 +124,7 @@ class HANEncoder(AttEncoder):
             hidden.append(hidden_val)
         return tf.concat(hidden, -1)
 
-    def call(self, inputs: Tuple[np.ndarray, np.ndarray]):  # type: ignore
+    def call(self, inputs: Tuple[np.ndarray, np.ndarray]) -> tf.Tensor:  # type: ignore
         """Compute embeddings."""
         node_feats_arr, neighbor_feats_arr = inputs
         embed_list = []

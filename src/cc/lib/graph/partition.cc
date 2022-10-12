@@ -283,9 +283,18 @@ Type Partition::GetNodeType(uint64_t internal_node_id) const
 {
     return m_node_types[internal_node_id];
 }
-void Partition::GetNodeFeature(uint64_t internal_id, std::span<snark::FeatureMeta> features,
+
+bool Partition::HasNodeFeatures(uint64_t internal_node_id) const
+{
+    return GetNodeType(internal_node_id) != snark::PLACEHOLDER_NODE_TYPE;
+}
+
+bool Partition::GetNodeFeature(uint64_t internal_id, std::span<snark::FeatureMeta> features,
                                std::span<uint8_t> output) const
 {
+    if (!HasNodeFeatures(internal_id))
+        return false;
+
     auto file_ptr = m_node_features->start();
     auto curr = std::begin(output);
     auto feature_index_offset = m_node_index[internal_id];
@@ -308,12 +317,18 @@ void Partition::GetNodeFeature(uint64_t internal_id, std::span<snark::FeatureMet
             curr = std::fill_n(curr, feature_size - stored_size, 0);
         }
     }
+
+    return true;
 }
-void Partition::GetNodeSparseFeature(uint64_t internal_node_id, std::span<const snark::FeatureId> features,
+
+bool Partition::GetNodeSparseFeature(uint64_t internal_node_id, std::span<const snark::FeatureId> features,
                                      int64_t prefix, std::span<int64_t> out_dimensions,
                                      std::vector<std::vector<int64_t>> &out_indices,
                                      std::vector<std::vector<uint8_t>> &out_values) const
 {
+    if (!HasNodeFeatures(internal_node_id))
+        return false;
+
     assert(features.size() == out_dimensions.size());
     auto file_ptr = m_node_features->start();
     auto feature_index_offset = m_node_index[internal_node_id];
@@ -374,10 +389,16 @@ void Partition::GetNodeSparseFeature(uint64_t internal_node_id, std::span<const 
         auto out_values_span = std::span(out_values[feature_index]).subspan(old_values_length);
         m_node_features->read(indices_offset, values_length, std::begin(out_values_span), file_ptr);
     }
+
+    return true;
 }
-void Partition::GetNodeStringFeature(uint64_t internal_node_id, std::span<const snark::FeatureId> features,
+
+bool Partition::GetNodeStringFeature(uint64_t internal_node_id, std::span<const snark::FeatureId> features,
                                      std::span<int64_t> out_dimensions, std::vector<uint8_t> &out_values) const
 {
+    if (!HasNodeFeatures(internal_node_id))
+        return false;
+
     assert(features.size() == out_dimensions.size());
     auto file_ptr = m_node_features->start();
     auto feature_index_offset = m_node_index[internal_node_id];
@@ -404,6 +425,8 @@ void Partition::GetNodeStringFeature(uint64_t internal_node_id, std::span<const 
         auto out_values_span = std::span(out_values).subspan(old_values_length);
         m_node_features->read(data_offset, stored_size, std::begin(out_values_span), file_ptr);
     }
+
+    return true;
 }
 
 template <class F>

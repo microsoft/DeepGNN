@@ -4,7 +4,6 @@
 import argparse
 import sys
 import os
-import json
 from typing import List, Tuple, Union
 
 import deepgnn.graph_engine.snark.convert as convert
@@ -220,14 +219,14 @@ class CitationGraph(Client):
 
         node_types = self.get_node_types(train_mask, val_mask, test_mask)
 
-        graph_file = os.path.join(data_dir, "graph.json")
-        self._write_json_graph(adj, features, labels, node_types, graph_file)
+        graph_file = os.path.join(data_dir, "graph.csv")
+        self._write_edge_list_graph(adj, features, labels, node_types, graph_file)
 
         convert.MultiWorkersConverter(
             graph_path=graph_file,
             partition_count=1,
             output_dir=data_dir,
-            decoder=decoders.JsonDecoder(),
+            decoder=decoders.EdgeListDecoder(),
         ).convert()
 
         train_file = os.path.join(data_dir, "train.nodes")
@@ -251,7 +250,7 @@ class CitationGraph(Client):
             node_types.append(t)
         return node_types
 
-    def _write_json_graph(
+    def _write_edge_list_graph(
         self,
         adj: sp.csr_matrix,
         features: np.ndarray,
@@ -264,7 +263,7 @@ class CitationGraph(Client):
         assert node_size == labels.shape[0]
         with open(graph_file, "w") as fout:
             for nid in range(node_size):
-                tmp = self.to_json_node(
+                tmp = self.to_edge_list_node(
                     nid,
                     node_types[nid],
                     flt_feat=list(features[nid].tolist()),
@@ -272,11 +271,10 @@ class CitationGraph(Client):
                     neighbors=adj[nid].nonzero()[1],
                 )
                 fout.write(tmp)
-                fout.write("\n")
 
     NODE_TYPE_ID = {"train": 0, "val": 1, "test": 2, "other": 3}
 
-    def to_json_node(
+    def to_edge_list_node(
         self,
         node_id: int,
         node_type: str,
@@ -284,28 +282,15 @@ class CitationGraph(Client):
         label: int,
         neighbors: np.ndarray,
     ) -> str:
-        """Convert node to json format."""
+        """Convert node to edge_list format."""
         assert type(flt_feat) is list and type(flt_feat[0]) == float
         assert type(label) is int
         ntype = self.NODE_TYPE_ID[node_type]
-        node = {
-            "node_id": node_id,
-            "node_type": ntype,
-            "node_weight": 1.0,
-            "float_feature": {"0": flt_feat, "1": [label]},
-            "uint64_feature": {},
-            "binary_feature": {},
-            "edge": [
-                {
-                    "src_id": int(node_id),
-                    "dst_id": int(nb),
-                    "weight": float(1),
-                    "edge_type": 0,
-                }
-                for nb in neighbors
-            ],
-        }
-        return json.dumps(node)
+        output = ""
+        output += f"{node_id},-1,{ntype},1.0,float32,{len(flt_feat)},{','.join([str(v) for v in flt_feat])},float32,1,{label}\n"
+        for nb in sorted(neighbors):
+            output += f"{node_id},0,{nb},1.0\n"
+        return output
 
     def _write_node_files(self, node_types: List[str], train_file: str, test_file: str):
         with open(train_file, "w") as fout_train, open(

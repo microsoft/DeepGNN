@@ -99,8 +99,14 @@ void Graph::GetNodeType(std::span<const NodeId> node_ids, std::span<Type> output
         }
         else
         {
-            const auto index = internal_id->second;
-            *curr_type = m_partitions[m_partitions_indices[index]].GetNodeType(m_internal_indices[index]);
+            auto index = internal_id->second;
+            size_t partition_count = m_counts[index];
+            for (size_t partition = 0; partition < partition_count; ++partition, ++index)
+            {
+                *curr_type = m_partitions[m_partitions_indices[index]].GetNodeType(m_internal_indices[index]);
+                if (*curr_type != snark::PLACEHOLDER_NODE_TYPE)
+                    break;
+            }
         }
         ++curr_type;
     }
@@ -125,9 +131,16 @@ void Graph::GetNodeFeature(std::span<const NodeId> node_ids, std::span<snark::Fe
         }
         else
         {
-            const auto index = internal_id->second;
-            m_partitions[m_partitions_indices[index]].GetNodeFeature(m_internal_indices[index], features,
-                                                                     output.subspan(feature_offset, feature_size));
+            auto output_span = output.subspan(feature_offset, feature_size);
+
+            auto index = internal_id->second;
+            size_t partition_count = m_counts[index];
+            bool found = false;
+            for (size_t partition = 0; partition < partition_count && !found; ++partition, ++index)
+            {
+                found = m_partitions[m_partitions_indices[index]].GetNodeFeature(m_internal_indices[index], features,
+                                                                                 output_span);
+            }
         }
         feature_offset += feature_size;
     }
@@ -152,9 +165,14 @@ void Graph::GetNodeSparseFeature(std::span<const NodeId> node_ids, std::span<con
             continue;
         }
 
-        const auto partition_index = internal_id->second;
-        m_partitions[m_partitions_indices[partition_index]].GetNodeSparseFeature(
-            m_internal_indices[partition_index], features, node_index, out_dimensions, out_indices, out_data);
+        auto index = internal_id->second;
+        size_t partition_count = m_counts[index];
+        bool found = false;
+        for (size_t partition = 0; partition < partition_count && !found; ++partition, ++index)
+        {
+            found = m_partitions[m_partitions_indices[index]].GetNodeSparseFeature(
+                m_internal_indices[index], features, node_index, out_dimensions, out_indices, out_data);
+        }
     }
 }
 
@@ -173,10 +191,16 @@ void Graph::GetNodeStringFeature(std::span<const NodeId> node_ids, std::span<con
             continue;
         }
 
-        const auto partition_index = internal_id->second;
-        m_partitions[m_partitions_indices[partition_index]].GetNodeStringFeature(
-            m_internal_indices[partition_index], features,
-            out_dimensions.subspan(features_size * node_index, features_size), out_data);
+        auto dims_span = out_dimensions.subspan(features_size * node_index, features_size);
+
+        auto index = internal_id->second;
+        size_t partition_count = m_counts[index];
+        bool found = false;
+        for (size_t partition = 0; partition < partition_count && !found; ++partition, ++index)
+        {
+            found = m_partitions[m_partitions_indices[index]].GetNodeStringFeature(m_internal_indices[index], features,
+                                                                                   dims_span, out_data);
+        }
     }
 }
 

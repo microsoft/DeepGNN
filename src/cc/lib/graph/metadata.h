@@ -10,6 +10,9 @@
 
 namespace snark
 {
+
+const size_t MINIMUM_SUPPORTED_VERSION = 1;
+
 struct Metadata
 {
     Metadata() = default;
@@ -17,6 +20,7 @@ struct Metadata
     void Write(std::filesystem::path path) const;
 
     // Graph information.
+    size_t m_version;
     size_t m_node_count;
     size_t m_edge_count;
     size_t m_edge_type_count;

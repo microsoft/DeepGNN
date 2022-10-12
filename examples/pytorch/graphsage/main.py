@@ -19,7 +19,7 @@ from deepgnn.graph_engine import (
     SamplingStrategy,
     GraphEngineBackend,
 )
-from model import SupervisedGraphSage, UnSupervisedGraphSage
+from model import SupervisedGraphSage, UnSupervisedGraphSage  # type: ignore
 
 
 # fmt: off

@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 """Encoder for GAT model."""
+from typing import Optional, Callable
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -11,12 +12,12 @@ class GatEncoder(nn.Module):
 
     def __init__(
         self,
-        in_features,
-        out_features,
-        dropout=0.2,
-        negative_slope=1e-2,
-        concat=True,
-        act=None,
+        in_features: int,
+        out_features: int,
+        dropout: float = 0.2,
+        negative_slope: float = 1e-2,
+        concat: bool = True,
+        act: Optional[Callable[[torch.Tensor], torch.Tensor]] = None,
     ):
         """Initialize encoder."""
         super(GatEncoder, self).__init__()
@@ -33,7 +34,7 @@ class GatEncoder(nn.Module):
         self.attn_l = nn.Linear(self.out_features, 1)
         self.attn_r = nn.Linear(self.out_features, 1)
 
-    def forward(self, combind_feats):
+    def forward(self, combind_feats: torch.Tensor) -> torch.Tensor:
         """Evaluate encoder."""
         feats = self.fc(combind_feats)
         f_1 = self.attn_l(feats)

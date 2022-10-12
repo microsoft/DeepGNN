@@ -36,7 +36,7 @@ from deepgnn.graph_engine import (
 import deepgnn.graph_engine.snark.convert as convert
 from deepgnn.graph_engine.snark.decoders import JsonDecoder
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
-from model import SupervisedGraphSage, UnSupervisedGraphSage
+from model import SupervisedGraphSage, UnSupervisedGraphSage  # type: ignore
 
 logger = get_logger()
 

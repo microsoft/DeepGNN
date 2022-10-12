@@ -11,10 +11,12 @@ from deepgnn import get_logger
 from deepgnn.graph_engine._adl_reader import TextFileIterator
 from deepgnn.graph_engine._base import get_fs
 from deepgnn.graph_engine.snark.decoders import DecoderType, JsonDecoder
+from deepgnn.graph_engine.snark.converter.writers import BinaryWriter
 from deepgnn.graph_engine.snark.dispatcher import (
     PipeDispatcher,
     Dispatcher,
 )
+from deepgnn.graph_engine.snark.meta import BINARY_DATA_VERSION
 
 
 class MultiWorkersConverter:
@@ -35,8 +37,13 @@ class MultiWorkersConverter:
         dispatcher: Dispatcher = None,
         skip_node_sampler: bool = False,
         skip_edge_sampler: bool = False,
+        file_iterator: Optional[TextFileIterator] = None,
+        debug: bool = False,
     ):
         """Run multi worker converter in multi process.
+
+        * Converter may stall if an error is thrown inside of the multiprocessing.
+        In order to disable multprocessing and see the error message, use debug=True.
 
         Args:
             graph_path: the raw graph file folder.
@@ -44,7 +51,7 @@ class MultiWorkersConverter:
             decoder (Decoder): Decoder object which is used to parse the raw graph data file.
             partition_count: how many partitions will be generated.
             worker_index: the work index when running in multi worker mode.
-            worker_count: how many workers will be started to convert the data.
+            worker_count: how many workers will be started to convert the data, use 0 with 1 partition for debug mode.
             record_per_step: how many lines will be read from the raw graph file to process in each step.
             buffer_size: buffer size in MB used to process the raw graph lines.
             queue_size: the queue size when generating the bin files.
@@ -52,12 +59,15 @@ class MultiWorkersConverter:
             dispatcher: dispatcher type when generating bin files.
             skip_node_sampler(bool): skip generation of node alias tables.
             skip_edge_sampler(bool): skip generation of edge alias tables.
+            file_iterator(TextFileIterator): Iterator to yield lines of the input text file.
+            debug(bool, False): Enable debug mode to disable multiprocessing and see error messages, forces worker_count=1, paritition_count=1.
         """
         if decoder is None:
             decoder = JsonDecoder()  # type: ignore
+        self._debug = debug
         self.graph_path = graph_path
         self.worker_index = worker_index
-        self.worker_count = worker_count
+        self.worker_count = worker_count if not self._debug else 1
         self.output_dir = output_dir
         self.decoder = decoder
         self.record_per_step = record_per_step
@@ -65,16 +75,19 @@ class MultiWorkersConverter:
         self.buffer_queue_size = queue_size
         self.thread_count = thread_count
         self.dispatcher = dispatcher
+        self.file_iterator = file_iterator
 
         self.fs, _ = get_fs(graph_path)
 
         # calculate the partition offset and count of this worker.
-        self.partition_count = int(math.ceil(partition_count / worker_count))
+        self.partition_count = (
+            int(math.ceil(partition_count / worker_count)) if not self._debug else 1
+        )
         self.partition_offset = self.partition_count * worker_index
         if self.partition_offset + self.partition_count > partition_count:
             self.partition_count = partition_count - self.partition_offset
 
-        if self.dispatcher is None:
+        if self.dispatcher is None and not self._debug:
             # when converting data in HDFS make sure to turn it off: https://hdfs3.readthedocs.io/en/latest/limitations.html
             use_threads = True
             if hasattr(fsspec.implementations, "hdfs") and isinstance(
@@ -100,24 +113,43 @@ class MultiWorkersConverter:
             f"worker {self.worker_index} try to generate partition: {self.partition_offset} - {self.partition_count + self.partition_offset}"
         )
 
-        d = self.dispatcher
-        dataset = TextFileIterator(
-            filename=self.graph_path,
-            store_name=None,
-            batch_size=self.record_per_step,
-            epochs=1,
-            read_block_in_M=self.read_block_in_M,
-            buffer_queue_size=self.buffer_queue_size,
-            thread_count=self.thread_count,
-            worker_index=self.worker_index,
-            num_workers=self.worker_count,
-        )
+        if self.file_iterator is None:
+            self.file_iterator = TextFileIterator(
+                filename=self.graph_path,
+                store_name=None,
+                batch_size=self.record_per_step,
+                epochs=1,
+                read_block_in_M=self.read_block_in_M,
+                buffer_queue_size=self.buffer_queue_size,
+                thread_count=self.thread_count,
+                worker_index=self.worker_index,
+                num_workers=self.worker_count,
+            )
 
-        for _, data in enumerate(dataset):
-            for line in data:
-                d.dispatch(line)
+        if not self._debug:
+            d = self.dispatcher
+            for _, data in enumerate(self.file_iterator):
+                for line in data:
+                    d.dispatch(line)
 
-        d.join()
+            d.join()
+            gettr = lambda key: d.prop(key)  # noqa: E731
+            partitions = sorted(gettr("partitions"), key=lambda x: x["id"])
+            partition_gettr = lambda p, key: p[key]  # noqa: E731
+        else:
+            assert (
+                self.partition_count == 1
+            ), "Num_workers = 0 does not support multiple partitions."
+            if isinstance(self.decoder, type):
+                self.decoder = self.decoder()
+            writer = BinaryWriter(self.output_dir, 0)
+            for _, data in enumerate(self.file_iterator):
+                for line in data:
+                    writer.add(self.decoder.decode(line))
+            writer.close()
+            gettr = lambda key: getattr(writer, key)  # noqa: E731
+            partitions = [writer]
+            partition_gettr = lambda p, key: getattr(p, key)  # noqa: E731
 
         fs, _ = get_fs(self.output_dir)
         with fs.open(
@@ -127,40 +159,43 @@ class MultiWorkersConverter:
             ),
             "w",
         ) as mtxt:
+
             mtxt.writelines(
                 [
-                    str(d.prop("node_count")),
+                    str(BINARY_DATA_VERSION),
                     "\n",
-                    str(d.prop("edge_count")),
+                    str(gettr("node_count")),
                     "\n",
-                    str(d.prop("node_type_num")),
+                    str(gettr("edge_count")),
                     "\n",
-                    str(d.prop("edge_type_num")),
+                    str(gettr("node_type_num")),
                     "\n",
-                    str(d.prop("node_feature_num")),
+                    str(gettr("edge_type_num")),
                     "\n",
-                    str(d.prop("edge_feature_num")),
+                    str(gettr("node_feature_num")),
                     "\n",
-                    str(len(d.prop("partitions"))),
+                    str(gettr("edge_feature_num")),
+                    "\n",
+                    str(len(partitions)),
                     "\n",
                 ]
             )
 
-            edge_count_per_type = [0] * int(d.prop("edge_type_num"))
-            node_count_per_type = [0] * int(d.prop("node_type_num"))
-            for p in sorted(d.prop("partitions"), key=lambda x: x["id"]):
+            edge_count_per_type = [0] * int(gettr("edge_type_num"))
+            node_count_per_type = [0] * int(gettr("node_type_num"))
+            for p in partitions:
                 edge_count_per_type = list(
-                    map(add, edge_count_per_type, p["edge_type_count"])
+                    map(add, edge_count_per_type, partition_gettr(p, "edge_type_count"))
                 )
                 node_count_per_type = list(
-                    map(add, node_count_per_type, p["node_type_count"])
+                    map(add, node_count_per_type, partition_gettr(p, "node_type_count"))
                 )
 
-                mtxt.writelines([str(p["id"]), "\n"])
-                for nw in p["node_weight"]:
+                mtxt.writelines([str(p["id"] if isinstance(p, dict) else 0), "\n"])
+                for nw in partition_gettr(p, "node_weight"):
                     mtxt.writelines([str(nw), "\n"])
 
-                for ew in p["edge_weight"]:
+                for ew in partition_gettr(p, "edge_weight"):
                     mtxt.writelines([str(ew), "\n"])
             for count in node_count_per_type:
                 mtxt.writelines([str(count), "\n"])

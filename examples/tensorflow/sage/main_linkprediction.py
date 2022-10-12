@@ -19,8 +19,8 @@ from deepgnn.tf import common
 from deepgnn.tf.common.dataset import create_tf_dataset, get_distributed_dataset
 from deepgnn.tf.common.trainer_factory import get_trainer
 
-from sage import SAGEQueryParameter, LayerInfo
-from sage_linkprediction import SAGELinkPredictionQuery, GraphSAGELinkPrediction
+from sage import SAGEQueryParameter, LayerInfo  # type: ignore
+from sage_linkprediction import SAGELinkPredictionQuery, GraphSAGELinkPrediction  # type: ignore
 
 
 # fmt: off

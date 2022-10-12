@@ -14,7 +14,7 @@
 # ==============================================================================
 """Base classes to use with TF models."""
 import collections
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 import tensorflow as tf
 
@@ -24,7 +24,7 @@ from tensorflow.python.util import nest
 _LAYER_UIDS: Dict[str, Any] = collections.defaultdict(lambda: 0)
 
 
-def _get_layer_uid(layer_name=""):
+def _get_layer_uid(layer_name: str = ""):
     _LAYER_UIDS[layer_name] += 1
     return _LAYER_UIDS[layer_name]
 
@@ -44,27 +44,27 @@ class Layer(object):
         self.partitioner = kwargs.get("partitioner", None)
         self.log_variable_info = []
 
-    def build(self, input_shape):
+    def build(self, input_shape: tuple):
         """Freeze layer."""
         self.built = True
 
-    def call(self, inputs):
+    def call(self, inputs: tf.Tensor):
         """Return inputs to make derived classes simpler."""
         return inputs
 
-    def __call__(self, inputs):
+    def __call__(self, inputs: tf.Tensor):
         """Freeze model and evaluate it."""
-        input_shapes = None
+        input_shapes: Optional[tuple] = None
         if all(hasattr(x, "shape") for x in nest.flatten(inputs)):
             input_shapes = nest.map_structure(lambda x: x.shape, inputs)
 
         with tf.compat.v1.variable_scope(self._name):
             if not self.built:
-                self.build(input_shapes)
+                self.build(input_shapes)  # type: ignore
             outputs = self.call(inputs)
             return outputs
 
-    def compute_output_shape(self, input_shape):
+    def compute_output_shape(self, input_shape: tuple):
         """To be overriden in derived classes."""
         raise NotImplementedError()
 

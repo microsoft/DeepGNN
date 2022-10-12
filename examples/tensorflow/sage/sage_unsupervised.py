@@ -11,7 +11,7 @@ from deepgnn import get_logger
 
 from deepgnn.graph_engine import Graph, SamplingStrategy
 
-from sage import SAGEQuery, SAGEQueryParameter
+from sage import SAGEQuery, SAGEQueryParameter  # type: ignore
 
 
 @dataclass
@@ -63,7 +63,7 @@ class UnsupervisedQuery(SAGEQuery):
 
     def query_training(
         self, graph: Graph, inputs: np.ndarray, return_shape: bool = False
-    ):
+    ) -> tuple:
         """Retrieve graph data to train model."""
         seed_nodes = inputs
         positive, negative = self._sample_postive_negative_nodes(graph, seed_nodes)
@@ -74,15 +74,16 @@ class UnsupervisedQuery(SAGEQuery):
         all_nodes, neighbor_list_idx = self._query_neighbor(graph, merged_nodes)
 
         if self.param.identity_feature:
-            graph_tensor = [all_nodes, src_idx, pos_idx, neg_idx]
+            graph_tensor = tuple(
+                [all_nodes, src_idx, pos_idx, neg_idx] + neighbor_list_idx
+            )
         else:
             feat = graph.node_features(
                 all_nodes, self.feat_meta, self.param.feature_type
             )
-            graph_tensor = [all_nodes, feat, src_idx, pos_idx, neg_idx]
-
-        graph_tensor.extend(neighbor_list_idx)
-        graph_tensor = tuple(graph_tensor)
+            graph_tensor = tuple(
+                [all_nodes, feat, src_idx, pos_idx, neg_idx] + neighbor_list_idx
+            )
 
         # fmt: off
         if return_shape:
@@ -123,7 +124,7 @@ class UnsupervisedGraphSAGE(tf.keras.Model):
         agg_type: str = "mean",
         weight_decay: float = 0.0,
         negative_sample_weight: float = 1.0,
-        identity_embed_shape: List[int] = None,
+        identity_embed_shape: List[int] = [],
         concat: bool = True,
     ):
         """Initialize model."""

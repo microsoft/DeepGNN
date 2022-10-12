@@ -7,6 +7,7 @@ import operator
 import numpy as np
 import torch
 import os
+from typing import Optional, Union, List, Tuple
 
 from deepgnn import get_logger
 from .twinbert import TwinBERTEncoder, TriLetterTokenizer, StdBertTokenizer
@@ -47,7 +48,7 @@ class FeatureEncoder(torch.nn.Module):
         self.feature_dim = feature_dim
         self.embed_dim = embed_dim
 
-    def transform(self, context):
+    def transform(self, context: dict) -> torch.Tensor:
         """Perform necessary data transformation, e.g. tokenization for text data.
 
         Result is saved in the context, which will be converted to tensor for
@@ -56,7 +57,7 @@ class FeatureEncoder(torch.nn.Module):
         """
         raise NotImplementedError()
 
-    def forward(self, context):
+    def forward(self, context: dict) -> torch.Tensor:
         """Encode context to get feature embedding."""
         raise NotImplementedError()
 
@@ -108,12 +109,12 @@ class TwinBERTFeatureEncoder(FeatureEncoder):
                 return max_seq_len * 2
         raise RuntimeError("Raw feature dimension is underdetermined.")
 
-    def _tokenize_single_sentence(self, sentence):
+    def _tokenize_single_sentence(self, sentence: str) -> torch.Tensor:
         if hasattr(self, "max_letters_in_word"):
             return self.tokenize_func(
                 sentence, self.max_seq_len, self.max_letters_in_word
-            )
-        return self.tokenize_func(sentence, self.max_seq_len)
+            )  # type: ignore
+        return self.tokenize_func(sentence, self.max_seq_len)  # type: ignore
 
     def _tokenize(self, context: dict):
         """Tokenize binary(string) feature recursively to get sequence ids and mask."""
@@ -195,7 +196,9 @@ class TwinBERTFeatureEncoder(FeatureEncoder):
                 f"Raw feature with type {self.feature_type} is not supported."
             )
 
-    def forward(self, context: dict, pooler_index: int = 0, output_encoded_layer=False):
+    def forward(
+        self, context: dict, pooler_index: int = 0, output_encoded_layer: bool = False
+    ):
         """Encode context recursively to get binary(string) feature embedding."""
         for key in context:
             data = context[key]
@@ -238,8 +241,8 @@ class MultiTypeFeatureEncoder(FeatureEncoder):
         self,
         feature_type: FeatureType,
         config: dict,
-        encoder_types: list,
-        share_encoder=False,
+        encoder_types: List[str],
+        share_encoder: bool = False,
     ):
         """Initialize MultiType feature encoder."""
         super(MultiTypeFeatureEncoder, self).__init__(
@@ -270,11 +273,11 @@ class MultiTypeFeatureEncoder(FeatureEncoder):
                     ),
                 )
 
-    def get_feature_encoder(self, encoder_type):
+    def get_feature_encoder(self, encoder_type: str) -> TwinBERTFeatureEncoder:
         """Get encoder by type."""
         if self.share_encoder:
-            return getattr(self, FEATURE_ENCODER_STR, None)
-        return getattr(self, encoder_type + FEATURE_ENCODER_STR, None)
+            return getattr(self, FEATURE_ENCODER_STR)  # type: ignore
+        return getattr(self, encoder_type + FEATURE_ENCODER_STR)  # type: ignore
 
     def forward(self, context: dict):
         """Compute embeddings and save in context."""
@@ -318,7 +321,9 @@ class MultiTypeFeatureEncoder(FeatureEncoder):
         pass
 
 
-def get_feature_encoder(args: argparse.Namespace):
+def get_feature_encoder(
+    args: argparse.Namespace,
+) -> Optional[Union[TwinBERTFeatureEncoder, Tuple[MultiTypeFeatureEncoder, dict]]]:
     """Create feature encoder from command line arguments."""
     if (
         args.meta_dir is not None

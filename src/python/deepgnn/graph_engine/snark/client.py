@@ -87,7 +87,9 @@ class _SparseFeatureCallback:
         self.dimensions = np.copy(np.ctypeslib.as_array(dimensions, [self.feature_len]))
         for i in range(self.feature_len):
             if indices_len[i] == 0:
-                return
+                self.indices.append(np.empty(0, dtype=np.int64))
+                self.values.append(np.empty(0, dtype=self.dtype))
+                continue
 
             # Increment original feature dimensions by 1, because we use node offset as
             # the first dimension and it is not present in binary format

@@ -4,7 +4,7 @@ Preparing Graph Data
 
 DeepGNN supports both homogeneous and heterogeneous graphs. Nodes and Edges support the following attributes,
 
-  * Node/Edge Type: `int`.
+  * Node/Edge Type: `int, >= 0`.
   * Node/Edge Weight: `float`.
   * Node/Edge Features: `float/uint64/string`.
 
@@ -12,14 +12,130 @@ DeepGNN supports both homogeneous and heterogeneous graphs. Nodes and Edges supp
 Graph Data Format
 *****************
 
-DeepGNN supports two file formats: JSON and TSV.
+DeepGNN supports three file formats: EdgeList, JSON and TSV.
 Users can generate a graph in either format then our pipeline will convert it into binary for training and inference.
 DeepGNN also supports writing custom decoders, see [the decoders file](https://github.com/microsoft/DeepGNN/blob/main/src/python/deepgnn/graph_engine/snark/decoders.py).
 Just inheret the base class Decoder, overwrite the decode function and pass the new decoder as an argument to the converter or dispatcher.
 
-1. `JSON <#json-format>`_: Heterogeneous or homegeneous graph.
+	1. `EdgeList <#EdgeList-format>`_: Heterogeneous or homegeneous graph.
 
-2. `TSV <#tsv-format>`_: Homogeneous graph only.
+	2. `JSON <#json-format>`_: Heterogeneous or homegeneous graph.
+
+	3. `TSV <#tsv-format>`_: Homogeneous graph only.
+
+EdgeList Format
+===============
+
+The EdgeList format,
+
+	* Nodes and edges are on separate lines, so they may be sorted after generating the file.
+	* Small files that are fast to create and convert.
+	* Supports heterogeneous and homegeneous graphs.
+
+`graph.csv` layout,
+
+.. code-block:: text
+
+	<node_0_info>
+	<edge_0,1_info>
+	<edge_0,2_info>
+	...
+	<node_1_info>
+	...
+
+.. code-block:: text
+
+	node_info: node_id,-1,node_type,node_weight,<features>
+	edge_info: src,edge_type,dst,edge_weight,<features>
+
+Sort the file so the first line has the first node's info, the next few lines have all the first node's
+outgoing edges. Then the next line will have the second node's info and so on.
+
+Feature fectors to fill <features> can be dense or sparse. Features will be given
+indexes starting at 0 and indexes can be skipped with 0 length vectors. Each node and
+edge does not have to have the same number of features or feature types.
+
+.. code-block:: text
+
+	features[dense]: dtype_name,length,v1,v2,...,dtype_name2,length2,v1,v2,...
+	features[sparse]: dtype_name,values_length/coords_dim,c1,c2,...,v1,v2,...
+
+This sparse feature representation will generate a values vector with shape (values_length) and coordinates vector
+with shape (values_length, coords_dim). If coordinates vector should be flat, use values_length/0 to get the
+coordinates vector shape (values_length).
+
+Here is a concrete example: a graph with 2 nodes {0, 1} each with type = 1, weight = .5 and
+feature vectors [1, 1, 1] dtype=int32 and [1.1, 1.1] dtype=float32.
+Edges {0 -> 1, 1 -> 0} both with type = 0, weight = .5 and a sparse feature
+vector (coords=[0, 4, 10], values=[1, 1, 1] dtype=uint8).
+
+.. code-block:: text
+
+	0,-1,1,.5,int32,3,1,1,1,float32,2,1.1,1.1
+	0,0,1,.5,uint8,3/0,0,4,10,1,1,1
+	1,-1,1,.5,int32,3,1,1,1,float32,2,1.1,1.1
+	1,0,0,.5,uint8,3/0,0,4,10,1,1,1
+
+Delimiters
+
+.. code-block:: text
+
+	"," is the default column delimiter, it can be overriden with the delimiter parameter.
+	"/" is the default sparse features length delimiter, it can be overriden with the length_delimiter parameter.
+	"\" is the escape for the delimiter in "binary" features, it can be overriden with the binary_escape parameter.
+
+Sorting
+-------
+
+For some use cases that use the EdgeList format as an intermediate between their input format and binaries,
+it may be more efficient to first convert to EdgeList and sort it afterward.
+
+Here is an example using the bash exteral sort function with N workers.
+
+.. code-block:: text
+
+	sort edgelist.csv -t, -n -k1,1 -k2,2 -k3,3 --parallel=1 -o output.csv
+
+Advanced Usage
+--------------
+
+If your graph has the same types, weights, feature types or feature lengths,
+you can avoid writing this same info on every line by using the following init args,
+
+.. code-block:: text
+
+	default_node_type: int Type of all nodes, if set do not add node type to any nodes.
+	default_node_weight: int Weight of all nodes, if set do not add node weight to any nodes.
+	default_node_feature_types: ["dtype" or None, ...] Dtype of each feature vector.
+	default_node_feature_lens: [[int, ...] or None, ...] Length value for each feature vector.
+	default_edge_type: int Same as node except for all edges.
+	default_edge_weight: int Same as node except for all edges.
+	default_edge_feature_types: ["dtype" or None, ...] Dtype of each feature vector.
+	default_edge_feature_lens: [[int, ...] or None, ...] Length value for each feature vector.
+
+e.g. the same graph as before with init fully filled in,
+
+.. code-block:: python
+
+	EdgeListDecoder(
+		default_node_type=1,
+		default_node_weight=.5,
+		default_node_feature_types=["int32", "float32"],
+		default_node_feature_lens=[[3],[2]],
+		default_edge_type=0,
+		default_edge_weight=.5,
+		default_edge_feature_types=["uint8"],
+		default_edge_feature_lens=[[3, 0]],
+	)
+
+`condensed homogeneous graph.csv`,
+
+.. code-block:: text
+
+	0,-1,1,1,1,1.1,1.1
+	0,1,0,4,10,1,1,1
+	1,-1,1,1,1,1.1,1.1
+	1,0,0,4,10,1,1,1
 
 JSON Format
 ===========
@@ -32,7 +148,7 @@ The JSON format supports heterogeneous and homegeneous graphs.
 
 	{
 	"node_id": "int",
-	"node_type": "int",
+	"node_type": "int, >= 0",
 	"node_weight": "float",
 	"neighbor": {"edge type": {"neighbor_id": "weight(float)", "...": "..."}, "...": "..."},
 	"uint64_feature": {"feature_id": ["int", "..."], "...": "..."},
@@ -41,7 +157,7 @@ The JSON format supports heterogeneous and homegeneous graphs.
 	"edge":[{
 		"src_id": "int",
 		"dst_id": "int",
-		"edge_type": "int",
+		"edge_type": "int, >= 0",
 		"weight": "float",
 		"uint64_feature": {"feature_id": ["int", "..."], "...": ["int", "..."]},
 		"float_feature": {"feature_id": ["float", "..."], "...": ["float", "..."]},
@@ -119,6 +235,7 @@ Graph `meta.txt` is as follows with all pieces of text replaced by integers,
 
 .. code-block:: text
 
+	binary_data_version
 	node_count
 	edge_count
 	node_type_count

@@ -76,7 +76,7 @@ class PSTrainer(BaseTFTrainer):
 
         self.parameter_server_num = len(self.ps_hosts)  # type: ignore
 
-    def tf_device(self):
+    def tf_device(self) -> tf.device:
         """Get current device."""
         return tf.compat.v1.device(
             tf.compat.v1.train.replica_device_setter(

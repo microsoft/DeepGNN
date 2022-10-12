@@ -6,6 +6,7 @@ import re
 import random
 import glob
 import threading
+from typing import Optional, List, Iterator
 from queue import Queue
 from concurrent.futures import ThreadPoolExecutor
 import xml.etree.ElementTree as et
@@ -27,7 +28,7 @@ class FetchDone(object):
 
 class AdlCredentialParser:
     @staticmethod
-    def read_credentials(config=None):
+    def read_credentials(config: str = None) -> dict:
         adl_config = {"TENANT_ID": "", "CLIENT_SECRET": "", "CLIENT_ID": ""}
 
         if config is not None and len(config) > 0:
@@ -46,13 +47,13 @@ class AdlCredentialParser:
 
         for item in root.findall("./property"):
             if item[0].text == "fs.adl.oauth2.client.id":
-                adl_config["CLIENT_ID"] = item[1].text
+                adl_config["CLIENT_ID"] = item[1].text  # type: ignore
             if item[0].text == "fs.adl.oauth2.credential":
-                adl_config["CLIENT_SECRET"] = item[1].text
+                adl_config["CLIENT_SECRET"] = item[1].text  # type: ignore
             if item[0].text == "fs.adl.oauth2.refresh.url":
                 c = re.search(
                     "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}",
-                    item[1].text,
+                    item[1].text,  # type: ignore
                 )
                 if c is not None:
                     adl_config["TENANT_ID"] = c.group(0)
@@ -65,18 +66,18 @@ class TextFileIterator:
 
     def __init__(
         self,
-        filename,
-        store_name=None,
-        adl_config=None,
-        batch_size=512,
-        epochs=1,
-        read_block_in_M=50,
-        buffer_queue_size=3,
-        thread_count=10,
-        worker_index=0,
-        num_workers=1,
-        shuffle=False,
-        drop_last=False,
+        filename: str,
+        store_name: Optional[str] = None,
+        adl_config: Optional[str] = None,
+        batch_size: int = 512,
+        epochs: int = 1,
+        read_block_in_M: int = 50,
+        buffer_queue_size: int = 3,
+        thread_count: int = 10,
+        worker_index: int = 0,
+        num_workers: int = 1,
+        shuffle: bool = False,
+        drop_last: bool = False,
     ):
         if store_name is not None and len(store_name) != 0:
             spn = AdlCredentialParser.read_credentials(config=adl_config)
@@ -105,13 +106,13 @@ class TextFileIterator:
         self.left_epochs = epochs
         # a flag to terminate the reading thread.
         self.stop = False
-        self.remain_lines = []
+        self.remain_lines: List[str] = []
         self.thread_count = thread_count
         if self.thread_count < 0:
             self.thread_count = 1
         self.remain_bytes = bytearray()
         # queue of file content bytes.
-        self.outputs = Queue(buffer_queue_size)
+        self.outputs: Queue = Queue(buffer_queue_size)
         self.pool = ThreadPoolExecutor(1)
         self.workers = []  # type: ignore
         self.files = self.get_worker_files(filename, worker_index, num_workers)
@@ -139,8 +140,8 @@ class TextFileIterator:
         f = self.pool.submit(self._read_block)
         self.workers.append(f)
 
-    def _read_block_by_threads(self):
-        decoded_buf = []
+    def _read_block_by_threads(self) -> dict:
+        decoded_buf: List[dict] = []
         for n in range(self.thread_count):
             decoded_buf.append(
                 {"prefix": None, "lines": [], "suffix": None, "length": 0}
@@ -246,10 +247,10 @@ class TextFileIterator:
 
         return head_block
 
-    def get_length_to_read(self):
+    def get_length_to_read(self) -> int:
         return self.length
 
-    def get_offset(self):
+    def get_offset(self) -> int:
         return 0
 
     def _read_block(self):
@@ -297,7 +298,9 @@ class TextFileIterator:
                 self.outputs.put(block)
                 self.offset += total_len
 
-    def get_worker_files(self, path, worker_index=0, num_workers=1):
+    def get_worker_files(
+        self, path: str, worker_index: int = 0, num_workers: int = 1
+    ) -> List[str]:
         # if read files from local path.
         if not hasattr(self, "adl"):
             if self.fs.isfile(path):
@@ -320,7 +323,7 @@ class TextFileIterator:
             files.append(total_files[i])
         return files
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[List[str]]:
         self.reset()
         return self
 
@@ -353,13 +356,13 @@ class TextFileIterator:
             self.outputs.join()
             self.pool.shutdown(wait=True)
 
-    def __next__(self):
+    def __next__(self) -> List[str]:
         # if all the queue item is processed, return stop
         if self.end:
             raise StopIteration
 
-        buf = []
-        head = bytearray()
+        buf: List[str] = []
+        head: dict = {}
         while len(buf) < self.batch_size:
             # try to get lines from existing remain_lines
             if len(self.remain_lines) > 0:
@@ -404,22 +407,22 @@ class TextFileIterator:
 
         return buf
 
-    def __len__(self):
+    def __len__(self) -> int:
         raise NotImplementedError
 
 
 class TextFileSplitIterator(TextFileIterator):
     def __init__(
         self,
-        filename,
-        store_name=None,
-        adl_config=None,
-        batch_size=512,
-        read_block_in_M=50,
-        buffer_queue_size=3,
-        thread_count=10,
-        worker_offset=0,
-        total_read_length=-1,
+        filename: str,
+        store_name: str = None,
+        adl_config: str = None,
+        batch_size: int = 512,
+        read_block_in_M: int = 50,
+        buffer_queue_size: int = 3,
+        thread_count: int = 10,
+        worker_offset: int = 0,
+        total_read_length: int = -1,
     ):
         self.worker_offset = worker_offset
         self.total_read_length = total_read_length
@@ -439,7 +442,9 @@ class TextFileSplitIterator(TextFileIterator):
             drop_last=False,
         )
 
-    def get_worker_files(self, path, worker_index=0, num_workers=1):
+    def get_worker_files(
+        self, path: str, worker_index: int = 0, num_workers: int = 1
+    ) -> List[str]:
         # if read files from local path.
         if not hasattr(self, "adl"):
             total_files = glob.glob(path)
@@ -452,7 +457,7 @@ class TextFileSplitIterator(TextFileIterator):
 
         return total_files
 
-    def get_length_to_read(self):
+    def get_length_to_read(self) -> int:
         if self.total_read_length == -1:
             return self.length
 
@@ -460,5 +465,5 @@ class TextFileSplitIterator(TextFileIterator):
         self.total_read_length -= read
         return read
 
-    def get_offset(self):
+    def get_offset(self) -> int:
         return self.worker_offset

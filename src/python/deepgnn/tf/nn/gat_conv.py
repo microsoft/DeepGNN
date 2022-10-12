@@ -50,7 +50,7 @@ class AttnHead(tf.keras.layers.Layer):
             trainable=True,
         )
 
-    def call(self, inputs, training=True):
+    def call(self, inputs: tf.Tensor, training: bool = True) -> tf.Tensor:
         """Compute embeddings."""
         # feat: [N, F], adj: [N, N]
         feat, adj = inputs
@@ -160,7 +160,7 @@ class GATConv(tf.keras.layers.Layer):
             for _ in range(self.attn_heads)
         ]
 
-    def call(self, inputs, training=True):
+    def call(self, inputs: tf.Tensor, training: bool = True) -> tf.Tensor:
         """Compute embeddings."""
         attns = []
         for i in range(self.attn_heads):

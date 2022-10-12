@@ -8,7 +8,7 @@ import threading
 import atexit
 import concurrent.futures.thread
 
-from typing import Callable, Tuple
+from typing import Callable, Tuple, Optional
 from queue import Queue
 from concurrent.futures import ThreadPoolExecutor
 from deepgnn.graph_engine.samplers import BaseSampler
@@ -23,7 +23,11 @@ DEFAULT_THREAD_POOL_QUEUE_SIZE = 20
 class BoundedExecutor:
     """Executes model queries in a thread pool."""
 
-    def __init__(self, max_workers=None, bound=DEFAULT_THREAD_POOL_QUEUE_SIZE):
+    def __init__(
+        self,
+        max_workers: Optional[int] = None,
+        bound: int = DEFAULT_THREAD_POOL_QUEUE_SIZE,
+    ):
         """Initialize executor."""
         if bound <= 0:
             bound = DEFAULT_THREAD_POOL_QUEUE_SIZE

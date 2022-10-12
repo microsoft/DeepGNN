@@ -36,7 +36,7 @@ def main(root_path: str):
             src_id = entities_dict[cols[0]]
             dst_id = entities_dict[cols[2]]
             rlt_id = relations_dict[cols[1]]
-            output_file.write("\t".join(src_id, dst_id, rlt_id, mode))
+            output_file.write("\t".join([src_id, dst_id, rlt_id, mode]))
         mode = "1"
         for line in lines:
             line = line.rstrip()
@@ -44,7 +44,7 @@ def main(root_path: str):
             src_id = entities_dict[cols[0]]
             dst_id = entities_dict[cols[2]]
             rlt_id = relations_dict[cols[1]]
-            output_file.write("\t".join(src_id, dst_id, rlt_id, mode))
+            output_file.write("\t".join([src_id, dst_id, rlt_id, mode]))
 
         output_file.close()
 

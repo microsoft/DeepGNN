@@ -11,7 +11,7 @@ from deepgnn.pytorch.modeling import BaseModel
 from deepgnn.pytorch.training import run_dist
 from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.graph_engine import GEEdgeSampler, GraphEngineBackend
-from model import KGEModel
+from model import KGEModel  # type: ignore
 from deepgnn import get_logger
 
 
