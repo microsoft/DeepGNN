@@ -108,6 +108,7 @@ Here we manually write a meta.txt file for our graph engine to load.
 .. code-block:: python
     >>> with open(working_dir.name + "/meta.txt", "w") as f:
     ...     content = [
+    ...         "v1",  # converter version
     ...         writer.node_count,
     ...         writer.edge_count,
     ...         writer.node_type_num,
@@ -118,7 +119,7 @@ Here we manually write a meta.txt file for our graph engine to load.
     ...         0,  # partition id
     ...     ] + writer.node_weight + writer.edge_weight + writer.node_type_count + writer.edge_type_count
     ...     f.write("\n".join([str(line) for line in content]) + "\n")
-    28
+    31
 
 We load the generated binaries into a graph engine and demonstrate it working.
 
