@@ -153,42 +153,6 @@ For using diff types as diff modes
     >>> labels[0]
     tensor([0.])
 
-
-Batched Sampler
-================
-
-If you have some code with inconsistent outputs where the dataloader collate function
-will throw shape errors, here is a work around to maintain high batch sizes.
-
-.. code-block:: python
-
-    >>> class BatchedSampler:
-    ...     def __init__(self, sampler, batch_size):
-    ...         self.sampler = sampler
-    ...         self.batch_size = batch_size
-    ...
-    ...     def __len__(self):
-    ...         return len(self.sampler) // self.batch_size
-    ...
-    ...     def __iter__(self) -> Iterator[int]:
-    ...         generator = iter(self.sampler)
-    ...         x = []
-    ...         while True:
-    ...             try:
-    ...                 for _ in range(self.batch_size):
-    ...                     x.append(next(generator))
-    ...                 yield np.array(x, dtype=np.int64)
-    ...                 x = []
-    ...             except Exception:
-    ...                 break
-    ...         if len(x):
-    ...             yield np.array(x, dtype=np.int64)
-
-
-    >>> dataset = DeepGNNDataset(g.data_dir(), [0, 1, 2], [0, g.FEATURE_DIM], [1, 1], np.float32, np.float32)
-
-    >>> ds = DataLoader(dataset, sampler=BatchedSampler(FileSampler(os.path.join(g.data_dir(), "train.nodes")), 140))
-
 Dataloader Workers
 ================
 
