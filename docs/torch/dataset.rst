@@ -25,18 +25,18 @@ First we generate a Cora dataset to use in our examples.
 Simple Cora Dataset
 ================
 
+
+In this example we have a dataset to generate initial samples of node ids.
+These samples are pipelined into a mapping function to gather a dictionary of
+node features and labels which are given to the model.
+
+Ray pipelines data in terms of windows, windows set discrete portions of the dataset that will be loaded at a time // pre-processed in the background. Read more https://docs.ray.io/en/latest/data/pipelining-compute.html#pipelining-datasets
+* As a rule of thumb, higher parallelism settings perform better, however blocks_per_window == num_blocks effectively disables pipelining, since the DatasetPipeline will only contain a single Dataset.
+The other extreme is setting blocks_per_window=1, which minimizes the latency to initial output but only allows one concurrent transformation task per stage:
+* As a rule of thumb, the cluster memory should be at least 2-5x the window size to avoid spilling.
+
+Train test splis
 https://docs.ray.io/en/latest/data/api/dataset_pipeline.html#splitting-datasetpipelines
-
-    # pipeline incrementally on windows of the base data. This can be used for streaming data loading into ML training,
-    # or to execute batch transformations on large datasets without needing to load the entire dataset into cluster memory.
-    # Create a dataset and then create a pipeline from it.
-
-    # https://docs.ray.io/en/latest/data/pipelining-compute.html#pipelining-datasets
-    # As a rule of thumb, higher parallelism settings perform better, however blocks_per_window == num_blocks effectively disables pipelining, since the DatasetPipeline will only contain a single Dataset.
-    # The other extreme is setting blocks_per_window=1, which minimizes the latency to initial output but only allows one concurrent transformation task per stage:
-    # As a rule of thumb, the cluster memory should be at least 2-5x the window size to avoid spilling.
-    # TODO Check out the reported statistics for window size and blocks per window to ensure efficient pipeline execution.
-    pipe = dataset.window(blocks_per_window=2)  # can be 10 or something
 
 .. code-block:: python
 
@@ -65,28 +65,37 @@ https://docs.ray.io/en/latest/data/api/dataset_pipeline.html#splitting-datasetpi
 
     # Iterate over dataset n_epochs times
     >>> n_epochs = 1
-    >>> train_epoch_dataloader = pipe.repeat(n_epochs).iter_epochs():
+    >>> epoch_pipe = next(pipe.repeat(n_epochs).iter_epochs())
 
     # Iterate over epoch and shuffle windows each time, use windowed shuffling to maintain pipeline windows
-    >>> epoch_iterator = train_epoch_dataloader.random_shuffle_each_window().iter_torch_batches():
-    >>> next(epoch_iterator)
+    >>> batch_size = 2
+    >>> batch = next(epoch_pipe.random_shuffle_each_window(seed=100).iter_torch_batches(batch_size=batch_size))
+    >>> batch
+    {'features': tensor([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+            [3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
 
 File Node Sampler Dataset
 ================
 
 File node sampler, memory efficient.
 
-
 .. code-block:: python
 
-    >>> train_dataset = ray.data.read_text("/tmp/cora/train.nodes", parallelism=1)
+    >>> dataset = ray.data.read_text("/tmp/cora/train.nodes", parallelism=1)
+    >>> dataset
+    Dataset(num_blocks=1, num_rows=140, schema=<class 'str'>)
+
     >>> pipe = dataset.window(blocks_per_window=2)   # This turns it into a pipeline thtat pipelines data functions instead of all at once, window is piopeline unit. block is parralelism unit.
     >>> pipe
-    DatasetPipeline(num_windows=1, num_stages=2)
+    DatasetPipeline(num_windows=1, num_stages=1)
 
     >>> pipe = pipe.map_batches(transform_batch)
     >>> pipe
-    DatasetPipeline(num_windows=1, num_stages=3)
+    DatasetPipeline(num_windows=1, num_stages=2)
 
 # TODO add output check here
 
@@ -101,8 +110,20 @@ For using diff types as diff modes
     >>> from deepgnn.graph_engine import SamplingStrategy
     >>> def generate_dataset():
     ...     g = Client(data_dir.name, [0])
-    ...     return g.sample_nodes(2708, 0, SamplingStrategy.Weighted)[0]
+    ...     return g.sample_nodes(2708, np.array([0], dtype=np.int32), SamplingStrategy.Weighted)[0]
 
-    >>> ds = ray.data.read_datasource(
+    >>> dataset = ray.data.read_datasource(
     ...     SimpleTorchDatasource(), parallelism=1, dataset_factory=generate_dataset
     ... )
+    >>> dataset
+    Dataset(num_blocks=1, num_rows=2708, schema=<class 'numpy.int64'>)
+
+    >>> pipe = dataset.window(blocks_per_window=2)   # This turns it into a pipeline thtat pipelines data functions instead of all at once, window is piopeline unit. block is parralelism unit.
+    >>> pipe
+    DatasetPipeline(num_windows=1, num_stages=2)
+
+    >>> pipe = pipe.map_batches(transform_batch)
+    >>> pipe
+    DatasetPipeline(num_windows=1, num_stages=3)
+
+# TODO add output check here
