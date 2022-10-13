@@ -127,3 +127,53 @@ For using diff types as diff modes
     DatasetPipeline(num_windows=1, num_stages=3)
 
 # TODO add output check here
+
+Edge Sampling Dataset
+=====================
+
+In this example we have a dataset to generate initial samples of edge ids.
+These samples are pipelined into a mapping function to gather a dictionary of
+edge features and labels which are given to the model.
+
+.. code-block:: python
+
+    >>> from ray.data.datasource import SimpleTorchDatasource
+    >>> from deepgnn.graph_engine import SamplingStrategy
+    >>> def generate_dataset():
+    ...     g = Client(data_dir.name, [0])
+    ...     return g.sample_edges(2708, np.array([0], dtype=np.int32), SamplingStrategy.Weighted)
+
+    >>> dataset = ray.data.read_datasource(
+    ...     SimpleTorchDatasource(), parallelism=1, dataset_factory=generate_dataset
+    ... )
+    >>> dataset
+    Dataset(num_blocks=1, num_rows=2708, schema=<class 'numpy.ndarray'>)
+
+    # Convert dataset to a pipeline to pipeline stages
+    >>> pipe = dataset.window(blocks_per_window=2)
+    >>> pipe
+    DatasetPipeline(num_windows=1, num_stages=2)
+
+    # Map input indicies to a dict of node features and labels. This will run during iteration, not all at once.
+    >>> def transform_batch(idx: list) -> dict:
+    ...     g = Client(data_dir.name, [0])
+    ...     return {"features": g.edge_features(idx, np.array([[0, 2]]), feature_type=np.float32), "labels": np.ones((len(idx)))}
+    >>> pipe = pipe.map_batches(transform_batch)
+    >>> pipe
+    DatasetPipeline(num_windows=1, num_stages=3)
+
+    # Fetch the size of the dataset
+    >>> size = dataset.count()
+
+    #>>> train_dataloader, test_dataloader = pipe.split_at_indices([int(size * .5)])
+
+    # Iterate over dataset n_epochs times
+    >>> n_epochs = 1
+    >>> epoch_pipe = next(pipe.repeat(n_epochs).iter_epochs())
+
+    # Iterate over epoch and shuffle windows each time, use windowed shuffling to maintain pipeline windows
+    >>> batch_size = 2
+    >>> batch = next(epoch_pipe.random_shuffle_each_window(seed=100).iter_torch_batches(batch_size=batch_size))
+    >>> batch
+    {'features': tensor([[0., 0.],
+            [0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
