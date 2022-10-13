@@ -1,110 +1,103 @@
-****************************
-Torch Dataset Usage
-****************************
+***********************************
+Ray Dataset and Data Pipeline Usage
+***********************************
 
-In this guide we create a few Torch Datasets with various sampling strategies then we go through ways of setting a train test split.
+In this guide we show how to create and use Ray Datasets and Data Pipelines with the DeepGNN graph engine.
+We show several different sampling strategies and advanced usage.
 
 Generate Dataset
 ================
 
+First we generate a Cora dataset to use in our examples.
+
 .. code-block:: python
 
-    >>> from typing import List, Tuple, Any, Iterator
-    >>> import random
     >>> import numpy as np
-    >>> import torch
-    >>> from torch.utils.data import Dataset, DataLoader, Sampler
-    >>> from deepgnn.graph_engine import SamplingStrategy
+    >>> import ray
     >>> from deepgnn.graph_engine.snark.local import Client
-    >>> random.seed(0)
-    >>> torch.manual_seed(0)
-    <torch._C.Generator object at 0x...>
 
+    >>> import tempfile
     >>> from deepgnn.graph_engine.data.citation import Cora
-    >>> Cora("/tmp/cora")  # Generate Cora dataset (Train: 140, Valid: 500, Test: 1000)
+	>>> data_dir = tempfile.TemporaryDirectory()
+    >>> Cora(data_dir.name)  # (Train: 140, Valid: 500, Test: 1000)
     <deepgnn.graph_engine.data.citation.Cora object at 0x...>
 
 Simple Cora Dataset
 ================
 
+
+In this example we have a dataset to generate initial samples of node ids.
+These samples are pipelined into a mapping function to gather a dictionary of
+node features and labels which are given to the model.
+
+Ray pipelines data in terms of windows, windows set discrete portions of the dataset that will be loaded at a time // pre-processed in the background. Read more https://docs.ray.io/en/latest/data/pipelining-compute.html#pipelining-datasets
+* As a rule of thumb, higher parallelism settings perform better, however blocks_per_window == num_blocks effectively disables pipelining, since the DatasetPipeline will only contain a single Dataset.
+The other extreme is setting blocks_per_window=1, which minimizes the latency to initial output but only allows one concurrent transformation task per stage:
+* As a rule of thumb, the cluster memory should be at least 2-5x the window size to avoid spilling.
+
+Train test splis
+https://docs.ray.io/en/latest/data/api/dataset_pipeline.html#splitting-datasetpipelines
+
 .. code-block:: python
 
-    >>> class DeepGNNDataset(Dataset):
-    ...     """Cora dataset with base torch sampler."""
-    ...     def __init__(self, data_dir: str, node_types: List[int], feature_meta: List[int]):
-    ...         self.g = Client(data_dir, [0, 1])
-    ...         self.node_types = np.array(node_types)
-    ...         self.feature_meta = feature_meta
-    ...         self.count = self.g.node_count(self.node_types)
-    ...
-    ...     def __len__(self):
-    ...         return self.count
-    ... 
-    ...     def __getitem__(self, idx: int) -> Tuple[Any, Any]:
-    ...         return self.g.node_features([idx], np.array([self.feature_meta]), feature_type=np.float32), torch.Tensor([0])
+    # Setup initial node index samples, just integers of node ids
+    >>> dataset = ray.data.range(2708, parallelism=1)
+    >>> dataset
+    Dataset(num_blocks=1, num_rows=2708, schema=<class 'int'>)
 
-    >>> dataset = DeepGNNDataset("/tmp/cora", [0, 1, 2], [1, 50])
-    >>> train_dataset, test_dataset = torch.utils.data.random_split(dataset, [int(.8 * len(dataset)), len(dataset) - int(.8 * len(dataset))])
-    >>> train_dataloader = DataLoader(train_dataset, batch_size=512)
-    >>> test_dataloader = DataLoader(test_dataset, batch_size=512)
+    # Convert dataset to a pipeline to pipeline stages
+    >>> pipe = dataset.window(blocks_per_window=2)
+    >>> pipe
+    DatasetPipeline(num_windows=1, num_stages=2)
 
-    >>> features, labels = next(iter(train_dataloader))
-    >>> features[0]
-    tensor([[1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+    # Map input indicies to a dict of node features and labels. This will run during iteration, not all at once.
+    >>> def transform_batch(idx: list) -> dict:
+    ...     g = Client(data_dir.name, [0])
+    ...     return {"features": g.node_features(idx, np.array([[1, 50]]), feature_type=np.float32), "labels": np.ones((len(idx)))}
+    >>> pipe = pipe.map_batches(transform_batch)
+    >>> pipe
+    DatasetPipeline(num_windows=1, num_stages=3)
+
+    # Fetch the size of the dataset
+    >>> size = dataset.count()
+
+    #>>> train_dataloader, test_dataloader = pipe.split_at_indices([int(size * .5)])
+
+    # Iterate over dataset n_epochs times
+    >>> n_epochs = 1
+    >>> epoch_pipe = next(pipe.repeat(n_epochs).iter_epochs())
+
+    # Iterate over epoch and shuffle windows each time, use windowed shuffling to maintain pipeline windows
+    >>> batch_size = 2
+    >>> batch = next(epoch_pipe.random_shuffle_each_window(seed=100).iter_torch_batches(batch_size=batch_size))
+    >>> batch
+    {'features': tensor([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
              0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
-
-    >>> labels[0]
-    tensor([0.])
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+            [3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
 
 File Node Sampler Dataset
 ================
 
 File node sampler, memory efficient.
 
-
 .. code-block:: python
 
-    >>> class DeepGNNDataset(Dataset):
-    ...     """Cora dataset with file sampler."""
-    ...     def __init__(self, data_dir: str, node_types: List[int], feature_meta: List[int]):
-    ...         self.g = Client(data_dir, [0, 1])
-    ...         self.node_types = np.array(node_types)
-    ...         self.feature_meta = feature_meta
-    ...         self.count = self.g.node_count(self.node_types)
-    ...
-    ...     def __len__(self):
-    ...         return self.count
-    ... 
-    ...     def __getitem__(self, idx: int) -> Tuple[Any, Any]:
-    ...         return self.g.node_features([idx], np.array([self.feature_meta]), feature_type=np.float32), torch.Tensor([0])
+    >>> dataset = ray.data.read_text("/tmp/cora/train.nodes", parallelism=1)
+    >>> dataset
+    Dataset(num_blocks=1, num_rows=140, schema=<class 'str'>)
 
+    >>> pipe = dataset.window(blocks_per_window=2)   # This turns it into a pipeline thtat pipelines data functions instead of all at once, window is piopeline unit. block is parralelism unit.
+    >>> pipe
+    DatasetPipeline(num_windows=1, num_stages=1)
 
-    >>> class FileSampler(Sampler[int]):  # Shouldn't need this really with quick map from torch sampler?
-    ...     def __init__(self, filename: str):
-    ...         self.filename = filename
-    ... 
-    ...     def __len__(self) -> int:
-    ...         raise NotImplementedError("")
-    ... 
-    ...     def __iter__(self) -> Iterator[int]:
-    ...         with open(self.filename, "r") as file:
-    ...             while True:
-    ...                 yield int(file.readline())
+    >>> pipe = pipe.map_batches(transform_batch)
+    >>> pipe
+    DatasetPipeline(num_windows=1, num_stages=2)
 
-    >>> dataset = DeepGNNDataset("/tmp/cora", [0, 1, 2], [1, 50])
-    >>> train_dataloader = DataLoader(dataset, sampler=FileSampler("/tmp/cora/train.nodes"), batch_size=512)
-    >>> test_dataloader = DataLoader(dataset, sampler=FileSampler("/tmp/cora/test.nodes"), batch_size=512)
-
-
-    >>> features, labels = next(iter(train_dataloader))
-    >>> features[0]
-    tensor([[3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
-
-    >>> labels[0]
-    tensor([0.])
+# TODO add output check here
 
 Weighted Sampler with Split on Train / Test nodes
 ================
@@ -112,151 +105,75 @@ Weighted Sampler with Split on Train / Test nodes
 For using diff types as diff modes
 
 .. code-block:: python
-    >>> class DeepGNNDataset(Dataset):
-    ...     """Cora dataset with file sampler."""
-    ...     def __init__(self, data_dir: str, node_types: List[int], feature_meta: List[int]):
-    ...         self.g = Client(data_dir, [0])
-    ...         self.node_types = np.array(node_types)
-    ...         self.feature_meta = feature_meta
-    ...         self.count = self.g.node_count(self.node_types)
-    ... 
-    ...     def __len__(self):
-    ...         return self.count
-    ... 
-    ...     def __getitem__(self, idx: int) -> Tuple[Any, Any]:
-    ...         return self.g.node_features([idx], np.array([self.feature_meta]), feature_type=np.float32), torch.Tensor([0])
 
+    >>> from ray.data.datasource import SimpleTorchDatasource
+    >>> from deepgnn.graph_engine import SamplingStrategy
+    >>> def generate_dataset():
+    ...     g = Client(data_dir.name, [0])
+    ...     return g.sample_nodes(2708, np.array([0], dtype=np.int32), SamplingStrategy.Weighted)[0]
 
-    >>> class WeightedSampler(Sampler[int]):  # Shouldn't need this really with quick map from torch sampler?
-    ...     def __init__(self, graph: Client, node_types: List[int]):
-    ...         self.g = graph
-    ...         self.node_types = np.array(node_types)
-    ...         self.count = self.g.node_count(self.node_types)
-    ... 
-    ...     def __len__(self):
-    ...         return self.count
-    ... 
-    ...     def __iter__(self) -> Iterator[int]:
-    ...         for _ in range(len(self)):
-    ...             yield self.g.sample_nodes(1, self.node_types, SamplingStrategy.Weighted)[0]
+    >>> dataset = ray.data.read_datasource(
+    ...     SimpleTorchDatasource(), parallelism=1, dataset_factory=generate_dataset
+    ... )
+    >>> dataset
+    Dataset(num_blocks=1, num_rows=2708, schema=<class 'numpy.int64'>)
 
-    >>> dataset = DeepGNNDataset("/tmp/cora", [0, 1, 2], [1, 50])
-    >>> train_dataloader = DataLoader(dataset, sampler=WeightedSampler(dataset.g, node_types=[0]), batch_size=512)
-    >>> test_dataloader = DataLoader(dataset, sampler=WeightedSampler(dataset.g, node_types=[1]), batch_size=512)
+    >>> pipe = dataset.window(blocks_per_window=2)   # This turns it into a pipeline thtat pipelines data functions instead of all at once, window is piopeline unit. block is parralelism unit.
+    >>> pipe
+    DatasetPipeline(num_windows=1, num_stages=2)
 
-    >>> features, labels = next(iter(train_dataloader))
-    >>> features[0]
-    tensor([[4., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
+    >>> pipe = pipe.map_batches(transform_batch)
+    >>> pipe
+    DatasetPipeline(num_windows=1, num_stages=3)
 
-    >>> labels[0]
-    tensor([0.])
+# TODO add output check here
 
+Edge Sampling Dataset
+=====================
 
-Batched Sampler
-================
-
-If you have some code with inconsistent outputs where the dataloader collate function
-will throw shape errors, here is a work around to maintain high batch sizes.
+In this example we have a dataset to generate initial samples of edge ids.
+These samples are pipelined into a mapping function to gather a dictionary of
+edge features and labels which are given to the model.
 
 .. code-block:: python
 
-    >>> class BatchedSampler:
-    ...     def __init__(self, sampler, batch_size):
-    ...         self.sampler = sampler
-    ...         self.batch_size = batch_size
-    ...
-    ...     def __len__(self):
-    ...         return len(self.sampler) // self.batch_size
-    ...
-    ...     def __iter__(self) -> Iterator[int]:
-    ...         generator = iter(self.sampler)
-    ...         x = []
-    ...         while True:
-    ...             try:
-    ...                 for _ in range(self.batch_size):
-    ...                     x.append(next(generator))
-    ...                 yield np.array(x, dtype=np.int64)
-    ...                 x = []
-    ...             except Exception:
-    ...                 break
-    ...         if len(x):
-    ...             yield np.array(x, dtype=np.int64)
+    >>> from ray.data.datasource import SimpleTorchDatasource
+    >>> from deepgnn.graph_engine import SamplingStrategy
+    >>> def generate_dataset():
+    ...     g = Client(data_dir.name, [0])
+    ...     return g.sample_edges(2708, np.array([0], dtype=np.int32), SamplingStrategy.Weighted)
 
+    >>> dataset = ray.data.read_datasource(
+    ...     SimpleTorchDatasource(), parallelism=1, dataset_factory=generate_dataset
+    ... )
+    >>> dataset
+    Dataset(num_blocks=1, num_rows=2708, schema=<class 'numpy.ndarray'>)
 
-    >>> dataset = DeepGNNDataset(g.data_dir(), [0, 1, 2], [0, g.FEATURE_DIM], [1, 1], np.float32, np.float32)
+    # Convert dataset to a pipeline to pipeline stages
+    >>> pipe = dataset.window(blocks_per_window=2)
+    >>> pipe
+    DatasetPipeline(num_windows=1, num_stages=2)
 
-    >>> ds = DataLoader(dataset, sampler=BatchedSampler(FileSampler(os.path.join(g.data_dir(), "train.nodes")), 140))
+    # Map input indicies to a dict of node features and labels. This will run during iteration, not all at once.
+    >>> def transform_batch(idx: list) -> dict:
+    ...     g = Client(data_dir.name, [0])
+    ...     return {"features": g.edge_features(idx, np.array([[0, 2]]), feature_type=np.float32), "labels": np.ones((len(idx)))}
+    >>> pipe = pipe.map_batches(transform_batch)
+    >>> pipe
+    DatasetPipeline(num_windows=1, num_stages=3)
 
-Dataloader Workers
-================
+    # Fetch the size of the dataset
+    >>> size = dataset.count()
 
-Increasing dataloader num_workers will use soft copies of the dataset and increase throughput of dataloader and potentially resolve training bottlenecks.
+    #>>> train_dataloader, test_dataloader = pipe.split_at_indices([int(size * .5)])
 
-https://stackoverflow.com/questions/62361162/is-a-pytorch-dataset-accessed-by-multiple-dataloader-workers
+    # Iterate over dataset n_epochs times
+    >>> n_epochs = 1
+    >>> epoch_pipe = next(pipe.repeat(n_epochs).iter_epochs())
 
-TODO verify memroy usage in these examples is safe
-
-
-.. code-block:: python
-
-    >>> train_dataset = DeepGNNDataset("/tmp/cora", [0, 1, 2], [1, 50])
-    >>> train_dataloader = DataLoader(train_dataset, batch_size=512, num_workers=4)
-
-    >>> features, labels = next(iter(train_dataloader))
-    >>> features[0]
-    tensor([[1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
-
-    >>> labels[0]
-    tensor([0.])
-
-Remote Graph Engine
-================
-
-Graph engine supports N servers to N client connections to save memory, startup time or other gains.
-
-.. code-block:: python
-
-    >>> server = Server()
-
-    >>> class DeepGNNDataset(Dataset):
-    ...     """Cora dataset with file sampler."""
-    ...     def __init__(self, data_dir: str, node_types: List[int], feature_meta: List[int]):
-    ...         self.g = RemoteClient(data_dir, [0, 1])  # TODO use local rank
-    ...         self.node_types = np.array(node_types)
-    ...         self.feature_meta = feature_meta
-    ...         self.count = self.g.node_count(self.node_types)
-    ...
-    ...     def __len__(self):
-    ...         return self.count
-    ... 
-    ...     def __getitem__(self, idx: int) -> Tuple[Any, Any]:
-    ...         return self.g.node_features([idx], np.array([self.feature_meta]), feature_type=np.float32), torch.Tensor([0])
-
-
-    >>> class FileSampler(Sampler[int]):  # Shouldn't need this really with quick map from torch sampler?
-    ...     def __init__(self, filename: str):
-    ...         self.filename = filename
-    ... 
-    ...     def __len__(self) -> int:
-    ...         raise NotImplementedError("")
-    ... 
-    ...     def __iter__(self) -> Iterator[int]:
-    ...         with open(self.filename, "r") as file:
-    ...             while True:
-    ...                 yield int(file.readline())
-
-    >>> dataset = DeepGNNDataset("/tmp/cora", [0, 1, 2], [1, 50])
-    >>> train_dataloader = DataLoader(dataset, sampler=FileSampler("/tmp/cora/train.nodes"), batch_size=512, num_workers=4)
-
-    >>> features, labels = next(iter(train_dataloader))
-    >>> features[0]
-    tensor([[3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
-
-    >>> labels[0]
-    tensor([0.])
+    # Iterate over epoch and shuffle windows each time, use windowed shuffling to maintain pipeline windows
+    >>> batch_size = 2
+    >>> batch = next(epoch_pipe.random_shuffle_each_window(seed=100).iter_torch_batches(batch_size=batch_size))
+    >>> batch
+    {'features': tensor([[0., 0.],
+            [0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
