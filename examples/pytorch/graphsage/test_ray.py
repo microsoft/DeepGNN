@@ -122,6 +122,9 @@ def train_func(config: Dict):
     train_dataloader = ds.map_batches(transform_batch)
     """
 
+    # use windowed epoch shuffling for performance, per epoch shuffling very expensive
+
+
     # pipeline incrementally on windows of the base data. This can be used for streaming data loading into ML training,
     # or to execute batch transformations on large datasets without needing to load the entire dataset into cluster memory.
     # Create a dataset and then create a pipeline from it.
