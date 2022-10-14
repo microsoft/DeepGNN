@@ -38,7 +38,7 @@ Combined imports from `model.py <https://github.com/microsoft/DeepGNN/blob/main/
 
 .. code-block:: python
 
-    >>> from typing import List, Tuple, Any, Iterator, Dict
+    >>> from typing import List, Tuple, Any, Dict
     >>> import tempfile
     >>> from dataclasses import dataclass
     >>> import os
@@ -47,7 +47,6 @@ Combined imports from `model.py <https://github.com/microsoft/DeepGNN/blob/main/
     >>> import torch
     >>> import torch.nn as nn
     >>> import torch.nn.functional as F
-    >>> from torch.utils.data import Dataset, DataLoader, Sampler
     >>> import ray
     >>> import ray.train as train
     >>> from ray.train.torch import TorchTrainer
@@ -59,7 +58,6 @@ Combined imports from `model.py <https://github.com/microsoft/DeepGNN/blob/main/
     >>> from deepgnn.graph_engine import Graph, graph_ops
     >>> from deepgnn import str2list_int
     >>> from deepgnn.pytorch.common.utils import set_seed
-    >>> from deepgnn.graph_engine import SamplingStrategy
     >>> from deepgnn.graph_engine.snark.local import Client
     >>> from deepgnn.pytorch.modeling import BaseModel
     Moving 0 files to the new cache system
@@ -71,83 +69,6 @@ In the GAT model, query samples neighbors repeatedly `num_hops` times in order t
 
 `create_dataset` function allows parameterization torch of the training data used by workers.
 Notably we use the `FileNodeSampler` here which loads `sample_files` and generates samples from them, otherwise in our `link prediction example <link_pred.html>`_ we use `GEEdgeSampler` which uses the backend to generate samples.
-
-.. code-block:: python
-
-    >>> class GATDataset(Dataset):
-    ...     """Cora dataset with file sampler."""
-    ...     def __init__(self, data_dir: str, node_types: List[int], feature_meta: List[int], label_meta: List[int], feature_type: np.dtype, label_type: np.dtype, neighbor_edge_types: List[int] = [0], num_hops: int = 2):
-    ...         self.g = Client(data_dir, [0, 1])
-    ...         self.node_types = np.array(node_types)
-    ...         self.feature_meta = np.array([feature_meta])
-    ...         self.label_meta = np.array([label_meta])
-    ...         self.feature_type = feature_type
-    ...         self.label_type = label_type
-    ...         self.neighbor_edge_types = np.array(neighbor_edge_types, np.int64)
-    ...         self.num_hops = num_hops
-    ...         self.count = self.g.node_count(self.node_types)
-    ... 
-    ...     def __len__(self):
-    ...         return self.count
-    ... 
-    ...     def __getitem__(self, idx: int) -> Tuple[Any, Any]:
-    ...         """Query used to generate data for training."""
-    ...         inputs = np.array(idx, np.int64)
-    ...         nodes, edges, src_idx = graph_ops.sub_graph(
-    ...             self.g,
-    ...             inputs,
-    ...             edge_types=self.neighbor_edge_types,
-    ...             num_hops=self.num_hops,
-    ...             self_loop=True,
-    ...             undirected=True,
-    ...             return_edges=True,
-    ...         )
-    ...         input_mask = np.zeros(nodes.size, np.bool)
-    ...         input_mask[src_idx] = True
-    ... 
-    ...         feat = self.g.node_features(nodes, self.feature_meta, self.feature_type)
-    ...         label = self.g.node_features(nodes, self.label_meta, self.label_type)
-    ...         label = label.astype(np.int32)
-    ...         edges_value = np.ones(edges.shape[0], np.float32)
-    ...         edges = np.transpose(edges)
-    ...         adj_shape = np.array([nodes.size, nodes.size], np.int64)
-    ... 
-    ...         return (nodes, feat, input_mask, label, edges, edges_value, adj_shape), label
-
-    >>> class BatchedSampler:
-    ...     def __init__(self, sampler, batch_size):
-    ...         self.sampler = sampler
-    ...         self.batch_size = batch_size
-    ... 
-    ...     def __len__(self):
-    ...         return len(self.sampler) // self.batch_size
-    ... 
-    ...     def __iter__(self) -> Iterator[int]:
-    ...         generator = iter(self.sampler)
-    ...         x = []
-    ...         while True:
-    ...             try:
-    ...                 for _ in range(self.batch_size):
-    ...                     x.append(next(generator))
-    ...                 yield np.array(x, dtype=np.int64)
-    ...                 x = []
-    ...             except Exception:
-    ...                 break
-    ... 		if len(x):
-    ...				yield np.array(x, dtype=np.int64)
-
-    >>> class FileNodeSampler(Sampler[int]):
-    ...     def __init__(self, filename: str):
-    ...         self.filename = filename
-    ... 
-    ...     def __len__(self) -> int:
-    ...         raise NotImplementedError("")
-    ... 
-    ...     def __iter__(self) -> Iterator[int]:
-    ...         with open(self.filename, "r") as file:
-    ...             while True:
-    ...                 yield int(file.readline())
-
 
 Model Forward and Init
 ======================
@@ -165,11 +86,25 @@ In the GAT model, forward pass uses two of our built-in `GATConv layers <https:/
     ...         num_classes: int = -1,
     ...         ffd_drop: float = 0.0,
     ...         attn_drop: float = 0.0,
+    ...         node_types: List[int] = [0],
+    ...         feature_meta: List[int] = [0, 1433],
+    ...         label_meta: List[int] = [1, 1],
+    ...         feature_type: np.dtype = np.float32,
+    ...         label_type: np.dtype = np.float32,
+    ...         neighbor_edge_types: List[int] = [0],
+    ...         num_hops: int = 2
     ...     ):
     ...         super().__init__(np.float32, 0, 0, None)
     ...         self.num_classes = num_classes
     ...
     ...         self.out_dim = num_classes
+    ...         self.node_types = np.array(node_types)
+    ...         self.feature_meta = np.array([feature_meta])
+    ...         self.label_meta = np.array([label_meta])
+    ...         self.feature_type = feature_type
+    ...         self.label_type = label_type
+    ...         self.neighbor_edge_types = np.array(neighbor_edge_types, np.int64)
+    ...         self.num_hops = num_hops
     ...
     ...         self.input_layer = GATConv(
     ...             in_dim=in_dim,
@@ -194,17 +129,17 @@ In the GAT model, forward pass uses two of our built-in `GATConv layers <https:/
     ...
     ...         self.metric = Accuracy()
     ...
-    ...     def forward(self, inputs):
-    ...         nodes, feat, mask, labels, edges, edges_value, adj_shape = inputs
-    ...         nodes = torch.squeeze(nodes)                # [N], N: num of nodes in subgraph
-    ...         feat = torch.squeeze(feat)                  # [N, F]
-    ...         mask = torch.squeeze(mask)                  # [N]
-    ...         labels = torch.squeeze(labels)              # [N]
-    ...         edges = torch.squeeze(edges)                # [X, 2], X: num of edges in subgraph
-    ...         edges_value = torch.squeeze(edges_value)    # [X]
-    ...         adj_shape = torch.squeeze(adj_shape)        # [2]
+    ...     def forward(self, context):
+    ...         nodes = torch.squeeze(context["nodes"])                # [N], N: num of nodes in subgraph
+    ...         feat = torch.squeeze(context["feat"])                  # [N, F]
+    ...         mask = torch.squeeze(context["input_mask"])            # [N]
+    ...         labels = torch.squeeze(context["labels"])              # [N]
+    ...         edges = torch.squeeze(context["edges"])                # [X, 2], X: num of edges in subgraph
+    ...         adj_shape = torch.Tensor([nodes.size, nodes.size], np.int64)
     ...
-    ...         sp_adj = torch.sparse_coo_tensor(edges, edges_value, adj_shape.tolist())
+    ...         edges = np.transpose(edges)
+    ...
+    ...         sp_adj = torch.sparse_coo_tensor(edges, np.ones(edges.shape[0], np.float32), adj_shape.tolist())
     ...         h_1 = self.input_layer(feat, sp_adj)
     ...         scores = self.out_layer(h_1, sp_adj)
     ...
@@ -214,6 +149,30 @@ In the GAT model, forward pass uses two of our built-in `GATConv layers <https:/
     ...         pred = scores.argmax(dim=1)
     ...         loss = self.xent(scores, labels)
     ...         return loss, pred, labels
+    ...
+    ...     def query(self, g, idx: int) -> Tuple[Any, Any]:
+    ...         """Query used to generate data for training."""
+    ...         if isinstance(idx, (int, float)):
+    ...             idx = [idx]
+    ...         inputs = np.array(idx, np.int64)
+    ...         nodes, edges, src_idx = graph_ops.sub_graph(
+    ...             g,
+    ...             inputs,
+    ...             edge_types=self.neighbor_edge_types,
+    ...             num_hops=self.num_hops,
+    ...             self_loop=True,
+    ...             undirected=True,
+    ...             return_edges=True,
+    ...         )
+    ...         input_mask = np.zeros(nodes.size, np.bool)
+    ...         input_mask[src_idx] = True
+    ... 
+    ...         feat = g.node_features(nodes, self.feature_meta, self.feature_type)
+    ...         label = g.node_features(nodes, self.label_meta, self.label_type)
+    ...         label = label.astype(np.int32)
+    ... 
+    ...         return {"nodes": nodes, "feat": feat, "label": label, "input_mask": input_mask, "edges": edges}
+
 
 Train
 =====
@@ -225,20 +184,24 @@ Finally we can train the model with `run_dist` function. We expect the loss to d
     ...     model = GAT(in_dim=1433, num_classes=7)
     ...     model = train.torch.prepare_model(model)
     ...
-    ...     dataset = GATDataset("/tmp/cora", [0], [0, 1433], [1, 1], np.float32, np.float32)
-    ...     dataloader = DataLoader(
-    ...         dataset,
-    ...         sampler=BatchedSampler(FileNodeSampler("/tmp/cora/train.nodes"), 140),
-    ...     )
-    ...     dataloader = train.torch.prepare_data_loader(dataloader)
+    ...     dataset = ray.data.range(2708, parallelism=2)
+    ...     # -> Dataset(num_blocks=200, num_rows=1000000, schema=<class 'int'>)
+    ...
+    ...     pipe = dataset.window(blocks_per_window=2)
+    ...     # -> DatasetPipeline(num_windows=20, num_stages=1)
+    ...
+    ...     def transform_batch(batch: list) -> dict:
+    ...         g = Client("/tmp/cora", [0])
+    ...         return model.query(g, batch)
+    ...     pipe = pipe.map(transform_batch)  # TODO fix sub_graph so its shaped [n_nodes, n_edges] and use map_batches
     ...
     ...     optimizer = torch.optim.Adam(model.parameters(), lr=.005, weight_decay=0.0005)
     ...     loss_fn = nn.CrossEntropyLoss()
     ...
     ...     model.train()
-    ...     for epoch in range(20):
-    ...         for batch, (X, y) in enumerate(dataloader):
-    ...             loss, score, label = model(X)
+    ...     for epoch, epoch_pipe in enumerate(pipe.repeat(1).iter_epochs()):
+    ...         for i, batch in enumerate(epoch_pipe.random_shuffle_each_window().iter_torch_batches(batch_format="numpy")):
+    ...             loss, score, label = model(batch)
     ...             optimizer.zero_grad()
     ...             loss.backward()
     ...             optimizer.step()
