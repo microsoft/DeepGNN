@@ -57,7 +57,6 @@ Combined imports from `model.py <https://github.com/microsoft/DeepGNN/blob/main/
     >>> from deepgnn.pytorch.nn.gat_conv import GATConv
     >>> from deepgnn.graph_engine import Graph, graph_ops
     >>> from deepgnn import str2list_int
-    >>> from deepgnn.pytorch.common.utils import set_seed
     >>> from deepgnn.graph_engine.snark.local import Client
     >>> from deepgnn.pytorch.modeling import BaseModel
     Moving 0 files to the new cache system
@@ -181,8 +180,15 @@ Finally we can train the model with `run_dist` function. We expect the loss to d
 .. code-block:: python
 
     >>> def train_func(config: Dict):
+    ...     train.torch.enable_reproducibility(seed=0)
+    ...
     ...     model = GAT(in_dim=1433, num_classes=7)
     ...     model = train.torch.prepare_model(model)
+    ...
+    ...     optimizer = torch.optim.Adam(model.parameters(), lr=.005, weight_decay=0.0005)
+    ...     optimizer = train.torch.prepare_optimizer(optimizer)
+    ...
+    ...     loss_fn = nn.CrossEntropyLoss()
     ...
     ...     dataset = ray.data.range(2708, parallelism=2)
     ...     # -> Dataset(num_blocks=200, num_rows=1000000, schema=<class 'int'>)
@@ -194,9 +200,6 @@ Finally we can train the model with `run_dist` function. We expect the loss to d
     ...         g = Client("/tmp/cora", [0])
     ...         return model.query(g, batch)
     ...     pipe = pipe.map(transform_batch)  # TODO fix sub_graph so its shaped [n_nodes, n_edges] and use map_batches
-    ...
-    ...     optimizer = torch.optim.Adam(model.parameters(), lr=.005, weight_decay=0.0005)
-    ...     loss_fn = nn.CrossEntropyLoss()
     ...
     ...     model.train()
     ...     for epoch, epoch_pipe in enumerate(pipe.repeat(1).iter_epochs()):
