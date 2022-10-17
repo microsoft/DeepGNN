@@ -129,17 +129,14 @@ In the GAT model, forward pass uses two of our built-in `GATConv layers <https:/
     ...         feat = torch.squeeze(context["feat"])                  # [N, F]
     ...         mask = torch.squeeze(context["input_mask"])            # [N]
     ...         labels = torch.squeeze(context["labels"])              # [N]
-    ...         edges = torch.squeeze(context["edges"])                # [X, 2], X: num of edges in subgraph
-    ...         adj_shape = torch.Tensor([nodes.size, nodes.size], np.int64)
+    ...         edges = torch.squeeze(context["edges"].reshape((-1, 2)))                # [X, 2], X: num of edges in subgraph
     ...
     ...         edges = np.transpose(edges)
     ...
-    ...         sp_adj = torch.sparse_coo_tensor(edges, np.ones(edges.shape[0], np.float32), adj_shape.tolist())
+    ...         sp_adj = torch.sparse_coo_tensor(edges, np.ones(edges.shape[1], np.float32), size=(nodes.shape[0], nodes.shape[0]))
     ...         h_1 = self.input_layer(feat, sp_adj)
     ...         scores = self.out_layer(h_1, sp_adj)
     ...
-    ...         #labels = labels.type(torch.int64)
-    ...         #labels = labels[mask]  # [batch_size]
     ...         scores = scores[mask]  # [batch_size]
     ...         pred = scores.argmax(dim=1)
     ...         return pred
@@ -160,12 +157,17 @@ In the GAT model, forward pass uses two of our built-in `GATConv layers <https:/
     ...         )
     ...         input_mask = np.zeros(nodes.size, np.bool)
     ...         input_mask[src_idx] = True
-    ... 
+    ...
     ...         feat = g.node_features(nodes, self.feature_meta, self.feature_type)
     ...         label = g.node_features(nodes, self.label_meta, self.label_type)
     ...         label = label.astype(np.int32)
-    ... 
-    ...         return {"nodes": nodes, "feat": feat, "label": label, "input_mask": input_mask, "edges": edges}
+    ...
+    ...         edges_short = edges
+    ...         edges = np.zeros(((edges_short.shape[0] // nodes.size + 1) * nodes.size, 2))
+    ...         edges[:edges_short.shape[0]] = edges_short
+    ...         edges = edges.reshape((nodes.size, -1, 2))
+    ...
+    ...         return {"nodes": nodes, "feat": feat, "labels": label, "input_mask": input_mask, "edges": edges}
 
 
 Train
@@ -188,15 +190,13 @@ Finally we can train the model with `run_dist` function. We expect the loss to d
     ...     dataset = ray.data.range(2708, parallelism=1)
     ...     # -> Dataset(num_blocks=200, num_rows=1000000, schema=<class 'int'>)
     ...
-    ...     pipe = dataset.window(blocks_per_window=10)
+    ...     pipe = dataset.window(blocks_per_window=1000)
     ...     # -> DatasetPipeline(num_windows=20, num_stages=1)
     ...
-    ...     # loaded_checkpoint = session.get_checkpoint()  # TODO find good guide for train_fn/manual checkpointing instead
-    ...
+    ...     g = Client("/tmp/cora", [0])
     ...     def transform_batch(batch: list) -> dict:
-    ...         g = Client("/tmp/cora", [0])
     ...         return model.query(g, batch)
-    ...     pipe = pipe.map(transform_batch)  # TODO fix sub_graph so its shaped [n_nodes, n_edges] and use map_batches
+    ...     pipe = pipe.map_batches(transform_batch)  # TODO fix sub_graph so its shaped [n_nodes, n_edges] and use map_batches
     ...
     ...     model.train()
     ...     for epoch, epoch_pipe in enumerate(pipe.repeat(1).iter_epochs()):
@@ -207,7 +207,7 @@ Finally we can train the model with `run_dist` function. We expect the loss to d
     ...             loss.backward()
     ...             optimizer.step()
     ...
-    ...             session.report({"loss": loss.item()})#, checkpoint={"model_state": })
+    ...             session.report({"loss": loss.item()})
 
     >>> ray.init()
     RayContext(...)

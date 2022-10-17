@@ -165,6 +165,8 @@ class MemoryGraph:
             stream (bool, default=False): If remote path is given: by default, download files first then load,
                 if stream = True and libhdfs present, stream data directly to memory -- see docs/advanced/hdfs.md for setup and usage.
         """
+        self._init_args = (path, partitions, storage_type, config_path, stream)
+
         self.seed = datetime.now()
         self.path = GraphPath(path) if stream else download_graph_data(path, partitions)
         self.meta = Meta(self.path.name, config_path)
@@ -195,6 +197,14 @@ class MemoryGraph:
             c_char_p(bytes(config_path, "utf-8")),
         )
         self._describe_clib_functions()
+
+    def __reduce__(self):
+        class_fn = type(self)
+
+        def deserializer(*args):
+            return class_fn(*args)
+
+        return deserializer, self._init_args
 
     # Extract CDLL library functions descriptions in a separate method:
     # * describing C functions is not thread safe even if values are the same.
