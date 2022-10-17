@@ -83,13 +83,13 @@ grpc::Status GraphEngineServiceImpl::GetNodeTypes(::grpc::ServerContext *context
 
         auto index = elem->second;
         const size_t partition_count = m_counts[index];
-        Type result = snark::DEFAULT_NODE_TYPE;
-        for (size_t partition = 0; partition < partition_count && result == snark::DEFAULT_NODE_TYPE;
+        Type result = snark::PLACEHOLDER_NODE_TYPE;
+        for (size_t partition = 0; partition < partition_count && result == snark::PLACEHOLDER_NODE_TYPE;
              ++partition, ++index)
         {
             result = m_partitions[m_partitions_indices[index]].GetNodeType(m_internal_indices[index]);
         }
-        if (result == snark::DEFAULT_NODE_TYPE)
+        if (result == snark::PLACEHOLDER_NODE_TYPE)
             continue;
         response->add_offsets(curr_offset);
         response->add_types(result);

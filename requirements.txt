@@ -92,7 +92,7 @@ jedi==0.18.0
 jeepney==0.6.0
 Jinja2==3.0.1
 jmespath==0.10.0
-joblib==1.0.1
+joblib==1.2.0
 jsonpickle==2.0.0
 jsonschema==3.2.0
 jupyter_client==7.1.2
@@ -141,7 +141,7 @@ portalocker==1.7.1
 prettytable==2.1.0
 prometheus-client==0.11.0
 prompt-toolkit==3.0.19
-protobuf==3.17.3
+protobuf==3.20.3
 psutil==5.8.0
 ptyprocess==0.7.0
 pure_eval==0.2.2
