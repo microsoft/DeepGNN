@@ -55,7 +55,6 @@ Combined imports from `model.py <https://github.com/microsoft/DeepGNN/blob/main/
     >>> from deepgnn.graph_engine import Graph, graph_ops
     >>> from deepgnn.graph_engine.snark.local import Client
     >>> from deepgnn.pytorch.modeling import BaseModel
-    Moving 0 files to the new cache system
 
 Query
 =====
@@ -132,14 +131,16 @@ In the GAT model, forward pass uses two of our built-in `GATConv layers <https:/
     ...         edges = torch.squeeze(context["edges"].reshape((-1, 2)))                # [X, 2], X: num of edges in subgraph
     ...
     ...         edges = np.transpose(edges)
+    ...         edges = edges[edges != -50].reshape((2, -1))
     ...
-    ...         sp_adj = torch.sparse_coo_tensor(edges, np.ones(edges.shape[1], np.float32), size=(nodes.shape[0], nodes.shape[0]))
+    ...         # TODO This is not stable, when doing batch_size < graph size ends up with size < index values. use torch.unique to remap edges
+    ...         sp_adj = torch.sparse_coo_tensor(edges, torch.ones(edges.shape[1], dtype=torch.float32), (nodes.shape[0], nodes.shape[0]))
     ...         h_1 = self.input_layer(feat, sp_adj)
     ...         scores = self.out_layer(h_1, sp_adj)
     ...
     ...         scores = scores[mask]  # [batch_size]
-    ...         pred = scores.argmax(dim=1)
-    ...         return pred
+    ...         #pred = scores.argmax(dim=1)
+    ...         return scores  #pred
     ...
     ...     def query(self, g, idx: int) -> Dict[Any, np.ndarray]:
     ...         """Query used to generate data for training."""
@@ -163,7 +164,7 @@ In the GAT model, forward pass uses two of our built-in `GATConv layers <https:/
     ...         label = label.astype(np.int32)
     ...
     ...         edges_short = edges
-    ...         edges = np.zeros(((edges_short.shape[0] // nodes.size + 1) * nodes.size, 2))
+    ...         edges = -50 * np.ones(((edges_short.shape[0] // nodes.size + 1) * nodes.size, 2))
     ...         edges[:edges_short.shape[0]] = edges_short
     ...         edges = edges.reshape((nodes.size, -1, 2))
     ...
@@ -200,9 +201,10 @@ Finally we can train the model with `run_dist` function. We expect the loss to d
     ...
     ...     model.train()
     ...     for epoch, epoch_pipe in enumerate(pipe.repeat(1).iter_epochs()):
-    ...         for i, batch in enumerate(epoch_pipe.random_shuffle_each_window().iter_torch_batches(batch_size=140)):
-    ...             pred = model(batch)
-    ...             loss = loss_fn(pred, batch["labels"][batch["input_mask"]].type(torch.int64))
+    ...         for i, batch in enumerate(epoch_pipe.random_shuffle_each_window().iter_torch_batches(batch_size=2708)):
+    ...             scores = model(batch)
+    ...             labels = batch["labels"][batch["input_mask"]].flatten().to(torch.int64)
+    ...             loss = loss_fn(scores.type(torch.float32), labels)
     ...             optimizer.zero_grad()
     ...             loss.backward()
     ...             optimizer.step()
@@ -218,4 +220,3 @@ Finally we can train the model with `run_dist` function. We expect the loss to d
     ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     ... )
     >>> result = trainer.fit()
-    Trial TorchTrainer_...
