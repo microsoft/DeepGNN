@@ -33,7 +33,7 @@ Examples folder contains various models one can experiment with DeepGNN. To trai
 We provide a python module to help you upgrade your scripts to new deepgnn versions.
 
 ```bash
-python -m deepgnn.migrate --script_dir .
+python -m deepgnn.migrate.0_1_56 --script_dir .
 ```
 
 See [`CHANGELOG.md`](CHANGELOG.md) for full change details.
