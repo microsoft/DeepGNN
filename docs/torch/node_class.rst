@@ -40,9 +40,6 @@ Combined imports from `model.py <https://github.com/microsoft/DeepGNN/blob/main/
 
     >>> from typing import List, Tuple, Any, Dict
     >>> import tempfile
-    >>> from dataclasses import dataclass
-    >>> import os
-    >>> import argparse
     >>> import numpy as np
     >>> import torch
     >>> import torch.nn as nn
@@ -56,7 +53,6 @@ Combined imports from `model.py <https://github.com/microsoft/DeepGNN/blob/main/
     >>> from deepgnn.pytorch.common import Accuracy
     >>> from deepgnn.pytorch.nn.gat_conv import GATConv
     >>> from deepgnn.graph_engine import Graph, graph_ops
-    >>> from deepgnn import str2list_int
     >>> from deepgnn.graph_engine.snark.local import Client
     >>> from deepgnn.pytorch.modeling import BaseModel
     Moving 0 files to the new cache system
@@ -128,7 +124,7 @@ In the GAT model, forward pass uses two of our built-in `GATConv layers <https:/
     ...
     ...         self.metric = Accuracy()
     ...
-    ...     def forward(self, context):
+    ...     def forward(self, context: Dict[Any, np.ndarray]):
     ...         nodes = torch.squeeze(context["nodes"])                # [N], N: num of nodes in subgraph
     ...         feat = torch.squeeze(context["feat"])                  # [N, F]
     ...         mask = torch.squeeze(context["input_mask"])            # [N]
@@ -142,14 +138,13 @@ In the GAT model, forward pass uses two of our built-in `GATConv layers <https:/
     ...         h_1 = self.input_layer(feat, sp_adj)
     ...         scores = self.out_layer(h_1, sp_adj)
     ...
-    ...         labels = labels.type(torch.int64)
-    ...         labels = labels[mask]  # [batch_size]
+    ...         #labels = labels.type(torch.int64)
+    ...         #labels = labels[mask]  # [batch_size]
     ...         scores = scores[mask]  # [batch_size]
     ...         pred = scores.argmax(dim=1)
-    ...         loss = self.xent(scores, labels)
-    ...         return loss, pred, labels
+    ...         return pred
     ...
-    ...     def query(self, g, idx: int) -> Tuple[Any, Any]:
+    ...     def query(self, g, idx: int) -> Dict[Any, np.ndarray]:
     ...         """Query used to generate data for training."""
     ...         if isinstance(idx, (int, float)):
     ...             idx = [idx]
@@ -190,11 +185,13 @@ Finally we can train the model with `run_dist` function. We expect the loss to d
     ...
     ...     loss_fn = nn.CrossEntropyLoss()
     ...
-    ...     dataset = ray.data.range(2708, parallelism=2)
+    ...     dataset = ray.data.range(2708, parallelism=1)
     ...     # -> Dataset(num_blocks=200, num_rows=1000000, schema=<class 'int'>)
     ...
-    ...     pipe = dataset.window(blocks_per_window=2)
+    ...     pipe = dataset.window(blocks_per_window=10)
     ...     # -> DatasetPipeline(num_windows=20, num_stages=1)
+    ...
+    ...     # loaded_checkpoint = session.get_checkpoint()  # TODO find good guide for train_fn/manual checkpointing instead
     ...
     ...     def transform_batch(batch: list) -> dict:
     ...         g = Client("/tmp/cora", [0])
@@ -203,11 +200,14 @@ Finally we can train the model with `run_dist` function. We expect the loss to d
     ...
     ...     model.train()
     ...     for epoch, epoch_pipe in enumerate(pipe.repeat(1).iter_epochs()):
-    ...         for i, batch in enumerate(epoch_pipe.random_shuffle_each_window().iter_torch_batches(batch_format="numpy")):
-    ...             loss, score, label = model(batch)
+    ...         for i, batch in enumerate(epoch_pipe.random_shuffle_each_window().iter_torch_batches(batch_size=140)):
+    ...             pred = model(batch)
+    ...             loss = loss_fn(pred, batch["labels"][batch["input_mask"]].type(torch.int64))
     ...             optimizer.zero_grad()
     ...             loss.backward()
     ...             optimizer.step()
+    ...
+    ...             session.report({"loss": loss.item()})#, checkpoint={"model_state": })
 
     >>> ray.init()
     RayContext(...)

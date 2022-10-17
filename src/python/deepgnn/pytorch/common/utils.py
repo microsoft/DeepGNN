@@ -28,19 +28,6 @@ def get_python_type(dtype_str: str):
     raise RuntimeError(f"Unknown feature type:{dtype_str}")
 
 
-def set_seed(seed: int):
-    """
-    Set the random seed in ``random``, ``numpy`` and ``torch`` modules.
-
-    Args:
-        seed: The seed to set.
-    """
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-
-
 def to_cuda(context):
     """
     Move all tensor data in context to cuda.
