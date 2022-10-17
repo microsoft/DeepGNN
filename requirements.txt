@@ -165,7 +165,7 @@ pytest-rerunfailures==10.2
 pytest-xdist==2.5.0
 python-dateutil==2.8.2
 pytz==2022.4
-pywin32
+pywin32==304
 PyYAML==6.0
 pyzmq==24.0.1
 rdflib==6.2.0
