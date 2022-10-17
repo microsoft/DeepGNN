@@ -106,6 +106,7 @@ as long as the suffix value is incremented.
 Here we manually write a meta.txt file for our graph engine to load.
 
 .. code-block:: python
+
     >>> with open(working_dir.name + "/meta.txt", "w") as f:
     ...     content = [
     ...         "v1",  # converter version
