@@ -161,7 +161,7 @@ In the GAT model, forward pass uses two of our built-in `GATConv layers <https:/
     ...
     ...         feat = g.node_features(nodes, self.feature_meta, self.feature_type)
     ...         label = g.node_features(nodes, self.label_meta, self.label_type)
-    ...         label = label.astype(np.int32)
+    ...         label = label.astype(np.int64)
     ...
     ...         edges_short = edges
     ...         edges = -50 * np.ones(((edges_short.shape[0] // nodes.size + 1) * nodes.size, 2))
@@ -189,21 +189,21 @@ Finally we can train the model with `run_dist` function. We expect the loss to d
     ...     loss_fn = nn.CrossEntropyLoss()
     ...
     ...     dataset = ray.data.range(2708, parallelism=1)
-    ...     # -> Dataset(num_blocks=200, num_rows=1000000, schema=<class 'int'>)
+    ...     # -> Dataset(num_blocks=1, num_rows=140, schema=<class 'int'>)
     ...
-    ...     pipe = dataset.window(blocks_per_window=1000)
-    ...     # -> DatasetPipeline(num_windows=20, num_stages=1)
+    ...     pipe = dataset.window(blocks_per_window=10)
+    ...     # -> DatasetPipeline(num_windows=1, num_stages=1)
     ...
     ...     g = Client("/tmp/cora", [0])
     ...     def transform_batch(batch: list) -> dict:
     ...         return model.query(g, batch)
-    ...     pipe = pipe.map_batches(transform_batch)  # TODO fix sub_graph so its shaped [n_nodes, n_edges] and use map_batches
+    ...     pipe = pipe.map_batches(transform_batch)
     ...
     ...     model.train()
     ...     for epoch, epoch_pipe in enumerate(pipe.repeat(1).iter_epochs()):
     ...         for i, batch in enumerate(epoch_pipe.random_shuffle_each_window().iter_torch_batches(batch_size=2708)):
     ...             scores = model(batch)
-    ...             labels = batch["labels"][batch["input_mask"]].flatten().to(torch.int64)
+    ...             labels = batch["labels"][batch["input_mask"]].flatten()
     ...             loss = loss_fn(scores.type(torch.float32), labels)
     ...             optimizer.zero_grad()
     ...             loss.backward()
