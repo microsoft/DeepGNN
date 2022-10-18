@@ -19,6 +19,7 @@ from examples.pytorch.conftest import (  # noqa: F401
     mock_graph,
     prepare_local_test_files,
 )
+from deepgnn.graph_engine import FeatureType
 
 from model import PTGSupervisedGraphSage  # type: ignore
 
@@ -42,7 +43,7 @@ def train_supervised_graphsage(mock_graph):  # noqa: F811
         metric=F1Score(),
         label_idx=label_idx,
         label_dim=label_dim,
-        feature_type=np.float32,
+        feature_type=FeatureType.FLOAT,
         feature_idx=feature_idx,
         feature_dim=feature_dim,
         edge_type=edge_type,
@@ -103,7 +104,7 @@ def test_deep_graph_on_cora(train_supervised_graphsage):  # noqa: F811
         metric=F1Score(),
         label_idx=label_idx,
         label_dim=label_dim,
-        feature_type=np.float32,
+        feature_type=FeatureType.FLOAT,
         feature_idx=feature_idx,
         feature_dim=feature_dim,
         edge_type=edge_type,
@@ -121,7 +122,7 @@ def test_deep_graph_on_cora(train_supervised_graphsage):  # noqa: F811
     it = iter(trainloader)
     val_output_ref = graphsage.get_score(it.next())
     val_labels = g.node_features(
-        val_ref, np.array([[label_idx, label_dim]]), np.float32
+        val_ref, np.array([[label_idx, label_dim]]), FeatureType.FLOAT
     ).argmax(1)
     f1_ref = metric.compute(val_output_ref.argmax(axis=1), val_labels)
 
@@ -160,7 +161,7 @@ def test_supervised_graphsage_model(mock_graph):  # noqa: F811
         metric=F1Score(),
         label_idx=label_idx,
         label_dim=label_dim,
-        feature_type=np.float32,
+        feature_type=FeatureType.FLOAT,
         feature_idx=feature_idx,
         feature_dim=feature_dim,
         edge_type=edge_type,
@@ -192,7 +193,7 @@ def test_supervised_graphsage_loss_value(mock_graph):  # noqa: F811
         metric=F1Score(),
         label_idx=label_idx,
         label_dim=label_dim,
-        feature_type=np.float32,
+        feature_type=FeatureType.FLOAT,
         feature_idx=feature_idx,
         feature_dim=feature_dim,
         edge_type=edge_type,

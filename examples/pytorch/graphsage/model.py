@@ -8,7 +8,7 @@ import torch
 import numpy as np
 import torch.nn as nn
 
-from deepgnn.graph_engine import Graph
+from deepgnn.graph_engine import Graph, FeatureType
 from deepgnn.pytorch.common import MeanAggregator, BaseMetric, MRR
 from deepgnn.pytorch.modeling import BaseSupervisedModel, BaseUnsupervisedModel
 from deepgnn.pytorch.encoding import FeatureEncoder, SageEncoder
@@ -22,7 +22,7 @@ class SupervisedGraphSage(BaseSupervisedModel):
         num_classes: int,
         label_idx: int,
         label_dim: int,
-        feature_type: np.dtype,
+        feature_type: FeatureType,
         feature_idx: int,
         feature_dim: int,
         edge_type: int,
@@ -90,7 +90,7 @@ class SupervisedGraphSage(BaseSupervisedModel):
         context["label"] = graph.node_features(
             context["inputs"],
             np.array([[self.label_idx, self.label_dim]]),
-            np.int64,
+            FeatureType.INT64,
         )
         context["encoder"] = self.enc.query(
             context["inputs"],
@@ -127,7 +127,7 @@ class UnSupervisedGraphSage(BaseUnsupervisedModel):
         num_classes: int,
         edge_type: int,
         fanouts: list,
-        feature_type: np.dtype,
+        feature_type: FeatureType,
         feature_idx: int,
         feature_dim: int,
         num_negs: int = 20,

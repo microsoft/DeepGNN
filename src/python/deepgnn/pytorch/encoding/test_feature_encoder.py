@@ -15,6 +15,7 @@ from deepgnn.pytorch.common.consts import (
     ENCODER_SEQ,
     ENCODER_MASK,
 )
+from deepgnn.graph_engine import FeatureType
 from deepgnn.pytorch.encoding.feature_encoder import (
     TwinBERTEncoder,
     TwinBERTFeatureEncoder,
@@ -93,7 +94,7 @@ c_wordpiece_expected_tensors = [
 ]
 
 
-def get_twinbert_encoder(config_file, feature_type=np.uint8):
+def get_twinbert_encoder(config_file, feature_type=FeatureType.BINARY):
     torch.manual_seed(0)
     config = TwinBERTEncoder.init_config_from_file(config_file)
     return TwinBERTFeatureEncoder(feature_type, config, pooler_count=2)
@@ -112,7 +113,7 @@ def verify_twinbert_encoder_simple_input(config_file, feature_type, pooler_index
 
     test_input = (
         c_test_strings
-        if feature_type == np.uint8
+        if feature_type == FeatureType.BINARY
         else (
             c_triletter_input_features
             if tokenize_with_triletter
@@ -122,9 +123,9 @@ def verify_twinbert_encoder_simple_input(config_file, feature_type, pooler_index
 
     def verify_encode(input, expect):
         context = {}
-        if feature_type == np.uint8:
+        if feature_type == FeatureType.BINARY:
             context["feature"] = np.array([bytearray(input, encoding="utf-8")] * 3)
-        elif feature_type == np.int64:
+        elif feature_type == FeatureType.INT64:
             context["feature"] = np.array([input] * 3)
 
         twinbert.transform(context)
@@ -213,11 +214,11 @@ def test_twinbert_encoder_simple_input_string_features_pooler_0(
 ):
     verify_twinbert_encoder_simple_input(
         os.path.join(prepare_local_test_files, "twinbert", "twinbert_triletter.json"),
-        np.uint8,
+        FeatureType.BINARY,
     )
     verify_twinbert_encoder_simple_input(
         os.path.join(prepare_local_test_files, "twinbert", "twinbert_wordpiece.json"),
-        np.uint8,
+        FeatureType.BINARY,
     )
 
 
@@ -226,12 +227,12 @@ def test_twinbert_encoder_simple_input_string_features_pooler_1(
 ):
     verify_twinbert_encoder_simple_input(
         os.path.join(prepare_local_test_files, "twinbert", "twinbert_triletter.json"),
-        np.uint8,
+        FeatureType.BINARY,
         1,
     )
     verify_twinbert_encoder_simple_input(
         os.path.join(prepare_local_test_files, "twinbert", "twinbert_wordpiece.json"),
-        np.uint8,
+        FeatureType.BINARY,
         1,
     )
 
@@ -239,11 +240,11 @@ def test_twinbert_encoder_simple_input_string_features_pooler_1(
 def test_twinbert_encoder_simple_input_int_features(prepare_local_test_files):
     verify_twinbert_encoder_simple_input(
         os.path.join(prepare_local_test_files, "twinbert", "twinbert_triletter.json"),
-        np.int64,
+        FeatureType.INT64,
     )
     verify_twinbert_encoder_simple_input(
         os.path.join(prepare_local_test_files, "twinbert", "twinbert_wordpiece.json"),
-        np.int64,
+        FeatureType.INT64,
     )
 
 

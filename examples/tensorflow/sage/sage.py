@@ -9,7 +9,7 @@ from typing import List
 
 from deepgnn.tf.nn import sage_conv
 
-from deepgnn.graph_engine import Graph
+from deepgnn.graph_engine import Graph, FeatureType
 
 
 @dataclass
@@ -30,8 +30,8 @@ class SAGEQueryParameter:
     feature_dim: int
     label_idx: int
     label_dim: int
-    feature_type: np.dtype = np.float32
-    label_type: np.dtype = np.float32
+    feature_type: FeatureType = FeatureType.FLOAT
+    label_type: FeatureType = FeatureType.FLOAT
     identity_feature: bool = False
 
 

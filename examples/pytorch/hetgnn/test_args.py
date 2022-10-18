@@ -9,7 +9,7 @@ import argparse
 import torch
 from deepgnn import TrainMode, setup_default_logging_config
 from deepgnn import get_logger
-from deepgnn.pytorch.common.utils import get_python_type, set_seed
+from deepgnn.pytorch.common.utils import get_feature_type, set_seed
 from deepgnn.pytorch.modeling import BaseModel
 from deepgnn.pytorch.training import run_dist
 from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
@@ -30,7 +30,7 @@ def create_model(args: argparse.Namespace):
         node_type_count=args.node_type_count,
         neighbor_count=args.neighbor_count,
         embed_d=args.feature_dim,  # currently feature dimention is equal to embedding dimention.
-        feature_type=get_python_type(args.feature_type),
+        feature_type=get_feature_type(args.feature_type),
         feature_idx=args.feature_idx,
         feature_dim=args.feature_dim,
     )
