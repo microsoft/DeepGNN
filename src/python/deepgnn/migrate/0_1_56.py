@@ -1,8 +1,6 @@
-"""
-Script to migrate to new versions of DeepGNN.
-
-pip install google-pasta
-"""
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+"""Script to migrate to new versions of DeepGNN."""
 import argparse
 from pathlib import Path
 import pasta
@@ -17,9 +15,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     for filename in Path(args.script_dir).glob("**/*.py"):
-        if filename.name.startswith("src/python/deepgnn/migrate"):
-            continue
-
         with open(filename, "r") as file:
             raw_input = file.read()
 
