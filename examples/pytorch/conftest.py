@@ -10,7 +10,7 @@ import tempfile
 from collections import defaultdict
 from typing import Tuple
 from torch.utils.data import IterableDataset
-from deepgnn.graph_engine import Graph, SamplingStrategy, FeatureType
+from deepgnn.graph_engine import Graph, SamplingStrategy
 
 
 @pytest.fixture(scope="module")
@@ -135,7 +135,7 @@ class MockGraph(Graph):
         )
 
     def node_features(
-        self, nodes: np.ndarray, features: np.ndarray, feature_type: FeatureType
+        self, nodes: np.ndarray, features: np.ndarray, feature_type: np.dtype
     ) -> np.ndarray:
         if np.array_equal(features, np.array([[1, 7]])):
             rt = []

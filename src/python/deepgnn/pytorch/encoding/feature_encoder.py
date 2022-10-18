@@ -11,7 +11,6 @@ from typing import Optional, Union, List, Tuple
 
 from deepgnn import get_logger
 from .twinbert import TwinBERTEncoder, TriLetterTokenizer, StdBertTokenizer
-from deepgnn.graph_engine import FeatureType
 from deepgnn.pytorch.common.consts import (
     DOWNSCALE,
     MAX_SEQ_LEN,
@@ -29,13 +28,13 @@ from deepgnn.pytorch.common.consts import (
     ENCODER_TYPES,
     EMBS_LIST,
 )
-from deepgnn.pytorch.common.utils import get_feature_type
+from deepgnn.pytorch.common.utils import get_python_type
 
 
 class FeatureEncoder(torch.nn.Module):
     """Encoder for raw feature of graph nodes."""
 
-    def __init__(self, feature_type: FeatureType, feature_dim: int, embed_dim: int):
+    def __init__(self, feature_type: np.dtype, feature_dim: int, embed_dim: int):
         """Initialize feature encoder.
 
         Args:
@@ -65,7 +64,7 @@ class FeatureEncoder(torch.nn.Module):
 class TwinBERTFeatureEncoder(FeatureEncoder):
     """Wrapper for TwinBERTEncoder."""
 
-    def __init__(self, feature_type: FeatureType, config: dict, pooler_count: int = 1):
+    def __init__(self, feature_type: np.dtype, config: dict, pooler_count: int = 1):
         """Initialize TwinBERT encoder.
 
         Args:
@@ -97,12 +96,12 @@ class TwinBERTFeatureEncoder(FeatureEncoder):
         self.tokenize_func = tokenizer.extract_from_sentence
 
     @classmethod
-    def get_feature_dim(cls, feature_type: FeatureType, config: dict):
+    def get_feature_dim(cls, feature_type: np.dtype, config: dict):
         """Extract feature dimensions."""
         max_seq_len = config[MAX_SEQ_LEN]
-        if feature_type == FeatureType.BINARY:
+        if feature_type == np.uint8:
             return config[MAX_SENT_CHARS]
-        if feature_type == FeatureType.INT64:
+        if feature_type == np.int64:
             if config[EMBEDDING_TYPE] == TRILETTER:
                 return max_seq_len * (config[TRILETTER_MAX_LETTERS_IN_WORD] + 1)
             else:
@@ -187,9 +186,9 @@ class TwinBERTFeatureEncoder(FeatureEncoder):
 
     def transform(self, context: dict):
         """Transform binary or int64 features."""
-        if self.feature_type == FeatureType.BINARY:
+        if self.feature_type == np.uint8:
             self._tokenize(context)
-        elif self.feature_type == FeatureType.INT64:
+        elif self.feature_type == np.int64:
             self._extract_sequence_id_and_mask(context)
         else:
             raise RuntimeError(
@@ -239,7 +238,7 @@ class MultiTypeFeatureEncoder(FeatureEncoder):
 
     def __init__(
         self,
-        feature_type: FeatureType,
+        feature_type: np.dtype,
         config: dict,
         encoder_types: List[str],
         share_encoder: bool = False,
@@ -345,7 +344,7 @@ def get_feature_encoder(
 
             return (
                 MultiTypeFeatureEncoder(
-                    get_feature_type(args.feature_type),
+                    get_python_type(args.feature_type),
                     config,
                     encoders,
                     args.share_encoder,
@@ -353,6 +352,6 @@ def get_feature_encoder(
                 config,
             )  # here we also return the config object because model will use it.
         else:
-            return TwinBERTFeatureEncoder(get_feature_type(args.feature_type), config)
+            return TwinBERTFeatureEncoder(get_python_type(args.feature_type), config)
 
     return None
