@@ -122,7 +122,7 @@ ndg-httpsclient==0.5.1
 nest-asyncio==1.5.6
 networkx==2.5.1
 notebook==6.4.12
-numpy==1.23.4
+numpy==1.22.0
 oauthlib==3.2.1
 opencensus==0.11.0
 opencensus-context==0.1.3
