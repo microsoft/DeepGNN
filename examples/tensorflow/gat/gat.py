@@ -9,7 +9,7 @@ from typing import List
 from deepgnn.tf.nn.gat_conv import GATConv
 from deepgnn.tf.nn.metrics import masked_accuracy, masked_softmax_cross_entropy
 
-from deepgnn.graph_engine import Graph, graph_ops
+from deepgnn.graph_engine import Graph, FeatureType, graph_ops
 
 
 @dataclass
@@ -21,8 +21,8 @@ class GATQueryParameter:
     feature_dim: int
     label_idx: int
     label_dim: int
-    feature_type: np.dtype = np.float32
-    label_type: np.dtype = np.float32
+    feature_type: FeatureType = FeatureType.FLOAT
+    label_type: FeatureType = FeatureType.FLOAT
     num_hops: int = 2
 
 

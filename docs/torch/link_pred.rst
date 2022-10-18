@@ -107,7 +107,7 @@ Our goal is to create a model capable of predicting whether an edge exists betwe
 	>>> import numpy as np
 	>>> import torch
 	>>> from deepgnn.pytorch.modeling.base_model import BaseModel
-	>>> from deepgnn.graph_engine import SamplingStrategy, GEEdgeSampler, GraphEngineBackend
+	>>> from deepgnn.graph_engine import FeatureType, SamplingStrategy, GEEdgeSampler, GraphEngineBackend
 	>>> from deepgnn.pytorch.common.utils import set_seed
 	>>> from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 	>>> from deepgnn.pytorch.modeling import BaseModel
@@ -127,8 +127,8 @@ In this example, the query function will generate a set of positive and negative
 	...     feature_dim: int
 	...     label_idx: int
 	...     label_dim: int
-	...     feature_type: np.dtype = np.float32
-	...     label_type: np.dtype = np.float32
+	...     feature_type: FeatureType = FeatureType.FLOAT
+	...     label_type: FeatureType = FeatureType.FLOAT
 
 	>>> class LinkPredictionQuery:
 	...     def __init__(self, p: LinkPredictionQueryParameter):

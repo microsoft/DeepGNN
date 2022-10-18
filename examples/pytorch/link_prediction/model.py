@@ -8,7 +8,12 @@ import torch.nn as nn
 
 from typing import Optional, Tuple
 from deepgnn import TrainMode, vec2str
-from deepgnn.graph_engine import Graph, INVALID_NODE_ID, multihop
+from deepgnn.graph_engine import (
+    Graph,
+    FeatureType,
+    INVALID_NODE_ID,
+    multihop,
+)
 
 from deepgnn.pytorch.common.consts import (
     NODE_SRC,
@@ -282,7 +287,7 @@ class LinkPredictionModel(BaseSupervisedModel):
                 type_mask = []
                 for layer, ids in enumerate(multihop_ids[1:]):
                     one_hop_feats = graph.node_features(
-                        ids, np.array([[0, self.feature_dim]]), np.int64
+                        ids, np.array([[0, self.feature_dim]]), FeatureType.INT64
                     ).astype(np.int64)
                     for idx, node_id in enumerate(ids):
                         if (

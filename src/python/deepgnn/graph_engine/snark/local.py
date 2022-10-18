@@ -7,9 +7,14 @@ from typing import List, Tuple, Union, Dict
 
 import numpy as np
 import deepgnn.graph_engine.snark.client as client
-from deepgnn.graph_engine._base import Graph, SamplingStrategy
+from deepgnn.graph_engine._base import FeatureType, Graph, SamplingStrategy
 from deepgnn import get_logger
 
+_feature_type_map: Dict[FeatureType, np.dtype] = {
+    FeatureType.BINARY: np.dtype(np.uint8),
+    FeatureType.FLOAT: np.dtype(np.float32),
+    FeatureType.INT64: np.dtype(np.int64),
+}
 
 _sampling_map: Dict[SamplingStrategy, str] = {
     SamplingStrategy.Weighted: "weighted",
@@ -131,7 +136,7 @@ class Client(Graph):
         raise NotImplementedError(f"Unknown strategy type {strategy}")
 
     def node_features(
-        self, nodes: np.ndarray, features: np.ndarray, feature_type: np.dtype
+        self, nodes: np.ndarray, features: np.ndarray, feature_type: FeatureType
     ) -> np.ndarray:
         """Fetch node features."""
         assert len(features.shape) == 2
@@ -142,7 +147,9 @@ class Client(Graph):
                     f"Requesting feature with id #{feature[0]} that is larger than number of the node features {self.graph.meta._node_feature_count} in the graph"
                 )
 
-        return self.graph.node_features(nodes, features, feature_type)
+        return self.graph.node_features(
+            nodes, features, _feature_type_map[feature_type]
+        )
 
     def random_walk(
         self,
@@ -190,7 +197,7 @@ class Client(Graph):
         return self.graph.node_types(nodes, -1)
 
     def edge_features(
-        self, edges: np.ndarray, features: np.ndarray, feature_type: np.dtype
+        self, edges: np.ndarray, features: np.ndarray, feature_type: FeatureType
     ) -> np.ndarray:
         """Fetch edge features."""
         edges = np.array(edges, dtype=np.int64)
@@ -208,7 +215,7 @@ class Client(Graph):
             np.copy(edges[:, 1]),
             np.copy(edges[:, 2]),
             features,
-            feature_type,
+            _feature_type_map[feature_type],
         )
 
     def node_count(self, types: Union[int, np.ndarray]) -> int:

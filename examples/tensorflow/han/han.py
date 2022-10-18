@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 from dataclasses import dataclass
 from deepgnn.tf import encoders
-from deepgnn.graph_engine import Graph
+from deepgnn.graph_engine import Graph, FeatureType
 from deepgnn.graph_engine import multihop
 from typing import Tuple
 
@@ -41,7 +41,7 @@ class HANQuery:
         if self.param.label_idx == -1:
             label = np.empty([len(inputs), self.param.label_dim], np.int32)
         else:
-            label = graph.node_features(inputs, self.label_meta, np.int64)
+            label = graph.node_features(inputs, self.label_meta, FeatureType.INT64)
 
         hop_num = len(self.param.nb_num)
 
@@ -58,9 +58,9 @@ class HANQuery:
             )[0]
 
             neighbors = np.reshape(neighbors_list[-1], [-1, total_nb_num])
-            node_feats = graph.node_features(inputs, self.feat_meta, np.float32)
+            node_feats = graph.node_features(inputs, self.feat_meta, FeatureType.FLOAT)
             neighbor_feats = graph.node_features(
-                np.reshape(neighbors, [-1]), self.feat_meta, np.float32
+                np.reshape(neighbors, [-1]), self.feat_meta, FeatureType.FLOAT
             )
 
             node_feats_arr.append(

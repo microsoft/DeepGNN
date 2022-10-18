@@ -29,6 +29,7 @@ from deepgnn.pytorch.encoding import TwinBERTEncoder, MultiTypeFeatureEncoder
 from examples.pytorch.conftest import MockGraph, load_data  # noqa: F401
 from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.graph_engine import (
+    FeatureType,
     GraphType,
     BackendType,
     TextFileSampler,
@@ -115,10 +116,12 @@ def train_linkprediction_model(params, config, model_path, lp_mock_graph):
     num_epoch = 1
     model_path_name = os.path.join(model_path, f"gnnmodel_{params.gnn_encoder}.pt")
 
-    feature_enc = MultiTypeFeatureEncoder(np.int64, config, ["q", "k", "s"], False)
+    feature_enc = MultiTypeFeatureEncoder(
+        FeatureType.INT64, config, ["q", "k", "s"], False
+    )
 
     lp = LinkPredictionModel(
-        args=params, feature_type=np.int64, feature_enc=feature_enc
+        args=params, feature_type=FeatureType.INT64, feature_enc=feature_enc
     )
 
     optimizer = torch.optim.SGD(
@@ -258,10 +261,12 @@ def test_link_prediction_model_gat(train_linkprediction_model_gat):
 
     params = train_linkprediction_model_gat["params"]
     config = train_linkprediction_model_gat["config"]
-    feature_enc = MultiTypeFeatureEncoder(np.int64, config, ["q", "k", "s"], False)
+    feature_enc = MultiTypeFeatureEncoder(
+        FeatureType.INT64, config, ["q", "k", "s"], False
+    )
 
     lp = LinkPredictionModel(
-        args=params, feature_type=np.int64, feature_enc=feature_enc
+        args=params, feature_type=FeatureType.INT64, feature_enc=feature_enc
     )
 
     args = argparse.Namespace(
@@ -331,11 +336,13 @@ def test_link_prediction_model_hetgnn(train_linkprediction_model_hetgnn):
 
     params = train_linkprediction_model_hetgnn["params"]
     config = train_linkprediction_model_hetgnn["config"]
-    feature_enc = MultiTypeFeatureEncoder(np.int64, config, ["q", "k", "s"], False)
+    feature_enc = MultiTypeFeatureEncoder(
+        FeatureType.INT64, config, ["q", "k", "s"], False
+    )
     params.gnn_encoder = "hetgnn_lgcl"
 
     lp = LinkPredictionModel(
-        args=params, feature_type=np.int64, feature_enc=feature_enc
+        args=params, feature_type=FeatureType.INT64, feature_enc=feature_enc
     )
 
     args = argparse.Namespace(
@@ -384,10 +391,12 @@ def test_link_prediction_model_hetgnn(train_linkprediction_model_hetgnn):
 
 
 def do_inference(params, config, mock_graph, model_path):
-    feature_enc = MultiTypeFeatureEncoder(np.int64, config, ["q", "k", "s"], False)
+    feature_enc = MultiTypeFeatureEncoder(
+        FeatureType.INT64, config, ["q", "k", "s"], False
+    )
 
     lp = LinkPredictionModel(
-        args=params, feature_type=np.int64, feature_enc=feature_enc
+        args=params, feature_type=FeatureType.INT64, feature_enc=feature_enc
     )
 
     lp.load_state_dict(torch.load(model_path))
@@ -475,9 +484,11 @@ def test_linkprediction_query(lp_mock_graph, prepare_local_twinbert_test_files):
 
     mock_graph = lp_mock_graph
     params, config = prepare_params(prepare_local_twinbert_test_files)
-    feature_enc = MultiTypeFeatureEncoder(np.int64, config, ["q", "k", "s"], False)
+    feature_enc = MultiTypeFeatureEncoder(
+        FeatureType.INT64, config, ["q", "k", "s"], False
+    )
     lp = LinkPredictionModel(
-        args=params, feature_type=np.int64, feature_enc=feature_enc
+        args=params, feature_type=FeatureType.INT64, feature_enc=feature_enc
     )
 
     sampler = TextFileSampler(
@@ -509,9 +520,11 @@ def test_linkprediction_query(lp_mock_graph, prepare_local_twinbert_test_files):
 
 def run_multitype_feature_encoder(params, config, graph, shared=False):
     node_types = ["q", "k", "s"]
-    enc = MultiTypeFeatureEncoder(np.int64, config, node_types, shared)
+    enc = MultiTypeFeatureEncoder(FeatureType.INT64, config, node_types, shared)
 
-    lp = LinkPredictionModel(args=params, feature_type=np.int64, feature_enc=enc)
+    lp = LinkPredictionModel(
+        args=params, feature_type=FeatureType.INT64, feature_enc=enc
+    )
 
     args = argparse.Namespace(
         data_dir="/mock/doesnt/need/physical/path",

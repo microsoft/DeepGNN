@@ -17,7 +17,7 @@ Node Classification with GAT
     >>> from typing import Dict, List, Union, Callable, Any, Tuple
     >>> from contextlib import closing
     >>> from deepgnn import str2list_int, setup_default_logging_config
-    >>> from deepgnn.graph_engine import Graph, graph_ops
+    >>> from deepgnn.graph_engine import Graph, FeatureType, graph_ops
     >>> from deepgnn.graph_engine import (
     ...    SamplingStrategy,
     ...    GENodeSampler,
@@ -41,8 +41,8 @@ Node Classification with GAT
     ...    feature_dim: int
     ...    label_idx: int
     ...    label_dim: int
-    ...    feature_type: np.dtype = np.float32
-    ...    label_type: np.dtype = np.float32
+    ...    feature_type: FeatureType = FeatureType.FLOAT
+    ...    label_type: FeatureType = FeatureType.FLOAT
     ...    num_hops: int = 2
 
 
