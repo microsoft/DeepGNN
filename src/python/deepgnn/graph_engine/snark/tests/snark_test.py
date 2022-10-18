@@ -18,7 +18,7 @@ import pytest
 
 from deepgnn.graph_engine.snark.local import Client as LocalClient
 import deepgnn.graph_engine.snark.distributed as distributed
-from deepgnn.graph_engine._base import SamplingStrategy, FeatureType
+from deepgnn.graph_engine._base import SamplingStrategy
 from deepgnn.graph_engine.snark.meta_merger import merge_metadata_files
 from deepgnn.graph_engine.snark.meta import Meta
 
@@ -96,7 +96,7 @@ def test_snark_backend_local_graph_node_features(memory_graph):
     values = memory_graph.node_features(
         np.array([1], dtype=np.int64),
         np.array([[0, 2]], dtype=np.int32),
-        FeatureType.FLOAT,
+        np.float32,
     )
 
     assert values.shape == (1, 2)
@@ -157,7 +157,7 @@ def test_snark_backend_distributed_graph_node_features(distributed_graph):
     values = distributed_graph.node_features(
         np.array([1], dtype=np.int64),
         np.array([[0, 2]], dtype=np.int32),
-        FeatureType.FLOAT,
+        np.float32,
     )
     assert values.shape == (1, 2)
     npt.assert_almost_equal([[1, 0.516677]], values, decimal=4)
@@ -212,7 +212,7 @@ def test_snark_backend_distributed_graph_features_missing_from_graph(distributed
     values = distributed_graph.node_features(
         np.array([1], dtype=np.int64),
         np.array([[2, 3]], dtype=np.int32),
-        FeatureType.FLOAT,
+        np.float32,
     )
     log_record = string_stream.getvalue()
     assert (
@@ -228,7 +228,7 @@ def test_snark_backend_distributed_graph_features_missing_from_graph(distributed
     values = distributed_graph.edge_features(
         np.array([[1, 2, 0]], dtype=np.int64),
         np.array([[1, 2]], dtype=np.int32),
-        FeatureType.FLOAT,
+        np.float32,
     )
     log_record = string_stream.getvalue()
     assert (

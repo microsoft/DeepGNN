@@ -3,7 +3,7 @@
 
 # We want to have a dynamic library without any dependencies,
 # that's why we statically link standard libs.
-build:linux --repo_env=CC=gcc-11
+build:linux --repo_env=CC=gcc-10
 build:linux --action_env=BAZEL_LINKLIBS=-l%:libstdc++.a
 build:linux --action_env=BAZEL_LINKOPTS=-static-libgcc:-lm:-pthread
 build:linux --action_env=SETUPTOOLS_USE_DISTUTILS="false"

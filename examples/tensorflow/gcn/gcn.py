@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from deepgnn.tf.nn.gcn_conv import GCNConv, gcn_norm_adj
 from deepgnn.tf.nn.metrics import masked_accuracy, masked_softmax_cross_entropy
 
-from deepgnn.graph_engine import Graph, FeatureType, graph_ops
+from deepgnn.graph_engine import Graph, graph_ops
 
 from deepgnn import get_logger
 
@@ -24,8 +24,8 @@ class GCNQueryParameter:
     feature_dim: int
     label_idx: int
     label_dim: int
-    feature_type: FeatureType = FeatureType.FLOAT
-    label_type: FeatureType = FeatureType.FLOAT
+    feature_type: np.dtype = np.float32
+    label_type: np.dtype = np.float32
     num_hops: int = 2
 
 
