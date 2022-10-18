@@ -11,7 +11,7 @@ from deepgnn.pytorch.common import Accuracy
 from deepgnn.pytorch.modeling.base_model import BaseModel
 from deepgnn.pytorch.nn.gat_conv import GATConv
 
-from deepgnn.graph_engine import Graph, graph_ops
+from deepgnn.graph_engine import Graph, FeatureType, graph_ops
 
 
 @dataclass
@@ -23,8 +23,8 @@ class GATQueryParameter:
     feature_dim: int
     label_idx: int
     label_dim: int
-    feature_type: np.dtype = np.float32
-    label_type: np.dtype = np.float32
+    feature_type: FeatureType = FeatureType.FLOAT
+    label_type: FeatureType = FeatureType.FLOAT
     num_hops: int = 2
 
 
@@ -77,7 +77,7 @@ class GAT(BaseModel):
     ):
         """Initialize GAT model."""
         self.q = GATQuery(q_param)
-        super().__init__(np.float32, 0, 0, None)
+        super().__init__(FeatureType.FLOAT, 0, 0, None)
         self.num_classes = num_classes
 
         self.out_dim = num_classes

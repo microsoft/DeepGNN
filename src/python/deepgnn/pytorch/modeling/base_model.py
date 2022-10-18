@@ -8,7 +8,7 @@ import torch.nn as nn
 import numpy as np
 
 from torch.autograd import Variable
-from deepgnn.graph_engine import Graph, SamplingStrategy, QueryOutput
+from deepgnn.graph_engine import Graph, FeatureType, SamplingStrategy, QueryOutput
 from deepgnn.pytorch.encoding.feature_encoder import FeatureEncoder
 from deepgnn.pytorch.common.metrics import BaseMetric
 from deepgnn.graph_engine.samplers import BaseSampler
@@ -20,7 +20,7 @@ class BaseModel(nn.Module):
 
     def __init__(
         self,
-        feature_type: np.dtype,
+        feature_type: FeatureType,
         feature_idx: int,
         feature_dim: int,
         feature_enc: Optional[FeatureEncoder],
@@ -137,7 +137,7 @@ class BaseSupervisedModel(BaseModel):
 
     def __init__(
         self,
-        feature_type: np.dtype,
+        feature_type: FeatureType,
         feature_idx: int,
         feature_dim: int,
         feature_enc: Optional[FeatureEncoder],
@@ -190,7 +190,7 @@ class BaseUnsupervisedModel(BaseModel):
 
     def __init__(
         self,
-        feature_type: np.dtype,
+        feature_type: FeatureType,
         feature_idx: int,
         feature_dim: int,
         feature_enc: Optional[FeatureEncoder],

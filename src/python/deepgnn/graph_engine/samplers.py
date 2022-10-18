@@ -29,9 +29,13 @@ def get_files(filenames: str, worker_index: int, num_workers: int) -> List[str]:
     return sample_files
 
 
-def get_python_type(dtype):
+def get_feature_type(feature_type: np.dtype) -> type:
     """Map numpy to python types."""
-    return type(dtype(0).item())
+    if feature_type == np.float32:
+        return float
+    elif feature_type == np.int64:
+        return int
+    raise RuntimeError("unknown feature_type: {}".format(str(feature_type)))
 
 
 class _GEIterator:
@@ -339,7 +343,7 @@ class FileEdgeSampler(BaseSampler):
           shuffle(int, optional): set to True to have the data reshuffled at every epoch (default: False).
           delimeter(str, optional): The string used to separate values. (default: '\\t').
           feature_dim(int, optional): the feature dimentions in sample files. (default: 0).
-          feature_type(np.dtype, optional): the feature dimentions in sample files. (default: np.float32).
+          feature_type(numpy.dtype, optional): the feature dimentions in sample files. (default: np.float32).
           drop_last(bool, optional): set to True to drop the last incomplete batch, if the dataset size is not divisible by the batch size. If False and the size of dataset is not divisible by the batch size, the last batch will be padded with backfill_id. (default: False)
           backfill_id(int, optional): backfill value for the last no-full batch. (default: INVALID_NODE_ID)
           worker_index(int, optional): worker index from distrbiuted training. for single worker job, please use default value. (default: 0)
@@ -366,7 +370,7 @@ class FileEdgeSampler(BaseSampler):
         self.logger.info("Edge Sample files: {0}".format(", ".join(filelist)))
         edges = []
         features = []
-        ftype = get_python_type(self.feature_type)
+        ftype = get_feature_type(self.feature_type)
 
         for f in filelist:
             for line in open(f):

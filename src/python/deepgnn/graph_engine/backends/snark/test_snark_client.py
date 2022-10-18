@@ -23,6 +23,7 @@ from deepgnn.graph_engine.backends.snark.client import (
     SnarkLocalBackend,
     SnarkDistributedBackend,
 )
+from deepgnn.graph_engine._base import FeatureType
 from deepgnn.graph_engine.graph_dataset import BackendType
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
 
@@ -210,7 +211,7 @@ def test_snark_basic_distributed_backend(distributed_graph):
     values = distributed_graph.node_features(
         np.array([0, 13, 42], dtype=np.int64),
         np.array([[0, 2]], dtype=np.int32),
-        np.float32,
+        FeatureType.FLOAT,
     )
 
     assert values.shape == (3, 2)
@@ -223,7 +224,7 @@ def test_snark_basic_local_backend(memory_graph):
     values = memory_graph.node_features(
         np.array([1], dtype=np.int64),
         np.array([[0, 2]], dtype=np.int32),
-        np.float32,
+        FeatureType.FLOAT,
     )
 
     assert values.shape == (1, 2)
@@ -496,7 +497,7 @@ def test_snark_2_workers_1_client_distributed_backend(distributed_graph_2_worker
     values = distributed_graph_2_workers.node_features(
         np.array([0, 13, 42], dtype=np.int64),
         np.array([[0, 2]], dtype=np.int32),
-        np.float32,
+        FeatureType.FLOAT,
     )
 
     assert values.shape == (3, 2)
@@ -531,7 +532,7 @@ def test_snark_backend_connect_to_existing_ge(caveman_data, request):
             values = backend.graph.node_features(
                 np.array([0], dtype=np.int64),
                 np.array([[0, 2]], dtype=np.int32),
-                np.float32,
+                FeatureType.FLOAT,
             )
 
             assert values.shape == (1, 2)

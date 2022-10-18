@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch_geometric.nn as pyg_nn
 
-from deepgnn.graph_engine import Graph
+from deepgnn.graph_engine import Graph, FeatureType
 from deepgnn.pytorch.common import BaseMetric, MRR
 from deepgnn.pytorch.modeling import BaseSupervisedModel
 from deepgnn.pytorch.encoding import FeatureEncoder
@@ -24,7 +24,7 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         num_classes: int,
         label_idx: int,
         label_dim: int,
-        feature_type: np.dtype,
+        feature_type: FeatureType,
         feature_idx: int,
         feature_dim: int,
         edge_type: int,
@@ -73,7 +73,7 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         context["label"] = graph.node_features(
             context["inputs"],
             np.array([[self.label_idx, self.label_dim]]),
-            np.float32,
+            FeatureType.FLOAT,
         )
 
         n2_out = context["inputs"]  # Output nodes of 2nd (final) layer of convolution

@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from deepgnn.graph_engine import Graph
+from deepgnn.graph_engine import Graph, FeatureType
 from deepgnn import get_logger
 
 
@@ -19,7 +19,7 @@ class SageEncoder(nn.Module):
         features: Callable[[torch.Tensor], torch.Tensor],
         query_func: Optional[
             Union[
-                Callable[[np.ndarray, Graph, np.dtype, int, int], dict],
+                Callable[[np.ndarray, Graph, FeatureType, int, int], dict],
                 Callable[[torch.Tensor], torch.Tensor],
             ]
         ],
@@ -54,7 +54,7 @@ class SageEncoder(nn.Module):
             self.base_model = base_model
         self.features = features
         self.query_func: Union[
-            Callable[[np.ndarray, Graph, np.dtype, int, int], dict],
+            Callable[[np.ndarray, Graph, FeatureType, int, int], dict],
             Callable[[torch.Tensor], torch.Tensor],
         ]
         if query_func is None:
@@ -74,7 +74,7 @@ class SageEncoder(nn.Module):
         self,
         nodes: np.ndarray,
         graph: Graph,
-        feature_type: np.dtype,
+        feature_type: FeatureType,
         feature_idx: int,
         feature_dim: int,
         neigh_nodes: np.ndarray = None,
@@ -120,7 +120,7 @@ class SageEncoder(nn.Module):
         self,
         nodes: np.ndarray,
         graph: Graph,
-        feature_type: np.dtype,
+        feature_type: FeatureType,
         feature_idx: int,
         feature_dim: int,
         neigh_nodes: np.ndarray = None,
