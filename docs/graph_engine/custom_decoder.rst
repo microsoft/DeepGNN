@@ -38,24 +38,26 @@ number of indexable feature vectors.
     ... {"name": "sparse_int16_feature", "type": {"type": "array", "items": "int", "default": []}}
     ... ]}""")
 
-    >>> import numpy as np
+    >>> data = [  # src, node_type/dst, -1/edge_type, weight, feature_float, sparse_feature_int16
+    ...     (0, 0, -1, 1.0, [3.5, 6.], ([7, 3], [255, 16])),  # Node 0
+    ...     (1, 0, -1, 1.0, [2., 3.], ([6, 3], [100, 101])),  # Node 1
+    ...     (0, 1, 0, 1.0, [4., 7.], ([5, 1], [16, 244])),  # Edge from 0 to 1
+    ...     (1, 0, 0, 1.0, [5., 1.], ([2, 3], [51, 255])),  # Edge from 1 to 0
+    ... ]
+
+    >>> data = sorted(data)
+    >>> data
+    [(0, 0, -1, 1.0, [3.5, 6.0], ([7, 3], [255, 16])), (0, 1, 0, 1.0, [4.0, 7.0], ([5, 1], [16, 244])), (1, 0, -1, 1.0, [2.0, 3.0], ([6, 3], [100, 101])), (1, 0, 0, 1.0, [5.0, 1.0], ([2, 3], [51, 255]))]
+
     >>> writer = DataFileWriter(open(raw_file, "wb"), DatumWriter(), schema)
-    >>> writer.append({"src": 0, "dst": -1, "type": 0, "weight": 1.0,
-    ...     "float_feature": [3.5, 6.],
-    ...     "sparse_int16_coords": [7, 3],
-    ...     "sparse_int16_feature": [255, 16]})
-    >>> writer.append({"src": 0, "dst": 1, "type": 0, "weight": 1.0,
-    ...     "float_feature": [4., 7.],
-    ...     "sparse_int16_coords": [5, 1],
-    ...     "sparse_int16_feature": [16, 244]})
-    >>> writer.append({"src": 1, "dst": -1, "type": 0, "weight": 1.0,
-    ...     "float_feature": [2., 3.],
-    ...     "sparse_int16_coords": [6, 3],
-    ...     "sparse_int16_feature": [100, 101]})
-    >>> writer.append({"src": 1, "dst": 0, "type": 0, "weight": 1.0,
-    ...     "float_feature": [5., 1.],
-    ...     "sparse_int16_coords": [2, 3],
-    ...     "sparse_int16_feature": [51, 255]})
+    >>> for src, dst, typ, weight, feature_float, sparse_feature_int16 in data:
+    ...     if typ == -1:  # if is node, flip type and dst
+    ...         typ = dst
+    ...         dst = -1
+    ...     writer.append({"src": src, "dst": dst, "type": typ, "weight": weight,
+    ...         "float_feature": feature_float,
+    ...         "sparse_int16_coords": sparse_feature_int16[0],
+    ...         "sparse_int16_feature": sparse_feature_int16[1]})
     >>> writer.close()
 
 Next we write the AvroDecoder that will be used to decode our input file
@@ -77,6 +79,7 @@ index 0 and 2 but skip index 1.
 
     >>> from deepgnn.graph_engine.snark.decoders import Decoder
     >>> from typing import Iterator, Tuple
+    >>> import numpy as np
     >>> class AvroDecoder(Decoder):
     ...     def __init__(self):
     ...         # Args can be added to init and added before passing to MultiWorkersConverter
