@@ -18,7 +18,6 @@ First we'll import all modules used in the tutorial and set up some global setti
     >>> from dataclasses import dataclass
 
     >>> from deepgnn.tf.common import utils
-    >>> from deepgnn.graph_engine import FeatureType
     >>> from deepgnn.graph_engine.snark.converter.options import DataConverterType
 
     >>> from deepgnn import setup_default_logging_config
@@ -128,7 +127,7 @@ Check node features for nodeids = [0, 13, 42], feature id is `0`, length `2`
 .. code-block:: python
 
     >>> ge.graph.node_features(
-    ...    np.array([0, 13, 42]), np.array([[0, 2]], dtype=np.int32), FeatureType.FLOAT
+    ...    np.array([0, 13, 42]), np.array([[0, 2]], dtype=np.int32), np.float32
     ... )
     array([[-0.9914585 ,  0.51667684],
            [-0.49990606,  0.8618959 ],
@@ -161,8 +160,8 @@ Graph itself stores both labels and model inputs. Labels are node features with 
     ...        Query graph to fetch nodes features and labels for the inputs.
     ...        Put them in the context to train model in the call method later.
     ...        """
-    ...        labels = graph.node_features(inputs, self.label_meta, FeatureType.FLOAT)
-    ...        node_features = graph.node_features(inputs, self.feat_meta, FeatureType.FLOAT)
+    ...        labels = graph.node_features(inputs, self.label_meta, np.float32)
+    ...        node_features = graph.node_features(inputs, self.feat_meta, np.float32)
     ...
     ...        hops = [inputs]
     ...        features = [node_features]
@@ -171,7 +170,7 @@ Graph itself stores both labels and model inputs. Labels are node features with 
     ...                nodes=hops[-1], edge_types=np.array([0], dtype=np.int32), count=count,
     ...            )[0].flatten()
     ...            hops.append(nbs)
-    ...            val = graph.node_features(nbs, self.feat_meta, FeatureType.FLOAT)
+    ...            val = graph.node_features(nbs, self.feat_meta, np.float32)
     ...            # number of neighbors belonging to the original inputs
     ...            middle = val.size // (len(inputs) * self.feature_dim)
     ...            features.append(

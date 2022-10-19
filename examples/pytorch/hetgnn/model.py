@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-from deepgnn.graph_engine import Graph, FeatureType
+from deepgnn.graph_engine import Graph
 from deepgnn.pytorch.common import MRR
 from deepgnn.pytorch.modeling import BaseUnsupervisedModel
 
@@ -23,7 +23,7 @@ class HetGnnModel(BaseUnsupervisedModel):
         embed_d: int,
         feature_idx: int,
         feature_dim: int,
-        feature_type: FeatureType,
+        feature_type: np.dtype,
         metric=MRR(),
     ):
         """Initialize HetGnn model."""
@@ -254,7 +254,7 @@ class HetGnnModel(BaseUnsupervisedModel):
         context["node_feats"] = graph.node_features(
             id_batch,
             np.array([[self.feature_idx, self.feature_dim]]),
-            FeatureType.FLOAT,
+            np.float32,
         )
         for i in range(self.node_type_count):
             neigh_batch[i] = graph.sample_neighbors(
@@ -264,7 +264,7 @@ class HetGnnModel(BaseUnsupervisedModel):
                 graph.node_features(
                     np.reshape(neigh_batch[i], (1, -1))[0],
                     np.array([[self.feature_idx, self.feature_dim]]),
-                    FeatureType.FLOAT,
+                    np.float32,
                 )
             )
         context["neigh_feats"] = neigh_batch_feature

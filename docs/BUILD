@@ -31,6 +31,29 @@ py_test(
 )
 
 py_test(
+    name = "custom_decoder",
+    srcs = ["doctest_template.py"],
+    args = ["graph_engine/custom_decoder.rst"],
+    data = [
+        "graph_engine/custom_decoder.rst",
+    ],
+    imports = ["../src/python/"],
+    main = "doctest_template.py",
+    python_version = "PY3",
+    srcs_version = "PY3",
+    deps = [
+        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
+        requirement("azure-datalake-store"),
+        requirement("numpy"),
+        requirement("fsspec"),
+        requirement("opencensus"),
+        requirement("opencensus-context"),
+        requirement("opencensus-ext-azure"),
+        requirement("avro-python3"),
+    ],
+)
+
+py_test(
     name = "from_networkx",
     srcs = ["doctest_template.py"],
     args = ["graph_engine/from_networkx.rst"],

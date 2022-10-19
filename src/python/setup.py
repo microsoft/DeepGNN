@@ -55,9 +55,20 @@ def graph_engine(version: str):
         author=AUTHOR,
         author_email=AUTHOR_EMAIL,
         packages=setuptools.find_packages(
-            include=["deepgnn", "deepgnn.graph_engine", "deepgnn.graph_engine.*"]
+            include=[
+                "deepgnn",
+                "deepgnn.graph_engine",
+                "deepgnn.graph_engine.*",
+                "deepgnn.migrate",
+                "deepgnn.migrate.*",
+            ]
         ),
-        package_data={"": ["*.so", "*.dll"]},
+        package_data={
+            "": [
+                "*.so",
+                "*.dll",
+            ]
+        },
         install_requires=[
             "numpy>=1.17.0",
             "networkx==2.5.1",

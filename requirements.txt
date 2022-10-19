@@ -13,6 +13,7 @@ async-generator==1.10
 async-timeout==4.0.2
 atomicwrites==1.4.1
 attrs==22.1.0
+avro-python3==1.10.2
 azure-common==1.1.28
 azure-core==1.26.0
 azure-datalake-store==0.0.52
