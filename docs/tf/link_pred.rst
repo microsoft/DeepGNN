@@ -342,8 +342,8 @@ Verify model predictions
     >>> np.set_printoptions(formatter={"float_kind": "{: .2f}".format})
     >>> pred = utils.load_embeddings(tmp_dir.name, max_node_cnt, num_clusters)
     >>> print(np.argmax(pred, 1).reshape(num_clusters, -1))
-    [[0 0 0 0 1 0 0 0 0 0]
-     [0 1 0 1 1 0 0 0 0 0]
+    [[0 0 0 0 0 0 0 0 0 0]
+     [0 1 0 1 0 0 0 0 0 0]
      [2 2 2 2 2 2 2 2 2 2]
-     [3 4 3 4 3 3 4 4 4 4]
-     [4 4 4 4 4 4 4 4 4 4]]
+     [3 4 3 4 3 3 4 4 3 4]
+     [4 4 3 4 4 4 4 4 4 4]]
