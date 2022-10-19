@@ -21,7 +21,6 @@ from deepgnn import get_logger
 from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.graph_engine import (
     Graph,
-    FeatureType,
     SamplingStrategy,
     GraphType,
     BackendType,
@@ -153,7 +152,7 @@ class MockGraph(Graph):
         )
 
     def node_features(
-        self, nodes: np.ndarray, features: np.ndarray, feature_type: FeatureType
+        self, nodes: np.ndarray, features: np.ndarray, feature_type: np.dtype
     ) -> np.ndarray:
         node_features = np.zeros((len(nodes), features[0][1]), dtype=np.float32)
         for i in range(len(nodes)):
@@ -295,7 +294,7 @@ def train_academic_data(mock_graph):
         node_type_count=args.node_type_count,
         neighbor_count=args.neighbor_count,
         embed_d=args.dim,
-        feature_type=FeatureType.FLOAT,
+        feature_type=np.float32,
         feature_idx=args.feature_idx,
         feature_dim=args.feature_dim,
     )
@@ -374,7 +373,7 @@ def save_embedding(train_academic_data):
         node_type_count=args.node_type_count,
         neighbor_count=args.neighbor_count,
         embed_d=args.dim,
-        feature_type=FeatureType.FLOAT,
+        feature_type=np.float32,
         feature_idx=args.feature_idx,
         feature_dim=args.feature_dim,
     )
@@ -462,7 +461,7 @@ def test_academic_hetgnn_loss(mock_graph):
         node_type_count=node_type_count,
         neighbor_count=neighbor_count,
         embed_d=dim,
-        feature_type=FeatureType.FLOAT,
+        feature_type=np.float32,
         feature_idx=feature_idx,
         feature_dim=feature_dim,
     )
@@ -523,7 +522,7 @@ def test_academic_hetgnn_model(mock_graph):
         node_type_count=node_type_count,
         neighbor_count=neighbor_count,
         embed_d=dim,
-        feature_type=FeatureType.FLOAT,
+        feature_type=np.float32,
         feature_idx=feature_idx,
         feature_dim=feature_dim,
     )
@@ -597,7 +596,7 @@ def test_hetgnn_sampler_reset():
         node_type_count=node_type_count,
         neighbor_count=neighbor_count,
         embed_d=dim,
-        feature_type=FeatureType.FLOAT,
+        feature_type=np.float32,
         feature_idx=feature_idx,
         feature_dim=feature_dim,
     )
