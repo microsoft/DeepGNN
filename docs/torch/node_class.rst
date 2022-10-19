@@ -157,9 +157,8 @@ In the GAT model, forward pass uses two of our built-in `GATConv layers <https:/
     ...         input_mask = np.zeros(nodes.size, np.bool)
     ...         input_mask[src_idx] = True
     ...
-    ...         feats = g.node_features(nodes, [self.feature_meta[0], self.label_meta[0]], self.feature_type)
-    ...         feats = labels = #label = g.node_features(nodes, , self.label_type)
-    ...         label = label.astype(np.int64)
+    ...         feat = g.node_features(nodes, self.feature_meta, self.feature_type)
+    ...         label = g.node_features(nodes, self.label_meta, self.label_type).astype(np.int64)
     ...         return {"nodes": nodes.reshape((1, *nodes.shape)), "feat": feat.reshape((1, *feat.shape)), "labels": label.reshape((1, *label.shape)), "input_mask": input_mask.reshape((1, *input_mask.shape)), "edges": edges.reshape((1, *edges.shape))}
 
 
@@ -184,7 +183,7 @@ Finally we can train the model with `run_dist` function. We expect the loss to d
     ...     
     ...     pipe = dataset.window(blocks_per_window=10)  # -> DatasetPipeline(num_windows=1, num_stages=1)
     ...
-    ...     g = Client("/tmp/cora", [0])
+    ...     g = Client("/tmp/cora", [0], delayed_start=True)
     ...     def transform_batch(batch: list) -> dict:
     ...         return model.query(g, batch)
     ...     pipe = pipe.map_batches(transform_batch)
@@ -205,7 +204,7 @@ Finally we can train the model with `run_dist` function. We expect the loss to d
     RayContext(...)
     >>> trainer = TorchTrainer(
     ...     train_func,
-    ...     train_loop_config={ip, port},
+    ...     train_loop_config={},
     ...     run_config=RunConfig(verbose=0),
     ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     ... )
