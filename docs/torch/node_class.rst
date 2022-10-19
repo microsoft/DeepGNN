@@ -131,7 +131,6 @@ In the GAT model, forward pass uses two of our built-in `GATConv layers <https:/
     ...         edges = torch.squeeze(context["edges"].reshape((-1, 2)))                # [X, 2], X: num of edges in subgraph
     ...
     ...         edges = np.transpose(edges)
-    ...         edges = edges[edges != -50].reshape((2, -1))
     ...
     ...         # TODO This is not stable, when doing batch_size < graph size ends up with size < index values. use torch.unique to remap edges
     ...         sp_adj = torch.sparse_coo_tensor(edges, torch.ones(edges.shape[1], dtype=torch.float32), (nodes.shape[0], nodes.shape[0]))
@@ -139,8 +138,7 @@ In the GAT model, forward pass uses two of our built-in `GATConv layers <https:/
     ...         scores = self.out_layer(h_1, sp_adj)
     ...
     ...         scores = scores[mask]  # [batch_size]
-    ...         #pred = scores.argmax(dim=1)
-    ...         return scores  #pred
+    ...         return scores
     ...
     ...     def query(self, g, idx: int) -> Dict[Any, np.ndarray]:
     ...         """Query used to generate data for training."""
@@ -159,16 +157,10 @@ In the GAT model, forward pass uses two of our built-in `GATConv layers <https:/
     ...         input_mask = np.zeros(nodes.size, np.bool)
     ...         input_mask[src_idx] = True
     ...
-    ...         feat = g.node_features(nodes, self.feature_meta, self.feature_type)
-    ...         label = g.node_features(nodes, self.label_meta, self.label_type)
+    ...         feats = g.node_features(nodes, [self.feature_meta[0], self.label_meta[0]], self.feature_type)
+    ...         feats = labels = #label = g.node_features(nodes, , self.label_type)
     ...         label = label.astype(np.int64)
-    ...
-    ...         edges_short = edges
-    ...         edges = -50 * np.ones(((edges_short.shape[0] // nodes.size + 1) * nodes.size, 2))
-    ...         edges[:edges_short.shape[0]] = edges_short
-    ...         edges = edges.reshape((nodes.size, -1, 2))
-    ...
-    ...         return {"nodes": nodes, "feat": feat, "labels": label, "input_mask": input_mask, "edges": edges}
+    ...         return {"nodes": nodes.reshape((1, *nodes.shape)), "feat": feat.reshape((1, *feat.shape)), "labels": label.reshape((1, *label.shape)), "input_mask": input_mask.reshape((1, *input_mask.shape)), "edges": edges.reshape((1, *edges.shape))}
 
 
 Train
@@ -188,11 +180,9 @@ Finally we can train the model with `run_dist` function. We expect the loss to d
     ...
     ...     loss_fn = nn.CrossEntropyLoss()
     ...
-    ...     dataset = ray.data.range(2708, parallelism=1)
-    ...     # -> Dataset(num_blocks=1, num_rows=140, schema=<class 'int'>)
-    ...
-    ...     pipe = dataset.window(blocks_per_window=10)
-    ...     # -> DatasetPipeline(num_windows=1, num_stages=1)
+    ...     dataset = ray.data.range(2708, parallelism=1)  # -> Dataset(num_blocks=1, num_rows=140, schema=<class 'int'>)
+    ...     
+    ...     pipe = dataset.window(blocks_per_window=10)  # -> DatasetPipeline(num_windows=1, num_stages=1)
     ...
     ...     g = Client("/tmp/cora", [0])
     ...     def transform_batch(batch: list) -> dict:
@@ -215,7 +205,7 @@ Finally we can train the model with `run_dist` function. We expect the loss to d
     RayContext(...)
     >>> trainer = TorchTrainer(
     ...     train_func,
-    ...     train_loop_config={},
+    ...     train_loop_config={ip, port},
     ...     run_config=RunConfig(verbose=0),
     ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     ... )
