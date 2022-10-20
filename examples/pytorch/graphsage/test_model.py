@@ -19,6 +19,18 @@ from deepgnn.pytorch.encoding.feature_encoder import (
     TwinBERTEncoder,
     TwinBERTFeatureEncoder,
 )
+from examples.pytorch.conftest import (  # noqa: F401
+    MockSimpleDataLoader,
+    MockFixedSimpleDataLoader,
+    mock_graph,
+)
+from deepgnn.graph_engine import (
+    GraphType,
+    BackendType,
+    BackendOptions,
+    GENodeSampler,
+    create_backend,
+)
 import deepgnn.graph_engine.snark.convert as convert
 from deepgnn.graph_engine.snark.decoders import JsonDecoder
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
@@ -46,7 +58,7 @@ def train_supervised_graphsage(mock_graph):  # noqa: F811
         metric=F1Score(),
         label_idx=label_idx,
         label_dim=label_dim,
-        feature_type=np.float,
+        feature_type=np.float32,
         feature_idx=feature_idx,
         feature_dim=feature_dim,
         edge_type=edge_type,
@@ -105,7 +117,7 @@ def train_unsupervised_graphsage(mock_graph):  # noqa: F811
         num_classes=label_dim,
         metric=MRR(),
         num_negs=num_negs,
-        feature_type=np.float,
+        feature_type=np.float32,
         feature_idx=feature_idx,
         feature_dim=feature_dim,
         edge_type=edge_type,
@@ -173,7 +185,7 @@ def test_deep_graph_on_cora(train_supervised_graphsage):
         metric=F1Score(),
         label_idx=label_idx,
         label_dim=label_dim,
-        feature_type=np.float,
+        feature_type=np.float32,
         feature_idx=feature_idx,
         feature_dim=feature_dim,
         edge_type=edge_type,
@@ -191,7 +203,7 @@ def test_deep_graph_on_cora(train_supervised_graphsage):
     it = iter(trainloader)
     val_output_ref = graphsage.get_score(it.next())
     val_labels = g.node_features(
-        val_ref, np.array([[label_idx, label_dim]]), np.float
+        val_ref, np.array([[label_idx, label_dim]]), np.float32
     ).argmax(1)
     f1_ref = metric.compute(val_output_ref.argmax(axis=1), val_labels)
 
@@ -212,7 +224,7 @@ def test_deep_graph_on_unsupervised_cora(train_unsupervised_graphsage):
         num_classes=label_dim,
         metric=MRR(),
         num_negs=num_negs,
-        feature_type=np.float,
+        feature_type=np.float32,
         feature_idx=feature_idx,
         feature_dim=feature_dim,
         edge_type=edge_type,
@@ -264,7 +276,7 @@ def test_supervised_graphsage_model(mock_graph):  # noqa: F811
         metric=F1Score(),
         label_idx=label_idx,
         label_dim=label_dim,
-        feature_type=np.float,
+        feature_type=np.float32,
         feature_idx=feature_idx,
         feature_dim=feature_dim,
         edge_type=edge_type,
@@ -296,7 +308,7 @@ def test_supervised_graphsage_computational_graph(mock_graph):  # noqa: F811
         metric=F1Score(),
         label_idx=label_idx,
         label_dim=label_dim,
-        feature_type=np.float,
+        feature_type=np.float32,
         feature_idx=feature_idx,
         feature_dim=feature_dim,
         edge_type=edge_type,
@@ -334,7 +346,7 @@ def test_supervised_graphsage_loss_value(mock_graph):  # noqa: F811
         metric=F1Score(),
         label_idx=label_idx,
         label_dim=label_dim,
-        feature_type=np.float,
+        feature_type=np.float32,
         feature_idx=feature_idx,
         feature_dim=feature_dim,
         edge_type=edge_type,
@@ -377,7 +389,7 @@ def test_unsupervised_graphsage_model(mock_graph):  # noqa: F811
         num_classes=label_dim,
         metric=MRR(),
         num_negs=num_negs,
-        feature_type=np.float,
+        feature_type=np.float32,
         feature_idx=feature_idx,
         feature_dim=feature_dim,
         edge_type=edge_type,
@@ -406,7 +418,7 @@ def test_unsupervised_graphsage_loss_value(mock_graph):  # noqa: F811
         num_classes=label_dim,
         metric=MRR(),
         num_negs=num_negs,
-        feature_type=np.float,
+        feature_type=np.float32,
         feature_idx=feature_idx,
         feature_dim=feature_dim,
         edge_type=edge_type,
@@ -453,11 +465,11 @@ def tiny_graph():
     graph_dir.cleanup()
 
 
-def get_twinbert_encoder(test_rootdir, config_file, feature_type=np.uint8):
+def get_twinbert_encoder(test_rootdir, config_file, dtype=np.uint8):
     torch.manual_seed(0)
     config_file = os.path.join(test_rootdir, "twinbert", config_file)
     config = TwinBERTEncoder.init_config_from_file(config_file)
-    return TwinBERTFeatureEncoder(feature_type, config, pooler_count=2)
+    return TwinBERTFeatureEncoder(dtype, config, pooler_count=2)
 
 
 @pytest.fixture(scope="module")
@@ -486,7 +498,6 @@ def train_unsupervised_graphsage_with_feature_encoder(tiny_graph):
     loss_list = []
     while epochs_left > 0:
         epochs_left -= 1
-
 
         trainloader = torch.utils.data.DataLoader(
             TorchDeepGNNDataset(

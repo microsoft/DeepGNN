@@ -102,19 +102,17 @@ Our goal is to create a model capable of predicting whether an edge exists betwe
 
 .. code-block:: python
 
-    >>> from typing import List, Tuple, Any, Iterator
-    >>> from dataclasses import dataclass
-    >>> import argparse
-    >>> import numpy as np
-    >>> import torch
-    >>> from torch.utils.data import Dataset, DataLoader, Sampler
-    >>> from deepgnn.graph_engine import SamplingStrategy
-    >>> from deepgnn.pytorch.common.utils import set_seed
-    >>> from deepgnn.pytorch.modeling import BaseModel
-    Moving 0 files to the new cache system
-    >>> from deepgnn.pytorch.training import run_dist
-    >>> from deepgnn.pytorch.common.metrics import F1Score
-    >>> from deepgnn.graph_engine.snark.local import Client
+	>>> from dataclasses import dataclass
+	>>> import argparse
+	>>> import numpy as np
+	>>> import torch
+	>>> from deepgnn.pytorch.modeling.base_model import BaseModel
+	>>> from deepgnn.graph_engine import SamplingStrategy, GEEdgeSampler, GraphEngineBackend
+	>>> from deepgnn.pytorch.common.utils import set_seed
+	>>> from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
+	>>> from deepgnn.pytorch.modeling import BaseModel
+	>>> from deepgnn.pytorch.training import run_dist
+	>>> from deepgnn.pytorch.common.metrics import F1Score
 
 Query is the interface between the model and graph database. It uses the graph engine API to perform graph functions like `node_features` and `sample_neighbors`, for a full reference on this interface see, `this guide <../graph_engine/overview>`_. Typically Query is initialized by the model as `self.q` so its functions may also be used ad-hoc by the model.
 
@@ -122,95 +120,64 @@ In this example, the query function will generate a set of positive and negative
 
 .. code-block:: python
 
-    >>> class LinkPredictionDataset(Dataset):
-    ...     """Cora dataset with file sampler."""
-    ...     def __init__(self, data_dir: str, node_types: List[int], feature_meta: List[int], label_meta: List[int], feature_type: np.dtype, label_type: np.dtype, neighbor_edge_types: List[int] = [0], num_hops: int = 2):
-    ...         self.g = Client(data_dir, [0])
-    ...         self.node_types = np.array(node_types)
-    ...         self.feature_meta = np.array([feature_meta])
-    ...         self.label_meta = np.array([label_meta])
-    ...         self.feature_type = feature_type
-    ...         self.label_type = label_type
-    ...         self.neighbor_edge_types = np.array(neighbor_edge_types, np.int64)
-    ...         self.num_hops = num_hops
-    ...         self.count = self.g.node_count(self.node_types)
-    ... 
-    ...     def __len__(self):
-    ...         return self.count
-    ...
-    ...     def _query(self, nodes, edge_types):
-    ...         # Sample neighbors for every input node
-    ...         try:
-    ...             nodes = nodes.detach().numpy()
-    ...         except Exception:
-    ...             pass
-    ...         nbs = self.g.sample_neighbors(
-    ...             nodes=nodes.astype(dtype=np.int64),
-    ...             edge_types=edge_types)[0]
-    ...
-    ...         # Extract features for all neighbors
-    ...         nbs_features = self.g.node_features(
-    ...             nodes=nbs.reshape(-1),
-    ...             features=self.feature_meta,
-    ...             feature_type=self.feature_type)
-    ...
-    ...         # reshape the feature tensor to [nodes, neighbors, features]
-    ...         # and aggregate along neighbors dimension.
-    ...         nbs_agg = nbs_features.reshape(list(nbs.shape)+[self.feature_meta[0][1]]).mean(1)
-    ...         node_features = self.g.node_features(
-    ...             nodes=nodes.astype(dtype=np.int64),
-    ...             features=self.feature_meta,
-    ...             feature_type=self.feature_type,
-    ...         )
-    ...         return node_features, nbs_agg
-    ...
-    ...     def __getitem__(self, edges: int) -> Tuple[Any, Any]:
-    ...         edge_types = edges[:, 2]
-    ...         edges = torch.Tensor(edges[:, :2]).long()
-    ...         src, src_nbs = self._query(edges[:, 0], edge_types)
-    ...         dst, dst_nbs = self._query(edges[:, 1], edge_types)
-    ...         context = [edges, src, src_nbs, dst, dst_nbs]
-    ...
-    ...         # Prepare negative examples: edges between source nodes and random nodes
-    ...         dim = len(edges)
-    ...         source_nodes = torch.as_tensor(edges[:, 0], dtype=torch.int64).reshape(1, dim)
-    ...         random_nodes = self.g.sample_nodes(dim, node_types=0, strategy=SamplingStrategy.Weighted).reshape(1, dim)
-    ...         neg_inputs = torch.cat((source_nodes, torch.tensor(random_nodes)), axis=1)
-    ...         src, src_nbs = self._query(neg_inputs[:, 0], edge_types)
-    ...         dst, dst_nbs = self._query(neg_inputs[:, 1], edge_types)
-    ...         context += [edges, src, src_nbs, dst, dst_nbs]
-    ...
-    ...         return context
+	>>> @dataclass
+	... class LinkPredictionQueryParameter:
+	...     neighbor_edge_types: np.array
+	...     feature_idx: int
+	...     feature_dim: int
+	...     label_idx: int
+	...     label_dim: int
+	...     feature_type: np.dtype = np.float32
+	...     label_type: np.dtype = np.float32
 
-    >>> class BatchedSampler:
-    ...     def __init__(self, sampler, batch_size):
-    ...         self.sampler = sampler
-    ...         self.batch_size = batch_size
-    ... 
-    ...     def __len__(self):
-    ...         return len(self.sampler) // self.batch_size
-    ... 
-    ...     def __iter__(self) -> Iterator[int]:
-    ...         generator = iter(self.sampler)
-    ...         x = []
-    ...         while True:
-    ...             try:
-    ...                 for _ in range(self.batch_size):
-    ...                     x.append(next(generator))
-    ...                 yield np.array(x, dtype=np.int64)
-    ...                 x = []
-    ...             except Exception:
-    ...                 break
-    ... 		if len(x):
-    ...				yield np.array(x, dtype=np.int64)
-
-    >>> class RandomSampler:
-    ...     def __init__(self, n_items):
-    ...     	self.n_items = n_items
-    ...
-    ...     def __iter__(self):
-    ...     	for _ in range(n_items):
-    ...				yield (np.random.randint(0, self.n_items), np.random.randint(0, self.n_items), 0)
+	>>> class LinkPredictionQuery:
+	...     def __init__(self, p: LinkPredictionQueryParameter):
+	...         self.p = p
+	...         self.label_meta = np.array([[p.label_idx, p.label_dim]], np.int32)
+	...         self.feat_meta = np.array([[p.feature_idx, p.feature_dim]], np.int32)
+	...
+	...     def _query(self, g, nodes, edge_types):
+	...         # Sample neighbors for every input node
+	...         try:
+	...             nodes = nodes.detach().numpy()
+	...         except Exception:
+	...             pass
+	...         nbs = g.sample_neighbors(
+	...             nodes=nodes.astype(dtype=np.int64),
+	...             edge_types=edge_types)[0]
+	...
+	...         # Extract features for all neighbors
+	...         nbs_features = g.node_features(
+	...             nodes=nbs.reshape(-1),
+	...             features=self.feat_meta,
+	...             feature_type=self.p.feature_type)
+	...
+	...         # reshape the feature tensor to [nodes, neighbors, features]
+	...         # and aggregate along neighbors dimension.
+	...         nbs_agg = nbs_features.reshape(list(nbs.shape)+[self.p.feature_dim]).mean(1)
+	...         node_features = g.node_features(
+	...             nodes=nodes.astype(dtype=np.int64),
+	...             features=self.feat_meta,
+	...             feature_type=self.p.feature_type,
+	...         )
+	...         return node_features, nbs_agg
+	...
+	...     def query_training(self, ge, edges, edge_types = np.array([0], dtype=np.int32)):
+	...         edges = torch.Tensor(edges[:, :2]).long()
+	...         src, src_nbs = self._query(ge, edges[:, 0], edge_types)
+	...         dst, dst_nbs = self._query(ge, edges[:, 1], edge_types)
+	...         context = [edges, src, src_nbs, dst, dst_nbs]
+	...
+	...         # Prepare negative examples: edges between source nodes and random nodes
+	...         dim = len(edges)
+	...         source_nodes = torch.as_tensor(edges[:, 0], dtype=torch.int64).reshape(1, dim)
+	...         random_nodes = ge.sample_nodes(dim, node_types=0, strategy=SamplingStrategy.Weighted).reshape(1, dim)
+	...         neg_inputs = torch.cat((source_nodes, torch.tensor(random_nodes)), axis=1)
+	...         src, src_nbs = self._query(ge, neg_inputs[:, 0], edge_types)
+	...         dst, dst_nbs = self._query(ge, neg_inputs[:, 1], edge_types)
+	...         context += [edges, src, src_nbs, dst, dst_nbs]
+	...
+	...         return context
 
 
 The model init and forward look the same as any other pytorch model, though instead of inhereting `torch.nn.Module`, we base off of `deepgnn.pytorch.modeling.base_model.BaseModel` which itself is a torch module with DeepGNN's specific interface. The forward function is expected to return three values: the batch loss, the model predictions for the given nodes and the expected labels for the given nodes.

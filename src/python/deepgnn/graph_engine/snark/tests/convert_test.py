@@ -13,8 +13,10 @@ import numpy as np
 import numpy.testing as npt
 
 import deepgnn.graph_engine.snark.convert as convert
-from deepgnn.graph_engine.snark.decoders import JsonDecoder, TsvDecoder
+from deepgnn.graph_engine.snark.decoders import JsonDecoder, EdgeListDecoder, TsvDecoder
 from deepgnn.graph_engine.snark.dispatcher import QueueDispatcher
+from deepgnn.graph_engine.snark.converter.writers import BinaryWriter
+from util_test import json_to_edge_list
 from deepgnn.graph_engine.snark.meta import BINARY_DATA_VERSION
 
 
@@ -102,6 +104,10 @@ def triangle_graph(request):
     workdir = tempfile.TemporaryDirectory()
     if request.param == JsonDecoder:
         data_name = triangle_graph_json(workdir.name)
+    elif request.param == EdgeListDecoder:
+        json_name = triangle_graph_json(workdir.name)
+        data_name = os.path.join(workdir.name, "graph.csv")
+        json_to_edge_list(json_name, data_name)
     elif request.param == TsvDecoder:
         data_name = triangle_graph_tsv(workdir.name)
     else:
@@ -111,7 +117,47 @@ def triangle_graph(request):
     workdir.cleanup()
 
 
-param = [JsonDecoder, TsvDecoder]
+param = [JsonDecoder, EdgeListDecoder, TsvDecoder]
+
+
+@pytest.mark.parametrize("triangle_graph", param, indirect=True)
+def test_converter_0_workers(triangle_graph):
+    output = tempfile.TemporaryDirectory()
+    data_name, decoder = triangle_graph
+    convert.MultiWorkersConverter(
+        graph_path=data_name,
+        partition_count=1,
+        output_dir=output.name,
+        decoder=decoder(),
+        debug=True,
+    ).convert()
+
+    with open("{}/node_{}_{}.map".format(output.name, 0, 0), "rb") as nm:
+        expected_size = 3 * (2 * 8 + 4)
+        result = nm.read(expected_size + 8)
+        assert len(result) == expected_size
+        assert result[0:8] == (9).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:20] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[20:28] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[28:36] == (1).to_bytes(8, byteorder=sys.byteorder)
+        assert result[36:40] == (1).to_bytes(4, byteorder=sys.byteorder)
+        assert result[40:48] == (5).to_bytes(8, byteorder=sys.byteorder)
+        assert result[48:56] == (2).to_bytes(8, byteorder=sys.byteorder)
+        assert result[56:60] == (2).to_bytes(4, byteorder=sys.byteorder)
+
+    with pytest.raises(ValueError):
+        output = tempfile.TemporaryDirectory()
+        data_name, decoder = triangle_graph
+        convert.MultiWorkersConverter(
+            graph_path=data_name,
+            partition_count=1,
+            output_dir=output.name,
+            decoder=JsonDecoder()
+            if isinstance(decoder(), TsvDecoder)
+            else TsvDecoder(),
+            debug=True,
+        ).convert()
 
 
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
@@ -346,36 +392,66 @@ def test_edge_alias_tables(triangle_graph):
         decoder=decoder(),
         dispatcher=d,
     ).convert()
-    with open("{}/edge_0_0.alias".format(output.name), "rb") as ea:
-        expected_size = 36  # Only 1 record
-        result = ea.read(expected_size + 1)
-        assert len(result) == expected_size
-        assert result[0:8] == (9).to_bytes(8, byteorder=sys.byteorder)
-        assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
-        assert result[16:24] == (0).to_bytes(8, byteorder=sys.byteorder)
-        assert result[24:32] == (0).to_bytes(8, byteorder=sys.byteorder)
-        assert result[32:36] == struct.pack("=f", 1.0)
 
-    with open("{}/edge_1_0.alias".format(output.name), "rb") as ea:
-        expected_size = 36  # Only 1 record
-        result = ea.read(expected_size + 1)
-        assert len(result) == expected_size
-        assert result[0:8] == (5).to_bytes(8, byteorder=sys.byteorder)
-        assert result[8:16] == (9).to_bytes(8, byteorder=sys.byteorder)
-        assert result[16:24] == (0).to_bytes(8, byteorder=sys.byteorder)
-        assert result[24:32] == (0).to_bytes(8, byteorder=sys.byteorder)
-        assert result[32:36] == struct.pack("=f", 1.0)
+    if decoder == EdgeListDecoder:
+        assert os.path.getsize("{}/edge_0_0.alias".format(output.name)) == 0
+        assert os.path.getsize("{}/edge_1_0.alias".format(output.name)) == 0
 
-    with open("{}/edge_1_1.alias".format(output.name), "rb") as ea:
-        expected_size = 36  # Only 1 record
-        result = ea.read(expected_size + 1)
-        assert len(result) == expected_size
-        assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
-        assert result[8:16] == (5).to_bytes(8, byteorder=sys.byteorder)
-        assert result[16:24] == (0).to_bytes(8, byteorder=sys.byteorder)
-        assert result[24:32] == (0).to_bytes(8, byteorder=sys.byteorder)
-        assert result[32:36] == struct.pack("=f", 1.0)
-    assert os.path.getsize("{}/edge_0_1.alias".format(output.name)) == 0
+        with open("{}/edge_0_1.alias".format(output.name), "rb") as ea:
+            expected_size = 36  # Only 1 record
+            result = ea.read(expected_size + 1)
+            assert len(result) == expected_size
+            assert result[0:8] == (9).to_bytes(8, byteorder=sys.byteorder)
+            assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[16:24] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[24:32] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[32:36] == struct.pack("=f", 1.0)
+
+        with open("{}/edge_1_1.alias".format(output.name), "rb") as ea:
+            expected_size = 2 * 36  # 2 record
+            result = ea.read(expected_size + 1)
+            assert len(result) == expected_size
+            assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[8:16] == (5).to_bytes(8, byteorder=sys.byteorder)
+            assert result[16:24] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[24:32] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[32:36] == struct.pack("=f", 1.0)
+            assert result[36:44] == (5).to_bytes(8, byteorder=sys.byteorder)
+            assert result[44:52] == (9).to_bytes(8, byteorder=sys.byteorder)
+            assert result[52:60] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[60:68] == (5).to_bytes(8, byteorder=sys.byteorder)
+    else:
+        assert os.path.getsize("{}/edge_0_1.alias".format(output.name)) == 0
+
+        with open("{}/edge_0_0.alias".format(output.name), "rb") as ea:
+            expected_size = 36  # Only 1 record
+            result = ea.read(expected_size + 1)
+            assert len(result) == expected_size
+            assert result[0:8] == (9).to_bytes(8, byteorder=sys.byteorder)
+            assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[16:24] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[24:32] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[32:36] == struct.pack("=f", 1.0)
+
+        with open("{}/edge_1_0.alias".format(output.name), "rb") as ea:
+            expected_size = 36  # Only 1 record
+            result = ea.read(expected_size + 1)
+            assert len(result) == expected_size
+            assert result[0:8] == (5).to_bytes(8, byteorder=sys.byteorder)
+            assert result[8:16] == (9).to_bytes(8, byteorder=sys.byteorder)
+            assert result[16:24] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[24:32] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[32:36] == struct.pack("=f", 1.0)
+
+        with open("{}/edge_1_1.alias".format(output.name), "rb") as ea:
+            expected_size = 36  # Only 1 record
+            result = ea.read(expected_size + 1)
+            assert len(result) == expected_size
+            assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[8:16] == (5).to_bytes(8, byteorder=sys.byteorder)
+            assert result[16:24] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[24:32] == (0).to_bytes(8, byteorder=sys.byteorder)
+            assert result[32:36] == struct.pack("=f", 1.0)
 
 
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
@@ -408,7 +484,11 @@ def test_node_alias_tables(triangle_graph):
         assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
         assert result[16:20] == struct.pack("=f", 1.0)
 
-    with open("{}/node_1_1.alias".format(output.name), "rb") as ea:
+    if decoder == EdgeListDecoder:
+        filename = "{}/node_1_0.alias"
+    else:
+        filename = "{}/node_1_1.alias"
+    with open(filename.format(output.name), "rb") as ea:
         expected_size = 20  # Only 1 record
         result = ea.read(expected_size + 1)
         assert len(result) == expected_size
@@ -426,7 +506,11 @@ def test_node_alias_tables(triangle_graph):
 
     assert os.path.getsize("{}/node_0_1.alias".format(output.name)) == 0
     assert os.path.getsize("{}/node_2_1.alias".format(output.name)) == 0
-    assert os.path.getsize("{}/node_1_0.alias".format(output.name)) == 0
+    if decoder == EdgeListDecoder:
+        filename = "{}/node_1_1.alias"
+    else:
+        filename = "{}/node_1_0.alias"
+    assert os.path.getsize(filename.format(output.name)) == 0
 
 
 def graph_with_sparse_features_json(folder):
@@ -534,6 +618,10 @@ def graph_with_sparse_features(request):
     workdir = tempfile.TemporaryDirectory()
     if request.param == JsonDecoder:
         data_name = graph_with_sparse_features_json(workdir.name)
+    elif request.param == EdgeListDecoder:
+        json_name = graph_with_sparse_features_json(workdir.name)
+        data_name = os.path.join(workdir.name, "graph.csv")
+        json_to_edge_list(json_name, data_name)
     else:
         raise ValueError("Unsupported format.")
 
@@ -541,7 +629,10 @@ def graph_with_sparse_features(request):
     workdir.cleanup()
 
 
-@pytest.mark.parametrize("graph_with_sparse_features", [JsonDecoder], indirect=True)
+param_sparse = [JsonDecoder, EdgeListDecoder]
+
+
+@pytest.mark.parametrize("graph_with_sparse_features", param_sparse, indirect=True)
 def test_sanity_node_sparse_features_index(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
     data_name, decoder = graph_with_sparse_features
@@ -562,7 +653,7 @@ def test_sanity_node_sparse_features_index(graph_with_sparse_features):
         assert actual[6:11] == [60, 96, 96, 96, 128]
 
 
-@pytest.mark.parametrize("graph_with_sparse_features", [JsonDecoder], indirect=True)
+@pytest.mark.parametrize("graph_with_sparse_features", param_sparse, indirect=True)
 def test_sanity_node_sparse_features_data(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
     data_name, decoder = graph_with_sparse_features
@@ -594,7 +685,10 @@ def test_sanity_node_sparse_features_data(graph_with_sparse_features):
         )
 
         assert int.from_bytes(result[60:64], sys.byteorder) == 3
-        assert int.from_bytes(result[64:68], sys.byteorder) == 1
+        if decoder == EdgeListDecoder:
+            assert int.from_bytes(result[64:68], sys.byteorder) == 3
+        else:
+            assert int.from_bytes(result[64:68], sys.byteorder) == 1
         npt.assert_equal(np.frombuffer(result[68:92], dtype=np.int64), [1, 3, 7])
         npt.assert_almost_equal(np.frombuffer(result[92:96], dtype=np.float32), [5.5])
 
@@ -606,7 +700,7 @@ def test_sanity_node_sparse_features_data(graph_with_sparse_features):
         )
 
 
-@pytest.mark.parametrize("graph_with_sparse_features", [JsonDecoder], indirect=True)
+@pytest.mark.parametrize("graph_with_sparse_features", param_sparse, indirect=True)
 def test_sanity_edge_sparse_features_index(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
     data_name, decoder = graph_with_sparse_features
@@ -628,7 +722,7 @@ def test_sanity_edge_sparse_features_index(graph_with_sparse_features):
         assert actual[16:19] == [362, 362, 394]
 
 
-@pytest.mark.parametrize("graph_with_sparse_features", [JsonDecoder], indirect=True)
+@pytest.mark.parametrize("graph_with_sparse_features", param_sparse, indirect=True)
 def test_sanity_edge_sparse_features_data(graph_with_sparse_features):
     output = tempfile.TemporaryDirectory()
     data_name, decoder = graph_with_sparse_features
@@ -722,6 +816,434 @@ def test_sanity_edge_sparse_features_data(graph_with_sparse_features):
         )
 
 
+def _gen_edge_list(output, data_data, kwargs={}, partitions=1):
+    data = open(os.path.join(output.name, "graph.csv"), "w+")
+    for v in data_data:
+        data.write(v)
+    data.flush()
+    data.close()
+    convert.MultiWorkersConverter(
+        graph_path=data.name,
+        partition_count=partitions,
+        output_dir=output.name,
+        decoder=EdgeListDecoder(**kwargs),
+    ).convert()
+
+
+def test_edge_list_header():
+    output = tempfile.TemporaryDirectory()
+    data_data = [
+        "0,-1\n",
+        "1,-1\n",
+        "2,-1\n",
+    ]
+    meta_data = {"default_node_type": 0, "default_node_weight": 1.5}
+    _gen_edge_list(output, data_data, meta_data)
+    with open("{}/node_{}_{}.map".format(output.name, 0, 0), "rb") as nm:
+        expected_size = 3 * (2 * 8 + 4)
+        result = nm.read(expected_size + 8)
+        assert len(result) == expected_size
+        assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:20] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[20:28] == (1).to_bytes(8, byteorder=sys.byteorder)
+        assert result[28:36] == (1).to_bytes(8, byteorder=sys.byteorder)
+        assert result[36:40] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[40:48] == (2).to_bytes(8, byteorder=sys.byteorder)
+        assert result[48:56] == (2).to_bytes(8, byteorder=sys.byteorder)
+        assert result[56:60] == (0).to_bytes(4, byteorder=sys.byteorder)
+
+    output = tempfile.TemporaryDirectory()
+    data_data = [
+        "0,-1,0,0\n0,1\n0,2\n",
+        "1,-1,0,0\n1,0\n1,2\n",
+        "2,-1,0,0\n2,0\n2,1\n",
+    ]
+    meta_data = {"default_edge_type": 0, "default_edge_weight": 200}
+    _gen_edge_list(output, data_data, meta_data)
+    with open("{}/edge_{}_{}.index".format(output.name, 0, 0), "rb") as ei:
+        expected_size = 7 * 24
+        result = ei.read(expected_size + 100)
+        assert len(result) == expected_size
+        assert result[0:8] == (1).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:20] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[20:24] == struct.pack("f", 200)
+
+        assert result[24:32] == (2).to_bytes(8, byteorder=sys.byteorder)
+        assert result[32:40] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[40:44] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[44:48] == struct.pack("f", 200)
+
+        assert result[48:56] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[56:64] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[64:68] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[68:72] == struct.pack("f", 200)
+
+        assert result[72:80] == (2).to_bytes(8, byteorder=sys.byteorder)
+        assert result[80:88] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[88:92] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[92:96] == struct.pack("f", 200)
+
+    output = tempfile.TemporaryDirectory()
+    data_data = [
+        "0,-1,1,2,1.1,2.2\n",
+        "1,-1,3,4,3.3,4.4\n",
+        "2,-1,5,6,5.5,6.6\n",
+    ]
+    meta_data = {
+        "default_node_type": 0,
+        "default_node_weight": 1.5,
+        "default_node_feature_types": ["uint64", "float32"],
+        "default_node_feature_lens": [[2], [2]],
+    }
+    _gen_edge_list(output, data_data, meta_data)
+    with open("{}/node_features_{}_{}.data".format(output.name, 0, 0), "rb") as nfd:
+        expected_size = 72
+        result = nfd.read(expected_size + 1)
+        assert len(result) == expected_size
+        npt.assert_equal(np.frombuffer(result[0:16], dtype=np.uint64), [1, 2])
+        npt.assert_almost_equal(
+            np.frombuffer(result[16:24], dtype=np.float32), [1.1, 2.2]
+        )
+        npt.assert_equal(np.frombuffer(result[24:40], dtype=np.uint64), [3, 4])
+        npt.assert_almost_equal(
+            np.frombuffer(result[40:48], dtype=np.float32), [3.3, 4.4]
+        )
+        npt.assert_equal(np.frombuffer(result[48:64], dtype=np.uint64), [5, 6])
+        npt.assert_almost_equal(
+            np.frombuffer(result[64:72], dtype=np.float32), [5.5, 6.6]
+        )
+
+    output = tempfile.TemporaryDirectory()
+    data_data = [
+        "0,-1,0,0\n0,0,1,1.5,1,2,1.1,2.2\n",
+        "1,-1,0,0\n1,0,0,1.5,3,4,3.3,4.4\n",
+        "2,-1,0,0\n2,0,0,1.5,5,6,5.5,6.6\n",
+    ]
+    meta_data = {
+        "default_edge_feature_types": ["uint64", "float32"],
+        "default_edge_feature_lens": [[2], [2]],
+    }
+    _gen_edge_list(output, data_data, meta_data)
+    with open("{}/edge_features_{}_{}.data".format(output.name, 0, 0), "rb") as nfd:
+        expected_size = 72
+        result = nfd.read(expected_size + 1)
+        assert len(result) == expected_size
+        npt.assert_equal(np.frombuffer(result[0:16], dtype=np.uint64), [1, 2])
+        npt.assert_almost_equal(
+            np.frombuffer(result[16:24], dtype=np.float32), [1.1, 2.2]
+        )
+        npt.assert_equal(np.frombuffer(result[24:40], dtype=np.uint64), [3, 4])
+        npt.assert_almost_equal(
+            np.frombuffer(result[40:48], dtype=np.float32), [3.3, 4.4]
+        )
+        npt.assert_equal(np.frombuffer(result[48:64], dtype=np.uint64), [5, 6])
+        npt.assert_almost_equal(
+            np.frombuffer(result[64:72], dtype=np.float32), [5.5, 6.6]
+        )
+
+    output = tempfile.TemporaryDirectory()
+    data_data = [
+        "0,-1,uint64,2,1,2,1.1,2.2,int32,2,1,2\n",
+        "1,-1,uint64,2,3,4,3.3,4.4,int32,2,3,4\n",
+        "2,-1,uint64,2,5,6,5.5,6.6,int32,2,5,6\n",
+    ]
+    meta_data = {
+        "default_node_type": 0,
+        "default_node_weight": 1.5,
+        "default_node_feature_types": [None, "float32"],
+        "default_node_feature_lens": [None, [2]],
+    }
+    _gen_edge_list(output, data_data, meta_data)
+    with open("{}/node_features_{}_{}.data".format(output.name, 0, 0), "rb") as nfd:
+        expected_size = 96
+        result = nfd.read(expected_size + 1)
+        assert len(result) == expected_size
+        npt.assert_equal(np.frombuffer(result[0:16], dtype=np.uint64), [1, 2])
+        npt.assert_almost_equal(
+            np.frombuffer(result[16:24], dtype=np.float32), [1.1, 2.2]
+        )
+        npt.assert_equal(np.frombuffer(result[24:32], dtype=np.int32), [1, 2])
+        npt.assert_equal(np.frombuffer(result[32:48], dtype=np.uint64), [3, 4])
+        npt.assert_almost_equal(
+            np.frombuffer(result[48:56], dtype=np.float32), [3.3, 4.4]
+        )
+        npt.assert_equal(np.frombuffer(result[56:64], dtype=np.int32), [3, 4])
+        npt.assert_equal(np.frombuffer(result[64:80], dtype=np.uint64), [5, 6])
+        npt.assert_almost_equal(
+            np.frombuffer(result[80:88], dtype=np.float32), [5.5, 6.6]
+        )
+        npt.assert_equal(np.frombuffer(result[88:96], dtype=np.int32), [5, 6])
+
+
+def test_edge_list_header_multiple_partitions():
+    output = tempfile.TemporaryDirectory()
+    data_data = [
+        "0,-1\n",
+        "1,-1\n",
+        "2,-1\n",
+    ]
+    meta_data = {"default_node_type": 0, "default_node_weight": 1.5}
+    _gen_edge_list(output, data_data, meta_data, partitions=2)
+    with open("{}/node_{}_{}.map".format(output.name, 0, 0), "rb") as nm:
+        expected_size = 2 * (2 * 8 + 4)
+        result = nm.read(expected_size + 8)
+        assert len(result) == expected_size
+        assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
+        assert result[16:20] == (0).to_bytes(4, byteorder=sys.byteorder)
+        assert result[20:28] == (2).to_bytes(8, byteorder=sys.byteorder)
+        assert result[28:36] == (1).to_bytes(8, byteorder=sys.byteorder)
+        assert result[36:40] == (0).to_bytes(4, byteorder=sys.byteorder)
+
+
+def test_edge_list_error_checking():
+    decoder = EdgeListDecoder()
+    with pytest.raises(StopIteration):
+        next(decoder.decode(""))
+    with pytest.raises(ValueError):
+        next(decoder.decode("x"))
+    with pytest.raises(RuntimeError):
+        next(decoder.decode("0,-1"))
+    with pytest.raises(RuntimeError):
+        next(decoder.decode("0,-1,4"))
+    with pytest.raises(ValueError):
+        next(decoder.decode("0,-1,4,x"))
+    with pytest.raises(RuntimeError):
+        next(decoder.decode("0,-1,4,1,bad_key"))
+    with pytest.raises(RuntimeError):
+        next(decoder.decode("0,-1,4,1,float32"))
+    with pytest.raises(ValueError):
+        next(decoder.decode("0,-1,4,1,float32,2"))
+    with pytest.raises(ValueError):
+        next(decoder.decode("0,-1,4,1,float32,2,1"))
+    with pytest.raises(ValueError):
+        next(decoder.decode("0,-1,4,1,float32,2,1,x"))
+    next(decoder.decode("0,-1,4,1,float32,2,1,1"))
+    next(decoder.decode("0,-1,4,1,binary,1,test"))
+    next(decoder.decode("0,-1,4,1,float32,0"))
+    with pytest.raises(RuntimeError):
+        gen = decoder.decode("0,1")
+        next(gen)
+    with pytest.raises(RuntimeError):
+        gen = decoder.decode("0,1,4")
+        next(gen)
+    gen = decoder.decode("0,1,4,1")
+    next(gen)
+
+
+def test_edge_list_binary_escape():
+    decoder = EdgeListDecoder()
+    src, dst, typ, weight, features = next(decoder.decode("0,-1,0,1.0,binary,1,test"))
+    assert features[0] == "test"
+    with pytest.raises(RuntimeError):
+        src, dst, typ, weight, features = next(
+            decoder.decode("0,-1,0,1.0,binary,1,test,feature")
+        )
+    src, dst, typ, weight, features = next(
+        decoder.decode("0,-1,0,1.0,binary,1,test\,feature")
+    )
+    assert features[0] == "test,feature"
+    with pytest.raises(RuntimeError):
+        src, dst, typ, weight, features = next(
+            decoder.decode(r"0,-1,0,1.0,binary,1,test\\,feature")
+        )
+    src, dst, typ, weight, features = next(
+        decoder.decode(r"0,-1,0,1.0,binary,1,test\\\,feature")
+    )
+    assert features[0] == r"test\\,feature"
+    src, dst, typ, weight, features = next(
+        decoder.decode(r"0,-1,0,1.0,binary,1,test\,feature\\")
+    )
+    assert features[0] == r"test,feature\\"
+    src, dst, typ, weight, features = next(
+        decoder.decode("0,-1,0,1.0,binary,1,test,,feature")
+    )
+    assert len(features) == 1
+    assert features[0] == r"test"
+    with pytest.raises(RuntimeError):
+        src, dst, typ, weight, features = next(
+            decoder.decode("0,-1,0,1.0,binary,1,\test,\feature")
+        )
+    with pytest.raises(RuntimeError):
+        src, dst, typ, weight, features = next(
+            decoder.decode("0,-1,0,1.0,binary,1,\test,\\feature")
+        )
+    src, dst, typ, weight, features = next(
+        decoder.decode("0,-1,0,1.0,binary,1,\,feature")
+    )
+    assert features[0] == ",feature"
+    with pytest.raises(RuntimeError):
+        src, dst, typ, weight, features = next(
+            decoder.decode("0,-1,0,1.0,binary,1,,feature")
+        )
+    with pytest.raises(ValueError):
+        src, dst, typ, weight, features = next(
+            decoder.decode("0,-1,0,1.0,binary,1,test,feature,")
+        )
+    src, dst, typ, weight, features = next(
+        decoder.decode("0,-1,0,1.0,binary,1,test\,feature,")
+    )
+    assert features[0] == "test,feature"
+    src, dst, typ, weight, features = next(
+        decoder.decode("0,-1,0,1.0,binary,1,test\,feature\,")
+    )
+    assert features[0] == "test,feature,"
+    src, dst, typ, weight, features = next(
+        decoder.decode("0,-1,0,1.0,binary,1,test\,\,feature\,")
+    )
+    assert features[0] == "test,,feature,"
+
+    src, dst, typ, weight, features = next(
+        decoder.decode("0,-1,0,1.0,binary,1,test,binary,1,feature")
+    )
+    assert features[0] == "test"
+    assert features[1] == "feature"
+    with pytest.raises(ValueError):
+        src, dst, typ, weight, features = next(
+            decoder.decode("0,-1,0,1.0,binary,1,test,feature,binary,1,feature")
+        )
+    src, dst, typ, weight, features = next(
+        decoder.decode("0,-1,0,1.0,binary,1,test\,feature,binary,1,feature")
+    )
+    assert features[0] == "test,feature"
+    assert features[1] == "feature"
+    with pytest.raises(ValueError):
+        src, dst, typ, weight, features = next(
+            decoder.decode(r"0,-1,0,1.0,binary,1,test\\,feature,binary,1,feature")
+        )
+    src, dst, typ, weight, features = next(
+        decoder.decode(r"0,-1,0,1.0,binary,1,test\\\,feature,binary,1,feature")
+    )
+    assert features[0] == r"test\\,feature"
+    assert features[1] == "feature"
+    src, dst, typ, weight, features = next(
+        decoder.decode(r"0,-1,0,1.0,binary,1,test\,feature\\,binary,1,feature")
+    )
+    assert features[0] == r"test,feature\\"
+    assert features[1] == "feature"
+    with pytest.raises(ValueError):
+        src, dst, typ, weight, features = next(
+            decoder.decode("0,-1,0,1.0,binary,1,\test,\feature,binary,1,feature")
+        )
+    with pytest.raises(ValueError):
+        src, dst, typ, weight, features = next(
+            decoder.decode("0,-1,0,1.0,binary,1,\test,\\feature,binary,1,feature")
+        )
+    src, dst, typ, weight, features = next(
+        decoder.decode("0,-1,0,1.0,binary,1,\,feature,binary,1,feature")
+    )
+    assert features[0] == ",feature"
+    assert features[1] == "feature"
+    with pytest.raises(ValueError):
+        src, dst, typ, weight, features = next(
+            decoder.decode("0,-1,0,1.0,binary,1,,feature,binary,1,feature")
+        )
+    with pytest.raises(ValueError):
+        src, dst, typ, weight, features = next(
+            decoder.decode("0,-1,0,1.0,binary,1,test,feature,binary,1,feature,")
+        )
+    src, dst, typ, weight, features = next(
+        decoder.decode("0,-1,0,1.0,binary,1,test\,feature\,,binary,1,feature")
+    )
+    assert features[0] == "test,feature,"
+    assert features[1] == "feature"
+    src, dst, typ, weight, features = next(
+        decoder.decode("0,-1,0,1.0,binary,1,test\,\,feature\,,binary,1,feature")
+    )
+    assert features[0] == "test,,feature,"
+    assert features[1] == "feature"
+    src, dst, typ, weight, features = next(
+        decoder.decode(r"0,-1,0,1.0,binary,1,test\,\,feature\,,binary,1,\\")
+    )
+    assert features[1] == r"\\"
+
+
+def test_edge_list_sparse_parse():
+    decoder = EdgeListDecoder()
+
+    src, dst, typ, weight, ((coords, values),) = next(
+        decoder.decode("0,-1,0,1.0,int64,2/0,1,1,2,2")
+    )
+    npt.assert_equal(coords, np.array([1, 1]))
+    npt.assert_equal(values, np.array([2, 2]))
+
+    src, dst, typ, weight, features = next(decoder.decode("0,-1,0,1.0,int64,0/0,"))
+    assert features == [None]
+    src, dst, typ, weight, features = next(decoder.decode("0,-1,0,1.0,int64,0/1,"))
+    assert features == [None]
+    src, dst, typ, weight, features = next(decoder.decode("0,-1,0,1.0,int64,0/2,"))
+    assert features == [None]
+
+    src, dst, typ, weight, ((coords, values),) = next(
+        decoder.decode("0,-1,0,1.0,int64,2/1,1,1,2,2")
+    )
+    npt.assert_equal(coords, np.array([[1], [1]]))
+    npt.assert_equal(values, np.array([2, 2]))
+
+    src, dst, typ, weight, ((coords, values),) = next(
+        decoder.decode("0,-1,0,1.0,int64,2/2,1,1,2,2,3,3")
+    )
+    npt.assert_equal(coords, np.array([[1, 1], [2, 2]]))
+    npt.assert_equal(values, np.array([3, 3]))
+
+    src, dst, typ, weight, ((coords, values),) = next(
+        decoder.decode("0,-1,0,1.0,int64,1/3,1,1,1,2")
+    )
+    npt.assert_equal(coords, np.array([[1, 1, 1]]))
+    npt.assert_equal(values, np.array([2]))
+
+    with pytest.raises(ValueError):
+        src, dst, typ, weight, ((coords, values),) = next(
+            decoder.decode("0,-1,0,1.0,int64,2/0,1.5,1.0,2,2")
+        )
+
+    src, dst, typ, weight, ((coords, values),) = next(
+        decoder.decode("0,-1,0,1.0,float32,2/0,1,1,2.2,2.2")
+    )
+    npt.assert_equal(coords, np.array([1, 1]))
+    npt.assert_almost_equal(values, np.array([2.2, 2.2]))
+    assert values.dtype == np.float32
+
+    src, dst, typ, weight, ((coords, values),) = next(
+        decoder.decode("0,-1,0,1.0,uint8,2/0,1,1,2,2")
+    )
+    npt.assert_equal(coords, np.array([1, 1]))
+    npt.assert_equal(values, np.array([2, 2]))
+    assert values.dtype == np.uint8
+
+
+def test_edge_list_binary_spaces():
+    decoder = EdgeListDecoder()
+    src, dst, typ, weight, features = next(
+        decoder.decode("0, -1, 0, 1.0, binary, 1, test, int32, 2, 1, 2")
+    )
+    assert features[0] == " test"
+    npt.assert_equal(features[1], np.array([1, 2], np.int32))
+
+
+def test_binary_writer_error_checking():
+    output = tempfile.TemporaryDirectory()
+    node = [(0, -1, 0, 0.1, [])]
+    edges = [(0, 1, 0, 0.1, []), (0, 2, 1, 0.1, []), (0, 3, 0, 0.1, [])]
+    writer = BinaryWriter(output.name, "0_0")
+    with pytest.raises(AssertionError):
+        writer.add(edges)
+    writer = BinaryWriter(output.name, "0_0")
+    with pytest.raises(AssertionError):
+        for edge in edges:
+            writer.add([edge])
+
+    writer = BinaryWriter(output.name, "0_0")
+    with pytest.raises(AssertionError):
+        writer.add(node + edges)
+    writer = BinaryWriter(output.name, "0_0")
+    with pytest.raises(AssertionError):
+        for edge in node + edges:
+            writer.add([edge])
+
+
 def graph_with_inverse_edge_type_order_json(folder):
     data = open(os.path.join(folder, "graph.json"), "w+")
     graph = [
@@ -776,7 +1298,9 @@ def graph_with_inverse_edge_type_order(request):
     workdir.cleanup()
 
 
-@pytest.mark.parametrize("graph_with_inverse_edge_type_order", param, indirect=True)
+@pytest.mark.parametrize(
+    "graph_with_inverse_edge_type_order", [JsonDecoder, TsvDecoder], indirect=True
+)
 def test_edge_index_inverted_types(graph_with_inverse_edge_type_order):
     output = tempfile.TemporaryDirectory()
     data_name, decoder = graph_with_inverse_edge_type_order

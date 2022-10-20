@@ -18,7 +18,18 @@ from deepgnn.graph_engine import Graph, graph_ops
 
 class GATDataset(Dataset):
     """Cora dataset with file sampler."""
-    def __init__(self, data_dir: str, node_types: List[int], feature_meta: List[int], label_meta: List[int], feature_type: np.dtype, label_type: np.dtype, neighbor_edge_types: List[int] = [0], num_hops: int = 2):
+
+    def __init__(
+        self,
+        data_dir: str,
+        node_types: List[int],
+        feature_meta: List[int],
+        label_meta: List[int],
+        feature_type: np.dtype,
+        label_type: np.dtype,
+        neighbor_edge_types: List[int] = [0],
+        num_hops: int = 2,
+    ):
         self.g = Client(data_dir, [0, 1])
         self.node_types = np.array(node_types)
         self.feature_meta = np.array([feature_meta])

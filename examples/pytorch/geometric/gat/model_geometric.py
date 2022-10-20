@@ -14,25 +14,31 @@ from deepgnn.graph_engine import Graph, graph_ops
 from torch_geometric.nn import GATConv
 
 
-class GATGeoDataset(Dataset):
-    """Cora dataset with file sampler."""
-    def __init__(self, data_dir: str, node_types: List[int], feature_meta: List[int], label_meta: List[int], feature_type: np.dtype, label_type: np.dtype, neighbor_edge_types: List[int] = [0], num_hops: int = 2):
-        self.g = Client(data_dir, [0, 1])
-        self.node_types = np.array(node_types)
-        self.feature_meta = np.array([feature_meta])
-        self.label_meta = np.array([label_meta])
-        self.feature_type = feature_type
-        self.label_type = label_type
-        self.neighbor_edge_types = np.array(neighbor_edge_types, np.int64)
-        self.num_hops = num_hops
-        self.count = self.g.node_count(self.node_types)
+@dataclass
+class GATQueryParameter:
+    """Configuration for graph query."""
 
-    def __len__(self):
-        return self.count
+    neighbor_edge_types: np.ndarray
+    feature_idx: int
+    feature_dim: int
+    label_idx: int
+    label_dim: int
+    feature_type: np.dtype = np.float32
+    label_type: np.dtype = np.float32
+    num_hops: int = 2
 
-    def __getitem__(self, idx: int) -> Tuple[Any, Any]:
-        """Query used to generate data for training."""
-        inputs = np.array(idx, np.int64)
+
+class GATQuery:
+    """Query to fetch graph data for the model."""
+
+    def __init__(self, p: GATQueryParameter):
+        """Initialize graph query."""
+        self.p = p
+        self.label_meta = np.array([[p.label_idx, p.label_dim]], np.int32)
+        self.feat_meta = np.array([[p.feature_idx, p.feature_dim]], np.int32)
+
+    def query_training(self, graph: Graph, inputs: np.ndarray) -> tuple:
+        """Fetch training data."""
         nodes, edges, src_idx = graph_ops.sub_graph(
             graph,
             inputs,
