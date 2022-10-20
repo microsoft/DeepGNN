@@ -111,7 +111,7 @@ All node and edge features in this sub-graph are pulled and added to the context
     ...
     ...         feat = g.node_features(nodes, self.feature_meta, self.feature_type)
     ...         label = g.node_features(nodes, self.label_meta, self.label_type).astype(np.int64)
-    ...         return {"nodes": nodes.reshape((1, *nodes.shape)), "feat": feat.reshape((1, *feat.shape)), "labels": label.reshape((1, *label.shape)), "input_mask": input_mask.reshape((1, *input_mask.shape)), "edges": edges.reshape((1, *edges.shape))}
+    ...         return {"nodes": np.expand_dims(nodes, 0), "feat": np.expand_dims(feat, 0), "labels": np.expand_dims(label, 0), "input_mask": np.expand_dims(input_mask, 0), "edges": np.expand_dims(edges, 0)}
 
 
 Model Forward and Init
@@ -227,7 +227,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...             loss.backward()
     ...             optimizer.step()
     ...
-    ...             session.report({"loss": loss.item()})
+    ...             session.report({"metric": (scores.argmax(1) == labels).sum(), "loss": loss.item()})
 
 In this step we start the training job.
 First we start a local ray cluster with `ray.init() <https://docs.ray.io/en/latest/ray-core/package-ref.html#ray-init>`.

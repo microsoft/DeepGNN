@@ -30,6 +30,18 @@ label_idx = 0
 label_dim = 121
 
 
+def setup_module(module):
+    import deepgnn.graph_engine.snark._lib as lib
+
+    lib_name = "libwrapper.so"
+    if platform.system() == "Windows":
+        lib_name = "wrapper.dll"
+
+    os.environ[lib._SNARK_LIB_PATH_ENV_KEY] = os.path.join(
+        os.path.dirname(__file__), "..", "..", "..", "src", "cc", "lib", lib_name
+    )
+
+
 class NeuralNetwork(nn.Module):
     def __init__(self):
         super(NeuralNetwork, self).__init__()
@@ -52,114 +64,48 @@ class NeuralNetwork(nn.Module):
         return {"features": g.node_features(idx, np.array([[feature_idx, feature_dim]]), feature_type=np.float32), "labels": np.ones((len(idx)))}
 
 
-def train_epoch(dataloader, model, loss_fn, optimizer, size):
-    model.train()
-
-    for i, batch in enumerate(dataloader.random_shuffle_each_window().iter_torch_batches()):
-        # Compute prediction error
-        pred = model(batch["features"])
-        loss = loss_fn(pred, batch["labels"].squeeze().long())
-
-        # Backpropagation
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-        if i % 100 == 0:
-            loss, current = loss.item(), i * len(batch["labels"])
-            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
-
-
 def train_func(config: Dict):
-    batch_size = config["batch_size"]
-    lr = config["lr"]
-    epochs = config["epochs"]
+    worker_batch_size = config["batch_size"] // session.get_world_size()
 
-    worker_batch_size = batch_size // session.get_world_size()
-
-    pipe = config["pipe"]
-
-    size = pipe.count() // session.get_world_size()  # TODO count affected by repeats?
-
-    # Create model.
     model = NeuralNetwork()
     model = train.torch.prepare_model(model)
 
+    optimizer = torch.optim.SGD(model.parameters(), lr=config["lr"])
+    optimizer = train.torch.prepare_optimizer(optimizer)
+
     loss_fn = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=lr)
 
     loss_results = []
 
-    for train_dataloader in pipe.repeat(epochs).iter_epochs():
-        train_epoch(train_dataloader, model, loss_fn, optimizer, size)
-        #loss = validate_epoch(test_dataloader, model, loss_fn)
-        #loss_results.append(loss)
-        #session.report(dict(loss=loss))
+    dataset = ray.data.range(2708, parallelism=1)
+    pipe = dataset.window(blocks_per_window=2)
+    g = Client("/tmp/cora", [0], delayed_start=True)
+    def transform_batch(batch: list) -> dict:
+        return NeuralNetwork.query(None, g, batch)
+    pipe = pipe.map_batches(transform_batch)
+
+    model.train()
+    for train_dataloader in pipe.repeat(config["epochs"]).iter_epochs():
+        for i, batch in enumerate(train_dataloader.random_shuffle_each_window().iter_torch_batches(batch_size=worker_batch_size)):
+            pred = model(batch["features"])
+            loss = loss_fn(pred, batch["labels"].squeeze().long())
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
     return loss_results
 
 
-def train_fashion_mnist(num_workers=2, use_gpu=False):
-    """
-    #ds = ray.data.range(2708, parallelism=1)
-    #ds = ray.data.read_text("/tmp/cora/train.nodes", parallelism=1)
-    from ray.data.datasource import SimpleTorchDatasource
-    def generate_dataset():
-        g = Client("/tmp/cora", [0])
-        return g.sample_nodes(2708, 0, SamplingStrategy.Random)
-
-    ds = ray.data.read_datasource(
-        SimpleTorchDatasource(), parallelism=1, dataset_factory=generate_dataset
-    )
-
-    def transform_batch(batch):
-        g = Client("/tmp/cora", [0])
-        return model.query(g, batch)
-
-    train_dataloader = ds.map_batches(transform_batch)
-    """
-
-    dataset = ray.data.range(2708, parallelism=2)
-
-    print(dataset)
-    # -> Dataset(num_blocks=200, num_rows=1000000, schema=<class 'int'>)
-
-    # TODO Check out the reported statistics for window size and blocks per window to ensure efficient pipeline execution.
-    pipe = dataset.window(blocks_per_window=2)  # can be 10 or something
-    print(pipe)
-    # -> DatasetPipeline(num_windows=20, num_stages=1)
-
-    def transform_batch(batch: list) -> dict:
-        g = Client("/tmp/cora", [0])
-        return NeuralNetwork.query(None, g, batch)
-    pipe = pipe.map_batches(transform_batch)
-    print(pipe)
-    # -> DatasetPipeline(num_windows=20, num_stages=4)
-
+def test_graphsage_ppi_hvd_trainer():
+    ray.init()
     trainer = TorchTrainer(
         train_func,
-        train_loop_config={"lr": 1e-3, "batch_size": 64, "epochs": 4, "pipe": pipe},
-        scaling_config=ScalingConfig(num_workers=num_workers, use_gpu=use_gpu),
+        train_loop_config={"lr": 1e-3, "batch_size": 64, "epochs": 4},
+        scaling_config=ScalingConfig(num_workers=2, use_gpu=False),
     )
     result = trainer.fit()
     print(f"Results: {result.metrics}")
-
-
-def setup_module(module):
-    import deepgnn.graph_engine.snark._lib as lib
-
-    lib_name = "libwrapper.so"
-    if platform.system() == "Windows":
-        lib_name = "wrapper.dll"
-
-    os.environ[lib._SNARK_LIB_PATH_ENV_KEY] = os.path.join(
-        os.path.dirname(__file__), "..", "..", "..", "src", "cc", "lib", lib_name
-    )
-
-
-def test_graphsage_ppi_hvd_trainer():
-    ray.init()
-    train_fashion_mnist(num_workers=1, use_gpu=False)
 
 
 if __name__ == "__main__":
