@@ -54,8 +54,8 @@ https://docs.ray.io/en/latest/data/api/dataset_pipeline.html#splitting-datasetpi
     DatasetPipeline(num_windows=1, num_stages=2)
 
     # Map input indicies to a dict of node features and labels. This will run during iteration, not all at once.
+    >>> g = Client(data_dir.name, [0], delayed_start=True)
     >>> def transform_batch(idx: list) -> dict:
-    ...     g = Client(data_dir.name, [0])
     ...     return {"features": g.node_features(idx, np.array([[1, 50]]), feature_type=np.float32), "labels": np.ones((len(idx)))}
     >>> pipe = pipe.map_batches(transform_batch)
     >>> pipe
@@ -118,7 +118,7 @@ iterator uses () so it is a gneerator
     >>> from ray.data import DatasetPipeline
     >>> from deepgnn.graph_engine import SamplingStrategy
 
-    >>> g = Client(data_dir.name, [0])
+    >>> g = Client(data_dir.name, [0], delayed_start=True)
     >>> node_batch_iterator = (lambda: ray.data.from_numpy(g.sample_nodes(140, np.array([0], dtype=np.int32), SamplingStrategy.Weighted)[0]) for _ in range(10))
     >>> pipe = DatasetPipeline.from_iterable(node_batch_iterator)
     >>> pipe
@@ -144,7 +144,7 @@ For more details on iteratoe see above example.
     >>> from ray.data import DatasetPipeline
     >>> from deepgnn.graph_engine import SamplingStrategy
 
-    >>> g = Client(data_dir.name, [0])
+    >>> g = Client(data_dir.name, [0])#, delayed_start=True)
     >>> edge_batch_iterator = (lambda: ray.data.from_numpy(g.sample_edges(140, np.array([0], dtype=np.int32), SamplingStrategy.Weighted)) for _ in range(10))
     >>> pipe = DatasetPipeline.from_iterable(edge_batch_iterator)
     >>> pipe
@@ -152,7 +152,6 @@ For more details on iteratoe see above example.
 
     # Map input indicies to a dict of node features and labels. This will run during iteration, not all at once.
     >>> def transform_batch(idx: list) -> dict:
-    ...     g = Client(data_dir.name, [0])
     ...     return {"features": g.edge_features(idx, np.array([[0, 2]]), feature_type=np.float32), "labels": np.ones((len(idx)))}
     >>> pipe = pipe.map_batches(transform_batch)
     >>> pipe
