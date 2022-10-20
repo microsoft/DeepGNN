@@ -100,11 +100,11 @@ py_test(
 )
 
 py_test(
-    name = "torch_dataset",
+    name = "dataset",
     srcs = ["doctest_template.py"],
-    args = ["torch/dataset.rst"],
+    args = ["graph_engine/dataset.rst"],
     data = [
-        "torch/dataset.rst",
+        "graph_engine/dataset.rst",
     ],
     imports = ["../src/python/"],
     main = "doctest_template.py",
