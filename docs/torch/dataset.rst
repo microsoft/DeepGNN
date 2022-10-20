@@ -100,7 +100,18 @@ File node sampler, memory efficient.
     >>> pipe
     DatasetPipeline(num_windows=1, num_stages=2)
 
-# TODO add output check here
+    #>>> train_dataloader, test_dataloader = pipe.split_at_indices([int(size * .5)])
+
+    # Iterate over dataset n_epochs times
+    >>> n_epochs = 1
+    >>> #epoch_pipe = next(pipe.repeat(n_epochs).iter_epochs())
+
+    # Iterate over epoch and shuffle windows each time, use windowed shuffling to maintain pipeline windows
+    >>> batch_size = 2
+    >>> batch = next(pipe.random_shuffle_each_window(seed=100).iter_torch_batches(batch_size=batch_size))
+    >>> batch
+    {'features': tensor([[0., 0.],
+            [0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
 
 Weighted Sampler with Split on Train / Test nodes
 ================
@@ -110,8 +121,6 @@ For using diff types as diff modes
     # This pipeline has num_windows=None because it is streaming
 iterator uses () so it is a gneerator
 10 batches per ecpoh is run
-
-- ALSO TODO need to handle 
 
 .. code-block:: python
 
@@ -128,7 +137,18 @@ iterator uses () so it is a gneerator
     >>> pipe
     DatasetPipeline(num_windows=None, num_stages=2)
 
-# TODO add output check here
+    #>>> train_dataloader, test_dataloader = pipe.split_at_indices([int(size * .5)])
+
+    # Iterate over dataset n_epochs times
+    >>> n_epochs = 1
+    >>> #epoch_pipe = next(pipe.repeat(n_epochs).iter_epochs())
+
+    # Iterate over epoch and shuffle windows each time, use windowed shuffling to maintain pipeline windows
+    >>> batch_size = 2
+    >>> batch = next(pipe.random_shuffle_each_window(seed=100).iter_torch_batches(batch_size=batch_size))
+    >>> batch
+    {'features': tensor([[0., 0.],
+            [0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
 
 Edge Sampling Dataset
 =====================
