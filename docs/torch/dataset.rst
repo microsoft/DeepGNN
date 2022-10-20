@@ -35,6 +35,10 @@ Ray pipelines data in terms of windows, windows set discrete portions of the dat
 The other extreme is setting blocks_per_window=1, which minimizes the latency to initial output but only allows one concurrent transformation task per stage:
 * As a rule of thumb, the cluster memory should be at least 2-5x the window size to avoid spilling.
 
+
+Parrelelism for all datasets muust be manually set =1 for graph engine usage. May run into rare conflicts
+with multiple GE calls happening at once if not specified.
+
 Train test splis
 https://docs.ray.io/en/latest/data/api/dataset_pipeline.html#splitting-datasetpipelines
 
