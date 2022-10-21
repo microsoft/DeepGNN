@@ -22,69 +22,6 @@ from examples.pytorch.conftest import (  # noqa: F401
 
 from model import PTGSupervisedGraphSage  # type: ignore
 
-from torch.utils.data import Dataset, DataLoader, Sampler
-
-from deepgnn.graph_engine.snark.local import Client
-from deepgnn import get_logger
-from deepgnn.pytorch.common.utils import set_seed
-from deepgnn.graph_engine.snark.converter.options import DataConverterType
-from deepgnn.graph_engine.data.citation import Cora
-from model import GAT, GATQueryParameter  # type: ignore
-from deepgnn.graph_engine import Graph, graph_ops
-
-class DeepGNNDataset(Dataset):
-    """Cora dataset with file sampler."""
-    def __init__(self, data_dir: str, node_types: List[int], feature_meta: List[int], label_meta: List[int], feature_type: np.dtype, label_type: np.dtype, neighbor_edge_types: List[int] = [0], num_hops: int = 2):
-        self.g = Client(data_dir, [0, 1])
-        self.node_types = np.array(node_types)
-        self.feature_meta = np.array([feature_meta])
-        self.label_meta = np.array([label_meta])
-        self.feature_type = feature_type
-        self.label_type = label_type
-        self.neighbor_edge_types = np.array(neighbor_edge_types, np.int64)
-        self.num_hops = num_hops
-        self.count = self.g.node_count(self.node_types)
-
-    def __len__(self):
-        return self.count
-
-    def __getitem__(self, idx: int) -> Tuple[Any, Any]:
-        """Query used to generate data for training."""
-        inputs = np.array([idx], np.int64)
-        nodes, edges, src_idx = graph_ops.sub_graph(
-            self.g,
-            inputs,
-            edge_types=self.neighbor_edge_types,
-            num_hops=self.num_hops,
-            self_loop=True,
-            undirected=True,
-            return_edges=True,
-        )
-        input_mask = np.zeros(nodes.size, np.bool)
-        input_mask[src_idx] = True
-
-        feat = self.g.node_features(nodes, self.feature_meta, self.feature_type)
-        label = self.g.node_features(nodes, self.label_meta, self.label_type)
-        label = label.astype(np.int32)
-        edges_value = np.ones(edges.shape[0], np.float32)
-        edges = np.transpose(edges)
-        adj_shape = np.array([nodes.size, nodes.size], np.int64)
-
-        return nodes.reshape((1, -1)), feat.reshape((1, -1)), input_mask.reshape((1, -1)), label.reshape((1, -1)), edges.reshape((1, -1)), edges_value.reshape((1, -1)), adj_shape.reshape((1, -1))
-
-
-class FileSampler(Sampler[int]):
-    def __init__(self, filename: str):
-        self.filename = filename
-
-    def __len__(self) -> int:
-        raise NotImplementedError("")
-
-    def __iter__(self) -> Iterator[int]:
-        with open(self.filename, "r") as file:
-            for line in file.readlines():
-                yield int(line)
-
 
 @pytest.fixture(scope="module")
 def train_supervised_graphsage(mock_graph):  # noqa: F811
@@ -114,13 +51,14 @@ def train_supervised_graphsage(mock_graph):  # noqa: F811
     optimizer = torch.optim.SGD(
         filter(lambda p: p.requires_grad, graphsage.parameters()), lr=0.7
     )
-
-    dataset = DeepGNNDataset(mock_graph, [0, 1, 2], [feature_idx, feature_dim], [label_idx, label_dim], np.float32, np.float32)
-
     times = []
     loss_list = []
     while True:
-        trainloader = DataLoader(dataset, sampler=FileSampler(os.path.join(g.data_dir(), "train.nodes")), batch_size=256)
+        trainloader = torch.utils.data.DataLoader(
+            MockSimpleDataLoader(
+                batch_size=256, query_fn=graphsage.query, graph=mock_graph
+            )
+        )
 
         for i, context in enumerate(trainloader):
             start_time = time.time()
