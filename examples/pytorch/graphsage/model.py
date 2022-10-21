@@ -14,64 +14,6 @@ from deepgnn.pytorch.modeling import BaseSupervisedModel, BaseUnsupervisedModel
 from deepgnn.pytorch.encoding import FeatureEncoder, SageEncoder
 
 
-class GraphSAGEDataset(Dataset):
-    """Cora dataset with file sampler."""
-    def __init__(self, data_dir: str, node_types: List[int], feature_meta: List[int], label_meta: List[int], feature_type: np.dtype, label_type: np.dtype, neighbor_edge_types: List[int] = [0], num_hops: int = 2):
-        self.g = Client(data_dir, [0, 1])
-        self.node_types = np.array(node_types)
-        self.feature_meta = np.array([feature_meta])
-        self.label_meta = np.array([label_meta])
-        self.feature_type = feature_type
-        self.label_type = label_type
-        self.neighbor_edge_types = np.array(neighbor_edge_types, np.int64)
-        self.num_hops = num_hops
-        self.count = self.g.node_count(self.node_types)
-
-    def __len__(self):
-        return self.count
-
-    def __getitem__(self, idx: int) -> Tuple[Any, Any]:
-        """Query used to generate data for training."""
-        inputs = np.array(idx, np.int64)
-
-        return
-
-class BatchedSampler:
-    def __init__(self, sampler, batch_size):
-        self.sampler = sampler
-        self.batch_size = batch_size
-
-    def __len__(self):
-        return len(self.sampler) // self.batch_size
-
-    def __iter__(self) -> Iterator[int]:
-        generator = iter(self.sampler)
-        x = []
-        while True:
-            try:
-                for _ in range(self.batch_size):
-                    x.append(next(generator))
-                yield np.array(x, dtype=np.int64)
-                x = []
-            except Exception:
-                break
-        if len(x):
-            yield np.array(x, dtype=np.int64)
-
-
-class FileNodeSampler(Sampler[int]):
-    def __init__(self, filename: str):
-        self.filename = filename
-
-    def __len__(self) -> int:
-        raise NotImplementedError("")
-
-    def __iter__(self) -> Iterator[int]:
-        with open(self.filename, "r") as file:
-            while True:
-                yield int(file.readline())
-
-
 class SupervisedGraphSage(BaseSupervisedModel):
     """Simple supervised GraphSAGE model."""
 

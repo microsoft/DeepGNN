@@ -15,6 +15,7 @@ import zipfile
 
 from deepgnn import get_logger
 from deepgnn.pytorch.common import MRR, F1Score
+from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.pytorch.encoding.feature_encoder import (
     TwinBERTEncoder,
     TwinBERTFeatureEncoder,
@@ -498,7 +499,13 @@ def train_unsupervised_graphsage_with_feature_encoder(tiny_graph):
     loss_list = []
     while epochs_left > 0:
         epochs_left -= 1
-
+        args = argparse.Namespace(
+            backend=BackendType.SNARK,
+            graph_type=GraphType.LOCAL,
+            data_dir=tiny_graph,
+            converter=DataConverterType.SKIP,
+        )
+        backend = create_backend(BackendOptions(args), is_leader=True)
         trainloader = torch.utils.data.DataLoader(
             TorchDeepGNNDataset(
                 sampler_class=GENodeSampler,
@@ -544,6 +551,7 @@ def test_unsupervised_graphsage_with_feature_encoder(
     train_unsupervised_graphsage_with_feature_encoder, tiny_graph
 ):
     """This test is to go through the process of training a graphsage model with twinbert feature encoder.
+
     Twinbert encoding on CPU is very time consuming, so we just run few steps with a random tiny graph,
     and don't check exact metrics values.
     """

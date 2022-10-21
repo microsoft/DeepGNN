@@ -4,14 +4,15 @@
 import numpy as np
 import argparse
 import torch
-from torch.utils.data import DataLoader
 
 from deepgnn import str2list_int, setup_default_logging_config
 from deepgnn import get_logger
 from deepgnn.pytorch.common.utils import set_seed
+from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.pytorch.modeling import BaseModel
 from deepgnn.pytorch.training import run_dist
-from model import GAT, GATDataset, FileNodeSampler, BatchedSampler  # type: ignore
+from deepgnn.graph_engine import FileNodeSampler, GraphEngineBackend
+from model import GAT, GATQueryParameter  # type: ignore
 
 
 # fmt: off
@@ -38,6 +39,14 @@ def create_model(args: argparse.Namespace):
     if args.seed:
         set_seed(args.seed)
 
+    p = GATQueryParameter(
+        neighbor_edge_types=np.array([args.neighbor_edge_types], np.int32),
+        feature_idx=args.feature_idx,
+        feature_dim=args.feature_dim,
+        label_idx=args.label_idx,
+        label_dim=args.label_dim,
+    )
+
     return GAT(
         in_dim=args.feature_dim,
         head_num=args.head_num,
@@ -45,6 +54,7 @@ def create_model(args: argparse.Namespace):
         num_classes=args.num_classes,
         ffd_drop=args.ffd_drop,
         attn_drop=args.attn_drop,
+        q_param=p,
     )
 
 
@@ -53,12 +63,20 @@ def create_dataset(
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
+    backend: GraphEngineBackend = None,
 ):
-    dataset = GATDataset(args.data_dir, [args.node_type], [args.feature_idx, args.feature_dim], [args.label_idx, args.label_dim], np.float32, np.float32)
-    return DataLoader(
-        dataset,
-        sampler=BatchedSampler(FileNodeSampler(args.sample_file), args.batch_size),
-        num_workers=2,
+    return TorchDeepGNNDataset(
+        sampler_class=FileNodeSampler,
+        backend=backend,
+        query_fn=model.q.query_training,
+        prefetch_queue_size=2,
+        prefetch_worker_size=2,
+        sample_files=args.sample_file,
+        batch_size=args.batch_size,
+        shuffle=True,
+        drop_last=True,
+        worker_index=rank,
+        num_workers=world_size,
     )
 
 
@@ -67,11 +85,20 @@ def create_eval_dataset(
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
+    backend: GraphEngineBackend = None,
 ):
-    dataset = GATDataset(args.data_dir, [args.node_type], [args.feature_idx, args.feature_dim], [args.label_idx, args.label_dim], np.float32, np.float32)
-    return DataLoader(
-        dataset,
-        sampler=BatchedSampler(FileNodeSampler(args.eval_file), 1000),
+    return TorchDeepGNNDataset(
+        sampler_class=FileNodeSampler,
+        backend=backend,
+        query_fn=model.q.query_training,
+        prefetch_queue_size=2,
+        prefetch_worker_size=2,
+        sample_files=args.eval_file,
+        batch_size=1000,
+        shuffle=False,
+        drop_last=True,
+        worker_index=rank,
+        num_workers=world_size,
     )
 
 

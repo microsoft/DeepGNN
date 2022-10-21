@@ -60,42 +60,6 @@ class GATQuery:
         return graph_tensor
 
 
-class BatchedSampler:
-    def __init__(self, sampler, batch_size):
-        self.sampler = sampler
-        self.batch_size = batch_size
-
-    def __len__(self):
-        return len(self.sampler) // self.batch_size
-
-    def __iter__(self) -> Iterator[int]:
-        generator = iter(self.sampler)
-        x = []
-        while True:
-            try:
-                for _ in range(self.batch_size):
-                    x.append(next(generator))
-                yield np.array(x, dtype=np.int64)
-                x = []
-            except Exception:
-                break
-        if len(x):
-            yield np.array(x, dtype=np.int64)
-
-
-class FileNodeSampler(Sampler[int]):
-    def __init__(self, filename: str):
-        self.filename = filename
-
-    def __len__(self) -> int:
-        raise NotImplementedError("")
-
-    def __iter__(self) -> Iterator[int]:
-        with open(self.filename, "r") as file:
-            while True:
-                yield int(file.readline())
-
-
 class GAT(BaseModel):
     """GAT model."""
 

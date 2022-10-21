@@ -11,9 +11,9 @@ First we download the Cora dataset and convert it to a valid binary representati
 
 .. code-block:: python
 
-    >>> from deepgnn.graph_engine.data.citation import Cora
-    >>> Cora("/tmp/cora/")
-    <deepgnn.graph_engine.data.citation.Cora object at 0x...>
+	>>> from deepgnn.graph_engine.data.citation import Cora
+	>>> Cora("/tmp/cora/")
+	<deepgnn.graph_engine.data.citation.Cora object at 0x...>
 
 GAT Model
 =========
@@ -26,10 +26,10 @@ This model leverages masked self-attentional layers to address the shortcomings 
 Next we copy the GAT model from `DeepGNN's examples directory <https://github.com/microsoft/DeepGNN/blob/main/examples/pytorch/gat>`_. Pre-built models are kept out of the pip installation because it is rarely possible to inheret and selectively edit a single function of a graph model, instead it is best to copy the entire model and edit as needed.
 DeepGNN models typically contain multiple parts:
 
-    1. Query struct and implementation
-    2. Model init and forward
-    3. Training setup: Dataset, Optimizer, Model creation
-    4. Execution
+	1. Query struct and implementation
+	2. Model init and forward
+	3. Training setup: Dataset, Optimizer, Model creation
+	4. Execution
 
 Setup
 ======
@@ -38,25 +38,24 @@ Combined imports from `model.py <https://github.com/microsoft/DeepGNN/blob/main/
 
 .. code-block:: python
 
-    >>> from typing import List, Tuple, Any, Iterator
-    >>> from dataclasses import dataclass
-    >>> import argparse
-    >>> import numpy as np
-    >>> import torch
-    >>> import torch.nn as nn
-    >>> import torch.nn.functional as F
-    >>> from torch.utils.data import Dataset, DataLoader, Sampler
-    >>> import deepgnn.pytorch
-    >>> from deepgnn.pytorch.common import Accuracy
-    >>> from deepgnn.pytorch.nn.gat_conv import GATConv
-    >>> from deepgnn.graph_engine import Graph, graph_ops
-    >>> from deepgnn import str2list_int
-    >>> from deepgnn.pytorch.common.utils import set_seed
-    >>> from deepgnn.pytorch.training.factory import run_dist
-        Moving 0 files to the new cache system
-    >>> from deepgnn.graph_engine import SamplingStrategy
-    >>> from deepgnn.graph_engine.snark.local import Client
-    >>> from deepgnn.pytorch.modeling import BaseModel
+	>>> from typing import List
+	>>> from dataclasses import dataclass
+	>>> import argparse
+	>>> import numpy as np
+	>>> import torch
+	>>> import torch.nn as nn
+	>>> import torch.nn.functional as F
+	>>> import deepgnn.pytorch
+	>>> from deepgnn.pytorch.common import Accuracy
+	>>> from deepgnn.pytorch.modeling.base_model import BaseModel
+	>>> from deepgnn.pytorch.nn.gat_conv import GATConv
+	>>> from deepgnn.graph_engine import Graph, graph_ops
+	>>> from deepgnn import str2list_int
+	>>> from deepgnn.pytorch.common.utils import set_seed
+	>>> from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
+	>>> from deepgnn.pytorch.modeling import BaseModel
+	>>> from deepgnn.pytorch.training import run_dist
+	>>> from deepgnn.graph_engine import FileNodeSampler, GraphEngineBackend
 
 Query
 =====
@@ -178,25 +177,33 @@ We need to implement `create_model` and `create_optimizer` functions to allow di
 
 .. code-block:: python
 
-    >>> def create_model(args: argparse.Namespace):
-    ...     if args.seed:
-    ...         set_seed(args.seed)
-    ...
-    ...     return GAT(
-    ...         in_dim=args.feature_dim,
-    ...         head_num=args.head_num,
-    ...         hidden_dim=args.hidden_dim,
-    ...         num_classes=args.num_classes,
-    ...         ffd_drop=args.ffd_drop,
-    ...         attn_drop=args.attn_drop,
-    ...     )
-
-    >>> def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):
-    ...     return torch.optim.Adam(
-    ...         filter(lambda p: p.requires_grad, model.parameters()),
-    ...         lr=args.learning_rate * world_size,
-    ...         weight_decay=0.0005,
-    ...     )
+	>>> def create_model(args: argparse.Namespace):
+	...     if args.seed:
+	...         set_seed(args.seed)
+	...
+	...     p = GATQueryParameter(
+	...         neighbor_edge_types=np.array([args.neighbor_edge_types], np.int32),
+	...         feature_idx=args.feature_idx,
+	...         feature_dim=args.feature_dim,
+	...         label_idx=args.label_idx,
+	...         label_dim=args.label_dim,
+	...     )
+	...
+	...     return GAT(
+	...         in_dim=args.feature_dim,
+	...         head_num=args.head_num,
+	...         hidden_dim=args.hidden_dim,
+	...         num_classes=args.num_classes,
+	...         ffd_drop=args.ffd_drop,
+	...         attn_drop=args.attn_drop,
+	...         q_param=p,
+	...     )
+	>>> def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):
+	...     return torch.optim.Adam(
+	...         filter(lambda p: p.requires_grad, model.parameters()),
+	...         lr=args.learning_rate * world_size,
+	...         weight_decay=0.0005,
+	...     )
 
 Dataset
 =======
@@ -205,18 +212,26 @@ Notably we use the `FileNodeSampler` here which loads `sample_files` and generat
 
 .. code-block:: python
 
-    >>> def create_dataset(
-    ...     args: argparse.Namespace,
-    ...     model: BaseModel,
-    ...     rank: int = 0,
-    ...     world_size: int = 1,
-    ... ):
-    ...     dataset = GATDataset(args.data_dir, [args.node_type], [args.feature_idx, args.feature_dim], [args.label_idx, args.label_dim], np.float32, np.float32)
-    ... 	return DataLoader(
-    ... 		dataset,
-    ... 		sampler=BatchedSampler(FileNodeSampler(args.sample_file), args.batch_size),
-    ... 		num_workers=2,
-    ... 	)
+	>>> def create_dataset(
+	...     args: argparse.Namespace,
+	...     model: BaseModel,
+	...     rank: int = 0,
+	...     world_size: int = 1,
+	...     backend: GraphEngineBackend = None,
+	... ):
+	...     return TorchDeepGNNDataset(
+	...         sampler_class=FileNodeSampler,
+	...         backend=backend,
+	...         query_fn=model.q.query_training,
+	...         prefetch_queue_size=2,
+	...         prefetch_worker_size=2,
+	...         sample_files=args.sample_file,
+	...         batch_size=args.batch_size,
+	...         shuffle=True,
+	...         drop_last=True,
+	...         worker_index=rank,
+	...         num_workers=world_size,
+	...     )
 
 Arguments
 =========
@@ -224,43 +239,45 @@ Arguments
 
 .. code-block:: python
 
-    >>> def init_args(parser):
-    ...     parser.add_argument("--head_num", type=str2list_int, default="8,1", help="the number of attention headers.")
-    ...     parser.add_argument("--hidden_dim", type=int, default=8, help="hidden layer dimension.")
-    ...     parser.add_argument("--num_classes", type=int, default=-1, help="number of classes for category")
-    ...     parser.add_argument("--ffd_drop", type=float, default=0.0, help="feature dropout rate.")
-    ...     parser.add_argument("--attn_drop", type=float, default=0.0, help="attention layer dropout rate.")
-    ...     parser.add_argument("--l2_coef", type=float, default=0.0005, help="l2 loss")
-    ...     parser.add_argument("--neighbor_edge_types", type=str2list_int, default="0", help="Graph Edge for attention encoder.",)
-    ...     parser.add_argument("--eval_file", default="", type=str, help="")
+	>>> def init_args(parser):
+	...     parser.add_argument("--head_num", type=str2list_int, default="8,1", help="the number of attention headers.")
+	...     parser.add_argument("--hidden_dim", type=int, default=8, help="hidden layer dimension.")
+	...     parser.add_argument("--num_classes", type=int, default=-1, help="number of classes for category")
+	...     parser.add_argument("--ffd_drop", type=float, default=0.0, help="feature dropout rate.")
+	...     parser.add_argument("--attn_drop", type=float, default=0.0, help="attention layer dropout rate.")
+	...     parser.add_argument("--l2_coef", type=float, default=0.0005, help="l2 loss")
+	...     parser.add_argument("--neighbor_edge_types", type=str2list_int, default="0", help="Graph Edge for attention encoder.",)
+	...     parser.add_argument("--eval_file", default="", type=str, help="")
 
 NOTE Below code block is for jupyter notebooks only.
 
 .. code-block:: python
 
-    >>> MODEL_DIR = f"~/tmp/gat_{np.random.randint(9999999)}"
-    >>> arg_list = [
-    ...     "--data_dir", "/tmp/cora",
-    ...     "--mode", "train",
-    ...     "--trainer", "base",
-    ...     "--converter", "skip",
-    ...     "--sample_file", "/tmp/cora/train.nodes",
-    ...     "--node_type", "0",
-    ...     "--feature_idx", "0",
-    ...     "--feature_dim", "1433",
-    ...     "--label_idx", "1",
-    ...     "--label_dim", "1",
-    ...     "--num_classes", "7",
-    ...     "--batch_size", "140",
-    ...     "--learning_rate", ".005",
-    ...     "--num_epochs", "20",
-    ...     "--log_by_steps", "10",
-    ...     "--use_per_step_metrics",
-    ...     "--data_parallel_num", "0",
-    ...     "--model_dir", MODEL_DIR,
-    ...     "--metric_dir", MODEL_DIR,
-    ...     "--save_path", MODEL_DIR,
-    ... ]
+	>>> MODEL_DIR = f"~/tmp/gat_{np.random.randint(9999999)}"
+	>>> arg_list = [
+	...     "--data_dir", "/tmp/cora",
+	...     "--mode", "train",
+	...     "--trainer", "base",
+	...     "--backend", "snark",
+	...     "--graph_type", "local",
+	...     "--converter", "skip",
+	...     "--sample_file", "/tmp/cora/train.nodes",
+	...     "--node_type", "0",
+	...     "--feature_idx", "0",
+	...     "--feature_dim", "1433",
+	...     "--label_idx", "1",
+	...     "--label_dim", "1",
+	...     "--num_classes", "7",
+	...     "--batch_size", "140",
+	...     "--learning_rate", ".005",
+	...     "--num_epochs", "20",
+	...     "--log_by_steps", "10",
+	...     "--use_per_step_metrics",
+	...     "--data_parallel_num", "0",
+	...     "--model_dir", MODEL_DIR,
+	...     "--metric_dir", MODEL_DIR,
+	...     "--save_path", MODEL_DIR,
+	... ]
 
 Train
 =====
@@ -268,10 +285,10 @@ Finally we can train the model with `run_dist` function. We expect the loss to d
 
 .. code-block:: python
 
-    >>> run_dist(
-    ...     init_model_fn=create_model,
-    ...     init_dataset_fn=create_dataset,
-    ...     init_optimizer_fn=create_optimizer,
-    ...     init_args_fn=init_args,
-    ...		run_args=arg_list,
-    ... )
+	>>> run_dist(
+	...     init_model_fn=create_model,
+	...     init_dataset_fn=create_dataset,
+	...     init_optimizer_fn=create_optimizer,
+	...     init_args_fn=init_args,
+	...		run_args=arg_list,
+	... )

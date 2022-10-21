@@ -2,17 +2,17 @@
 # Licensed under the MIT License.
 
 import argparse
-import numpy as np
 import torch
-from torch.utils.data import DataLoader
 from deepgnn import TrainMode, setup_default_logging_config
 from deepgnn import get_logger
 from deepgnn.pytorch.common.utils import get_python_type, set_seed
 from deepgnn.pytorch.modeling import BaseModel
 from deepgnn.pytorch.training import run_dist
+from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
+from deepgnn.graph_engine import CSVNodeSampler, GraphEngineBackend
 from args import init_args  # type: ignore
+from model import HetGnnModel  # type: ignore
 from sampler import HetGnnDataSampler  # type: ignore
-from model import HetGnnModel, HetGNNDataset, FileNodeSampler, BatchedSampler  # type: ignore
 
 
 def create_model(args: argparse.Namespace):
@@ -36,13 +36,30 @@ def create_dataset(
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
+    backend: GraphEngineBackend = None,
 ):
     if args.mode == TrainMode.INFERENCE:
-        dataset = HetGNNDataset(model.query_inference, args.data_dir, [args.node_type], [args.feature_idx, args.feature_dim], [args.label_idx, args.label_dim], np.float32, np.float32)
-        return DataLoader(dataset, sampler=FileNodeSampler(dataset.g, args.sample_file), batch_size=args.batch_size)
+        return TorchDeepGNNDataset(
+            sampler_class=CSVNodeSampler,
+            backend=backend,
+            query_fn=model.query_inference,
+            prefetch_queue_size=10,
+            prefetch_worker_size=2,
+            batch_size=args.batch_size,
+            sample_file=args.sample_file,
+        )
     else:
-        dataset = HetGNNDataset(model.query, args.data_dir, [args.node_type], [args.feature_idx, args.feature_dim], [args.label_idx, args.label_dim], np.float32, np.float32)
-        return DataLoader(dataset, sampler=HetGnnDataSampler(dataset.g, num_nodes=args.max_id // world_size, batch_size=args.batch_size, node_type_count=args.node_type_count, walk_length=args.walk_length), batch_size=1)
+        return TorchDeepGNNDataset(
+            sampler_class=HetGnnDataSampler,
+            backend=backend,
+            query_fn=model.query,
+            prefetch_queue_size=10,
+            prefetch_worker_size=2,
+            num_nodes=args.max_id // world_size,
+            batch_size=args.batch_size,
+            node_type_count=args.node_type_count,
+            walk_length=args.walk_length,
+        )
 
 
 def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):
