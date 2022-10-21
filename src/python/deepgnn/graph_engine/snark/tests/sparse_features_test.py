@@ -12,11 +12,12 @@ import numpy.testing as npt
 import pytest
 
 import deepgnn.graph_engine.snark.client as client
-from deepgnn.graph_engine.snark.decoders import JsonDecoder
+from deepgnn.graph_engine.snark.decoders import JsonDecoder, EdgeListDecoder
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.dispatcher as dispatcher
 from deepgnn.graph_engine.snark.converter.writers import BinaryWriter
+from util_test import json_to_edge_list
 
 
 nodes = [
@@ -122,21 +123,31 @@ def graph_with_sparse_features_json(folder):
 
 @pytest.fixture(scope="module")
 def graph_with_sparse_features(request):
+    partition_count, decoder_type = request.param
     workdir = tempfile.TemporaryDirectory()
     data_name = graph_with_sparse_features_json(workdir.name)
+    if decoder_type == EdgeListDecoder:
+        json_name = data_name
+        data_name = os.path.join(workdir.name, "graph.csv")
+        json_to_edge_list(json_name, data_name)
+
     convert.MultiWorkersConverter(
         graph_path=data_name,
-        partition_count=request.param,
+        partition_count=partition_count,
         output_dir=workdir.name,
-        decoder=JsonDecoder(),
+        decoder=decoder_type(),
         skip_edge_sampler=True,
         skip_node_sampler=True,
     ).convert()
-    yield client.MemoryGraph(workdir.name, list(range(request.param)))
+    yield client.MemoryGraph(workdir.name, list(range(partition_count)))
     workdir.cleanup()
 
 
-@pytest.mark.parametrize("graph_with_sparse_features", [1, 2], indirect=True)
+@pytest.mark.parametrize(
+    "graph_with_sparse_features",
+    [(1, JsonDecoder), (1, EdgeListDecoder), (2, JsonDecoder), (2, EdgeListDecoder)],
+    indirect=True,
+)
 def test_sanity_node_sparse_features(graph_with_sparse_features):
     indices, values, dimensions = graph_with_sparse_features.node_sparse_features(
         np.array([9], dtype=np.int64),
@@ -149,7 +160,11 @@ def test_sanity_node_sparse_features(graph_with_sparse_features):
     npt.assert_allclose(values, [[1.0, 2.13]])
 
 
-@pytest.mark.parametrize("graph_with_sparse_features", [1, 2], indirect=True)
+@pytest.mark.parametrize(
+    "graph_with_sparse_features",
+    [(1, JsonDecoder), (1, EdgeListDecoder), (2, JsonDecoder), (2, EdgeListDecoder)],
+    indirect=True,
+)
 def test_multiple_nodes_sparse_features(graph_with_sparse_features):
     indices, values, dimensions = graph_with_sparse_features.node_sparse_features(
         np.array([9, 0, 5], dtype=np.int64),
@@ -164,7 +179,11 @@ def test_multiple_nodes_sparse_features(graph_with_sparse_features):
     npt.assert_allclose(values, [[1.0, 2.13, 5.5, 6.5, 7.5, 5.5, 6.89]])
 
 
-@pytest.mark.parametrize("graph_with_sparse_features", [1, 2], indirect=True)
+@pytest.mark.parametrize(
+    "graph_with_sparse_features",
+    [(1, JsonDecoder), (1, EdgeListDecoder), (2, JsonDecoder), (2, EdgeListDecoder)],
+    indirect=True,
+)
 def test_multiple_edges_sparse_features(graph_with_sparse_features):
     indices, values, dimensions = graph_with_sparse_features.edge_sparse_features(
         edge_src=np.array([9, 5, 0], dtype=np.int64),
@@ -179,7 +198,11 @@ def test_multiple_edges_sparse_features(graph_with_sparse_features):
     assert len(values) == 1
 
 
-@pytest.mark.parametrize("graph_with_sparse_features", [1, 2], indirect=True)
+@pytest.mark.parametrize(
+    "graph_with_sparse_features",
+    [(1, JsonDecoder), (1, EdgeListDecoder), (2, JsonDecoder), (2, EdgeListDecoder)],
+    indirect=True,
+)
 def test_multiple_edges_empty_sparse_features(graph_with_sparse_features):
     indices, values, dimensions = graph_with_sparse_features.edge_sparse_features(
         edge_src=np.array([9, 5, 0], dtype=np.int64),
@@ -195,14 +218,19 @@ def test_multiple_edges_empty_sparse_features(graph_with_sparse_features):
 
 
 @pytest.fixture(scope="module")
-def multi_server_sparse_features_graph():
+def multi_server_sparse_features_graph(request):
+    decoder_type = request.param
     workdir = tempfile.TemporaryDirectory()
     data_name = graph_with_sparse_features_json(workdir.name)
+    if decoder_type == EdgeListDecoder:
+        json_name = data_name
+        data_name = os.path.join(workdir.name, "graph.csv")
+        json_to_edge_list(json_name, data_name)
     convert.MultiWorkersConverter(
         graph_path=data_name,
         partition_count=2,
         output_dir=workdir.name,
-        decoder=JsonDecoder(),
+        decoder=decoder_type(),
         skip_edge_sampler=True,
         skip_node_sampler=True,
     ).convert()
@@ -215,6 +243,11 @@ def multi_server_sparse_features_graph():
     s2.reset()
 
 
+@pytest.mark.parametrize(
+    "multi_server_sparse_features_graph",
+    [JsonDecoder, EdgeListDecoder],
+    indirect=True,
+)
 def test_distributed_multiple_nodes_sparse_features(multi_server_sparse_features_graph):
     (
         indices,
@@ -233,6 +266,11 @@ def test_distributed_multiple_nodes_sparse_features(multi_server_sparse_features
     npt.assert_allclose(values, [[1.0, 2.13, 5.5, 6.5, 7.5, 5.5, 6.89]])
 
 
+@pytest.mark.parametrize(
+    "multi_server_sparse_features_graph",
+    [JsonDecoder, EdgeListDecoder],
+    indirect=True,
+)
 def test_distributed_node_with_empty_sparse_features(
     multi_server_sparse_features_graph,
 ):
@@ -251,6 +289,11 @@ def test_distributed_node_with_empty_sparse_features(
     assert dimensions == [0]
 
 
+@pytest.mark.parametrize(
+    "multi_server_sparse_features_graph",
+    [JsonDecoder, EdgeListDecoder],
+    indirect=True,
+)
 def test_distributed_node_with_wrong_id_sparse_features(
     multi_server_sparse_features_graph,
 ):
@@ -269,7 +312,11 @@ def test_distributed_node_with_wrong_id_sparse_features(
     npt.assert_equal(dimensions, [0, 0])
 
 
-@pytest.mark.parametrize("multi_server_sparse_features_graph", [2], indirect=True)
+@pytest.mark.parametrize(
+    "multi_server_sparse_features_graph",
+    [JsonDecoder, EdgeListDecoder],
+    indirect=True,
+)
 def test_distributed_multiple_edges_sparse_features(multi_server_sparse_features_graph):
     (
         indices,
@@ -288,7 +335,11 @@ def test_distributed_multiple_edges_sparse_features(multi_server_sparse_features
     npt.assert_allclose(values, [[5.5, 6.7]])
 
 
-@pytest.mark.parametrize("multi_server_sparse_features_graph", [2], indirect=True)
+@pytest.mark.parametrize(
+    "multi_server_sparse_features_graph",
+    [JsonDecoder, EdgeListDecoder],
+    indirect=True,
+)
 def test_distributed_multiple_edges_multiple_sparse_features(
     multi_server_sparse_features_graph,
 ):

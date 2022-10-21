@@ -1,23 +1,20 @@
-"""
-Script to migrate to new versions of DeepGNN.
-
-pip install google-pasta
-"""
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+"""Script to migrate to new versions of DeepGNN."""
 import argparse
 from pathlib import Path
 import pasta
 from pasta.augment import rename
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Migrate to new versions of DeepgNN.")
-    parser.add_argument("--script_dir", type=str, required=True, help="Directory to migrate.")
+    parser.add_argument(
+        "--script_dir", type=str, required=True, help="Directory to migrate."
+    )
     args = parser.parse_args()
 
     for filename in Path(args.script_dir).glob("**/*.py"):
-        if filename.name.endswith("migrate.py"):
-            continue
-
         with open(filename, "r") as file:
             raw_input = file.read()
 
@@ -27,11 +24,15 @@ if __name__ == '__main__':
 
         tree = pasta.parse(raw_input)
 
-        rename.rename_external(tree, 'deepgnn.graph_engine.FeatureType', 'numpy.dtype_temp')
+        rename.rename_external(
+            tree, "deepgnn.graph_engine.FeatureType", "numpy.dtype_temp"
+        )
 
         raw_output = pasta.dump(tree)
 
-        raw_output = raw_output.replace("from numpy import dtype_temp", "import numpy as np")
+        raw_output = raw_output.replace(
+            "from numpy import dtype_temp", "import numpy as np"
+        )
         raw_output = raw_output.replace("dtype_temp", "np.dtype")
 
         with open(filename, "w") as file:

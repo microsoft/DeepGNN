@@ -1,55 +1,69 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-from typing import Dict
-
-import numpy as np
-
+import argparse
 import torch
-from torch import nn
-from torch.utils.data import DataLoader
-
-import ray
-import ray.train as train
-from ray.train.torch import TorchTrainer
-from ray.air import session
-from ray.air.config import ScalingConfig, RunConfig
-
-from deepgnn import setup_default_logging_config
+from deepgnn import TrainMode, setup_default_logging_config
 from deepgnn import get_logger
 from deepgnn.pytorch.common.utils import get_python_type, set_seed
-
+from deepgnn.pytorch.modeling import BaseModel
+from deepgnn.pytorch.training import run_dist
+from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
+from deepgnn.graph_engine import CSVNodeSampler, GraphEngineBackend
 from args import init_args  # type: ignore
-from sampler import HetGnnDataSampler, FileNodeSampler, BatchedSampler  # type: ignore
-from model import HetGnnModel, HetGNNDataset  # type: ignore
+from model import HetGnnModel  # type: ignore
+from sampler import HetGnnDataSampler  # type: ignore
 
+
+def create_model(args: argparse.Namespace):
+    get_logger().info(f"Creating HetGnnModel with seed:{args.seed}.")
+    # set seed before instantiating the model
+    if args.seed:
+        set_seed(args.seed)
+
+    return HetGnnModel(
+        node_type_count=args.node_type_count,
+        neighbor_count=args.neighbor_count,
+        embed_d=args.feature_dim,  # currently feature dimention is equal to embedding dimention.
+        feature_type=get_python_type(args.feature_type),
+        feature_idx=args.feature_idx,
+        feature_dim=args.feature_dim,
+    )
 
 def train_func(config: Dict):
     batch_size = config["batch_size"]
     epochs = config["num_epochs"]
     world_size = session.get_world_size()
 
-    worker_batch_size = batch_size // world_size
-    num_nodes = config["max_id"] // world_size
-    #get_logger().info(f"Creating HetGnnModel with seed:{config["seed}.")
-    #set_seed(config["seed)
-
-    model_original = HetGnnModel(
-        node_type_count=config["node_type_count"],
-        neighbor_count=config["neighbor_count"],
-        embed_d=config["feature_dim"],
-        feature_type=get_python_type(config["feature_type"]),
-        feature_idx=config["feature_idx"],
-        feature_dim=config["feature_dim"],
-    )
-    model = train.torch.prepare_model(model_original)
-
-    if False:#config["mode"] == TrainMode.INFERENCE:
-        dataset = HetGNNDataset(model_original.query_inference, config["data_dir"], [config["node_type"]], [config["feature_idx"], config["feature_dim"]], [config["label_idx"], config["label_dim"]], np.float32, np.float32)
-        train_dataloader = DataLoader(dataset, sampler=FileNodeSampler(dataset.g, config["sample_file"]), batch_size=config["batch_size"])
+def create_dataset(
+    args: argparse.Namespace,
+    model: BaseModel,
+    rank: int = 0,
+    world_size: int = 1,
+    backend: GraphEngineBackend = None,
+):
+    if args.mode == TrainMode.INFERENCE:
+        return TorchDeepGNNDataset(
+            sampler_class=CSVNodeSampler,
+            backend=backend,
+            query_fn=model.query_inference,
+            prefetch_queue_size=10,
+            prefetch_worker_size=2,
+            batch_size=args.batch_size,
+            sample_file=args.sample_file,
+        )
     else:
-        dataset = HetGNNDataset(model_original.query, config["data_dir"], [config["node_type"]], [config["feature_idx"], config["feature_dim"]], [config["label_idx"], config["label_dim"]], np.float32, np.float32)
-        train_dataloader = DataLoader(dataset, sampler=HetGnnDataSampler(dataset.g, num_nodes=num_nodes, batch_size=config["batch_size"], node_type_count=config["node_type_count"], walk_length=config["walk_length"], sample_files=config["sample_file"]), batch_size=1)
+        return TorchDeepGNNDataset(
+            sampler_class=HetGnnDataSampler,
+            backend=backend,
+            query_fn=model.query,
+            prefetch_queue_size=10,
+            prefetch_worker_size=2,
+            num_nodes=args.max_id // world_size,
+            batch_size=args.batch_size,
+            node_type_count=args.node_type_count,
+            walk_length=args.walk_length,
+        )
 
     train_dataloader = train.torch.prepare_data_loader(train_dataloader)
 

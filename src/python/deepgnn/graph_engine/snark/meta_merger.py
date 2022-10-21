@@ -50,6 +50,11 @@ class Meta:
     def _from_file(self):
         with self.fs.open(self.path, "r") as meta:
             self.version = meta.readline().strip()
+            if self.version[0] != "v":
+                raise RuntimeError(
+                    "First line in meta file should be version, please regenerate binary data"
+                )
+
             self.node_count = int(meta.readline())
             self.edge_count = int(meta.readline())
             self.node_type_num = int(meta.readline())

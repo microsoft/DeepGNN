@@ -15,9 +15,9 @@ First we download the Cora dataset and convert it to a valid binary representati
 
 .. code-block:: python
 
-    >>> from deepgnn.graph_engine.data.citation import Cora
-    >>> Cora("/tmp/cora/")
-    <deepgnn.graph_engine.data.citation.Cora object at 0x...>
+	>>> from deepgnn.graph_engine.data.citation import Cora
+	>>> Cora("/tmp/cora/")
+	<deepgnn.graph_engine.data.citation.Cora object at 0x...>
 
 GAT Model
 =========
@@ -36,10 +36,10 @@ Pre-built models are kept out of the pip installation because it is rarely possi
 edit a single function of a graph model, instead it is best to copy the entire model and edit as needed.
 DeepGNN models typically contain multiple parts:
 
-    1. Query struct and implementation
-    2. Model init and forward
-    3. Training setup: Dataset, Optimizer, Model creation
-    4. Execution
+	1. Query struct and implementation
+	2. Model init and forward
+	3. Training setup: Dataset, Optimizer, Model creation
+	4. Execution
 
 Setup
 ======

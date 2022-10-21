@@ -158,8 +158,8 @@ def test_sage_supervised():
     data_dir = g.data_dir()
     eval_f1, test_f1 = run_graphsage_supervised(data_dir, agg_type="mean", epochs=15)
     logger.info(f"graphsage ppi - mean eval_f1:{eval_f1}, test_f1:{test_f1}")
-    assert eval_f1 >= 0.582909741 - 0.0051  # f1 > average_f1 - stddev
-    assert test_f1 >= 0.592567404 - 0.0054  # f1 > average_f1 - stddev
+    assert eval_f1 >= 0.577909741 - 0.0051  # f1 > average_f1 - stddev
+    assert test_f1 >= 0.587567404 - 0.0054  # f1 > average_f1 - stddev
 
 
 def test_sage_supervised_other_agg():

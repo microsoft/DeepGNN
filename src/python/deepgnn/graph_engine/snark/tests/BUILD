@@ -4,6 +4,18 @@
 load("@rules_python//python:defs.bzl", "py_test")
 load("@pip_deps//:requirements.bzl", "requirement")
 
+py_library(
+    name = "snark_test_utils",
+    srcs = [
+        "util_test.py",
+    ],
+    deps = [
+        "//src/python/deepgnn:deepgnn",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+
 py_test(
     name = "sparse_features_tests",
     srcs = ["sparse_features_test.py"],
@@ -14,6 +26,7 @@ py_test(
     deps = [
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/graph_engine:graph_engine",
+        "//src/python/deepgnn/graph_engine/snark/tests:snark_test_utils",
         requirement("numpy"),
         requirement("pytest"),
         requirement("networkx"),
@@ -37,6 +50,7 @@ py_test(
     deps = [
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/graph_engine:graph_engine",
+        "//src/python/deepgnn/graph_engine/snark/tests:snark_test_utils",
         requirement("numpy"),
         requirement("pytest"),
         requirement("networkx"),
@@ -60,6 +74,7 @@ py_test(
     deps = [
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/graph_engine:graph_engine",
+        "//src/python/deepgnn/graph_engine/snark/tests:snark_test_utils",
         requirement("importlib_metadata"),
         requirement("numpy"),
         requirement("pytest"),
