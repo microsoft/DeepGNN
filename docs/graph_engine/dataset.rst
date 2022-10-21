@@ -2,7 +2,9 @@
 Ray Dataset and Data Pipeline Usage
 ***********************************
 
-In this guide we show how to create and use Ray Datasets and Data Pipelines with the DeepGNN graph engine.
+In this guide we show how to create and use `Ray Datasets <https://docs.ray.io/en/latest/data/dataset.html>`
+and `Data Pipelines <https://docs.ray.io/en/latest/data/pipelining-compute.html#pipelining-datasets>`
+with the DeepGNN graph engine.
 We show several different sampling strategies and advanced usage.
 
 Generate Dataset
@@ -25,35 +27,44 @@ First we generate a Cora dataset to use in our examples.
 Simple Cora Dataset
 ================
 
+In this example we create a simple dataset using Ray Data.
 
-In this example we have a dataset to generate initial samples of node ids.
-These samples are pipelined into a mapping function to gather a dictionary of
-node features and labels which are given to the model.
+First we initialize a Ray Dataset of node ids ranging from 0 to 2708.
+`ray.data.range <https://docs.ray.io/en/latest/data/api/input_output.html#synthetic-data>`
 
-Ray pipelines data in terms of windows, windows set discrete portions of the dataset that will be loaded at a time // pre-processed in the background. Read more https://docs.ray.io/en/latest/data/pipelining-compute.html#pipelining-datasets
-* As a rule of thumb, higher parallelism settings perform better, however blocks_per_window == num_blocks effectively disables pipelining, since the DatasetPipeline will only contain a single Dataset.
-The other extreme is setting blocks_per_window=1, which minimizes the latency to initial output but only allows one concurrent transformation task per stage:
-* As a rule of thumb, the cluster memory should be at least 2-5x the window size to avoid spilling.
+For graph engine usage in the next steps, it is necessary to manually set parallelism=1!
 
-Parrelelism for all datasets muust be manually set =1 for graph engine usage. May run into rare conflicts
-with multiple GE calls happening at once if not specified.
-
-Train test splis
-https://docs.ray.io/en/latest/data/api/dataset_pipeline.html#splitting-datasetpipelines
 
 .. code-block:: python
 
-    # Setup initial node index samples, just integers of node ids
     >>> dataset = ray.data.range(2708, parallelism=1)
     >>> dataset
     Dataset(num_blocks=1, num_rows=2708, schema=<class 'int'>)
 
-    # Convert dataset to a pipeline to pipeline stages
+We convert this dataset to a data pipeline by splitting it into windows.
+
+"Dataset pipelines allow Dataset transformations to be executed incrementally
+on windows of the base data, instead of on all of the data at once.
+This can be used for streaming data loading into ML training, or to execute batch
+transformations on large datasets without needing to load the entire dataset into cluster memory."
+More about dataset pipelines, `here <https://docs.ray.io/en/latest/data/pipelining-compute.html#pipelining-datasets>`.
+
+* "As a rule of thumb, higher parallelism settings perform better, however blocks_per_window == num_blocks effectively disables pipelining, since the DatasetPipeline will only contain a single Dataset.
+The other extreme is setting blocks_per_window=1, which minimizes the latency to initial output but only allows one concurrent transformation task per stage."
+* "As a rule of thumb, the cluster memory should be at least 2-5x the window size to avoid spilling."
+
+.. code-block:: python
+
     >>> pipe = dataset.window(blocks_per_window=2)
     >>> pipe
     DatasetPipeline(num_windows=1, num_stages=2)
 
-    # Map input indicies to a dict of node features and labels. This will run during iteration, not all at once.
+Use `map_batches <https://docs.ray.io/en/latest/data/api/dataset.html#ray.data.Dataset.map_batches>`
+to map node ids from the sampler to a dictionary of node features and labels for the model forward function.
+Since this is run on the dataset pipeline, the node ids will not be mapped all at once, only when needed during iteration.
+
+.. code-block:: python
+
     >>> g = Client(data_dir.name, [0], delayed_start=True)
     >>> def transform_batch(idx: list) -> dict:
     ...     return {"features": g.node_features(idx, np.array([[1, 50]]), feature_type=np.float32), "labels": np.ones((len(idx)))}
@@ -61,18 +72,22 @@ https://docs.ray.io/en/latest/data/api/dataset_pipeline.html#splitting-datasetpi
     >>> pipe
     DatasetPipeline(num_windows=1, num_stages=3)
 
-    # Fetch the size of the dataset
-    >>> size = dataset.count()
+Train test splits
+https://docs.ray.io/en/latest/data/api/dataset_pipeline.html#splitting-datasetpipelines
+`<https://docs.ray.io/en/latest/data/api/dataset.html#ray.data.Dataset.split_at_indices>`
+
+.. code-block:: python
 
     #>>> train_dataloader, test_dataloader = pipe.split_at_indices([int(size * .5)])
 
-    # Iterate over dataset n_epochs times
+Finally we iterate over the dataset n_epochs times.
+
+.. code-block:: python
+
     >>> n_epochs = 1
     >>> epoch_pipe = next(pipe.repeat(n_epochs).iter_epochs())
 
-    # Iterate over epoch and shuffle windows each time, use windowed shuffling to maintain pipeline windows
-    >>> batch_size = 2
-    >>> batch = next(epoch_pipe.random_shuffle_each_window(seed=100).iter_torch_batches(batch_size=batch_size))
+    >>> batch = next(epoch_pipe.random_shuffle_each_window(seed=100).iter_torch_batches(batch_size=2))
     >>> batch
     {'features': tensor([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
              0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
@@ -81,10 +96,10 @@ https://docs.ray.io/en/latest/data/api/dataset_pipeline.html#splitting-datasetpi
              0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
              0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
 
-File Node Sampler Dataset
-================
+File Node Sampler
+=================
 
-File node sampler, memory efficient.
+Here we replace the node id sampler with a file line sampler, `ray.data.read_text() <https://docs.ray.io/en/latest/data/api/input_output.html#ray.data.read_text>`.
 
 .. code-block:: python
 
@@ -92,7 +107,7 @@ File node sampler, memory efficient.
     >>> dataset
     Dataset(num_blocks=1, num_rows=140, schema=<class 'str'>)
 
-    >>> pipe = dataset.window(blocks_per_window=2)   # This turns it into a pipeline thtat pipelines data functions instead of all at once, window is piopeline unit. block is parralelism unit.
+    >>> pipe = dataset.window(blocks_per_window=2)
     >>> pipe
     DatasetPipeline(num_windows=1, num_stages=1)
 
@@ -100,27 +115,17 @@ File node sampler, memory efficient.
     >>> pipe
     DatasetPipeline(num_windows=1, num_stages=2)
 
-    #>>> train_dataloader, test_dataloader = pipe.split_at_indices([int(size * .5)])
-
-    # Iterate over dataset n_epochs times
-    >>> n_epochs = 1
-    >>> #epoch_pipe = next(pipe.repeat(n_epochs).iter_epochs())
-
-    # Iterate over epoch and shuffle windows each time, use windowed shuffling to maintain pipeline windows
-    >>> batch_size = 2
-    >>> batch = next(pipe.random_shuffle_each_window(seed=100).iter_torch_batches(batch_size=batch_size))
+    >>> batch = next(pipe.iter_torch_batches(batch_size=2))
     >>> batch
     {'features': tensor([[0., 0.],
             [0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
 
-Weighted Sampler with Split on Train / Test nodes
-================
+Graph Engine Node Sampler
+=========================
 
-For using diff types as diff modes
-
-    # This pipeline has num_windows=None because it is streaming
-iterator uses () so it is a gneerator
-10 batches per ecpoh is run
+In this example we use the graph engine `sample_nodes` function to generate inputs to the query function.
+Since this method uses `DatasetPipeline.from_iterable <https://docs.ray.io/en/latest/data/api/dataset_pipeline.html#creating-datasetpipelines>`
+with a generator as input, it streams the windows instead of loading them.
 
 .. code-block:: python
 
@@ -128,8 +133,8 @@ iterator uses () so it is a gneerator
     >>> from deepgnn.graph_engine import SamplingStrategy
 
     >>> g = Client(data_dir.name, [0], delayed_start=True)
-    >>> node_batch_iterator = (lambda: ray.data.from_numpy(g.sample_nodes(140, np.array([0], dtype=np.int32), SamplingStrategy.Weighted)[0]) for _ in range(10))
-    >>> pipe = DatasetPipeline.from_iterable(node_batch_iterator)
+    >>> node_batch_generator = (lambda: ray.data.from_numpy(g.sample_nodes(140, np.array([0], dtype=np.int32), SamplingStrategy.Weighted)[0]) for _ in range(10))
+    >>> pipe = DatasetPipeline.from_iterable(node_batch_generator)
     >>> pipe
     DatasetPipeline(num_windows=None, num_stages=1)
 
@@ -137,55 +142,36 @@ iterator uses () so it is a gneerator
     >>> pipe
     DatasetPipeline(num_windows=None, num_stages=2)
 
-    #>>> train_dataloader, test_dataloader = pipe.split_at_indices([int(size * .5)])
-
-    # Iterate over dataset n_epochs times
-    >>> n_epochs = 1
-    >>> #epoch_pipe = next(pipe.repeat(n_epochs).iter_epochs())
-
-    # Iterate over epoch and shuffle windows each time, use windowed shuffling to maintain pipeline windows
-    >>> batch_size = 2
-    >>> batch = next(pipe.random_shuffle_each_window(seed=100).iter_torch_batches(batch_size=batch_size))
+    >>> batch = next(pipe.iter_torch_batches(batch_size=2))
     >>> batch
     {'features': tensor([[0., 0.],
             [0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
 
-Edge Sampling Dataset
-=====================
+Graph Engine Edge Sampler
+=========================
 
-In this example we have a dataset to generate initial samples of edge ids.
-These samples are pipelined into a mapping function to gather a dictionary of
-edge features and labels which are given to the model.
-
-For more details on iteratoe see above example.
+In this example we use the graph engine `sample_edge` function to generate edge ids as inputs to the query function.
+Since this method uses `DatasetPipeline.from_iterable <https://docs.ray.io/en/latest/data/api/dataset_pipeline.html#creating-datasetpipelines>`
+with a generator as input, it streams the windows instead of loading them.
 
 .. code-block:: python
 
     >>> from ray.data import DatasetPipeline
     >>> from deepgnn.graph_engine import SamplingStrategy
 
-    >>> g = Client(data_dir.name, [0])#, delayed_start=True)
-    >>> edge_batch_iterator = (lambda: ray.data.from_numpy(g.sample_edges(140, np.array([0], dtype=np.int32), SamplingStrategy.Weighted)) for _ in range(10))
-    >>> pipe = DatasetPipeline.from_iterable(edge_batch_iterator)
+    >>> g = Client(data_dir.name, [0], delayed_start=True)
+    >>> edge_batch_generator = (lambda: ray.data.from_numpy(g.sample_edges(140, np.array([0], dtype=np.int32), SamplingStrategy.Weighted)) for _ in range(10))
+    >>> pipe = DatasetPipeline.from_iterable(edge_batch_generator)
     >>> pipe
     DatasetPipeline(num_windows=None, num_stages=1)
 
-    # Map input indicies to a dict of node features and labels. This will run during iteration, not all at once.
     >>> def transform_batch(idx: list) -> dict:
     ...     return {"features": g.edge_features(idx, np.array([[0, 2]]), feature_type=np.float32), "labels": np.ones((len(idx)))}
     >>> pipe = pipe.map_batches(transform_batch)
     >>> pipe
     DatasetPipeline(num_windows=None, num_stages=2)
 
-    #>>> train_dataloader, test_dataloader = pipe.split_at_indices([int(size * .5)])
-
-    # Iterate over dataset n_epochs times
-    >>> n_epochs = 1
-    >>> #epoch_pipe = next(pipe.repeat(n_epochs).iter_epochs())
-
-    # Iterate over epoch and shuffle windows each time, use windowed shuffling to maintain pipeline windows
-    >>> batch_size = 2
-    >>> batch = next(pipe.random_shuffle_each_window(seed=100).iter_torch_batches(batch_size=batch_size))
+    >>> batch = next(pipe.iter_torch_batches(batch_size=2))
     >>> batch
     {'features': tensor([[0., 0.],
             [0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
