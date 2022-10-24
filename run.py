@@ -105,7 +105,7 @@ class GAT(BaseModel):
         return scores
 
 def train_func(config: Dict):
-    train.torch.enable_reproducibility(seed=0)
+    train.torch.enable_reproducibility(seed=session.get_world_rank())
 
     model = GAT(in_dim=1433, num_classes=7)
     model = train.torch.prepare_model(model)
@@ -124,7 +124,7 @@ def train_func(config: Dict):
     pipe = pipe.map_batches(transform_batch)
 
     model.train()
-    for epoch, epoch_pipe in enumerate(pipe.repeat(1).iter_epochs()):
+    for epoch, epoch_pipe in enumerate(pipe.repeat(10).iter_epochs()):
         for i, batch in enumerate(epoch_pipe.random_shuffle_each_window().iter_torch_batches(batch_size=2708)):
             scores = model(batch)
             labels = batch["labels"][batch["input_mask"]].flatten()
@@ -150,7 +150,7 @@ trainer = TorchTrainer(
     train_func,
     train_loop_config={},
     run_config=RunConfig(),
-    scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
+    scaling_config=ScalingConfig(num_workers=2, use_gpu=False),
 )
 result = trainer.fit()
 
