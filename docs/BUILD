@@ -138,6 +138,7 @@ py_test(
     args = ["advanced/aml.rst"],
     data = [
         "advanced/aml.rst",
+        "advanced/config.json",
     ],
     imports = ["../src/python/"],
     main = "doctest_template.py",

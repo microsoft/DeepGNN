@@ -2,7 +2,7 @@
 Submit Job to Azure ML
 **********************
 
-This example demonstrates how to use ray to submit a job to Azure ML.
+This example demonstrates how to use ray to submit a job to Azure ML using `ray-on-aml <https://github.com/microsoft/ray-on-aml>`.
 
 Setup
 ============
@@ -154,12 +154,25 @@ Ray Connect to AML
 
 .. code-block:: python
 
-    >>> ray.init()
+    >>> import os
+    >>> os.environ["HOME"] = "."
+
+
+    >>> from azureml.core import Workspace
+    >>> from ray_on_aml.core import Ray_On_AML
+    >>> ws = Workspace.from_config("config.json")
+    >>> #ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="multi-node", maxnode=1) 
+    >>> #ray = ray_on_aml.getRay() 
+    # may take 7 mintues or longer.Check the AML run under ray_on_aml experiment for cluster status.  
+
+    >>> #ray.init()
     RayContext(...)
-    >>> trainer = TorchTrainer(
+    >>> '''trainer = TorchTrainer(
     ...     train_func,
     ...     train_loop_config={},
     ...     run_config=RunConfig(verbose=0),
     ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
-    ... )
-    >>> result = trainer.fit()
+    ... )'''
+    >>> #result = trainer.fit()
+
+    >>> #ray_on_aml.shutdown()
