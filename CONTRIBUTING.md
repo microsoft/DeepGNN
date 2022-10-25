@@ -121,14 +121,12 @@ This command will run all tests with prefix `test_sanity_neighbors_index`.
 # Create PR
 
 Follow these steps to create a pull request from a forked repo:
-1. Sync your repo with `https://github.com/microsoft/DeepGNN`.
+1. Create [a fork repo](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks).
 2. Create a new branch locally based off main with some descriptive name.
 3. Make some changes.
 4. Push changes to remote(your fork).
 5. Run [a CI action](https://github.com/microsoft/DeepGNN/actions/workflows/ci.yml) in your forked repo to make sure all tests pass.
 6. In [a pulls page](https://github.com/microsoft/DeepGNN/pulls), click `New` button and publish a PR.
 
-If your fork is out of sync with this repo, you can still work with multiple remotes:
-1. Add a remote with the name upstream: `git remote add upstream https://github.com/microsoft/DeepGNN.git`
-2. Fetch latest changes from upstream: `git fetch upstream`
-3. Create a new branch from it: `git checkout -b my-changes`
+If your fork is out of sync with this repo, you can still work [with multiple remotes](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/configuring-a-remote-for-a-fork)
+and rebase your branch to the main branch of this repo.
