@@ -18,6 +18,7 @@ from deepgnn.graph_engine.snark.local import Client
 
 
 def onehot(value, size):
+    """Convert value to onehot vector."""
     output = [0] * size
     output[value] = 1
     return output
@@ -42,7 +43,7 @@ class Reddit(Client):
     - Node Feature Dim: 300 (id:1)
     """
 
-    def __init__(self, output_dir: str = None, edge_downsample_pct: float=.1):
+    def __init__(self, output_dir: str = None, edge_downsample_pct: float = 0.1):
         """
         Initialize Reddit dataset.
 
@@ -73,7 +74,7 @@ class Reddit(Client):
         train_nodes = []
         NODE_TYPE_ID = {"train": 0, "val": 1, "test": 2}
         for nid, node in enumerate(g["nodes"]):
-            #id_map[node["id"]] = nid
+            # id_map[node["id"]] = nid
             nid = id_map[node["id"]]
             if node["test"]:
                 ntype = NODE_TYPE_ID["test"]
@@ -90,12 +91,14 @@ class Reddit(Client):
 
         # edges
         np.random.seed(0)
-        edge_downsample_mask = np.random.uniform(size=len(g["links"])) < self._edge_downsample_pct
+        edge_downsample_mask = (
+            np.random.uniform(size=len(g["links"])) < self._edge_downsample_pct
+        )
         train_mask = np.zeros(len(id_map), np.bool8)
         train_mask[train_nodes] = True
         for i, e in enumerate(np.array(g["links"])[edge_downsample_mask]):
-            src = e["source"]  #id_map[e["source"]]
-            tgt = e["target"]  #id_map[e["target"]]
+            src = e["source"]  # id_map[e["source"]]
+            tgt = e["target"]  # id_map[e["target"]]
             if train_mask[src] and train_mask[tgt]:
                 train_neighbors[src].append(tgt)
                 if tgt != src:
@@ -128,7 +131,7 @@ class Reddit(Client):
             z.extractall(raw_data_dir)
         d = self._load_raw_graph(os.path.join(raw_data_dir, "reddit"))
         nodes, nodes_type, train_neighbors, other_neighbors, feats, class_map = d
-        #assert feats.shape[0] == len(nodes), (feats.shape[0], len(nodes))
+        # assert feats.shape[0] == len(nodes), (feats.shape[0], len(nodes))
         self.NUM_NODES = len(nodes)
         self.FEATURE_DIM = feats.shape[1]
         self.NUM_CLASSES = len(class_map[0])
@@ -200,7 +203,7 @@ class Reddit(Client):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir", default="/tmp/reddit", type=str)
-    parser.add_argument("--edge_downsample_pct", default=.1, type=float)
+    parser.add_argument("--edge_downsample_pct", default=0.1, type=float)
 
     args = parser.parse_args()
 
