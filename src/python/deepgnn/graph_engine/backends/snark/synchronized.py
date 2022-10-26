@@ -2,17 +2,14 @@
 # Licensed under the MIT License.
 
 """
-Snark districuted client implementation.
-
 Synchronized wrappers for client and server to use as a backend for GE.
+
 The idea is to use sync files to wait until all servers are created or every client is closed.
 Every backend knows how many servers are going to be started through command line arguments,
 so clients wait until that number of server sync files appear in a sync folder(usually a model path).
 To synchronize shutdown we track every client created via a sync file with snark_{client_id}.client pattern.
 Servers will stop only after all these files are deleted by clients.
 """
-from typing import Optional, Tuple, List, Dict, Any, Callable
-import tempfile
 import concurrent
 from concurrent.futures import ThreadPoolExecutor
 import os
@@ -21,84 +18,9 @@ import time
 import multiprocessing as mp
 import threading
 import glob
-import threading
-import socket
 
-from deepgnn.graph_engine.snark.client import PartitionStorageType
+from typing import Optional, Any, Callable
 from deepgnn.logging_utils import get_logger
-import deepgnn.graph_engine.snark.client as client
-import deepgnn.graph_engine.snark.server as server
-import deepgnn.graph_engine.snark.local as ge_snark
-from deepgnn import get_logger
-from deepgnn.graph_engine.snark.meta import download_meta
-
-
-class DistributedClient(ge_snark.Client):
-    """Distributed client."""
-
-    def __init__(self, servers: List[str], ssl_cert: str = None):
-        """Init snark client to wrapper around ctypes API of distributed graph."""
-        self.logger = get_logger()
-        self.logger.info(f"servers: {servers}. SSL: {ssl_cert}")
-        self.graph = client.DistributedGraph(servers, ssl_cert)
-        self.node_samplers: Dict[str, client.NodeSampler] = {}
-        self.edge_samplers: Dict[str, client.EdgeSampler] = {}
-        self.logger.info(
-            f"Loaded distributed snark client. Node counts: {self.graph.meta.node_count_per_type}. Edge counts: {self.graph.meta.edge_count_per_type}"
-        )
-
-
-class Server:
-    """Distributed server."""
-
-    def __init__(
-        self,
-        hostname: str,
-        data_path: str,
-        index: int,
-        total_shards: int,
-        ssl_key: str = None,
-        ssl_root: str = None,
-        ssl_cert: str = None,
-        storage_type: client.PartitionStorageType = client.PartitionStorageType.memory,
-        config_path: str = "",
-        stream: bool = False,
-    ):
-        """Init snark server."""
-        temp_dir = tempfile.TemporaryDirectory()
-        temp_path = temp_dir.name
-        meta_path = download_meta(data_path, temp_path, config_path)
-
-        with open(meta_path, "r") as meta:
-            # TODO(alsamylk): expose graph metadata reader in snark.
-            # Based on snark.client._read_meta() method
-            skip_lines = 7
-            for _ in range(skip_lines):
-                meta.readline()
-            partition_count = int(meta.readline())
-
-        ssl_config = None
-        if ssl_key is not None:
-            ssl_config = {
-                "ssl_key": ssl_key,
-                "ssl_root": ssl_root,
-                "ssl_cert": ssl_cert,
-            }
-        partitions = list(range(index, partition_count, total_shards))
-        self.server = server.Server(
-            data_path,
-            partitions,
-            hostname,
-            ssl_config,  # type: ignore
-            storage_type,
-            config_path,
-            stream,  # type: ignore
-        )
-
-    def reset(self):
-        """Reset server."""
-        if self.server is not None:
-            self.server.reset()
 
 
 def _create_lock_file(folder: str, index: int, extension: str):
@@ -123,8 +45,17 @@ def _delete_lock_file(folder: str, index: int, extension: str):
     os.remove(path)
 
 
+class SupportsReset:
+    """Simple interface for client/server."""
+
+    def reset(self) -> None:
+        """Unload client/server from memory."""
+        pass
+
+
 class SynchronizedClient:
     """SynchronizedClient uses file system to synchronize create graph client only after every GE instance started.
+
     Servers appear in the `path` folder as files snark_#[0-n].server and client creation is delayed until these sync files appear.
     """
 
@@ -144,7 +75,7 @@ class SynchronizedClient:
         self.original_pid = os.getpid()
         self.num_servers = num_servers
         self.timeout = timeout
-        self._client = None
+        self._client: Optional[SupportsReset] = None
         self._ktr = lambda: klass(*args, **kwargs)
         self._lock = threading.Lock()
         _create_lock_file(self.path, self.rank, "client")
@@ -216,7 +147,7 @@ class _ServerProcess(mp.Process):
         self.id = index
         self.sync_path = sync_path
         self._ktr = lambda: klass(*args, **kwargs)
-        self._server = None
+        self._server: Optional[SupportsReset] = None
         self._stop_event = mp.Event()
 
     def _wait_for_clients(self, timeout: Optional[float]):
@@ -266,6 +197,7 @@ class _ServerProcess(mp.Process):
 
 class SynchronizedServer:
     """SynchronizedServer uses file system to delay server deletion on shutdown.
+
     Until all client sync files are deleted from the `sync_path` folder, the servers will keep running.
     """
 
@@ -274,6 +206,7 @@ class SynchronizedServer:
     ):
         """
         Initialize server.
+
         A backend might be forked(e.g. by pytorch DDP), so we need to start a separate process to protect mutexes.
         """
         self.sync_path = sync_path
@@ -288,135 +221,3 @@ class SynchronizedServer:
         self._server_process.join(timeout=self.timeout)
         if os.getpid() == self.original_pid:
             _delete_lock_file(self.sync_path, self.id, "server")
-
-
-# Helper functions and classes to automatically determine servers in a cluster:
-# Every worker will write out it's primary address with a port via _AddressFinder,
-# and a server index obtained from environment variables/passed through command line.
-# Classes will act essentially as file servers. After all these files are created
-# the _AddressReader class will read all addresses and feed to the backend so snark client
-# can connect to every GE instance.
-def _get_host() -> str:
-    # Find a primary address of a compute instance
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-        try:
-            s.connect(("10.255.255.255", 1))
-            return s.getsockname()[0]
-        except Exception:
-            return "localhost"
-
-
-# A class to write out worker's primary address to the path.
-# The class must be wrapped with SynchronizedServer.
-class _AddressFinder:
-    def __init__(self, path: str, id: int, server_idx: int):
-        get_logger().debug("Starting address finder")
-        self.file_name = os.path.join(path, str(id) + ".servername")
-        with open(self.file_name, "w+", newline=os.linesep) as file:
-            host = _get_host()
-            port = self._get_free_port(host)
-            file.write(host + ":" + str(port))
-            file.write(os.linesep)
-            file.write(str(server_idx))
-
-    def _get_free_port(self, host: str) -> int:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind((host, 0))
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            return s.getsockname()[1]
-
-    def reset(self):
-        os.remove(self.file_name)
-
-
-# Read all addresses from path.
-# _AddressReader must be wrapped by SynchronizedClient to wait all servers.
-class _AddressReader:
-    def __init__(self, path: str):
-        self._servers: List[str] = []
-        for file_name in glob.glob(os.path.join(path, "*.servername")):
-            with open(file_name, "r", newline=os.linesep) as f:
-                # First line is the address and the second - server index.
-                raw = f.readlines()
-                assert len(raw) == 2
-                server_idx = int(raw[1])
-                if server_idx >= 0:
-                    self._servers.append(raw[0].rstrip(os.linesep))
-
-    def servers(self) -> List[str]:
-        return self._servers
-
-    def reset(self):
-        return
-
-
-def start_distributed_backend(
-    server_hostnames: List[str],
-    data_dir: str,
-    server_index: int,
-    client_rank: int,
-    world_size: int,
-    sync_dir: Optional[str] = None,
-    ge_start_timeout: int = 30,
-    ssl_cert=None,
-    storage_type: PartitionStorageType = PartitionStorageType.memory,
-    config_path: str = "",
-    stream: bool = True,
-):
-    """Initialize a snark client connected to to a GE server.
-
-    Parameters
-    ----------
-    server_index: int Index of server, use -1 to skip starting GE in worker.
-    client_rank: int Index of client.
-    world_size: int Number of clients to initialize.
-    sync_dir: str, default="." Dir to store lock and address files.
-    """
-    if sync_dir is None or len(sync_dir) == 0:
-        sync_dir = os.path.join(".", "sync")
-        try:
-            os.mkdir(sync_dir)
-        except FileExistsError:
-            pass
-        get_logger().debug(f"Defaulting to {sync_dir} to synchronize GE and workers.")
-    lock_dir = os.path.join(sync_dir, "workers")
-    addr_dir = os.path.join(sync_dir, "addresses")
-    try:
-        os.mkdir(sync_dir)
-    except FileExistsError:
-        pass
-    try:
-        os.mkdir(addr_dir)
-    except FileExistsError:
-        pass
-
-    for i, hostname in enumerate(server_hostnames):
-        server = SynchronizedServer(
-            lock_dir,
-            server_index,
-            ge_start_timeout,
-            Server,  # _AddressFinder
-            hostname,  # addr_dir
-            data_dir,  # client_rank
-            server_index,
-            len(server_hostnames),
-            ssl_cert=ssl_cert,
-            storage_type=storage_type,
-            config_path=config_path,
-            stream=stream,
-        )
-
-    client = SynchronizedClient(  # type: ignore
-        sync_dir,
-        client_rank,
-        world_size,
-        ge_start_timeout,
-        # Below 3 or _AddressReader, address_folder,
-        DistributedClient,
-        server_hostnames,
-        ssl_cert,
-    )
-
-    client.reset()
-    server.reset()
-    return client, server

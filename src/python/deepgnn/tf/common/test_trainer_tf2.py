@@ -9,6 +9,7 @@ from deepgnn.tf.common import trainer_factory
 from deepgnn.tf.common.args import TrainerType
 from deepgnn.tf.common.test_helper import TestHelper
 from deepgnn.tf.common.dataset import create_tf_dataset
+from deepgnn.graph_engine.samplers import FileNodeSampler, TextFileSampler
 from deepgnn.graph_engine import Graph
 import tensorflow as tf
 

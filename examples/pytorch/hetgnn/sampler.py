@@ -4,48 +4,10 @@
 from typing import List, Any, Dict, Union, Tuple, Iterator
 import numpy as np
 
-from deepgnn.graph_engine import Graph
-from torch.utils.data import Sampler
-from deepgnn.graph_engine import SamplingStrategy
+from deepgnn.graph_engine import Graph, SamplingStrategy, BaseSampler, FileNodeSampler
 
 
-class BatchedSampler:
-    def __init__(self, sampler, batch_size):
-        self.sampler = sampler
-        self.batch_size = batch_size
-
-    def __len__(self):
-        return len(self.sampler) // self.batch_size
-
-    def __iter__(self) -> Iterator[int]:
-        generator = iter(self.sampler)
-        x = []
-        while True:
-            try:
-                for _ in range(self.batch_size):
-                    x.append(next(generator))
-                yield np.array(x, dtype=np.int64)
-                x = []
-            except Exception:
-                break
-        if len(x):
-            yield np.array(x, dtype=np.int64)
-
-
-class FileNodeSampler(Sampler[int]):
-    def __init__(self, filename: str):
-        self.filename = filename
-
-    def __len__(self) -> int:
-        raise NotImplementedError("")
-
-    def __iter__(self) -> Iterator[int]:
-        with open(self.filename, "r") as file:
-            while True:
-                yield int(file.readline())
-
-
-class HetGnnDataSampler(Sampler):
+class HetGnnDataSampler(BaseSampler):
     """
     Implementation of BaseSampler for HetGnn model.
 
@@ -62,6 +24,7 @@ class HetGnnDataSampler(Sampler):
         sample_files: str = "",
     ):
         """Initialize sampler."""
+        super().__init__(batch_size, epochs=1, shuffle=False)
         self.graph = graph
         self.num_nodes = num_nodes
         self.nodes_left = num_nodes
@@ -75,9 +38,9 @@ class HetGnnDataSampler(Sampler):
                 BatchedSampler(
                     FileNodeSampler(
                         sample_files,
-                        #batch_size,
-                        #worker_index=k,
-                        #num_workers=node_type_count,
+                        # batch_size,
+                        # worker_index=k,
+                        # num_workers=node_type_count,
                     ),
                     batch_size=batch_size,
                 )

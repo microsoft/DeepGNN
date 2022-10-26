@@ -11,6 +11,7 @@ from torch.autograd import Variable
 from deepgnn.graph_engine import Graph, SamplingStrategy, QueryOutput
 from deepgnn.pytorch.encoding.feature_encoder import FeatureEncoder
 from deepgnn.pytorch.common.metrics import BaseMetric
+from deepgnn.graph_engine.samplers import BaseSampler
 from deepgnn import get_logger
 
 
@@ -118,9 +119,7 @@ class BaseModel(nn.Module):
         if self.feature_enc:
             self.feature_enc.forward(context)
 
-    def forward(
-        self, context: QueryOutput
-    ) -> torch.Tensor:
+    def forward(self, context: QueryOutput) -> torch.Tensor:
         """Execute common forward operation for all models.
 
         Args:
