@@ -18,6 +18,7 @@ import torch
 from torch.utils.data import IterableDataset
 
 from deepgnn import get_logger
+from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.graph_engine import (
     Graph,
     SamplingStrategy,
@@ -251,6 +252,30 @@ def get_train_args(data_dir, model_dir, test_rootdir):
         ]
     )
     return args
+
+
+class MockBackend(GraphEngineBackend):
+    _backend = None
+
+    def __new__(
+        cls, options=None, is_leader: bool = False, feat_data=None, adj_lists=None
+    ):
+        if MockBackend._backend is None:
+            MockBackend._backend = object.__new__(cls)
+            MockBackend._backend._graph = MockGraph(feat_data, adj_lists)  # type: ignore
+
+        return MockBackend._backend
+
+    @property
+    def graph(self):
+        return self._graph
+
+
+@pytest.fixture(scope="session")
+def mock_graph(load_data):  # noqa: F811
+    feat_data, adj_lists, test_rootdir = load_data
+    backend = MockBackend(None, False, feat_data, adj_lists)
+    return backend.graph, test_rootdir
 
 
 @pytest.fixture(scope="session")

@@ -17,6 +17,7 @@ py_library(
         "poolers.py",
     ],
     deps = [
+        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/graph_engine:graph_engine_testlib",
         "//src/python/deepgnn/graph_engine/data:graph_engine_data",

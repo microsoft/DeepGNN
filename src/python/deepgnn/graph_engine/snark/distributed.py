@@ -33,7 +33,6 @@ from deepgnn import get_logger
 from deepgnn.graph_engine.snark.meta import download_meta
 
 
-
 class DistributedClient(ge_snark.Client):
     """Distributed client."""
 
@@ -351,7 +350,19 @@ class _AddressReader:
         return
 
 
-def start_distributed_backend(server_hostnames: List[str], data_dir: str, server_index: int, client_rank: int, world_size: int, sync_dir: Optional[str] = None, ge_start_timeout: int = 30, ssl_cert = None, storage_type: PartitionStorageType=PartitionStorageType.memory, config_path: str = "", stream: bool = True):
+def start_distributed_backend(
+    server_hostnames: List[str],
+    data_dir: str,
+    server_index: int,
+    client_rank: int,
+    world_size: int,
+    sync_dir: Optional[str] = None,
+    ge_start_timeout: int = 30,
+    ssl_cert=None,
+    storage_type: PartitionStorageType = PartitionStorageType.memory,
+    config_path: str = "",
+    stream: bool = True,
+):
     """Initialize a snark client connected to to a GE server.
 
     Parameters
@@ -367,9 +378,7 @@ def start_distributed_backend(server_hostnames: List[str], data_dir: str, server
             os.mkdir(sync_dir)
         except FileExistsError:
             pass
-        get_logger().debug(
-            f"Defaulting to {sync_dir} to synchronize GE and workers."
-        )
+        get_logger().debug(f"Defaulting to {sync_dir} to synchronize GE and workers.")
     lock_dir = os.path.join(sync_dir, "workers")
     addr_dir = os.path.join(sync_dir, "addresses")
     try:
@@ -381,7 +390,6 @@ def start_distributed_backend(server_hostnames: List[str], data_dir: str, server
     except FileExistsError:
         pass
 
-    
     for i, hostname in enumerate(server_hostnames):
         server = SynchronizedServer(
             lock_dir,

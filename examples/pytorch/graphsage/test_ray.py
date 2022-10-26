@@ -47,15 +47,22 @@ class NeuralNetwork(nn.Module):
         x = self.flatten(x)
         logits = self.linear_relu_stack(x)
         return logits
-    
+
     def query(self, g, idx):
-        return {"features": g.node_features(idx, np.array([[feature_idx, feature_dim]]), feature_type=np.float32), "labels": np.ones((len(idx)))}
+        return {
+            "features": g.node_features(
+                idx, np.array([[feature_idx, feature_dim]]), feature_type=np.float32
+            ),
+            "labels": np.ones((len(idx))),
+        }
 
 
 def train_epoch(dataloader, model, loss_fn, optimizer, size):
     model.train()
 
-    for i, batch in enumerate(dataloader.random_shuffle_each_window().iter_torch_batches()):
+    for i, batch in enumerate(
+        dataloader.random_shuffle_each_window().iter_torch_batches()
+    ):
         # Compute prediction error
         pred = model(batch["features"])
         loss = loss_fn(pred, batch["labels"].squeeze().long())
@@ -92,9 +99,9 @@ def train_func(config: Dict):
 
     for train_dataloader in pipe.repeat(epochs).iter_epochs():
         train_epoch(train_dataloader, model, loss_fn, optimizer, size)
-        #loss = validate_epoch(test_dataloader, model, loss_fn)
-        #loss_results.append(loss)
-        #session.report(dict(loss=loss))
+        # loss = validate_epoch(test_dataloader, model, loss_fn)
+        # loss_results.append(loss)
+        # session.report(dict(loss=loss))
 
     return loss_results
 
@@ -132,6 +139,7 @@ def train_fashion_mnist(num_workers=2, use_gpu=False):
     def transform_batch(batch: list) -> dict:
         g = Client("/tmp/cora", [0])
         return NeuralNetwork.query(None, g, batch)
+
     pipe = pipe.map_batches(transform_batch)
     print(pipe)
     # -> DatasetPipeline(num_windows=20, num_stages=4)

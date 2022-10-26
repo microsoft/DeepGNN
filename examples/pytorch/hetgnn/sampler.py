@@ -3,12 +3,10 @@
 """Graph sampler for HetGnn model."""
 import numpy as np
 
-from deepgnn.graph_engine import Graph
-from torch.utils.data import Sampler
-from deepgnn.graph_engine import SamplingStrategy
+from deepgnn.graph_engine import Graph, SamplingStrategy, BaseSampler, FileNodeSampler
 
 
-class HetGnnDataSampler(Sampler):
+class HetGnnDataSampler(BaseSampler):
     """
     Implementation of BaseSampler for HetGnn model.
 
@@ -25,6 +23,7 @@ class HetGnnDataSampler(Sampler):
         sample_files: str = "",
     ):
         """Initialize sampler."""
+        super().__init__(batch_size, epochs=1, shuffle=False)
         self.graph = graph
         self.num_nodes = num_nodes
         self.nodes_left = num_nodes
