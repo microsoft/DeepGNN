@@ -10,6 +10,7 @@ py_library(
         "arg_types.py",
         "log_consts.py",
         "logging_utils.py",
+        "train_types.py",
     ],
     visibility = ["//visibility:public"],
 )

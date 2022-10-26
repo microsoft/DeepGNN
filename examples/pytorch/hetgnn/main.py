@@ -30,10 +30,6 @@ def create_model(args: argparse.Namespace):
         feature_dim=args.feature_dim,
     )
 
-def train_func(config: Dict):
-    batch_size = config["batch_size"]
-    epochs = config["num_epochs"]
-    world_size = session.get_world_size()
 
 def create_dataset(
     args: argparse.Namespace,
@@ -65,53 +61,29 @@ def create_dataset(
             walk_length=args.walk_length,
         )
 
-    train_dataloader = train.torch.prepare_data_loader(train_dataloader)
 
-    loss_fn = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(
+def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):
+    return torch.optim.Adam(
         filter(lambda p: p.requires_grad, model.parameters()),
-        lr=config["learning_rate"] * world_size,
+        lr=args.learning_rate * world_size,
         weight_decay=0,
     )
-    loss_results = []
 
-    model.train()
-    for epoch in range(epochs):
-        for batch, (X, y) in enumerate(train_dataloader):
-            loss, score, label = model(X)
-            #loss = loss_fn(pred, y)
 
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+def _main():
+    # setup default logging component.
+    setup_default_logging_config(enable_telemetry=True)
 
-            if batch % 100 == 0:
-                loss, current = loss.item(), batch * len(X)
-                print(f"loss: {loss:>7f}  [{current:>5d}/{num_nodes:>5d}]")
-        #session.report(dict(loss=loss))
-        torch.save(
-            {"state_dict": model_original.state_dict(), "epoch": epoch},
-            os.path.join(config["save_path"], f"gnnmodel-{epoch:03}.pt"),
-        )
-
-    torch.save(
-        model_original.state_dict(),
-        os.path.join(config["save_path"], f"gnnmodel.pt"),
+    # run_dist is the unified entry for pytorch model distributed training/evaluation/inference.
+    # User only needs to prepare initializing function for model, dataset, optimizer and args.
+    # reference: `deepgnn/pytorch/training/factory.py`
+    run_dist(
+        init_model_fn=create_model,
+        init_dataset_fn=create_dataset,
+        init_optimizer_fn=create_optimizer,
+        init_args_fn=init_args,
     )
-    # return required for backwards compatibility with the old API
-    # TODO(team-ml) clean up and remove return
-    return loss_results
 
 
 if __name__ == "__main__":
-    from deepgnn.pytorch.training.args import get_args
-    args = get_args(init_args, run_args=None)
-
-    ray.init()
-    trainer = TorchTrainer(
-        train_func,
-        train_loop_config=vars(args),
-        run_config=RunConfig(verbose=1),
-        scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
-    )
-    result = trainer.fit()
+    _main()

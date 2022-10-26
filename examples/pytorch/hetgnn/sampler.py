@@ -1,7 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 """Graph sampler for HetGnn model."""
-from typing import List, Any, Dict, Union, Tuple, Iterator
 import numpy as np
 
 from deepgnn.graph_engine import Graph, SamplingStrategy, BaseSampler, FileNodeSampler
@@ -35,14 +34,11 @@ class HetGnnDataSampler(BaseSampler):
         self.samplers = []
         if len(sample_files) > 0:
             self.samplers = [
-                BatchedSampler(
-                    FileNodeSampler(
-                        sample_files,
-                        # batch_size,
-                        # worker_index=k,
-                        # num_workers=node_type_count,
-                    ),
-                    batch_size=batch_size,
+                FileNodeSampler(
+                    sample_files,
+                    batch_size,
+                    worker_index=k,
+                    num_workers=node_type_count,
                 )
                 for k in range(node_type_count)
             ]
