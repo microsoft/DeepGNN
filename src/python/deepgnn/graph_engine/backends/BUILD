@@ -4,13 +4,13 @@
 load("@rules_python//python:defs.bzl", "py_library")
 
 py_library(
-    name = "deepgnn",
+    name = "graph_engine_backends",
     srcs = [
-        "__init__.py",
-        "arg_types.py",
-        "log_consts.py",
-        "logging_utils.py",
-        "train_types.py",
+        "common.py",
+        "options.py",
     ],
     visibility = ["//visibility:public"],
+    deps = [
+        "//src/python/deepgnn/graph_engine:graph_engine",
+    ],
 )

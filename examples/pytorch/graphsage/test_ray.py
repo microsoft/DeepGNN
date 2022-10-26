@@ -22,8 +22,6 @@ from deepgnn.graph_engine import SamplingStrategy
 from deepgnn.graph_engine.snark.local import Client
 
 
-import pandas as pd
-
 feature_idx = 1
 feature_dim = 50
 label_idx = 0
@@ -59,9 +57,15 @@ class NeuralNetwork(nn.Module):
         x = self.flatten(x)
         logits = self.linear_relu_stack(x)
         return logits
-    
-    def query(self, g, idx):
-        return {"features": g.node_features(idx, np.array([[feature_idx, feature_dim]]), feature_type=np.float32), "labels": np.ones((len(idx)))}
+
+    @staticmethod
+    def query(g, idx):
+        return {
+            "features": g.node_features(
+                idx, np.array([[feature_idx, feature_dim]]), feature_type=np.float32
+            ),
+            "labels": np.ones((len(idx))),
+        }
 
 
 def train_func(config: Dict):
@@ -75,18 +79,22 @@ def train_func(config: Dict):
 
     loss_fn = nn.CrossEntropyLoss()
 
-    loss_results = []
-
     dataset = ray.data.range(2708, parallelism=1)
     pipe = dataset.window(blocks_per_window=2)
     g = Client("/tmp/cora", [0], delayed_start=True)
+
     def transform_batch(batch: list) -> dict:
-        return NeuralNetwork.query(None, g, batch)
+        return NeuralNetwork.query(g, batch)
+
     pipe = pipe.map_batches(transform_batch)
 
     model.train()
     for train_dataloader in pipe.repeat(config["epochs"]).iter_epochs():
-        for i, batch in enumerate(train_dataloader.random_shuffle_each_window().iter_torch_batches(batch_size=worker_batch_size)):
+        for i, batch in enumerate(
+            train_dataloader.random_shuffle_each_window().iter_torch_batches(
+                batch_size=worker_batch_size
+            )
+        ):
             pred = model(batch["features"])
             loss = loss_fn(pred, batch["labels"].squeeze().long())
 
@@ -94,7 +102,7 @@ def train_func(config: Dict):
             loss.backward()
             optimizer.step()
 
-    return loss_results
+    return []
 
 
 def test_graphsage_ppi_hvd_trainer():

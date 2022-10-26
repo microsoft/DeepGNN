@@ -29,6 +29,7 @@ from .log_consts import (
     LOG_PROPS_PLATFORM_PYTORCH,
     LOG_PROPS_PLATFORM_TF,
 )
+from .train_types import TrainerType, TrainMode
 from .logging_utils import (
     get_current_user,
     log_telemetry,
