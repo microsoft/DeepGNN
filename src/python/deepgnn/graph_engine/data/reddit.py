@@ -37,7 +37,7 @@ class Reddit(Client):
     Graph Statistics:
     - Nodes: 232,965
     - Edges: 114,618,780 * edge_downsample_pct
-    - Split: (Train: x%, Valid: x%, Test: x%)
+    - Split: (Train: 152410, Valid: 23699, Test: 55334)
     - Node Label Dim: 50 (id:0)
     - Node Feature Dim: 300 (id:1)
     """
@@ -89,6 +89,7 @@ class Reddit(Client):
         other_neighbors: Dict = {nid: [] for nid in id_map.values()}
 
         # edges
+        np.random.seed(0)
         edge_downsample_mask = np.random.uniform(size=len(g["links"])) < self._edge_downsample_pct
         train_mask = np.zeros(len(id_map), np.bool8)
         train_mask[train_nodes] = True
@@ -204,3 +205,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     g = Reddit(args.data_dir, args.edge_downsample_pct)
+
+    print(g.node_features([1], np.array([[0, 50]]), np.float32))
+    print(g.node_features([1], np.array([[1, 300]]), np.float32))
