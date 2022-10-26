@@ -11,7 +11,7 @@ so clients wait until that number of server sync files appear in a sync folder(u
 To synchronize shutdown we track every client created via a sync file with snark_{client_id}.client pattern.
 Servers will stop only after all these files are deleted by clients.
 """
-from typing import Optional, Tuple, List, Dict, Any, Callable
+from typing import Optional, List, Dict, Any, Callable
 import tempfile
 import concurrent
 from concurrent.futures import ThreadPoolExecutor
@@ -21,11 +21,9 @@ import time
 import multiprocessing as mp
 import threading
 import glob
-import threading
 import socket
 
 from deepgnn.graph_engine.snark.client import PartitionStorageType
-from deepgnn.logging_utils import get_logger
 import deepgnn.graph_engine.snark.client as client
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.local as ge_snark
@@ -125,6 +123,7 @@ def _delete_lock_file(folder: str, index: int, extension: str):
 
 class SynchronizedClient:
     """SynchronizedClient uses file system to synchronize create graph client only after every GE instance started.
+
     Servers appear in the `path` folder as files snark_#[0-n].server and client creation is delayed until these sync files appear.
     """
 
@@ -266,14 +265,15 @@ class _ServerProcess(mp.Process):
 
 class SynchronizedServer:
     """SynchronizedServer uses file system to delay server deletion on shutdown.
+
     Until all client sync files are deleted from the `sync_path` folder, the servers will keep running.
     """
 
     def __init__(
         self, sync_path: str, index: int, timeout: float, klass: Any, *args, **kwargs
     ):
-        """
-        Initialize server.
+        """Initialize server.
+
         A backend might be forked(e.g. by pytorch DDP), so we need to start a separate process to protect mutexes.
         """
         self.sync_path = sync_path

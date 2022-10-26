@@ -22,8 +22,6 @@ from deepgnn.graph_engine import SamplingStrategy
 from deepgnn.graph_engine.snark.local import Client
 
 
-import pandas as pd
-
 feature_idx = 1
 feature_dim = 50
 label_idx = 0
@@ -60,7 +58,8 @@ class NeuralNetwork(nn.Module):
         logits = self.linear_relu_stack(x)
         return logits
 
-    def query(self, g, idx):
+    @staticmethod
+    def query(g, idx):
         return {
             "features": g.node_features(
                 idx, np.array([[feature_idx, feature_dim]]), feature_type=np.float32
@@ -80,14 +79,12 @@ def train_func(config: Dict):
 
     loss_fn = nn.CrossEntropyLoss()
 
-    loss_results = []
-
     dataset = ray.data.range(2708, parallelism=1)
     pipe = dataset.window(blocks_per_window=2)
     g = Client("/tmp/cora", [0], delayed_start=True)
 
     def transform_batch(batch: list) -> dict:
-        return NeuralNetwork.query(None, g, batch)
+        return NeuralNetwork.query(g, batch)
 
     pipe = pipe.map_batches(transform_batch)
 
@@ -105,7 +102,7 @@ def train_func(config: Dict):
             loss.backward()
             optimizer.step()
 
-    return loss_results
+    return []
 
 
 def test_graphsage_ppi_hvd_trainer():

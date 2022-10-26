@@ -69,7 +69,7 @@ Setup
 Query
 =====
 
-The Query function takes a set of node or edge ids and returns the 
+The Query function takes a set of node or edge ids and returns the
 neighbor and feature information about these items that will be given to the model forward function.
 Query is kept in a separate object from the model because it will be run in
 a ray data pipeline in the background, not in the main thread.

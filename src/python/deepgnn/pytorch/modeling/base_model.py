@@ -7,10 +7,8 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from torch.autograd import Variable
 from deepgnn.graph_engine import Graph, SamplingStrategy, QueryOutput
 from deepgnn.pytorch.encoding.feature_encoder import FeatureEncoder
-from deepgnn.pytorch.common.metrics import BaseMetric
 from deepgnn.graph_engine.samplers import BaseSampler
 from deepgnn import get_logger
 
@@ -149,7 +147,12 @@ class BaseSupervisedModel(BaseModel):
     def forward(
         self, context: QueryOutput
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        return None
+        """Execute common forward operation for all models.
+
+        Args:
+            context: nested tensor dictionary.
+        """
+        raise NotImplementedError
 
 
 class BaseUnsupervisedModel(BaseModel):
