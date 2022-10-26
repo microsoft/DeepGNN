@@ -203,6 +203,7 @@ class MemoryGraph:
         self._describe_clib_functions()
 
     def __reduce__(self):
+        """Serialize object."""
         class_fn = type(self)
 
         def deserializer(*args):

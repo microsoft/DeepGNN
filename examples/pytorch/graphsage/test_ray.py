@@ -22,8 +22,6 @@ from deepgnn.graph_engine import SamplingStrategy
 from deepgnn.graph_engine.snark.local import Client
 
 
-import pandas as pd
-
 feature_idx = 1
 feature_dim = 50
 label_idx = 0
@@ -48,7 +46,8 @@ class NeuralNetwork(nn.Module):
         logits = self.linear_relu_stack(x)
         return logits
 
-    def query(self, g, idx):
+    @staticmethod
+    def query(g, idx):
         return {
             "features": g.node_features(
                 idx, np.array([[feature_idx, feature_dim]]), feature_type=np.float32
@@ -95,15 +94,13 @@ def train_func(config: Dict):
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
 
-    loss_results = []
-
     for train_dataloader in pipe.repeat(epochs).iter_epochs():
         train_epoch(train_dataloader, model, loss_fn, optimizer, size)
         # loss = validate_epoch(test_dataloader, model, loss_fn)
         # loss_results.append(loss)
         # session.report(dict(loss=loss))
 
-    return loss_results
+    return []
 
 
 def train_fashion_mnist(num_workers=2, use_gpu=False):
@@ -138,7 +135,7 @@ def train_fashion_mnist(num_workers=2, use_gpu=False):
 
     def transform_batch(batch: list) -> dict:
         g = Client("/tmp/cora", [0])
-        return NeuralNetwork.query(None, g, batch)
+        return NeuralNetwork.query(g, batch)
 
     pipe = pipe.map_batches(transform_batch)
     print(pipe)

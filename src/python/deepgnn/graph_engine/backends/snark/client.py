@@ -13,8 +13,8 @@ from deepgnn.graph_engine.backends.options import BackendOptions
 from deepgnn.graph_engine.backends.common import GraphEngineBackend
 from deepgnn.graph_engine.snark.local import Client as LocalClient
 from deepgnn.graph_engine.snark.distributed import (
-    Client as DistributedClient,
-    Server as Server,
+    DistributedClient,
+    Server,
 )
 from deepgnn.graph_engine.backends.snark.synchronized import (
     SynchronizedClient,
