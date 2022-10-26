@@ -11,6 +11,7 @@ from torch.optim import Optimizer
 
 from typing import Optional, Tuple
 from torch.nn.utils import parameters_to_vector, vector_to_parameters
+from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.pytorch.training.trainer_fp16 import FP16Trainer, BaseModel
 from deepgnn.pytorch.training.utils import disable_infini_band
 
@@ -65,9 +66,9 @@ class DDPTrainer(FP16Trainer):
     def _initialize(
         self,
         model: BaseModel,
-        dataset,
+        dataset: TorchDeepGNNDataset,
         optimizer: Optional[Optimizer] = None,
-        eval_dataset_for_training = None,
+        eval_dataset_for_training: TorchDeepGNNDataset = None,
     ) -> BaseModel:
         model = super()._initialize(
             model, dataset, optimizer, eval_dataset_for_training

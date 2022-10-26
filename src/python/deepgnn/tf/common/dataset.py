@@ -4,13 +4,16 @@
 from typing import Tuple, Optional
 from deepgnn import get_logger
 import tensorflow as tf
+from deepgnn.graph_engine.backends.common import GraphEngineBackend
+from deepgnn.graph_engine.graph_dataset import DeepGNNDataset
+from deepgnn.graph_engine.samplers import BaseSampler
 from typing import Callable
 
 
 def create_tf_dataset(
     sampler_class: BaseSampler,
     query_fn: Callable,
-    backend = None,
+    backend: GraphEngineBackend = None,
     num_workers: int = 1,
     worker_index: int = 0,
     batch_size: int = 1,

@@ -11,6 +11,7 @@ from deepgnn.tf.common.ps_trainer import PSTrainer
 from deepgnn.tf.common.args import TrainerType
 from deepgnn.tf.common.utils import node_embedding_to_string, reset_tf_graph
 from deepgnn.tf.common.dataset import create_tf_dataset
+from deepgnn.graph_engine.samplers import RangeNodeSampler
 import tensorflow as tf
 
 

@@ -11,6 +11,7 @@ from torch.autograd import Variable
 from deepgnn.graph_engine import Graph, SamplingStrategy, QueryOutput
 from deepgnn.pytorch.encoding.feature_encoder import FeatureEncoder
 from deepgnn.pytorch.common.metrics import BaseMetric
+from deepgnn.graph_engine.samplers import BaseSampler
 from deepgnn import get_logger
 
 

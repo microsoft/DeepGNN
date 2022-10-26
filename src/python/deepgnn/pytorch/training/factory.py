@@ -13,6 +13,8 @@ from contextlib import closing
 from deepgnn.pytorch.common import init_common_args
 from deepgnn.pytorch.training.args import init_trainer_args, init_fp16_args
 from deepgnn.pytorch.training.trainer import Trainer
+from deepgnn.graph_engine import create_backend, BackendOptions
+from deepgnn.graph_engine.samplers import GENodeSampler, GEEdgeSampler
 
 
 def get_args(init_arg_fn: Optional[Callable] = None, run_args: Optional[List] = None):
@@ -82,33 +84,54 @@ def run_dist(
     """
     args = get_args(init_args_fn, run_args)
     trainer = get_trainer(args)
+    backend = create_backend(BackendOptions(args), is_leader=(trainer.rank == 0))
 
     model = init_model_fn(args)
-    dataloader = init_dataset_fn(
+    dataset = init_dataset_fn(
         args=args,
         model=model,
         rank=trainer.rank,
         world_size=trainer.world_size,
+        backend=backend,
     )
 
     eval_dataloader_for_training = None
     if init_eval_dataset_for_training_fn is not None:
-        eval_dataloader_for_training = init_eval_dataset_for_training_fn(
+        eval_dataset_for_training = init_eval_dataset_for_training_fn(
             args=args,
             model=model,
             rank=trainer.rank,
             world_size=trainer.world_size,
+            backend=backend,
         )
-
+        if eval_dataset_for_training is not None:
+            eval_dataloader_for_training = torch.utils.data.DataLoader(
+                dataset=eval_dataset_for_training,
+                num_workers=args.data_parallel_num,
+                prefetch_factor=args.prefetch_factor,
+            )
     optimizer = (
         init_optimizer_fn(args=args, model=model, world_size=trainer.world_size)
         if init_optimizer_fn is not None
         else None
     )
 
-    trainer.run(
-        model,
-        dataloader,
-        optimizer,
-        eval_dataloader_for_training,
+    num_workers = (
+        0
+        if issubclass(dataset.sampler_class, (GENodeSampler, GEEdgeSampler))
+        or platform.system() == "Windows"
+        else args.data_parallel_num
     )
+
+    # Executed distributed training/evalution/inference.
+    with closing(backend):
+        trainer.run(
+            model,
+            torch.utils.data.DataLoader(
+                dataset=dataset,
+                num_workers=num_workers,
+                prefetch_factor=args.prefetch_factor,
+            ),
+            optimizer,
+            eval_dataloader_for_training,
+        )
