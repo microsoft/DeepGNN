@@ -757,10 +757,6 @@ void GRPCClient::WeightedSampleNeighbor(int64_t seed, std::span<const NodeId> no
             auto curr_out_weight = std::begin(output_weights);
             auto curr_shard_weight = std::begin(shard_weights);
 
-            auto total_reply_neighbor = std::begin(reply.neighbor_ids());
-            auto total_reply_type = std::begin(reply.neighbor_types());
-            auto total_reply_weight = std::begin(reply.neighbor_weights());
-            auto total_reply_shard_weight = std::begin(reply.shard_weights());
             boost::random::uniform_real_distribution<float> selector(0, 1);
 
             // We need to lock the merge in case some nodes are present in multiple
@@ -783,11 +779,6 @@ void GRPCClient::WeightedSampleNeighbor(int64_t seed, std::span<const NodeId> no
                     curr_out_neighbor = std::fill_n(curr_out_neighbor, count, default_node_id);
                     curr_out_weight = std::fill_n(curr_out_weight, count, default_weight);
                     curr_out_type = std::fill_n(curr_out_type, count, default_edge_type);
-
-                    total_reply_neighbor += count;
-                    total_reply_type += count;
-                    total_reply_weight += count;
-                    ++total_reply_shard_weight;
                     continue;
                 }
 
@@ -815,17 +806,7 @@ void GRPCClient::WeightedSampleNeighbor(int64_t seed, std::span<const NodeId> no
                     *(curr_out_type++) = *(curr_reply_type++);
                     *(curr_out_weight++) = *(curr_reply_weight++);
                 }
-
-                total_reply_neighbor += count;
-                total_reply_type += count;
-                total_reply_weight += count;
-                ++total_reply_shard_weight;
             }
-
-            assert(total_reply_weight == std::end(reply.neighbor_weights()));
-            assert(total_reply_neighbor == std::end(reply.neighbor_ids()));
-            assert(total_reply_type == std::end(reply.neighbor_types()));
-            assert(total_reply_shard_weight == std::end(reply.shard_weights()));
         };
 
         futures.emplace_back(call->promise.get_future());
@@ -879,9 +860,6 @@ void GRPCClient::UniformSampleNeighbor(bool without_replacement, int64_t seed, s
             auto curr_out_type = std::begin(output_types);
             auto curr_shard_weight = std::begin(shard_counts);
 
-            auto total_reply_neighbor = std::begin(reply.neighbor_ids());
-            auto total_reply_type = std::begin(reply.neighbor_types());
-            auto total_reply_shard_weight = std::begin(reply.shard_counts());
             boost::random::uniform_real_distribution<float> selector(0, 1);
 
             // We need to lock the merge in case some nodes are present in multiple
@@ -903,10 +881,6 @@ void GRPCClient::UniformSampleNeighbor(bool without_replacement, int64_t seed, s
                 {
                     curr_out_neighbor = std::fill_n(curr_out_neighbor, count, default_node_id);
                     curr_out_type = std::fill_n(curr_out_type, count, default_type);
-
-                    total_reply_neighbor += count;
-                    total_reply_type += count;
-                    ++total_reply_shard_weight;
                     continue;
                 }
 
@@ -930,15 +904,7 @@ void GRPCClient::UniformSampleNeighbor(bool without_replacement, int64_t seed, s
                     *(curr_out_neighbor++) = *(curr_reply_neighbor++);
                     *(curr_out_type++) = *(curr_reply_type++);
                 }
-
-                total_reply_neighbor += count;
-                total_reply_type += count;
-                ++total_reply_shard_weight;
             }
-
-            assert(total_reply_neighbor == std::end(reply.neighbor_ids()));
-            assert(total_reply_type == std::end(reply.neighbor_types()));
-            assert(total_reply_shard_weight == std::end(reply.shard_counts()));
         };
 
         futures.emplace_back(call->promise.get_future());
