@@ -4,7 +4,7 @@
 
 from enum import Enum
 from inspect import signature
-from typing import Callable, Union
+from typing import Callable, Iterator
 from deepgnn.graph_engine._base import Graph
 from deepgnn.graph_engine.backends.common import GraphEngineBackend
 from deepgnn.graph_engine.prefetch import Generator
@@ -112,7 +112,7 @@ class DeepGNNDataset:
 
         self.sampler = self.sampler_class(**sampler_args)
 
-    def __iter__(self) -> Union[Generator, _DeepGNNDatasetIterator]:
+    def __iter__(self) -> Iterator:
         """Create an iterator for graph."""
         if self.enable_prefetch:
             prefetch_size = (

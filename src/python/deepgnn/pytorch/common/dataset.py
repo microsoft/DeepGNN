@@ -6,10 +6,9 @@ import torch
 from deepgnn.graph_engine import (
     DeepGNNDataset,
     GraphEngineBackend,
-    Generator,
 )
 from torch.utils.data import IterableDataset
-from typing import Callable, Union
+from typing import Callable, Iterator
 
 
 class TorchDeepGNNDataset(IterableDataset, DeepGNNDataset):
@@ -81,7 +80,7 @@ class TorchDeepGNNDataset(IterableDataset, DeepGNNDataset):
             )
         super().init_sampler()
 
-    def __iter__(self) -> Union[Generator, DeepGNNDataset._DeepGNNDatasetIterator]:
+    def __iter__(self) -> Iterator:
         """Create sampler and start iteration."""
         self._torch_init_sampler()
         return DeepGNNDataset.__iter__(self)
