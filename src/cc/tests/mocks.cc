@@ -62,7 +62,7 @@ snark::Partition convert(std::filesystem::path path, std::string suffix, MemoryG
             auto &e = edge_index[edge_pos];
             auto dst = std::get<0>(e);
             edge_index_out.write(reinterpret_cast<const char *>(&dst), sizeof(snark::NodeId));
-            uint64_t feature_offset = edge_feature_index_out.tellp();
+            uint64_t feature_offset = edge_feature_index_out.tellp() / 8;
             edge_index_out.write(reinterpret_cast<const char *>(&feature_offset), sizeof(uint64_t));
             for (size_t feature_pos = 0; !edge_features.empty() && feature_pos < edge_features[edge_pos].size();
                  ++feature_pos)

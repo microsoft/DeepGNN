@@ -4,25 +4,11 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 load("//config:variables.bzl", "CXX_OPTS", "PLATFORM_DEFINES")
 
 cc_library(
-    name = "graph",
+    name = "utils",
     srcs = [
-        "graph.cc",
-        "locator.cc",
-        "metadata.cc",
-        "partition.cc",
-        "sampler.cc",
-        "hdfs_wrap.cc",
     ],
     hdrs = [
-        "graph.h",
-        "locator.h",
-        "metadata.h",
-        "partition.h",
-        "sampler.h",
-        "storage.h",
-        "hdfs_wrap.h",
-        "types.h",
-        "xoroshiro.h",
+        "thread_pool.h",
     ],
     copts = CXX_OPTS,
     linkopts = select({
@@ -35,11 +21,6 @@ cc_library(
     linkstatic = True,
     visibility = ["//visibility:public"],
     deps = [
-        "//src/cc/lib/utils",
-        "@boost//:random",
         "@boost//:asio",
-        "@com_github_google_glog//:glog",
-        "@com_google_absl//absl/container:flat_hash_map",
-        "@com_google_absl//absl/container:flat_hash_set",
     ],
 )

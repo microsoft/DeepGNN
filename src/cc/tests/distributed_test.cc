@@ -507,7 +507,7 @@ TEST(DistributedTest, NodeFeaturesMultipleServersBackFillLargeRequestFeatureSize
 }
 
 std::pair<std::shared_ptr<snark::GRPCServer>, std::shared_ptr<snark::GRPCClient>> CreateSingleServerEnvironment(
-    std::string name)
+    std::string name, bool use_thread_pool = false)
 {
     TestGraph::MemoryGraph m;
     size_t curr_node = 0;
@@ -523,14 +523,15 @@ std::pair<std::shared_ptr<snark::GRPCServer>, std::shared_ptr<snark::GRPCClient>
                                             .m_neighbors = {TestGraph::NeighborRecord{curr_node + 1, 0, 1.0f},
                                                             TestGraph::NeighborRecord{curr_node + 2, 0, 2.0f},
                                                             TestGraph::NeighborRecord{curr_node + 3, 0, 2.0f},
-                                                            TestGraph::NeighborRecord{curr_node + 4, 0, 1.0f}}});
+                                                            TestGraph::NeighborRecord{curr_node + 4, 0, 1.0f}},
+                                            .m_edge_features = {{{1.0f}}, {{2.0f}}, {{3.0f}}, {{4.0f}}}});
     }
 
     TempFolder path(name);
     auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
 
-    auto service = std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                                   snark::PartitionStorageType::memory, "");
+    auto service = std::make_shared<snark::GraphEngineServiceImpl>(
+        path.string(), std::vector<uint32_t>{0}, snark::PartitionStorageType::memory, "", use_thread_pool);
     auto server = std::make_shared<snark::GRPCServer>(
         std::move(service), std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", "");
     auto client = std::make_shared<snark::GRPCClient>(
@@ -538,9 +539,28 @@ std::pair<std::shared_ptr<snark::GRPCServer>, std::shared_ptr<snark::GRPCClient>
     return {server, client};
 }
 
+TEST(DistributedTest, EdgeFeaturesSingleServer)
+{
+    for (size_t i = 0; i < 2; i++)
+    {
+        auto env = CreateSingleServerEnvironment("EdgeFeaturesSingleServer", i % 2 == 0);
+        auto &client = *env.second;
+        std::vector<snark::NodeId> edge_src_ids = {0, 1, 2};
+        std::vector<snark::NodeId> edge_dst_ids = {1, 3, 5};
+        std::vector<snark::Type> edge_types = {0, 0, 0};
+        std::vector<snark::FeatureMeta> features = {{snark::FeatureId(0), snark::FeatureSize(sizeof(float) * 1)}};
+        std::vector<float> output(1 * edge_src_ids.size());
+
+        client.GetEdgeFeature(std::span(edge_src_ids), std::span(edge_dst_ids), std::span(edge_types),
+                              std::span(features),
+                              std::span(reinterpret_cast<uint8_t *>(output.data()), sizeof(float) * output.size()));
+        EXPECT_EQ(output, std::vector<float>({1.0f, 2.0f, 3.0f}));
+    }
+}
+
 TEST(DistributedTest, SampleNeighborsSingleServer)
 {
-    auto env = CreateSingleServerEnvironment("SampleNeighborsSingleServer");
+    auto env = CreateSingleServerEnvironment("SampleNeighborsSingleServer", false); //
     auto &client = *env.second;
     std::vector<snark::NodeId> input_nodes = {0, 1, 2};
     std::vector<snark::Type> input_types = {0};
@@ -553,6 +573,23 @@ TEST(DistributedTest, SampleNeighborsSingleServer)
     EXPECT_EQ(output_types, std::vector<snark::Type>(6, 0));
     EXPECT_EQ(output_nodes, std::vector<snark::NodeId>({3, 3, 3, 4, 5, 5}));
     EXPECT_EQ(output_weights, std::vector<float>({2, 2, 2, 2, 2, 2}));
+
+    // use thread pool, we cannot guarantee the order of the threads, so just use 1 node to verify
+    // if thread pool works.
+    auto env_tp = CreateSingleServerEnvironment("SampleNeighborsSingleServer", true);
+    auto &client_tp = *env_tp.second;
+    std::vector<snark::NodeId> input_nodes_tp = {0};
+    std::vector<snark::Type> input_types_tp = {0};
+    const size_t nb_count_tp = 2;
+    std::vector<snark::NodeId> output_nodes_tp(nb_count_tp * input_nodes_tp.size());
+    std::vector<float> output_weights_tp(nb_count_tp * input_nodes_tp.size());
+    std::vector<snark::Type> output_types_tp(nb_count_tp * input_nodes_tp.size(), -1);
+    client_tp.WeightedSampleNeighbor(21, std::span(input_nodes_tp), std::span(input_types_tp), nb_count_tp,
+                                     std::span(output_nodes_tp), std::span(output_types_tp),
+                                     std::span(output_weights_tp), -1, 0.0f, -1);
+    EXPECT_EQ(output_types_tp, std::vector<snark::Type>(2, 0));
+    EXPECT_EQ(output_nodes_tp, std::vector<snark::NodeId>({3, 3}));
+    EXPECT_EQ(output_weights_tp, std::vector<float>({2, 2}));
 }
 
 TEST(DistributedTest, UniformSampleNeighborsSingleServer)
@@ -568,6 +605,20 @@ TEST(DistributedTest, UniformSampleNeighborsSingleServer)
                                  std::span(output_nodes), std::span(output_types), -1, -1);
     EXPECT_EQ(output_types, std::vector<snark::Type>({0, 0, 0, 0, 0, 0}));
     EXPECT_EQ(output_nodes, std::vector<snark::NodeId>({3, 3, 3, 5, 5, 6}));
+
+    // use thread pool, we cannot guarantee the order of the threads, so just use 1 node to verify
+    // if thread pool works.
+    auto env_tp = CreateSingleServerEnvironment("UniformSampleNeighborsSingleServer", true);
+    auto &client_tp = *env_tp.second;
+    std::vector<snark::NodeId> input_nodes_tp = {0};
+    std::vector<snark::Type> input_types_tp = {0};
+    const size_t nb_count_tp = 2;
+    std::vector<snark::NodeId> output_nodes_tp(nb_count_tp * input_nodes_tp.size());
+    std::vector<snark::Type> output_types_tp(nb_count_tp * input_nodes_tp.size(), -1);
+    client_tp.UniformSampleNeighbor(false, 21, std::span(input_nodes_tp), std::span(input_types_tp), nb_count_tp,
+                                    std::span(output_nodes_tp), std::span(output_types_tp), -1, -1);
+    EXPECT_EQ(output_types_tp, std::vector<snark::Type>({0, 0}));
+    EXPECT_EQ(output_nodes_tp, std::vector<snark::NodeId>({3, 3}));
 }
 
 TEST(DistributedTest, UniformSampleNeighborsWithoutReplacementSingleServer)

@@ -418,8 +418,8 @@ void GRPCClient::GetNodeFeature(std::span<const NodeId> node_ids, std::span<Feat
             auto curr_feature_reply = reply.feature_values().c_str();
             for (auto index : reply.offsets())
             {
-                std::copy(curr_feature_reply, curr_feature_reply + fv_size, curr_feature_out + fv_size * index);
-                curr_feature_reply += fv_size;
+                std::copy(curr_feature_reply + fv_size * index, curr_feature_reply + fv_size * (index + 1),
+                          curr_feature_out + fv_size * index);
                 found[index] = true;
             }
         };
@@ -495,8 +495,8 @@ void GRPCClient::GetEdgeFeature(std::span<const NodeId> edge_src_ids, std::span<
             auto curr_feature_reply = reply.feature_values().c_str();
             for (auto index : reply.offsets())
             {
-                std::copy(curr_feature_reply, curr_feature_reply + fv_size, curr_feature_out + fv_size * index);
-                curr_feature_reply += fv_size;
+                std::copy(curr_feature_reply + index * fv_size, curr_feature_reply + (index + 1) * fv_size,
+                          curr_feature_out + fv_size * index);
                 found[index] = true;
             }
         };
@@ -752,16 +752,15 @@ void GRPCClient::WeightedSampleNeighbor(int64_t seed, std::span<const NodeId> no
                 return;
             }
 
-            auto curr_nodes = std::begin(node_ids);
             auto curr_out_neighbor = std::begin(output_neighbors);
             auto curr_out_type = std::begin(output_types);
             auto curr_out_weight = std::begin(output_weights);
             auto curr_shard_weight = std::begin(shard_weights);
 
-            auto curr_reply_neighbor = std::begin(reply.neighbor_ids());
-            auto curr_reply_type = std::begin(reply.neighbor_types());
-            auto curr_reply_weight = std::begin(reply.neighbor_weights());
-            auto curr_reply_shard_weight = std::begin(reply.shard_weights());
+            auto total_reply_neighbor = std::begin(reply.neighbor_ids());
+            auto total_reply_type = std::begin(reply.neighbor_types());
+            auto total_reply_weight = std::begin(reply.neighbor_weights());
+            auto total_reply_shard_weight = std::begin(reply.shard_weights());
             boost::random::uniform_real_distribution<float> selector(0, 1);
 
             // We need to lock the merge in case some nodes are present in multiple
@@ -771,35 +770,32 @@ void GRPCClient::WeightedSampleNeighbor(int64_t seed, std::span<const NodeId> no
 
             // The strategy is to zip nodes from server response matching to the input
             // nodes.
-            for (const auto &reply_node_id : reply.node_ids())
+            for (const auto &reply_node_id_index : reply.node_ids())
             {
-                // Loop until we find a match
-                for (; curr_nodes != std::end(node_ids) && *curr_nodes != reply_node_id; ++curr_nodes)
-                {
-                    curr_out_neighbor += count;
-                    curr_out_weight += count;
-                    curr_out_type += count;
-                    ++curr_shard_weight;
-                }
+                curr_out_neighbor = std::begin(output_neighbors) + count * reply_node_id_index;
+                curr_out_weight = std::begin(output_weights) + count * reply_node_id_index;
+                curr_out_type = std::begin(output_types) + count * reply_node_id_index;
+                curr_shard_weight = std::begin(shard_weights) + reply_node_id_index;
 
-                *curr_shard_weight += *curr_reply_shard_weight;
+                *curr_shard_weight += *(std::begin(reply.shard_weights()) + reply_node_id_index);
                 if (*curr_shard_weight == 0)
                 {
-                    ++curr_shard_weight;
-                    ++curr_reply_shard_weight;
-
                     curr_out_neighbor = std::fill_n(curr_out_neighbor, count, default_node_id);
                     curr_out_weight = std::fill_n(curr_out_weight, count, default_weight);
                     curr_out_type = std::fill_n(curr_out_type, count, default_edge_type);
 
-                    curr_reply_neighbor += count;
-                    curr_reply_type += count;
-                    curr_reply_weight += count;
-                    ++curr_nodes;
+                    total_reply_neighbor += count;
+                    total_reply_type += count;
+                    total_reply_weight += count;
+                    ++total_reply_shard_weight;
                     continue;
                 }
 
-                float overwrite_rate = *curr_reply_shard_weight / *curr_shard_weight;
+                float overwrite_rate = *(std::begin(reply.shard_weights()) + reply_node_id_index) / *curr_shard_weight;
+                auto curr_reply_neighbor = std::begin(reply.neighbor_ids()) + count * reply_node_id_index;
+                auto curr_reply_type = std::begin(reply.neighbor_types()) + count * reply_node_id_index;
+                auto curr_reply_weight = std::begin(reply.neighbor_weights()) + count * reply_node_id_index;
+
                 for (size_t i = 0; i < count; ++i)
                 {
                     // Perf optimization for the most common scenario: every node has its
@@ -820,15 +816,16 @@ void GRPCClient::WeightedSampleNeighbor(int64_t seed, std::span<const NodeId> no
                     *(curr_out_weight++) = *(curr_reply_weight++);
                 }
 
-                ++curr_reply_shard_weight;
-                ++curr_shard_weight;
-                ++curr_nodes;
+                total_reply_neighbor += count;
+                total_reply_type += count;
+                total_reply_weight += count;
+                ++total_reply_shard_weight;
             }
 
-            assert(curr_reply_weight == std::end(reply.neighbor_weights()));
-            assert(curr_reply_neighbor == std::end(reply.neighbor_ids()));
-            assert(curr_reply_type == std::end(reply.neighbor_types()));
-            assert(curr_reply_shard_weight == std::end(reply.shard_weights()));
+            assert(total_reply_weight == std::end(reply.neighbor_weights()));
+            assert(total_reply_neighbor == std::end(reply.neighbor_ids()));
+            assert(total_reply_type == std::end(reply.neighbor_types()));
+            assert(total_reply_shard_weight == std::end(reply.shard_weights()));
         };
 
         futures.emplace_back(call->promise.get_future());
@@ -878,13 +875,13 @@ void GRPCClient::UniformSampleNeighbor(bool without_replacement, int64_t seed, s
                 return;
             }
 
-            auto curr_nodes = std::begin(node_ids);
             auto curr_out_neighbor = std::begin(output_neighbors);
             auto curr_out_type = std::begin(output_types);
             auto curr_shard_weight = std::begin(shard_counts);
-            auto curr_reply_neighbor = std::begin(reply.neighbor_ids());
-            auto curr_reply_type = std::begin(reply.neighbor_types());
-            auto curr_reply_shard_weight = std::begin(reply.shard_counts());
+
+            auto total_reply_neighbor = std::begin(reply.neighbor_ids());
+            auto total_reply_type = std::begin(reply.neighbor_types());
+            auto total_reply_shard_weight = std::begin(reply.shard_counts());
             boost::random::uniform_real_distribution<float> selector(0, 1);
 
             // We need to lock the merge in case some nodes are present in multiple
@@ -894,32 +891,29 @@ void GRPCClient::UniformSampleNeighbor(bool without_replacement, int64_t seed, s
 
             // The strategy is to zip nodes from server response matching to the input
             // nodes.
-            for (const auto &reply_node_id : reply.node_ids())
+            for (const auto &reply_node_id_index : reply.node_ids())
             {
                 // Loop until we find a match
-                for (; curr_nodes != std::end(node_ids) && *curr_nodes != reply_node_id; ++curr_nodes)
-                {
-                    curr_out_neighbor += count;
-                    curr_out_type += count;
-                    ++curr_shard_weight;
-                }
+                curr_out_neighbor = std::begin(output_neighbors) + reply_node_id_index * count;
+                curr_out_type = std::begin(output_types) + reply_node_id_index * count;
+                curr_shard_weight = std::begin(shard_counts) + reply_node_id_index;
 
-                *curr_shard_weight += *curr_reply_shard_weight;
+                *curr_shard_weight += *(std::begin(reply.shard_counts()) + reply_node_id_index);
                 if (*curr_shard_weight == 0)
                 {
-                    ++curr_shard_weight;
-                    ++curr_reply_shard_weight;
-
                     curr_out_neighbor = std::fill_n(curr_out_neighbor, count, default_node_id);
                     curr_out_type = std::fill_n(curr_out_type, count, default_type);
 
-                    curr_reply_neighbor += count;
-                    curr_reply_type += count;
-                    ++curr_nodes;
+                    total_reply_neighbor += count;
+                    total_reply_type += count;
+                    ++total_reply_shard_weight;
                     continue;
                 }
 
-                float overwrite_rate = float(*curr_reply_shard_weight) / *curr_shard_weight;
+                float overwrite_rate =
+                    float(*(std::begin(reply.shard_counts()) + reply_node_id_index)) / *curr_shard_weight;
+                auto curr_reply_neighbor = std::begin(reply.neighbor_ids()) + count * reply_node_id_index;
+                auto curr_reply_type = std::begin(reply.neighbor_types()) + count * reply_node_id_index;
                 for (size_t i = 0; i < count; ++i)
                 {
                     // Perf optimization for the most common scenario: every node has its
@@ -937,14 +931,14 @@ void GRPCClient::UniformSampleNeighbor(bool without_replacement, int64_t seed, s
                     *(curr_out_type++) = *(curr_reply_type++);
                 }
 
-                ++curr_reply_shard_weight;
-                ++curr_shard_weight;
-                ++curr_nodes;
+                total_reply_neighbor += count;
+                total_reply_type += count;
+                ++total_reply_shard_weight;
             }
 
-            assert(curr_reply_neighbor == std::end(reply.neighbor_ids()));
-            assert(curr_reply_type == std::end(reply.neighbor_types()));
-            assert(curr_reply_shard_weight == std::end(reply.shard_counts()));
+            assert(total_reply_neighbor == std::end(reply.neighbor_ids()));
+            assert(total_reply_type == std::end(reply.neighbor_types()));
+            assert(total_reply_shard_weight == std::end(reply.shard_counts()));
         };
 
         futures.emplace_back(call->promise.get_future());
