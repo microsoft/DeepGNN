@@ -2,7 +2,6 @@
 # Licensed under the MIT License.
 """Graph processing utility functions."""
 import os
-import json
 import logging
 import random
 from typing import List, Tuple, Dict, Set, DefaultDict
@@ -26,7 +25,7 @@ def download_file(url: str, data_dir: str, name: str):
         urllib.request.urlretrieve(url, fname)
 
 
-def get_json_node(
+def get_edge_list_node(
     node_id: int,
     node_type: str,
     flt_feat: List[float],
@@ -34,41 +33,22 @@ def get_json_node(
     train_neighbors: Set[int],
     test_neighbors: Set[int],
 ) -> str:
-    """Return node with JSON format.
+    """Return node with edge_list format.
 
     node type: 0(train), 1(test)
     use default value for node_weight(1.0), neighbor weight(1.0)
     """
     assert type(flt_feat) is list and type(flt_feat[0]) == float
     assert type(label) is int
-
     ntype = 0 if node_type == "train" else 1
-    node = {
-        "node_id": node_id,
-        "node_type": ntype,
-        "node_weight": 1.0,
-        "float_feature": {"0": flt_feat, "1": [label]},
-        "binary_feature": None,
-        "edge": [
-            {
-                "src_id": node_id,
-                "dst_id": nb,
-                "edge_type": 0,
-                "weight": 1.0,
-            }
-            for nb in train_neighbors
-        ]
-        + [
-            {
-                "src_id": node_id,
-                "dst_id": nb,
-                "edge_type": 1,
-                "weight": 1.0,
-            }
-            for nb in test_neighbors
-        ],
-    }
-    return json.dumps(node)
+
+    output = ""
+    output += f"{node_id},-1,{ntype},1.0,float32,{len(flt_feat)},{','.join([str(v) for v in flt_feat])},float32,1,{label}\n"
+    for nb in sorted(train_neighbors):
+        output += f"{node_id},0,{nb},1.0\n"
+    for nb in sorted(test_neighbors):
+        output += f"{node_id},1,{nb},1.0\n"
+    return output
 
 
 def write_node_files(node_types: Dict[int, str], train_file: str, test_file: str):
@@ -140,16 +120,18 @@ class Dataset(Client):
             data_dir, train_node_ratio, random_selection
         )
 
-        # build graph - JSON
-        graph_file = os.path.join(data_dir, "graph.json")
-        self._write_json_graph(nodes, node_types, train_adjs, test_adjs, graph_file)
+        # build graph - edge_list
+        graph_file = os.path.join(data_dir, "graph.csv")
+        self._write_edge_list_graph(
+            nodes, node_types, train_adjs, test_adjs, graph_file
+        )
 
-        # convert graph: JSON -> Binary
+        # convert graph: edge_list -> Binary
         convert.MultiWorkersConverter(
             graph_path=graph_file,
             partition_count=1,
             output_dir=data_dir,
-            decoder=decoders.JsonDecoder(),
+            decoder=decoders.EdgeListDecoder(),
         ).convert()
 
         # write training/testing nodes.
@@ -191,7 +173,7 @@ class Dataset(Client):
         logging.info("* classes {}".format(set([node[1] for _, node in nodes.items()])))
         logging.info("*******************************************")
 
-    def _write_json_graph(
+    def _write_edge_list_graph(
         self,
         nodes: Dict[int, Tuple[List[float], int]],
         node_types: Dict[int, str],
@@ -201,7 +183,7 @@ class Dataset(Client):
     ):
         with open(graph_file, "w") as fout:
             for nid, info in nodes.items():
-                tmp = get_json_node(
+                tmp = get_edge_list_node(
                     nid,
                     node_types[nid],
                     info[0],
@@ -210,4 +192,3 @@ class Dataset(Client):
                     test_adjs[nid],
                 )
                 fout.write(tmp)
-                fout.write("\n")

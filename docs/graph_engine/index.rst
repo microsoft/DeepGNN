@@ -8,4 +8,5 @@ Graph Engine
    overview
    data_spec
    from_networkx
+   custom_decoder
    spark_converter
