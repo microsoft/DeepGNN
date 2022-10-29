@@ -27,12 +27,15 @@ namespace
 const size_t min_batch_size = 1 << 8;
 const size_t max_batch_size = 1 << 12;
 const size_t num_nodes = 100000;
-const size_t fv_size = 64;
+const size_t min_fv_size = 1 << 6;
+const size_t max_fv_size = 1 << 8;
+
 } // namespace
 
-void BM_DISTRIBUTED_GRAPH_SINGLE_NODE(benchmark::State &state)
+void RUN_DISTRIBUTED_GRAPH_SINGLE_NODE(benchmark::State &state, bool enable_thread_pool)
 {
     TestGraph::MemoryGraph m;
+    const size_t fv_size = state.range(1);
     for (size_t n = 0; n < num_nodes; n++)
     {
         std::vector<float> vals(fv_size);
@@ -44,7 +47,8 @@ void BM_DISTRIBUTED_GRAPH_SINGLE_NODE(benchmark::State &state)
     auto path = std::filesystem::temp_directory_path();
     TestGraph::convert(path, "0_0", std::move(m), 1);
     snark::GRPCServer server(std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                                             snark::PartitionStorageType::memory, ""),
+                                                                             snark::PartitionStorageType::memory, "",
+                                                                             enable_thread_pool),
                              {}, "0.0.0.0:0", {}, {}, {});
     snark::GRPCClient c({server.InProcessChannel()}, 1, 1);
 
@@ -64,9 +68,10 @@ void BM_DISTRIBUTED_GRAPH_SINGLE_NODE(benchmark::State &state)
     }
 }
 
-void BM_DISTRIBUTED_GRAPH_MULTIPLE_NODES(benchmark::State &state)
+void RUN_DISTRIBUTED_GRAPH_MULTIPLE_NODES(benchmark::State &state, bool enable_thread_pool)
 {
     const size_t num_servers = 2;
+    const size_t fv_size = state.range(1);
     std::vector<std::unique_ptr<snark::GRPCServer>> servers;
     std::vector<std::shared_ptr<grpc::Channel>> channels;
     size_t curr_node = 0;
@@ -85,8 +90,8 @@ void BM_DISTRIBUTED_GRAPH_MULTIPLE_NODES(benchmark::State &state)
         auto path = std::filesystem::temp_directory_path();
         TestGraph::convert(path, "0_0", std::move(m), 1);
         servers.emplace_back(std::make_unique<snark::GRPCServer>(
-            std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                            snark::PartitionStorageType::memory, ""),
+            std::make_shared<snark::GraphEngineServiceImpl>(
+                path.string(), std::vector<uint32_t>{0}, snark::PartitionStorageType::memory, "", enable_thread_pool),
             std::shared_ptr<snark::GraphSamplerServiceImpl>{}, std::string("0.0.0.0:0"), std::string{}, std::string{},
             std::string{}));
         channels.emplace_back(servers.back()->InProcessChannel());
@@ -115,7 +120,7 @@ static void BM_REGULAR_GRAPH(benchmark::State &state)
     TestGraph::MemoryGraph m;
     for (size_t n = 0; n < num_nodes; n++)
     {
-        std::vector<float> vals(fv_size);
+        std::vector<float> vals(min_fv_size);
         std::iota(std::begin(vals), std::end(vals), n);
         m.m_nodes.push_back(TestGraph::Node{
             .m_id = snark::NodeId(n), .m_type = 0, .m_weight = 1.0f, .m_float_features = {std::move(vals)}});
@@ -128,15 +133,15 @@ static void BM_REGULAR_GRAPH(benchmark::State &state)
     std::random_device rd;
     snark::Xoroshiro128PlusGenerator gen(rd());
     std::shuffle(std::begin(input_nodes), std::end(input_nodes), gen);
-    std::vector<uint8_t> output(4 * fv_size * num_nodes);
+    std::vector<uint8_t> output(4 * min_fv_size * num_nodes);
     boost::random::uniform_int_distribution<size_t> distrib(0, num_nodes - (max_batch_size)-1);
-    std::vector<snark::FeatureMeta> feature = {{0, 4 * fv_size}};
+    std::vector<snark::FeatureMeta> feature = {{0, 4 * min_fv_size}};
     for (auto _ : state)
     {
         const size_t batch_size = state.range(0);
 
         g.GetNodeFeature(std::span(std::begin(input_nodes) + distrib(gen), batch_size), std::span(feature),
-                         std::span(std::begin(output), 4 * fv_size * batch_size));
+                         std::span(std::begin(output), 4 * min_fv_size * batch_size));
     }
 }
 
@@ -205,15 +210,45 @@ void BM_DISTRIBUTED_SAMPLER_MULTIPLE_SERVERS(benchmark::State &state)
     }
 }
 
+void BM_DISTRIBUTED_GRAPH_SINGLE_NODE(benchmark::State &state)
+{
+    RUN_DISTRIBUTED_GRAPH_SINGLE_NODE(state, false);
+}
+
+void BM_DISTRIBUTED_GRAPH_SINGLE_NODE_THREADPOOL(benchmark::State &state)
+{
+    RUN_DISTRIBUTED_GRAPH_SINGLE_NODE(state, true);
+}
+
+void BM_DISTRIBUTED_GRAPH_MULTIPLE_NODES(benchmark::State &state)
+{
+    RUN_DISTRIBUTED_GRAPH_MULTIPLE_NODES(state, false);
+}
+
+void BM_DISTRIBUTED_GRAPH_MULTIPLE_NODES_THREADPOOL(benchmark::State &state)
+{
+    RUN_DISTRIBUTED_GRAPH_MULTIPLE_NODES(state, true);
+}
+
 // Use a fixed number of iterations for easier comparison.
 BENCHMARK(BM_REGULAR_GRAPH)->RangeMultiplier(4)->Range(min_batch_size, max_batch_size)->Iterations(10000);
 BENCHMARK(BM_DISTRIBUTED_GRAPH_SINGLE_NODE)
     ->RangeMultiplier(4)
-    ->Range(min_batch_size, max_batch_size)
+    ->Ranges({{min_batch_size, max_batch_size}, {min_fv_size, max_fv_size}})
     ->Iterations(10000);
-BENCHMARK(BM_DISTRIBUTED_GRAPH_MULTIPLE_NODES)
+BENCHMARK(BM_DISTRIBUTED_GRAPH_SINGLE_NODE_THREADPOOL)
     ->RangeMultiplier(4)
-    ->Range(min_batch_size, max_batch_size)
+    ->Ranges({{min_batch_size, max_batch_size}, {min_fv_size, max_fv_size}})
+    ->Iterations(10000);
+
+// To avoid response payload exceeds the maximum, limit the max batch size to 2048.
+BENCHMARK(BM_DISTRIBUTED_GRAPH_MULTIPLE_NODES)
+    ->RangeMultiplier(2)
+    ->Ranges({{min_batch_size, 1 << 11}, {min_fv_size, max_fv_size}})
+    ->Iterations(10000);
+BENCHMARK(BM_DISTRIBUTED_GRAPH_MULTIPLE_NODES_THREADPOOL)
+    ->RangeMultiplier(2)
+    ->Ranges({{min_batch_size, 1 << 11}, {min_fv_size, max_fv_size}})
     ->Iterations(10000);
 BENCHMARK(BM_DISTRIBUTED_SAMPLER_MULTIPLE_SERVERS)
     ->RangeMultiplier(4)

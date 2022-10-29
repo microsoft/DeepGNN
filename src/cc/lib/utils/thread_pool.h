@@ -19,11 +19,10 @@ class ThreadPool
     ThreadPool(ThreadPool &&) = delete;
     ThreadPool &operator=(ThreadPool &&) = delete;
 
-    static auto &GetInstance()
-    {
-        static ThreadPool instance;
-        return instance;
-    }
+    // Before calling GetInstance, we can use this to set the desired count of threads
+    // in the thread pool, by default, hardware concurrency is used.
+    static void SetThreadPoolSize(const std::size_t &size);
+    static ThreadPool &GetInstance();
 
     template <typename _Iterator, typename _Function>
     void RunInParallel(_Iterator _First, _Iterator _Last, const _Function &_Func)
@@ -54,10 +53,9 @@ class ThreadPool
     }
 
   private:
-    ThreadPool() : m_thread_pool(std::thread::hardware_concurrency())
-    {
-    }
+    ThreadPool(const std::size_t &size);
 
+    static std::size_t m_thread_size;
     boost::asio::thread_pool m_thread_pool;
 };
 

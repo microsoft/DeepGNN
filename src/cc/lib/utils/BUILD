@@ -6,6 +6,7 @@ load("//config:variables.bzl", "CXX_OPTS", "PLATFORM_DEFINES")
 cc_library(
     name = "utils",
     srcs = [
+        "thread_pool.cc",
     ],
     hdrs = [
         "thread_pool.h",

@@ -745,8 +745,8 @@ void GRPCClient::WeightedSampleNeighbor(int64_t seed, std::span<const NodeId> no
         auto response_reader =
             m_engine_stubs[shard]->PrepareAsyncWeightedSampleNeighbors(&call->context, request, NextCompletionQueue());
 
-        call->callback = [&reply = replies[shard], count, output_neighbors, output_types, output_weights, node_ids,
-                          &mtx, &engine, &shard_weights, default_node_id, default_weight, default_edge_type]() {
+        call->callback = [&reply = replies[shard], count, output_neighbors, output_types, output_weights, &mtx, &engine,
+                          &shard_weights, default_node_id, default_weight, default_edge_type]() {
             if (reply.node_ids().empty())
             {
                 return;
@@ -849,8 +849,8 @@ void GRPCClient::UniformSampleNeighbor(bool without_replacement, int64_t seed, s
 
         auto response_reader =
             m_engine_stubs[shard]->PrepareAsyncUniformSampleNeighbors(&call->context, request, NextCompletionQueue());
-        call->callback = [&reply = replies[shard], count, output_types, node_ids, &mtx, &engine, &shard_counts,
-                          output_neighbors, default_node_id, default_type]() {
+        call->callback = [&reply = replies[shard], count, output_types, &mtx, &engine, &shard_counts, output_neighbors,
+                          default_node_id, default_type]() {
             if (reply.node_ids().empty())
             {
                 return;
