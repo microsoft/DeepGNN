@@ -19,22 +19,24 @@ namespace
 std::shared_ptr<snark::Graph> g_client;
 } // namespace
 
-std::string create_features_graph(const size_t num_nodes, const size_t fv_size)
+std::string create_features_graph(const size_t num_nodes, const size_t fv_size, const std::size_t &partition = 1)
 {
     std::string path = std::filesystem::temp_directory_path() / "benchmark_features";
     std::filesystem::create_directory(path);
     std::vector<uint32_t> partitions{0};
 
-    TestGraph::MemoryGraph m;
-    for (size_t n = 0; n < num_nodes; n++)
+    for (size_t i = 0; i < partition; i++)
     {
-        std::vector<float> vals(fv_size);
-        std::iota(std::begin(vals), std::end(vals), n);
-        m.m_nodes.push_back(TestGraph::Node{
-            .m_id = snark::NodeId(n), .m_type = 0, .m_weight = 1.0f, .m_float_features = {std::move(vals)}});
+        TestGraph::MemoryGraph m;
+        for (size_t n = 0; n < num_nodes; n++)
+        {
+            std::vector<float> vals(fv_size);
+            std::iota(std::begin(vals), std::end(vals), n);
+            m.m_nodes.push_back(TestGraph::Node{
+                .m_id = snark::NodeId(n), .m_type = 0, .m_weight = 1.0f, .m_float_features = {std::move(vals)}});
+        }
+        TestGraph::convert(path, std::to_string(i) + "_0", std::move(m), partition);
     }
-
-    TestGraph::convert(path, "0_0", std::move(m), 1);
 
     return path;
 }
@@ -114,6 +116,33 @@ static void BM_NODE_STRING_FEATURES(benchmark::State &state, snark::PartitionSto
     }
 }
 
+static void BM_LOAD_GRAPH(benchmark::State &state, bool enable_threadpool = false)
+{
+    const size_t num_nodes = state.range(0);
+    const size_t partition = state.range(1);
+    const size_t fv_size = state.range(2);
+    std::vector<snark::FeatureId> features = {0};
+    std::string path;
+    std::vector<uint32_t> partition_list;
+    if (state.thread_index() == 0)
+    {
+        path = create_features_graph(num_nodes, fv_size, partition);
+        for (size_t i = 0; i < partition; i++)
+        {
+            partition_list.push_back(i);
+        }
+    }
+    for (auto _ : state)
+    {
+        g_client = std::make_shared<snark::Graph>(
+            snark::Graph(path, partition_list, snark::PartitionStorageType::memory, "", enable_threadpool));
+    }
+    if (state.thread_index() == 0)
+    {
+        std::filesystem::remove_all(path);
+    }
+}
+
 static void BM_NODE_FEATURES_DISK(benchmark::State &state)
 {
     BM_NODE_FEATURES(state, snark::PartitionStorageType::disk);
@@ -134,6 +163,21 @@ static void BM_NODE_STRING_FEATURES_MEMORY(benchmark::State &state)
     BM_NODE_STRING_FEATURES(state, snark::PartitionStorageType::memory);
 }
 
+static void BM_LOAD_GRAPH_THREADPOOL(benchmark::State &state)
+{
+    BM_LOAD_GRAPH(state, true);
+}
+
+static void BM_LOAD_GRAPH_NO_THREADPOOL(benchmark::State &state)
+{
+    BM_LOAD_GRAPH(state, false);
+}
+
+BENCHMARK(BM_LOAD_GRAPH_NO_THREADPOOL)
+    ->RangeMultiplier(2)
+    ->Ranges({{1000, 5000}, {8, 8}, {512, 1024}})
+    ->Iterations(100);
+BENCHMARK(BM_LOAD_GRAPH_THREADPOOL)->RangeMultiplier(2)->Ranges({{1000, 5000}, {8, 8}, {512, 1024}})->Iterations(100);
 BENCHMARK(BM_NODE_FEATURES_DISK)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(1);
 BENCHMARK(BM_NODE_FEATURES_MEMORY)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(1);
 BENCHMARK(BM_NODE_FEATURES_MEMORY_THREADPOOL)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(1);
