@@ -107,7 +107,7 @@ def _create_lock_file(folder: str, index: int, extension: str):
     assert not _check_lock_file(
         folder, index, extension
     ), f"Delete sync folder {folder} before starting training."
-
+    os.makedirs(folder, exist_ok=True)
     with open(file_name, "w+") as f:
         f.write(str(os.getpid()))
 
@@ -118,7 +118,10 @@ def _check_lock_file(folder: str, index: int, extension: str):
 
 def _delete_lock_file(folder: str, index: int, extension: str):
     path = pathlib.Path(folder, f"snark_{index}.{extension}")
-    os.remove(path)
+    try:
+        os.remove(path)
+    except FileNotFoundError:
+        pass
 
 
 class SynchronizedClient:

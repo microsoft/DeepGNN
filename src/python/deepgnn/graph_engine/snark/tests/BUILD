@@ -265,10 +265,10 @@ py_test(
 )
 
 py_test(
-    name = "test_start_distributed_backend",
-    srcs = ["test_start_distributed_backend.py"],
+    name = "start_distributed_backend_test",
+    srcs = ["start_distributed_backend_test.py"],
     imports = ["../../../../"],
-    main = "test_start_distributed_backend.py",
+    main = "start_distributed_backend_test.py",
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
