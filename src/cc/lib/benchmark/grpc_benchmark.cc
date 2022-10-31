@@ -27,6 +27,10 @@ namespace
 const size_t min_batch_size = 1 << 8;
 const size_t max_batch_size = 1 << 12;
 const size_t num_nodes = 100000;
+const size_t min_num_nodes = 1 << 10;
+const size_t max_num_nodes = 1 << 13;
+const size_t min_partition_count = 1 << 2;
+const size_t max_partition_count = 1 << 4;
 const size_t min_fv_size = 1 << 6;
 const size_t max_fv_size = 1 << 8;
 
@@ -68,7 +72,7 @@ void RUN_DISTRIBUTED_GRAPH_SINGLE_NODE(benchmark::State &state, bool enable_thre
     }
 }
 
-void RUN_DISTRIBUTED_GRAPH_MULTIPLE_NODES(benchmark::State &state, bool enable_thread_pool)
+void BM_DISTRIBUTED_GRAPH_MULTIPLE_NODES(benchmark::State &state)
 {
     const size_t num_servers = 2;
     const size_t fv_size = state.range(1);
@@ -90,8 +94,8 @@ void RUN_DISTRIBUTED_GRAPH_MULTIPLE_NODES(benchmark::State &state, bool enable_t
         auto path = std::filesystem::temp_directory_path();
         TestGraph::convert(path, "0_0", std::move(m), 1);
         servers.emplace_back(std::make_unique<snark::GRPCServer>(
-            std::make_shared<snark::GraphEngineServiceImpl>(
-                path.string(), std::vector<uint32_t>{0}, snark::PartitionStorageType::memory, "", enable_thread_pool),
+            std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
+                                                            snark::PartitionStorageType::memory, ""),
             std::shared_ptr<snark::GraphSamplerServiceImpl>{}, std::string("0.0.0.0:0"), std::string{}, std::string{},
             std::string{}));
         channels.emplace_back(servers.back()->InProcessChannel());
@@ -214,6 +218,7 @@ static void BM_LOAD_GRAPH(benchmark::State &state, bool enable_threadpool = fals
 {
     const size_t num_nodes = state.range(0);
     const size_t partition = state.range(1);
+    const size_t fv_size = state.range(2);
     std::string path;
 
     if (state.thread_index() == 0)
@@ -226,7 +231,7 @@ static void BM_LOAD_GRAPH(benchmark::State &state, bool enable_threadpool = fals
             TestGraph::MemoryGraph m;
             for (size_t n = 0; n < num_nodes; n++)
             {
-                std::vector<float> vals(512);
+                std::vector<float> vals(fv_size);
                 std::iota(std::begin(vals), std::end(vals), n);
                 m.m_nodes.push_back(TestGraph::Node{
                     .m_id = snark::NodeId(n), .m_type = 0, .m_weight = 1.0f, .m_float_features = {std::move(vals)}});
@@ -256,16 +261,6 @@ void BM_DISTRIBUTED_GRAPH_SINGLE_NODE_THREADPOOL(benchmark::State &state)
     RUN_DISTRIBUTED_GRAPH_SINGLE_NODE(state, true);
 }
 
-void BM_DISTRIBUTED_GRAPH_MULTIPLE_NODES(benchmark::State &state)
-{
-    RUN_DISTRIBUTED_GRAPH_MULTIPLE_NODES(state, false);
-}
-
-void BM_DISTRIBUTED_GRAPH_MULTIPLE_NODES_THREADPOOL(benchmark::State &state)
-{
-    RUN_DISTRIBUTED_GRAPH_MULTIPLE_NODES(state, true);
-}
-
 static void BM_LOAD_GRAPH_THREADPOOL(benchmark::State &state)
 {
     BM_LOAD_GRAPH(state, false);
@@ -277,6 +272,14 @@ static void BM_LOAD_GRAPH_NO_THREADPOOL(benchmark::State &state)
 }
 
 // Use a fixed number of iterations for easier comparison.
+BENCHMARK(BM_LOAD_GRAPH_NO_THREADPOOL)
+    ->RangeMultiplier(2)
+    ->Ranges({{min_num_nodes, max_num_nodes}, {min_partition_count, max_partition_count}, {1 << 8, 1 << 9}})
+    ->Iterations(100);
+BENCHMARK(BM_LOAD_GRAPH_THREADPOOL)
+    ->RangeMultiplier(2)
+    ->Ranges({{min_num_nodes, max_num_nodes}, {min_partition_count, max_partition_count}, {1 << 8, 1 << 9}})
+    ->Iterations(100);
 BENCHMARK(BM_DISTRIBUTED_GRAPH_SINGLE_NODE)
     ->RangeMultiplier(4)
     ->Ranges({{min_batch_size, max_batch_size}, {min_fv_size, max_fv_size}})
@@ -285,19 +288,10 @@ BENCHMARK(BM_DISTRIBUTED_GRAPH_SINGLE_NODE_THREADPOOL)
     ->RangeMultiplier(4)
     ->Ranges({{min_batch_size, max_batch_size}, {min_fv_size, max_fv_size}})
     ->Iterations(10000);
-
-BENCHMARK(BM_LOAD_GRAPH_NO_THREADPOOL)->RangeMultiplier(2)->Ranges({{200000, 200000}, {8, 8}})->Threads(1);
-BENCHMARK(BM_LOAD_GRAPH_THREADPOOL)->RangeMultiplier(2)->Ranges({{200000, 200000}, {8, 8}})->Threads(1);
 BENCHMARK(BM_REGULAR_GRAPH)->RangeMultiplier(4)->Range(min_batch_size, max_batch_size)->Iterations(10000);
-
-// To avoid response payload exceeds the maximum, limit the max batch size to 2048.
 BENCHMARK(BM_DISTRIBUTED_GRAPH_MULTIPLE_NODES)
-    ->RangeMultiplier(2)
-    ->Ranges({{min_batch_size, 1 << 11}, {min_fv_size, max_fv_size}})
-    ->Iterations(10000);
-BENCHMARK(BM_DISTRIBUTED_GRAPH_MULTIPLE_NODES_THREADPOOL)
-    ->RangeMultiplier(2)
-    ->Ranges({{min_batch_size, 1 << 11}, {min_fv_size, max_fv_size}})
+    ->RangeMultiplier(4)
+    ->Ranges({{min_batch_size, max_batch_size}, {min_fv_size, min_fv_size}})
     ->Iterations(10000);
 BENCHMARK(BM_DISTRIBUTED_SAMPLER_MULTIPLE_SERVERS)
     ->RangeMultiplier(4)

@@ -5,6 +5,7 @@
 #include "src/cc/lib/graph/partition.h"
 #include "src/cc/lib/graph/sampler.h"
 #include "src/cc/lib/graph/xoroshiro.h"
+#include "src/cc/lib/utils/thread_pool.h"
 #include "src/cc/tests/mocks.h"
 
 #include <algorithm>
@@ -25,6 +26,11 @@ template <bool withRep> using UniformEdgePartitionList = std::vector<snark::Unif
 
 class StorageTypeAndThreadPoolGraphTest : public testing::TestWithParam<std::tuple<snark::PartitionStorageType, bool>>
 {
+  protected:
+    void SetUp() override
+    {
+        snark::ThreadPool::SetThreadPoolSize(1);
+    }
 };
 
 TEST(GraphTest, NodeSamplingSingleType)
@@ -640,7 +646,7 @@ TEST_P(StorageTypeAndThreadPoolGraphTest, NeighborSamplesWithSingleNodeNoNeighbo
     m.m_nodes.push_back(TestGraph::Node{.m_id = 1, .m_type = 1, .m_weight = 1.0f});
     auto path = std::filesystem::temp_directory_path();
     TestGraph::convert(path, "0_0", std::move(m), 2);
-    snark::Graph g(path.string(), std::vector<uint32_t>{0}, std::get<0>(GetParam()), "");
+    snark::Graph g(path.string(), std::vector<uint32_t>{0}, std::get<0>(GetParam()), "", std::get<1>(GetParam()));
     std::vector<snark::NodeId> nodes = {0, 1};
     std::vector<snark::Type> types = {0};
     int count = 5;
@@ -655,27 +661,9 @@ TEST_P(StorageTypeAndThreadPoolGraphTest, NeighborSamplesWithSingleNodeNoNeighbo
     EXPECT_EQ(std::vector<snark::NodeId>(10, 13), neighbor_nodes);
     EXPECT_EQ(std::vector<snark::Type>(10, -1), neighbor_types);
     EXPECT_EQ(std::vector<float>(10, 2.0f), neighbor_weights);
-
-    // use thread pool, we cannot guarantee the order of the threads, so just use 1 node to verify
-    // if thread pool works.
-    snark::Graph g_tp(path.string(), std::vector<uint32_t>{0}, std::get<0>(GetParam()), "", true);
-    std::vector<snark::NodeId> nodes_tp = {0};
-    std::vector<snark::Type> types_tp = {0};
-    int count_tp = 5;
-    std::vector<snark::NodeId> neighbor_nodes_tp(count_tp * nodes_tp.size(), -1);
-    std::vector<snark::Type> neighbor_types_tp(count_tp * nodes_tp.size(), -1);
-    std::vector<float> neighbor_weights_tp(count_tp * nodes_tp.size(), -1);
-    std::vector<float> total_neighbor_weights_tp(nodes_tp.size());
-
-    g_tp.SampleNeighbor(42, std::span(nodes_tp), std::span(types_tp), count_tp, std::span(neighbor_nodes_tp),
-                        std::span(neighbor_types_tp), std::span(neighbor_weights_tp),
-                        std::span(total_neighbor_weights_tp), 13, 2, -1);
-    EXPECT_EQ(std::vector<snark::NodeId>(5, 13), neighbor_nodes_tp);
-    EXPECT_EQ(std::vector<snark::Type>(5, -1), neighbor_types_tp);
-    EXPECT_EQ(std::vector<float>(5, 2.0f), neighbor_weights_tp);
 }
 
-TEST(GraphTest, NeighborSampleSimple)
+TEST_P(StorageTypeAndThreadPoolGraphTest, NeighborSampleSimple)
 {
     TestGraph::MemoryGraph m;
     m.m_nodes.push_back(TestGraph::Node{
@@ -691,7 +679,7 @@ TEST(GraphTest, NeighborSampleSimple)
 
     auto path = std::filesystem::temp_directory_path();
     TestGraph::convert(path, "0_0", std::move(m), 2);
-    snark::Graph g(path.string(), {0}, snark::PartitionStorageType::memory, "", false);
+    snark::Graph g(path.string(), {0}, snark::PartitionStorageType::memory, "", std::get<1>(GetParam()));
     std::vector<snark::NodeId> nodes = {0, 2};
     std::vector<snark::Type> types = {0};
     int count = 3;
@@ -706,24 +694,6 @@ TEST(GraphTest, NeighborSampleSimple)
     EXPECT_EQ(std::vector<snark::NodeId>({4, 1, 3, 6, 6, 8}), neighbor_nodes);
     EXPECT_EQ(std::vector<snark::Type>(6, 0), neighbor_types);
     EXPECT_EQ(std::vector<float>(6, 1), neighbor_weights);
-
-    // use thread pool, we cannot guarantee the order of the threads, so just use 1 node to verify
-    // if thread pool works.
-    snark::Graph g_tp(path.string(), {0}, snark::PartitionStorageType::memory, "", true);
-    std::vector<snark::NodeId> nodes_tp = {0};
-    std::vector<snark::Type> types_tp = {0};
-    int count_tp = 3;
-    std::vector<snark::NodeId> neighbor_nodes_tp(count_tp * nodes_tp.size(), -1);
-    std::vector<snark::Type> neighbor_types_tp(count_tp * nodes_tp.size(), -1);
-    std::vector<float> neighbor_weights_tp(count_tp * nodes_tp.size(), -1);
-    std::vector<float> total_neighbor_weights_tp(nodes_tp.size());
-
-    g_tp.SampleNeighbor(42, std::span(nodes_tp), std::span(types_tp), count_tp, std::span(neighbor_nodes_tp),
-                        std::span(neighbor_types_tp), std::span(neighbor_weights_tp),
-                        std::span(total_neighbor_weights_tp), 0, 0, -1);
-    EXPECT_EQ(std::vector<snark::NodeId>({4, 1, 3}), neighbor_nodes_tp);
-    EXPECT_EQ(std::vector<snark::Type>(3, 0), neighbor_types_tp);
-    EXPECT_EQ(std::vector<float>(3, 1), neighbor_weights_tp);
 }
 
 TEST_P(StorageTypeAndThreadPoolGraphTest, NeighborSampleMultipleTypesSinglePartition)
@@ -742,7 +712,7 @@ TEST_P(StorageTypeAndThreadPoolGraphTest, NeighborSampleMultipleTypesSingleParti
         .m_neighbors{std::vector<TestGraph::NeighborRecord>{{6, 0, 1.0f}, {7, 0, 1.0f}, {8, 0, 1.0f}}}});
     auto path = std::filesystem::temp_directory_path();
     TestGraph::convert(path, "0_0", std::move(m), 2);
-    snark::Graph g(path.string(), std::vector<uint32_t>{0}, std::get<0>(GetParam()), "");
+    snark::Graph g(path.string(), std::vector<uint32_t>{0}, std::get<0>(GetParam()), "", std::get<1>(GetParam()));
     std::vector<snark::NodeId> nodes = {0, 2};
     std::vector<snark::Type> types = {0, 1};
     int count = 3;
@@ -758,28 +728,9 @@ TEST_P(StorageTypeAndThreadPoolGraphTest, NeighborSampleMultipleTypesSingleParti
     EXPECT_EQ(std::vector<snark::NodeId>({5, 1, 3, 7, 7, 8}), neighbor_nodes);
     EXPECT_EQ(std::vector<snark::Type>(6, 0), neighbor_types);
     EXPECT_EQ(std::vector<float>(6, 1.f), neighbor_weights);
-
-    // use thread pool, we cannot guarantee the order of the threads, so just use 1 node to verify
-    // if thread pool works.
-    snark::Graph g_tp(path.string(), std::vector<uint32_t>{0}, std::get<0>(GetParam()), "", true);
-    std::vector<snark::NodeId> nodes_tp = {0};
-    std::vector<snark::Type> types_tp = {0, 1};
-    int count_tp = 3;
-    std::vector<snark::NodeId> neighbor_nodes_tp(count_tp * nodes_tp.size(), -1);
-    std::vector<snark::Type> neighbor_types_tp(count_tp * nodes_tp.size(), -1);
-    std::vector<float> neighbor_weights_tp(count_tp * nodes_tp.size(), -1);
-    std::vector<float> total_neighbor_weights_tp(nodes_tp.size());
-
-    g_tp.SampleNeighbor(42, std::span(nodes_tp), std::span(types_tp), count_tp, std::span(neighbor_nodes_tp),
-                        std::span(neighbor_types_tp), std::span(neighbor_weights_tp),
-                        std::span(total_neighbor_weights_tp), 0, 0, -1);
-
-    EXPECT_EQ(std::vector<snark::NodeId>({5, 1, 3}), neighbor_nodes_tp);
-    EXPECT_EQ(std::vector<snark::Type>(3, 0), neighbor_types_tp);
-    EXPECT_EQ(std::vector<float>(3, 1.f), neighbor_weights_tp);
 }
 
-TEST(GraphTest, NeighborSampleMultipleTypesMultiplePartitions)
+TEST_P(StorageTypeAndThreadPoolGraphTest, NeighborSampleMultipleTypesMultiplePartitions)
 {
     TestGraph::MemoryGraph m1;
     m1.m_nodes.push_back(
@@ -798,7 +749,7 @@ TEST(GraphTest, NeighborSampleMultipleTypesMultiplePartitions)
     auto path = std::filesystem::temp_directory_path();
     TestGraph::convert(path, "0_0", std::move(m1), 3);
     TestGraph::convert(path, "1_0", std::move(m2), 3);
-    snark::Graph g(path.string(), {0, 1}, snark::PartitionStorageType::memory, "");
+    snark::Graph g(path.string(), {0, 1}, snark::PartitionStorageType::memory, "", std::get<1>(GetParam()));
     std::vector<snark::NodeId> nodes = {0, 2};
     std::vector<snark::Type> types = {0, 1};
     int count = 2;
@@ -812,24 +763,6 @@ TEST(GraphTest, NeighborSampleMultipleTypesMultiplePartitions)
     EXPECT_EQ(std::vector<snark::NodeId>({1, 1, 4, 6}), neighbor_nodes);
     EXPECT_EQ(std::vector<snark::Type>({0, 0, 0, 1}), neighbor_types);
     EXPECT_EQ(std::vector<float>({1.f, 1.f, 3.f, 2.0f}), neighbor_weights);
-
-    // use thread pool, we cannot guarantee the order of the threads, so just use 1 node to verify
-    // if thread pool works.
-    snark::Graph g_tp(path.string(), {0, 1}, snark::PartitionStorageType::memory, "", true);
-    std::vector<snark::NodeId> nodes_tp = {0};
-    std::vector<snark::Type> types_tp = {0, 1};
-    int count_tp = 2;
-    std::vector<snark::NodeId> neighbor_nodes_tp(count_tp * nodes_tp.size(), -1);
-    std::vector<snark::Type> neighbor_types_tp(count_tp * nodes_tp.size(), -1);
-    std::vector<float> neighbor_weights_tp(count_tp * nodes_tp.size(), -1);
-    std::vector<float> total_neighbor_weights_tp(nodes_tp.size());
-
-    g_tp.SampleNeighbor(8, std::span(nodes_tp), std::span(types_tp), count, std::span(neighbor_nodes_tp),
-                        std::span(neighbor_types_tp), std::span(neighbor_weights_tp),
-                        std::span(total_neighbor_weights_tp), 0, 0, 0);
-    EXPECT_EQ(std::vector<snark::NodeId>({1, 1}), neighbor_nodes_tp);
-    EXPECT_EQ(std::vector<snark::Type>({0, 0}), neighbor_types_tp);
-    EXPECT_EQ(std::vector<float>({1.f, 1.f}), neighbor_weights_tp);
 }
 
 TEST_P(StorageTypeAndThreadPoolGraphTest, NeighborSampleMultipleTypesNeighborsSpreadAcrossPartitions)

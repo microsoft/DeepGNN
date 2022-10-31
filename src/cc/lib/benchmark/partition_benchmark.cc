@@ -17,13 +17,20 @@ namespace
 {
 // Create a global(within benchmark code) client to share among threads.
 std::shared_ptr<snark::Graph> g_client;
+const size_t min_batch_size = 1 << 3;
+const size_t max_batch_size = 1 << 10;
+const size_t min_num_nodes = 1 << 10;
+const size_t max_num_nodes = 1 << 13;
+const size_t min_partition_count = 1 << 2;
+const size_t max_partition_count = 1 << 4;
+const size_t min_fv_size = 1 << 9;
+const size_t max_fv_size = 1 << 10;
 } // namespace
 
 std::string create_features_graph(const size_t num_nodes, const size_t fv_size, const std::size_t &partition = 1)
 {
     std::string path = std::filesystem::temp_directory_path() / "benchmark_features";
     std::filesystem::create_directory(path);
-    std::vector<uint32_t> partitions{0};
 
     for (size_t i = 0; i < partition; i++)
     {
@@ -175,17 +182,20 @@ static void BM_LOAD_GRAPH_NO_THREADPOOL(benchmark::State &state)
 
 BENCHMARK(BM_LOAD_GRAPH_NO_THREADPOOL)
     ->RangeMultiplier(2)
-    ->Ranges({{1000, 5000}, {8, 8}, {512, 1024}})
+    ->Ranges({{min_num_nodes, max_num_nodes}, {min_partition_count, max_partition_count}, {1 << 8, 1 << 9}})
     ->Iterations(100);
-BENCHMARK(BM_LOAD_GRAPH_THREADPOOL)->RangeMultiplier(2)->Ranges({{1000, 5000}, {8, 8}, {512, 1024}})->Iterations(100);
-BENCHMARK(BM_NODE_FEATURES_DISK)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(1);
-BENCHMARK(BM_NODE_FEATURES_MEMORY)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(1);
-BENCHMARK(BM_NODE_FEATURES_MEMORY_THREADPOOL)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(1);
-BENCHMARK(BM_NODE_FEATURES_DISK)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(2);
-BENCHMARK(BM_NODE_FEATURES_MEMORY)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(2);
-BENCHMARK(BM_NODE_FEATURES_DISK)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(4);
-BENCHMARK(BM_NODE_FEATURES_MEMORY)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(4);
-BENCHMARK(BM_NODE_STRING_FEATURES_MEMORY)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(1);
-BENCHMARK(BM_NODE_STRING_FEATURES_MEMORY)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(2);
-BENCHMARK(BM_NODE_STRING_FEATURES_MEMORY)->RangeMultiplier(2)->Range(1 << 3, 1 << 10)->Threads(4);
+BENCHMARK(BM_LOAD_GRAPH_THREADPOOL)
+    ->RangeMultiplier(2)
+    ->Ranges({{min_num_nodes, max_num_nodes}, {min_partition_count, max_partition_count}, {1 << 8, 1 << 9}})
+    ->Iterations(100);
+BENCHMARK(BM_NODE_FEATURES_DISK)->RangeMultiplier(2)->Range(min_batch_size, max_batch_size)->Threads(1);
+BENCHMARK(BM_NODE_FEATURES_MEMORY)->RangeMultiplier(2)->Range(min_batch_size, max_batch_size)->Threads(1);
+BENCHMARK(BM_NODE_FEATURES_MEMORY_THREADPOOL)->RangeMultiplier(2)->Range(min_batch_size, max_batch_size)->Threads(1);
+BENCHMARK(BM_NODE_FEATURES_DISK)->RangeMultiplier(2)->Range(min_batch_size, max_batch_size)->Threads(2);
+BENCHMARK(BM_NODE_FEATURES_MEMORY)->RangeMultiplier(2)->Range(min_batch_size, max_batch_size)->Threads(2);
+BENCHMARK(BM_NODE_FEATURES_DISK)->RangeMultiplier(2)->Range(min_batch_size, max_batch_size)->Threads(4);
+BENCHMARK(BM_NODE_FEATURES_MEMORY)->RangeMultiplier(2)->Range(min_batch_size, max_batch_size)->Threads(4);
+BENCHMARK(BM_NODE_STRING_FEATURES_MEMORY)->RangeMultiplier(2)->Range(min_batch_size, max_batch_size)->Threads(1);
+BENCHMARK(BM_NODE_STRING_FEATURES_MEMORY)->RangeMultiplier(2)->Range(min_batch_size, max_batch_size)->Threads(2);
+BENCHMARK(BM_NODE_STRING_FEATURES_MEMORY)->RangeMultiplier(2)->Range(min_batch_size, max_batch_size)->Threads(4);
 BENCHMARK_MAIN();

@@ -545,7 +545,7 @@ grpc::Status GraphEngineServiceImpl::WeightedSampleNeighbors(::grpc::ServerConte
     }
     else
     {
-        auto groups = SplitIntoGroups(request->node_ids().size(), 3); // 12345
+        auto groups = SplitIntoGroups(request->node_ids().size());
         ThreadPool::GetInstance().RunInParallel(groups.begin(), groups.end(),
                                                 [func](std::size_t, std::tuple<std::size_t, std::size_t> range) {
                                                     auto offset = std::get<0>(range);
@@ -617,7 +617,7 @@ grpc::Status GraphEngineServiceImpl::UniformSampleNeighbors(::grpc::ServerContex
     }
     else
     {
-        auto groups = SplitIntoGroups(request->node_ids().size(), 3); // 12345
+        auto groups = SplitIntoGroups(request->node_ids().size());
         ThreadPool::GetInstance().RunInParallel(groups.begin(), groups.end(),
                                                 [func](std::size_t, std::tuple<std::size_t, std::size_t> range) {
                                                     auto offset = std::get<0>(range);

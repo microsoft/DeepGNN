@@ -5,6 +5,7 @@
 #define SNARK_THREAD_POOL_H
 
 #include "boost/asio.hpp"
+#include <functional>
 #include <future>
 #include <memory>
 
@@ -51,6 +52,8 @@ class ThreadPool
             p->get_future().get();
         }
     }
+
+    void Submit(const std::function<void()> &callback);
 
   private:
     ThreadPool(const std::size_t &size);

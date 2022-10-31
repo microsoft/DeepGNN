@@ -27,4 +27,9 @@ ThreadPool::ThreadPool(const std::size_t &size) : m_thread_pool(size)
 {
 }
 
+void ThreadPool::Submit(const std::function<void()> &callback)
+{
+    boost::asio::post(m_thread_pool, [=]() { callback(); });
+}
+
 } // namespace snark
