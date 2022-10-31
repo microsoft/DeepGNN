@@ -117,8 +117,12 @@ Here we replace the node id sampler with a file line sampler, `ray.data.read_tex
 
     >>> batch = next(pipe.iter_torch_batches(batch_size=2))
     >>> batch
-    {'features': tensor([[0., 0.],
-            [0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
+    {'features': tensor([[3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+            [4., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
 
 Graph Engine Node Sampler
 =========================
@@ -132,7 +136,7 @@ with a generator as input, it streams the windows instead of loading them.
     >>> from ray.data import DatasetPipeline
     >>> from deepgnn.graph_engine import SamplingStrategy
 
-    >>> g = Client(data_dir.name, [0], delayed_start=True)
+    >>> g = Client(data_dir.name, [0])#, delayed_start=True)
     >>> node_batch_generator = (lambda: ray.data.from_numpy(g.sample_nodes(140, np.array([0], dtype=np.int32), SamplingStrategy.Weighted)[0]) for _ in range(10))
     >>> pipe = DatasetPipeline.from_iterable(node_batch_generator)
     >>> pipe
@@ -144,8 +148,12 @@ with a generator as input, it streams the windows instead of loading them.
 
     >>> batch = next(pipe.iter_torch_batches(batch_size=2))
     >>> batch
-    {'features': tensor([[0., 0.],
-            [0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
+    {'features': tensor([[3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+            [4., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
 
 Graph Engine Edge Sampler
 =========================
@@ -159,7 +167,7 @@ with a generator as input, it streams the windows instead of loading them.
     >>> from ray.data import DatasetPipeline
     >>> from deepgnn.graph_engine import SamplingStrategy
 
-    >>> g = Client(data_dir.name, [0], delayed_start=True)
+    >>> g = Client(data_dir.name, [0])#, delayed_start=True)
     >>> edge_batch_generator = (lambda: ray.data.from_numpy(g.sample_edges(140, np.array([0], dtype=np.int32), SamplingStrategy.Weighted)) for _ in range(10))
     >>> pipe = DatasetPipeline.from_iterable(edge_batch_generator)
     >>> pipe

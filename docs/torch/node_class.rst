@@ -188,7 +188,7 @@ In the setup part we do two notable things things,
 
 * Wrap the model and optimizer with train.torch.prepare_model/optimizer for Ray multi worker usage.
 
-* Initialize the dataloader.
+* Initialize the ray dataset, see more details in `docs/graph_engine/dataset.rst`.
 
 Then we define a standard torch training loop using the ray dataset, with no changes to model or optimizer usage.
 
