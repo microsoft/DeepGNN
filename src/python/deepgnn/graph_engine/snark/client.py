@@ -152,7 +152,6 @@ class MemoryGraph:
         storage_type: PartitionStorageType = PartitionStorageType.memory,
         config_path: str = "",
         stream: bool = False,
-        delayed_start: bool = False,
     ):
         """Load graph to memory.
 
@@ -165,15 +164,10 @@ class MemoryGraph:
             config_path (str, optional): Path to folder with configuration files.
             stream (bool, default=False): If remote path is given: by default, download files first then load,
                 if stream = True and libhdfs present, stream data directly to memory -- see docs/advanced/hdfs.md for setup and usage.
-            delayed_start (bool, default=False): Delay loading graph engine until after serialization reduce.
         """
-        self._init_args = (path, partitions, storage_type, config_path, stream)
-
         self.seed = datetime.now()
         self.path = GraphPath(path) if stream else download_graph_data(path, partitions)
         self.meta = Meta(self.path.name, config_path)
-        if delayed_start:
-            return
 
         self.g_ = _DEEP_GRAPH()
         self.lib = _get_c_lib()
@@ -201,15 +195,6 @@ class MemoryGraph:
             c_char_p(bytes(config_path, "utf-8")),
         )
         self._describe_clib_functions()
-
-    def __reduce__(self):
-        """Serialize object."""
-        class_fn = type(self)
-
-        def deserializer(*args):
-            return class_fn(*args)
-
-        return deserializer, self._init_args
 
     # Extract CDLL library functions descriptions in a separate method:
     # * describing C functions is not thread safe even if values are the same.
