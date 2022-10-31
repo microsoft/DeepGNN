@@ -128,7 +128,7 @@ and computes the loss via cross entropy.
 
 .. code-block:: python
 
-    >>> class GAT(BaseModel):
+    >>> class GAT(nn.Module):
     ...     def __init__(
     ...         self,
     ...         in_dim: int,
@@ -138,7 +138,7 @@ and computes the loss via cross entropy.
     ...         ffd_drop: float = 0.0,
     ...         attn_drop: float = 0.0,
     ...     ):
-    ...         super().__init__(np.float32, 0, 0, None)
+    ...         super().__init__()
     ...         self.num_classes = num_classes
     ...         self.out_dim = num_classes
     ...
@@ -172,7 +172,6 @@ and computes the loss via cross entropy.
     ...
     ...         edges = np.transpose(edges)
     ...
-    ...         # TODO This is not stable, when doing batch_size < graph size ends up with size < index values. use torch.unique to remap edges
     ...         sp_adj = torch.sparse_coo_tensor(edges, torch.ones(edges.shape[1], dtype=torch.float32), (nodes.shape[0], nodes.shape[0]))
     ...         h_1 = self.input_layer(feat, sp_adj)
     ...         scores = self.out_layer(h_1, sp_adj)
@@ -185,11 +184,11 @@ Train
 =====
 
 Here we define our training function.
-In the setup part we do 2 notable things things,
+In the setup part we do two notable things things,
 
 * Wrap the model and optimizer with train.torch.prepare_model/optimizer for Ray multi worker usage.
 
-* Initialize the ray dataset, see more details in `docs/graph_engine/dataset.rst`.
+* Initialize the dataloader.
 
 Then we define a standard torch training loop using the ray dataset, with no changes to model or optimizer usage.
 
@@ -247,6 +246,6 @@ Finally we call trainer.fit() to execute the training loop.
     ...     train_func,
     ...     train_loop_config={},
     ...     run_config=RunConfig(verbose=0),
-    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
+    ...     scaling_config=ScalingConfig(num_workers=2, use_gpu=False),
     ... )
     >>> result = trainer.fit()
