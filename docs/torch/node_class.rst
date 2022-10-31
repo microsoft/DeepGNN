@@ -66,6 +66,9 @@ Setup
     >>> from deepgnn.graph_engine.snark.local import Client
     >>> from deepgnn.pytorch.modeling import BaseModel
 
+    >>> from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
+    >>> from deepgnn.graph_engine import FileNodeSampler
+
 Query
 =====
 
