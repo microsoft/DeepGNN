@@ -21,6 +21,8 @@ from ray.air.config import ScalingConfig
 from deepgnn.graph_engine import SamplingStrategy
 from deepgnn.graph_engine.snark.local import Client
 
+from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
+from deepgnn.graph_engine import FileNodeSampler
 
 feature_idx = 1
 feature_dim = 50
@@ -79,22 +81,28 @@ def train_func(config: Dict):
 
     loss_fn = nn.CrossEntropyLoss()
 
-    dataset = ray.data.range(2708, parallelism=1)
-    pipe = dataset.window(blocks_per_window=2)
-    g = Client("/tmp/cora", [0], delayed_start=True)
-
-    def transform_batch(batch: list) -> dict:
-        return NeuralNetwork.query(g, batch)
-
-    pipe = pipe.map_batches(transform_batch)
+    g = Client("/tmp/cora", [0])
+    dataset = TorchDeepGNNDataset(
+        sampler_class=FileNodeSampler,
+        backend=g,  # type: ignore
+        query_fn=NeuralNetwork.query,
+        prefetch_queue_size=2,
+        prefetch_worker_size=2,
+        sample_files="/tmp/cora/train.nodes",
+        batch_size=worker_batch_size,
+        shuffle=True,
+        drop_last=True,
+        worker_index=0,
+        num_workers=1,
+    )
+    dataset = torch.utils.data.DataLoader(
+        dataset=dataset,
+        num_workers=0,
+    )
 
     model.train()
-    for train_dataloader in pipe.repeat(config["epochs"]).iter_epochs():
-        for i, batch in enumerate(
-            train_dataloader.random_shuffle_each_window().iter_torch_batches(
-                batch_size=worker_batch_size
-            )
-        ):
+    for epoch in range(config["epochs"]):
+        for i, batch in enumerate(dataset):
             pred = model(batch["features"])
             loss = loss_fn(pred, batch["labels"].squeeze().long())
 

@@ -263,28 +263,3 @@ py_test(
     ],
     target_compatible_with = ["@bazel_tools//platforms:linux"],
 )
-
-py_test(
-    name = "test_start_distributed_backend",
-    srcs = ["test_start_distributed_backend.py"],
-    imports = ["../../../../"],
-    main = "test_start_distributed_backend.py",
-    python_version = "PY3",
-    srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/graph_engine/data:graph_engine_data",
-        "//src/python/deepgnn/graph_engine:graph_engine",
-        requirement("numpy"),
-        requirement("pytest"),
-        requirement("networkx"),
-        requirement("opencensus"),
-        requirement("grpcio"),
-        requirement("fsspec"),
-        requirement("grpcio-health-checking"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("azure-datalake-store"),
-    ],
-)
