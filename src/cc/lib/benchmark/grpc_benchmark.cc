@@ -220,6 +220,7 @@ static void BM_LOAD_GRAPH(benchmark::State &state, bool enable_threadpool = fals
     const size_t partition = state.range(1);
     const size_t fv_size = state.range(2);
     std::string path;
+    std::vector<uint32_t> partition_list;
 
     if (state.thread_index() == 0)
     {
@@ -237,13 +238,14 @@ static void BM_LOAD_GRAPH(benchmark::State &state, bool enable_threadpool = fals
                     .m_id = snark::NodeId(n), .m_type = 0, .m_weight = 1.0f, .m_float_features = {std::move(vals)}});
             }
             TestGraph::convert(path, std::to_string(i) + "_0", std::move(m), partition);
+            partition_list.push_back(i);
         }
     }
 
     for (auto _ : state)
     {
-        auto graph = snark::GraphEngineServiceImpl(path, std::vector<uint32_t>{0}, snark::PartitionStorageType::memory,
-                                                   "", enable_threadpool);
+        auto graph = snark::GraphEngineServiceImpl(path, partition_list, snark::PartitionStorageType::memory, "",
+                                                   enable_threadpool);
     }
     if (state.thread_index() == 0)
     {
@@ -263,12 +265,12 @@ void BM_DISTRIBUTED_GRAPH_SINGLE_NODE_THREADPOOL(benchmark::State &state)
 
 static void BM_LOAD_GRAPH_THREADPOOL(benchmark::State &state)
 {
-    BM_LOAD_GRAPH(state, false);
+    BM_LOAD_GRAPH(state, true);
 }
 
 static void BM_LOAD_GRAPH_NO_THREADPOOL(benchmark::State &state)
 {
-    BM_LOAD_GRAPH(state, true);
+    BM_LOAD_GRAPH(state, false);
 }
 
 // Use a fixed number of iterations for easier comparison.
