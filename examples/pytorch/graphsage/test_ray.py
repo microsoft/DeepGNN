@@ -44,7 +44,7 @@ def setup_module(module):
 
 class NeuralNetwork(nn.Module):
     def __init__(self):
-        super(NeuralNetwork, self).__init__()
+        super().__init__()
         self.flatten = nn.Flatten()
         self.linear_relu_stack = nn.Sequential(
             nn.Linear(feature_dim, 512),
@@ -56,7 +56,6 @@ class NeuralNetwork(nn.Module):
         )
 
     def forward(self, x):
-        x = self.flatten(x)
         logits = self.linear_relu_stack(x)
         return logits
 
@@ -64,14 +63,21 @@ class NeuralNetwork(nn.Module):
     def query(g, idx):
         return {
             "features": g.node_features(
-                idx, np.array([[feature_idx, feature_dim]]), feature_type=np.float32
+                idx, np.array([[feature_idx, feature_dim]]), np.float32
             ),
             "labels": np.ones((len(idx))),
         }
 
 
+def onehot(values, size):
+    values = values.squeeze()
+    output = torch.zeros((values.shape[0], size))
+    output[values.long()] = 1
+    return output
+
+
 def train_func(config: Dict):
-    worker_batch_size = config["batch_size"] // session.get_world_size()
+    worker_batch_size = config["batch_size"]  # // session.get_world_size()
 
     model = NeuralNetwork()
     model = train.torch.prepare_model(model)
@@ -104,7 +110,7 @@ def train_func(config: Dict):
     for epoch in range(config["epochs"]):
         for i, batch in enumerate(dataset):
             pred = model(batch["features"])
-            loss = loss_fn(pred, batch["labels"].squeeze().long())
+            loss = loss_fn(pred.squeeze(), onehot(batch["labels"], 10))
 
             optimizer.zero_grad()
             loss.backward()
