@@ -161,9 +161,9 @@ Ray Connect to AML
     >>> from azureml.core import Workspace
     >>> from ray_on_aml.core import Ray_On_AML
     >>> ws = Workspace.from_config("config.json")
-    >>> #ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="multi-node", maxnode=1) 
-    >>> #ray = ray_on_aml.getRay() 
-    # may take 7 mintues or longer.Check the AML run under ray_on_aml experiment for cluster status.  
+    >>> #ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="multi-node", maxnode=1)
+    >>> #ray = ray_on_aml.getRay()
+    # may take 7 mintues or longer.Check the AML run under ray_on_aml experiment for cluster status.
 
     >>> #ray.init()
     RayContext(...)
