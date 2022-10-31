@@ -66,6 +66,9 @@ Setup
     >>> from deepgnn.graph_engine.snark.local import Client
     >>> from deepgnn.pytorch.modeling import BaseModel
 
+    >>> from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
+    >>> from deepgnn.graph_engine import FileNodeSampler
+
 Query
 =====
 
@@ -207,19 +210,31 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     # Define the loss function
     ...     loss_fn = nn.CrossEntropyLoss()
     ...
-    ...     # Ray Dataset
-    ...     dataset = ray.data.range(2708, parallelism=1)  # -> Dataset(num_blocks=1, num_rows=140, schema=<class 'int'>)
-    ...     pipe = dataset.window(blocks_per_window=10)  # -> DatasetPipeline(num_windows=1, num_stages=1)
-    ...     g = Client("/tmp/cora", [0], delayed_start=True)
+    ...     # Dataset
+    ...     g = Client("/tmp/cora", [0])
     ...     q = GATQuery()
-    ...     def transform_batch(batch: list) -> dict:
-    ...         return q.query(g, batch)
-    ...     pipe = pipe.map_batches(transform_batch)
+    ...     dataset = TorchDeepGNNDataset(
+    ...         sampler_class=FileNodeSampler,
+    ...         backend=g,
+    ...         query_fn=q.query,
+    ...         prefetch_queue_size=2,
+    ...         prefetch_worker_size=2,
+    ...         sample_files="/tmp/cora/train.nodes",
+    ...         batch_size=140,
+    ...         shuffle=True,
+    ...         drop_last=True,
+    ...         worker_index=0,
+    ...         num_workers=1,
+    ...     )
+    ...     dataset = torch.utils.data.DataLoader(
+    ...         dataset=dataset,
+    ...         num_workers=0,
+    ...     )
     ...
     ...     # Execute the training loop
     ...     model.train()
-    ...     for epoch, epoch_pipe in enumerate(pipe.repeat(1).iter_epochs()):
-    ...         for i, batch in enumerate(epoch_pipe.random_shuffle_each_window().iter_torch_batches(batch_size=2708)):
+    ...     for epoch in range(1):
+    ...         for i, batch in enumerate(dataset):
     ...             scores = model(batch)
     ...             labels = batch["labels"][batch["input_mask"]].flatten()
     ...             loss = loss_fn(scores.type(torch.float32), labels)
