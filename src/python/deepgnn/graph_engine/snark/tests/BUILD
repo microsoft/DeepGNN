@@ -107,8 +107,6 @@ py_test(
     ],
 )
 
-
-
 py_test(
     name = "neighbor_sampler_tests",
     srcs = ["neighbor_sampler_test.py"],
@@ -286,5 +284,7 @@ py_test(
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
         requirement("azure-datalake-store"),
+        requirement("scipy"),
+        requirement("scikit-learn"),
     ],
 )
