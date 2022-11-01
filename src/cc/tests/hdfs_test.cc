@@ -51,7 +51,9 @@ TEST(HDFSTest, NodeTypes)
     std::filesystem::path hdfs_path = std::string("file://") + temp_path.string();
     set_hdfs_env(temp_path, config_path);
 
-    snark::Graph g(hdfs_path.string(), std::vector<uint32_t>{0}, snark::PartitionStorageType::memory, config_path);
+    snark::Metadata metadata(hdfs_path.string(), config_path);
+    snark::Graph g(std::move(metadata), std::vector<std::string>{hdfs_path.string()}, std::vector<uint32_t>{0},
+                   snark::PartitionStorageType::memory);
     std::vector<snark::NodeId> nodes = {0, 1, 2};
     std::vector<snark::Type> output(3, -2);
     g.GetNodeType(std::span(nodes), std::span(output), -1);
@@ -73,7 +75,9 @@ TEST(HDFSTest, NodeFeature)
     std::filesystem::path hdfs_path = std::string("file://") + temp_path.string();
     set_hdfs_env(temp_path, config_path);
 
-    snark::Graph g(hdfs_path.string(), std::vector<uint32_t>{0}, snark::PartitionStorageType::memory, config_path);
+    snark::Metadata metadata(hdfs_path.string(), config_path);
+    snark::Graph g(std::move(metadata), std::vector<std::string>{hdfs_path.string()}, std::vector<uint32_t>{0},
+                   snark::PartitionStorageType::memory);
     std::vector<snark::NodeId> nodes = {0, 1};
     std::vector<uint8_t> output(4 * 3 * 2);
     std::vector<snark::FeatureMeta> features = {{0, 12}};
@@ -103,8 +107,9 @@ TEST(HDFSTest, NeighborSample)
 
     std::filesystem::path hdfs_path = std::string("file://") + temp_path.string();
     set_hdfs_env(temp_path, config_path);
-
-    snark::Graph g(hdfs_path.string(), std::vector<uint32_t>{0}, snark::PartitionStorageType::memory, config_path);
+    snark::Metadata metadata(hdfs_path.string(), config_path);
+    snark::Graph g(std::move(metadata), std::vector<std::string>{hdfs_path.string()}, std::vector<uint32_t>{0},
+                   snark::PartitionStorageType::memory);
     std::vector<snark::NodeId> nodes = {0, 2};
     std::vector<snark::Type> types = {0, 1};
     int count = 3;
@@ -136,8 +141,9 @@ TEST(HDFSTest, EdgeFeatureNoFeature)
 
     std::filesystem::path hdfs_path = std::string("file://") + temp_path.string();
     set_hdfs_env(temp_path, config_path);
-
-    snark::Graph g(hdfs_path.string(), std::vector<uint32_t>{0}, snark::PartitionStorageType::memory, config_path);
+    snark::Metadata metadata(hdfs_path.string(), config_path);
+    snark::Graph g(std::move(metadata), std::vector<std::string>{hdfs_path.string()}, std::vector<uint32_t>{0},
+                   snark::PartitionStorageType::memory);
     std::vector<snark::NodeId> nodes_src = {0};
     std::vector<snark::NodeId> nodes_dest = {1};
     std::vector<snark::Type> edge_types = {0};

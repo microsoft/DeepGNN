@@ -17,6 +17,8 @@ namespace deep_graph
 namespace python
 {
 
+namespace
+{
 std::string safe_convert(const char *buffer)
 {
     if (buffer)
@@ -25,18 +27,26 @@ std::string safe_convert(const char *buffer)
     }
     return std::string();
 }
+} // namespace
 
-int32_t StartServer(PyServer *graph, size_t count, uint32_t *partitions, const char *filename, const char *host_name,
-                    const char *ssl_key, const char *ssl_cert, const char *ssl_root,
-                    const PyPartitionStorageType storage_type_, const char *config_path)
+int32_t StartServer(PyServer *graph, const char *meta_location, size_t count, uint32_t *partition_indices,
+                    const char **partition_locations, const char *host_name, const char *ssl_key, const char *ssl_cert,
+                    const char *ssl_root, const PyPartitionStorageType storage_type_, const char *config_path)
 {
     snark::PartitionStorageType storage_type = static_cast<snark::PartitionStorageType>(storage_type_);
+    snark::Metadata metadata(safe_convert(meta_location), safe_convert(config_path));
+    std::vector<std::string> partition_paths;
+    partition_paths.reserve(count);
+    for (size_t i = 0; i < count; ++i)
+    {
+        partition_paths.emplace_back(safe_convert(partition_locations[i]));
+    }
     graph->server = std::make_unique<snark::GRPCServer>(
         std::make_shared<snark::GraphEngineServiceImpl>(
-            safe_convert(filename), std::vector<uint32_t>(partitions, partitions + count),
-            static_cast<snark::PartitionStorageType>(storage_type), config_path),
-        std::make_shared<snark::GraphSamplerServiceImpl>(safe_convert(filename),
-                                                         std::set<size_t>(partitions, partitions + count)),
+            metadata, partition_paths, std::vector<uint32_t>(partition_indices, partition_indices + count),
+            static_cast<snark::PartitionStorageType>(storage_type)),
+        std::make_shared<snark::GraphSamplerServiceImpl>(
+            metadata, partition_paths, std::vector<size_t>(partition_indices, partition_indices + count)),
         safe_convert(host_name), safe_convert(ssl_key), safe_convert(ssl_cert), safe_convert(ssl_root));
     return 0;
 }

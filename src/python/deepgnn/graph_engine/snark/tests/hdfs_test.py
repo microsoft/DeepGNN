@@ -47,7 +47,8 @@ def test_hdfs_local(hdfs_data):
     os.environ["HADOOP_HOME"] = f"{hadoop_home}/external/hadoop/"
     if "CLASSPATH" in os.environ:
         del os.environ["CLASSPATH"]
-    cl = client.MemoryGraph("file://" + hdfs_data, [0], config_path="", stream=True)
+    data_path = "file://" + hdfs_data
+    cl = client.MemoryGraph(data_path, [(data_path, 0)], config_path="", stream=True)
 
     v = cl.node_types(np.array([1, 2, 3], dtype=np.int64), default_type=-1)
     npt.assert_equal(v, np.array([0, 0, 0], dtype=np.int32))
@@ -81,8 +82,9 @@ def test_hdfs_remote(hdfs_data):
         del os.environ["CLASSPATH"]
 
     address = ["localhost:9999"]
+    location = "file://" + hdfs_data
     s = server.Server(
-        "file://" + hdfs_data, [0], address[0], config_path="", stream=True
+        location, [(location, 0)], address[0], config_path="", stream=True
     )
     cl = client.DistributedGraph(address)
 
