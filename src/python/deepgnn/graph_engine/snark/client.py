@@ -956,6 +956,8 @@ class NodeSampler:
             types (Union[List, int]): node types to sample.
             kind (str, optional): sampling strategy. Defaults to "weighted".
         """
+        self._init_args = (g, types, kind)
+
         if isinstance(types, int) and types == -1:
             types = []
             for tp in range(g.meta.node_type_count):
@@ -1026,6 +1028,15 @@ class NodeSampler:
             "reset node sampler"
         )
 
+    def __reduce__(self):
+        """Serialize object."""
+        class_fn = type(self)
+
+        def deserializer(*args):
+            return class_fn(*args)
+
+        return deserializer, self._init_args
+
     def sample(
         self, size: int, seed: Optional[int] = None
     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -1069,6 +1080,8 @@ class EdgeSampler:
             types (Union[List, int]): edge types to sample.
             kind (str, optional): sampling strategy. Defaults to "weighted".
         """
+        self._init_args = (g, types, kind)
+
         if isinstance(types, int) and types == -1:
             types = []
             for tp in range(g.meta.edge_type_count):
@@ -1134,6 +1147,15 @@ class EdgeSampler:
         self.lib.ResetSampler.errcheck = _ErrCallback(
             "reset edge sampler"
         )  # type: ignore
+
+    def __reduce__(self):
+        """Serialize object."""
+        class_fn = type(self)
+
+        def deserializer(*args):
+            return class_fn(*args)
+
+        return deserializer, self._init_args
 
     def sample(
         self, size: int, seed: Optional[int] = None
