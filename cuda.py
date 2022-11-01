@@ -144,7 +144,7 @@ def train_func(config: Dict):
     loss_fn = nn.CrossEntropyLoss()
 
     dataset = ray.data.range(2708, parallelism=1)
-    pipe = dataset.window(blocks_per_window=10)
+    pipe = dataset.window(blocks_per_window=10).repeat(10)
     g = Client("/tmp/cora", [0])  # , delayed_start=True)
     q = GATQuery()
 
@@ -157,7 +157,7 @@ def train_func(config: Dict):
     return torch.cuda.is_available()
 
     model.train()
-    for epoch, epoch_pipe in enumerate(pipe.repeat(10).iter_epochs()):
+    for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
         for i, batch in enumerate(
             epoch_pipe.random_shuffle_each_window().iter_torch_batches(batch_size=2708)
         ):
