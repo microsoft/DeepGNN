@@ -1151,6 +1151,7 @@ class _TrainingWorker:
             time.sleep(0.1)
 
 
+@pytest.mark.skipif(platform.system() == "Darwin", reason="Test is unstable on mac")
 @pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_servers_stay_alive_on_client_disconnects(
     two_servers_multi_partition_graph_data,
