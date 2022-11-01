@@ -107,8 +107,6 @@ py_test(
     ],
 )
 
-
-
 py_test(
     name = "neighbor_sampler_tests",
     srcs = ["neighbor_sampler_test.py"],
@@ -265,10 +263,10 @@ py_test(
 )
 
 py_test(
-    name = "test_start_distributed_backend",
-    srcs = ["test_start_distributed_backend.py"],
+    name = "start_distributed_backend_test",
+    srcs = ["start_distributed_backend_test.py"],
     imports = ["../../../../"],
-    main = "test_start_distributed_backend.py",
+    main = "start_distributed_backend_test.py",
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
@@ -286,5 +284,7 @@ py_test(
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
         requirement("azure-datalake-store"),
+        requirement("scipy"),
+        requirement("scikit-learn"),
     ],
 )

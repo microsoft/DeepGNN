@@ -7,8 +7,10 @@ import torch
 import torch.nn as nn
 import numpy as np
 
+from torch.autograd import Variable
 from deepgnn.graph_engine import Graph, SamplingStrategy, QueryOutput
 from deepgnn.pytorch.encoding.feature_encoder import FeatureEncoder
+from deepgnn.pytorch.common.metrics import BaseMetric
 from deepgnn.graph_engine.samplers import BaseSampler
 from deepgnn import get_logger
 
@@ -43,6 +45,8 @@ class BaseModel(nn.Module):
         self.feature_dim = feature_enc.feature_dim if feature_enc else feature_dim
         self.feature_enc = feature_enc
         self.sampler: Optional[BaseSampler] = None
+        self.xent = nn.CrossEntropyLoss()
+        self.metric: BaseMetric
 
     def get_score(self, context: QueryOutput) -> torch.Tensor:
         """Evaluate model."""
@@ -117,7 +121,9 @@ class BaseModel(nn.Module):
         if self.feature_enc:
             self.feature_enc.forward(context)
 
-    def forward(self, context: QueryOutput) -> torch.Tensor:
+    def forward(
+        self, context: QueryOutput
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Execute common forward operation for all models.
 
         Args:
@@ -144,15 +150,39 @@ class BaseSupervisedModel(BaseModel):
             feature_enc=feature_enc,
         )
 
+    def _loss_inner(
+        self, context: QueryOutput
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Cross entropy loss for a list of nodes."""
+        if isinstance(context, dict):
+            labels = context["label"].squeeze()  # type: ignore
+        elif isinstance(context, torch.Tensor):
+            labels = context.squeeze()  # type: ignore
+        else:
+            raise TypeError("Invalid input type.")
+        device = labels.device
+
+        # TODO(chaoyl): Due to the bug of pytorch argmax, we have to copy labels to numpy for argmax
+        # then copy back to Tensor. The fix has been merged to pytorch master branch but not included
+        # in latest stable version. Revisit this part after updating pytorch with the fix included.
+        # issue: https://github.com/pytorch/pytorch/issues/32343
+        # fix: https://github.com/pytorch/pytorch/pull/37864
+        labels = labels.cpu().numpy().argmax(1)
+        scores = self.get_score(context)
+        return (
+            self.xent(
+                scores,
+                Variable(torch.tensor(labels.squeeze(), dtype=torch.int64).to(device)),
+            ),
+            scores.argmax(dim=1),
+            torch.tensor(labels.squeeze(), dtype=torch.int64),
+        )
+
     def forward(
         self, context: QueryOutput
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Execute common forward operation for all models.
-
-        Args:
-            context: nested tensor dictionary.
-        """
-        raise NotImplementedError
+        """Return cross entropy loss."""
+        return self._loss_inner(context)
 
 
 class BaseUnsupervisedModel(BaseModel):

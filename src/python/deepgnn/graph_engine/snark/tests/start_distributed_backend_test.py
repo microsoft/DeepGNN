@@ -22,6 +22,9 @@ def cora_graph():
 
 def test_start_distributed_backend(cora_graph):
     start_distributed_backend(["127.0.0.1:9000"], cora_graph, 0, 0, 1)
+    from time import sleep
+
+    sleep(1)
 
 
 if __name__ == "__main__":

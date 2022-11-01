@@ -66,6 +66,9 @@ Setup
     >>> from deepgnn.graph_engine.snark.local import Client
     >>> from deepgnn.pytorch.modeling import BaseModel
 
+    >>> from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
+    >>> from deepgnn.graph_engine import FileNodeSampler
+
 Query
 =====
 
@@ -125,7 +128,7 @@ and computes the loss via cross entropy.
 
 .. code-block:: python
 
-    >>> class GAT(BaseModel):
+    >>> class GAT(nn.Module):
     ...     def __init__(
     ...         self,
     ...         in_dim: int,
@@ -135,7 +138,7 @@ and computes the loss via cross entropy.
     ...         ffd_drop: float = 0.0,
     ...         attn_drop: float = 0.0,
     ...     ):
-    ...         super().__init__(np.float32, 0, 0, None)
+    ...         super().__init__()
     ...         self.num_classes = num_classes
     ...         self.out_dim = num_classes
     ...
@@ -169,7 +172,6 @@ and computes the loss via cross entropy.
     ...
     ...         edges = np.transpose(edges)
     ...
-    ...         # TODO This is not stable, when doing batch_size < graph size ends up with size < index values. use torch.unique to remap edges
     ...         sp_adj = torch.sparse_coo_tensor(edges, torch.ones(edges.shape[1], dtype=torch.float32), (nodes.shape[0], nodes.shape[0]))
     ...         h_1 = self.input_layer(feat, sp_adj)
     ...         scores = self.out_layer(h_1, sp_adj)
@@ -182,7 +184,7 @@ Train
 =====
 
 Here we define our training function.
-In the setup part we do 2 notable things things,
+In the setup part we do two notable things things,
 
 * Wrap the model and optimizer with train.torch.prepare_model/optimizer for Ray multi worker usage.
 
@@ -209,7 +211,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...
     ...     # Ray Dataset
     ...     dataset = ray.data.range(2708, parallelism=1)  # -> Dataset(num_blocks=1, num_rows=140, schema=<class 'int'>)
-    ...     pipe = dataset.window(blocks_per_window=10)  # -> DatasetPipeline(num_windows=1, num_stages=1)
+    ...     pipe = dataset.window(blocks_per_window=10).repeat(1)  # -> DatasetPipeline(num_windows=1, num_stages=1)
     ...     g = Client("/tmp/cora", [0], delayed_start=True)
     ...     q = GATQuery()
     ...     def transform_batch(batch: list) -> dict:
@@ -218,7 +220,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...
     ...     # Execute the training loop
     ...     model.train()
-    ...     for epoch, epoch_pipe in enumerate(pipe.repeat(1).iter_epochs()):
+    ...     for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
     ...         for i, batch in enumerate(epoch_pipe.random_shuffle_each_window().iter_torch_batches(batch_size=2708)):
     ...             scores = model(batch)
     ...             labels = batch["labels"][batch["input_mask"]].flatten()
@@ -244,6 +246,6 @@ Finally we call trainer.fit() to execute the training loop.
     ...     train_func,
     ...     train_loop_config={},
     ...     run_config=RunConfig(verbose=0),
-    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
+    ...     scaling_config=ScalingConfig(num_workers=2, use_gpu=False),
     ... )
     >>> result = trainer.fit()

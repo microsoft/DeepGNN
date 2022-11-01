@@ -35,11 +35,11 @@ py_test(
     srcs_version = "PY3",
     deps = [
         ":example_torch_graphsage",
-        requirement("ray"),
         requirement("numpy"),
         requirement("pytest"),
         requirement("scikit-learn"),
         requirement("torch"),
+        requirement("boto3"),
         requirement("transformers"),
         requirement("fsspec"),
         requirement("networkx"),
@@ -59,6 +59,7 @@ py_test(
     srcs_version = "PY3",
     deps = [
         ":example_torch_graphsage",
+        requirement("ray"),
         requirement("numpy"),
         requirement("pytest"),
         requirement("scikit-learn"),
