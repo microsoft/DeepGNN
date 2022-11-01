@@ -274,7 +274,7 @@ def write_multi_binary(output_dir, partitions):
             ef = "0\n0"
         partition_meta += f"{i}\n3\n3\n3\n2\n2\n{nf}\n{ef}\n"
     meta = open(os.path.join(output_dir, "meta.txt"), "w+")
-    meta.write(f"3\n3\n3\n2\n15\n15\n2\n")
+    meta.write(f"v3\n3\n3\n2\n15\n15\n2\n")
     meta.write(partition_meta)
     meta.close()
 
@@ -314,7 +314,7 @@ param = ["original", "nodes_p0", "nodes_p1"]
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_memory_graph_metadata(multi_partition_graph_data, storage_type):
     cl = client.MemoryGraph(multi_partition_graph_data, [0, 1], storage_type)
     assert cl.meta.node_count == 3
@@ -329,7 +329,7 @@ def test_memory_graph_metadata(multi_partition_graph_data, storage_type):
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_memory_graph_neighbors(multi_partition_graph_data, storage_type):
     cl = client.MemoryGraph(multi_partition_graph_data, [0, 1], storage_type)
     node_ids, weights, edge_types, result_counts = cl.neighbors(
@@ -549,7 +549,7 @@ def test_edge_features_missing_feature_id(multi_partition_graph_data, storage_ty
     "storage_type",
     [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
 )
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_edge_extra_features_graph_multiple_partitions(
     multi_partition_graph_data, storage_type
 ):
@@ -756,46 +756,43 @@ def test_remote_client_node_features_single_server(
     s.reset()
 
 
-@pytest.mark.parametrize(
-    "storage_type",
-    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
-)
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
-def test_distributed_graph_metadata(multi_partition_graph_data, storage_type):
+def pytest_generate_tests(metafunc):
+    if "two_servers_multi_partition_graph_data" in metafunc.fixturenames:
+        metafunc.parametrize(
+            "two_servers_multi_partition_graph_data",
+            [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
+            indirect=True,
+        )
+
+
+@pytest.fixture(scope="module")
+def two_servers_multi_partition_graph_data(multi_partition_graph_data, request):
     address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
     s1 = server.Server(
-        multi_partition_graph_data, [0], address[0], storage_type=storage_type
+        multi_partition_graph_data, [0], address[0], storage_type=request.param
     )
     s2 = server.Server(
-        multi_partition_graph_data, [1], address[1], storage_type=storage_type
+        multi_partition_graph_data, [1], address[1], storage_type=request.param
     )
+    yield address
+    s1.reset()
+    s2.reset()
 
-    cl = client.DistributedGraph(address)
+
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
+def test_distributed_graph_metadata(two_servers_multi_partition_graph_data):
+    cl = client.DistributedGraph(two_servers_multi_partition_graph_data)
     assert cl.meta.node_count == 3
     assert cl.meta.edge_count == 3
     assert cl.meta.node_type_count == 3
     assert cl.meta.edge_type_count == 2
     assert cl.meta._node_feature_count == 15
     assert cl.meta._edge_feature_count == 15
-    s1.reset()
-    s2.reset()
 
 
-@pytest.mark.parametrize(
-    "storage_type",
-    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
-)
 @pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
-def test_distributed_graph_type_counts(multi_partition_graph_data, storage_type):
-    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
-    s1 = server.Server(
-        multi_partition_graph_data, [0], address[0], storage_type=storage_type
-    )
-    s2 = server.Server(
-        multi_partition_graph_data, [1], address[1], storage_type=storage_type
-    )
-
-    cl = client.DistributedGraph(address)
+def test_distributed_graph_type_counts(two_servers_multi_partition_graph_data):
+    cl = client.DistributedGraph(two_servers_multi_partition_graph_data)
     assert cl.get_node_type_count([0]) == 1
     assert cl.get_node_type_count([1]) == 1
     assert cl.get_node_type_count([1, 1]) == 1
@@ -811,27 +808,12 @@ def test_distributed_graph_type_counts(multi_partition_graph_data, storage_type)
     with pytest.raises(AssertionError):
         cl.get_edge_type_count([])
 
-    s1.reset()
-    s2.reset()
 
-
-@pytest.mark.parametrize(
-    "storage_type",
-    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
-)
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_remote_client_node_features_multiple_servers(
-    multi_partition_graph_data, storage_type
+    two_servers_multi_partition_graph_data,
 ):
-    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
-    s1 = server.Server(
-        multi_partition_graph_data, [0], address[0], storage_type=storage_type
-    )
-    s2 = server.Server(
-        multi_partition_graph_data, [1], address[1], storage_type=storage_type
-    )
-
-    cl = client.DistributedGraph(address)
+    cl = client.DistributedGraph(two_servers_multi_partition_graph_data)
     v = cl.node_features(
         np.array([9, 0], dtype=np.int64),
         features=np.array([[1, 2]], dtype=np.int32),
@@ -840,50 +822,22 @@ def test_remote_client_node_features_multiple_servers(
 
     assert v.shape == (2, 2)
     npt.assert_array_almost_equal(v, [[-0.01, -0.02], [-0.03, -0.04]])
-    s1.reset()
-    s2.reset()
 
 
-@pytest.mark.parametrize(
-    "storage_type",
-    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
-)
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_remote_client_node_string_features_multiple_servers(
-    multi_partition_graph_data, storage_type
+    two_servers_multi_partition_graph_data,
 ):
-    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
-    s1 = server.Server(
-        multi_partition_graph_data, [0], address[0], storage_type=storage_type
-    )
-    s2 = server.Server(
-        multi_partition_graph_data, [1], address[1], storage_type=storage_type
-    )
-
-    cl = client.DistributedGraph(address)
+    cl = client.DistributedGraph(two_servers_multi_partition_graph_data)
     v, d = cl.node_string_features([9, 0], features=[1], dtype=np.float32)
 
     npt.assert_array_equal(d, [[2], [2]])
     npt.assert_array_almost_equal(v, [-0.01, -0.02, -0.03, -0.04])
-    s1.reset()
-    s2.reset()
 
 
-@pytest.mark.parametrize(
-    "storage_type",
-    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
-)
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
-def test_remote_client_node_extra_features(multi_partition_graph_data, storage_type):
-    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
-    s1 = server.Server(
-        multi_partition_graph_data, [0], address[0], storage_type=storage_type
-    )
-    s2 = server.Server(
-        multi_partition_graph_data, [1], address[1], storage_type=storage_type
-    )
-
-    cl = client.DistributedGraph(address)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
+def test_remote_client_node_extra_features(two_servers_multi_partition_graph_data):
+    cl = client.DistributedGraph(two_servers_multi_partition_graph_data)
     types = [
         np.uint8,
         np.int8,
@@ -910,27 +864,12 @@ def test_remote_client_node_extra_features(multi_partition_graph_data, storage_t
         values = list(map(lambda x: x + 10, values))
         feature_id += 1
 
-    s1.reset()
-    s2.reset()
 
-
-@pytest.mark.parametrize(
-    "storage_type",
-    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
-)
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_remote_client_edge_extra_features_graph_multiple_partitions(
-    multi_partition_graph_data, storage_type
+    two_servers_multi_partition_graph_data,
 ):
-    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
-    s1 = server.Server(
-        multi_partition_graph_data, [0], address[0], storage_type=storage_type
-    )
-    s2 = server.Server(
-        multi_partition_graph_data, [1], address[1], storage_type=storage_type
-    )
-
-    cl = client.DistributedGraph(address)
+    cl = client.DistributedGraph(two_servers_multi_partition_graph_data)
     types = [
         np.uint8,
         np.int8,
@@ -958,27 +897,13 @@ def test_remote_client_edge_extra_features_graph_multiple_partitions(
         npt.assert_array_almost_equal(v, [values])
         values = list(map(lambda x: x + 10, values))
         feature_id += 1
-    s1.reset()
-    s2.reset()
 
 
-@pytest.mark.parametrize(
-    "storage_type",
-    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
-)
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_remote_client_missing_edge_features_graph_multiple_partitions(
-    multi_partition_graph_data, storage_type
+    two_servers_multi_partition_graph_data,
 ):
-    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
-    s1 = server.Server(
-        multi_partition_graph_data, [0], address[0], storage_type=storage_type
-    )
-    s2 = server.Server(
-        multi_partition_graph_data, [1], address[1], storage_type=storage_type
-    )
-
-    cl = client.DistributedGraph(address)
+    cl = client.DistributedGraph(two_servers_multi_partition_graph_data)
     v = cl.edge_features(
         np.array([5, -1], dtype=np.int64),
         np.array([9, 0], dtype=np.int64),
@@ -988,27 +913,13 @@ def test_remote_client_missing_edge_features_graph_multiple_partitions(
     )
 
     npt.assert_array_equal(v, [[5, 6, 7, 15, 16], [0, 0, 0, 0, 0]])
-    s1.reset()
-    s2.reset()
 
 
-@pytest.mark.parametrize(
-    "storage_type",
-    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
-)
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_remote_client_missing_edge_string_features_graph_multiple_partitions(
-    multi_partition_graph_data, storage_type
+    two_servers_multi_partition_graph_data,
 ):
-    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
-    s1 = server.Server(
-        multi_partition_graph_data, [0], address[0], storage_type=storage_type
-    )
-    s2 = server.Server(
-        multi_partition_graph_data, [1], address[1], storage_type=storage_type
-    )
-
-    cl = client.DistributedGraph(address)
+    cl = client.DistributedGraph(two_servers_multi_partition_graph_data)
     v, d = cl.edge_string_features(
         np.array([5, -1], dtype=np.int64),
         np.array([9, 0], dtype=np.int64),
@@ -1019,26 +930,13 @@ def test_remote_client_missing_edge_string_features_graph_multiple_partitions(
 
     npt.assert_equal(d, [[3, 3], [0, 0]])
     npt.assert_equal(v, [5, 6, 7, 15, 16, 17])
-    s1.reset()
-    s2.reset()
 
 
-@pytest.mark.parametrize(
-    "storage_type",
-    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
-)
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_remote_client_node_features_multiple_servers_same_data_tst(
-    multi_partition_graph_data, storage_type
+    two_servers_multi_partition_graph_data,
 ):
-    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
-    s1 = server.Server(
-        multi_partition_graph_data, [0, 1], address[0], storage_type=storage_type
-    )
-    s2 = server.Server(
-        multi_partition_graph_data, [1, 0], address[1], storage_type=storage_type
-    )
-    cl = client.DistributedGraph(address)
+    cl = client.DistributedGraph(two_servers_multi_partition_graph_data)
     v = cl.node_features(
         np.array([9, 0], dtype=np.int64),
         features=np.array([[1, 2]], dtype=np.int32),
@@ -1047,8 +945,6 @@ def test_remote_client_node_features_multiple_servers_same_data_tst(
 
     assert v.shape == (2, 2)
     npt.assert_array_almost_equal(v, [[-0.01, -0.02], [-0.03, -0.04]])
-    s1.reset()
-    s2.reset()
 
 
 @pytest.mark.parametrize(
@@ -1088,83 +984,42 @@ def test_remote_client_node_features_multiple_servers_connection_loss(
     s1.reset()
 
 
-@pytest.mark.parametrize(
-    "storage_type",
-    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
-)
 @pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_node_sampling_distributed_graph_multiple_partitions(
-    multi_partition_graph_data, storage_type
+    two_servers_multi_partition_graph_data,
 ):
-    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
-    s1 = server.Server(multi_partition_graph_data, [0], hostname=address[0])
-    s2 = server.Server(multi_partition_graph_data, [1], hostname=address[1])
-
-    cl = client.DistributedGraph(address)
+    cl = client.DistributedGraph(two_servers_multi_partition_graph_data)
 
     ns = client.NodeSampler(cl, [0, 2])
     v, t = ns.sample(size=5, seed=1)
     npt.assert_array_equal(v, [9, 5, 5, 5, 5])
     npt.assert_array_equal(t, [0, 2, 2, 2, 2])
-    s2.reset()
-    s1.reset()
 
 
-@pytest.mark.parametrize(
-    "storage_type",
-    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
-)
 @pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_node_sampling_distributed_graph_multiple_partitions_raises_empty_types(
-    multi_partition_graph_data, storage_type
+    two_servers_multi_partition_graph_data,
 ):
-    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
-    s1 = server.Server(
-        multi_partition_graph_data, [0], hostname=address[0], storage_type=storage_type
-    )
-    s2 = server.Server(
-        multi_partition_graph_data, [1], hostname=address[1], storage_type=storage_type
-    )
-
-    cl = client.DistributedGraph(address)
+    cl = client.DistributedGraph(two_servers_multi_partition_graph_data)
     with pytest.raises(AssertionError):
         client.NodeSampler(cl, [10])
-    s1.reset()
-    s2.reset()
 
 
 @pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_edge_sampling_distributed_graph_multiple_partitions(
-    multi_partition_graph_data,
+    two_servers_multi_partition_graph_data,
 ):
-    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
-    s1 = server.Server(multi_partition_graph_data, [0], hostname=address[0])
-    s2 = server.Server(multi_partition_graph_data, [1], hostname=address[1])
-
-    cl = client.DistributedGraph([address[0], address[1]])
+    cl = client.DistributedGraph(two_servers_multi_partition_graph_data)
     es = client.EdgeSampler(cl, [0, 1])
     s, d, t = es.sample(size=5, seed=2)
     npt.assert_array_equal(s, [0, 0, 5, 5, 5])
     npt.assert_array_equal(d, [5, 5, 9, 9, 9])
     npt.assert_array_equal(t, [1, 1, 1, 1, 1])
-    s1.reset()
-    s2.reset()
 
 
-@pytest.mark.parametrize(
-    "storage_type",
-    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
-)
-@pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
-def test_distributed_graph_neighbors(multi_partition_graph_data, storage_type):
-    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
-    s1 = server.Server(
-        multi_partition_graph_data, [0], hostname=address[0], storage_type=storage_type
-    )
-    s2 = server.Server(
-        multi_partition_graph_data, [1], hostname=address[1], storage_type=storage_type
-    )
-    cl = client.DistributedGraph(address)
+@pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
+def test_distributed_graph_neighbors(two_servers_multi_partition_graph_data):
+    cl = client.DistributedGraph(two_servers_multi_partition_graph_data)
     node_ids, weights, edge_types, result_counts = cl.neighbors(
         np.array([9, 0], dtype=np.int64),
         np.array([0, 1, 2], dtype=np.int32),
@@ -1173,8 +1028,6 @@ def test_distributed_graph_neighbors(multi_partition_graph_data, storage_type):
     npt.assert_almost_equal(weights, np.array([0.5, 1.0], dtype=np.float32))
     npt.assert_equal(edge_types, np.array([0, 1], dtype=np.int32))
     npt.assert_equal(result_counts, np.array([1, 1], dtype=np.int64))
-    s1.reset()
-    s2.reset()
 
 
 @pytest.mark.parametrize(
@@ -1209,27 +1062,13 @@ def test_distributed_graph_node_types(multi_partition_graph_data, storage_type):
     s1.reset()
 
 
-@pytest.mark.parametrize(
-    "storage_type",
-    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
-)
 @pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_edge_sampling_distributed_graph_multiple_partitions_raises_empty_types(
-    multi_partition_graph_data, storage_type
+    two_servers_multi_partition_graph_data,
 ):
-    address = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
-    s1 = server.Server(
-        multi_partition_graph_data, [0], hostname=address[0], storage_type=storage_type
-    )
-    s2 = server.Server(
-        multi_partition_graph_data, [1], hostname=address[1], storage_type=storage_type
-    )
-
-    cl = client.DistributedGraph(address)
+    cl = client.DistributedGraph(two_servers_multi_partition_graph_data)
     with pytest.raises(AssertionError):
         client.EdgeSampler(cl, [10])
-    s1.reset()
-    s2.reset()
 
 
 @pytest.mark.parametrize(
@@ -1312,27 +1151,11 @@ class _TrainingWorker:
             time.sleep(0.1)
 
 
-@pytest.mark.parametrize(
-    "storage_type",
-    [client.PartitionStorageType.memory, client.PartitionStorageType.disk],
-)
+@pytest.mark.skipif(platform.system() == "Darwin", reason="Test is unstable on mac")
 @pytest.mark.parametrize("multi_partition_graph_data", ["original"], indirect=True)
 def test_servers_stay_alive_on_client_disconnects(
-    multi_partition_graph_data, storage_type
+    two_servers_multi_partition_graph_data,
 ):
-    addresses = [f"localhost:{find_free_port()}", f"localhost:{find_free_port()}"]
-    s1 = server.Server(
-        multi_partition_graph_data,
-        [0],
-        hostname=addresses[0],
-        storage_type=storage_type,
-    )
-    s2 = server.Server(
-        multi_partition_graph_data,
-        [1],
-        hostname=addresses[1],
-        storage_type=storage_type,
-    )
     trainers: List[Tuple(mp.Event, mp.Process)] = []
     num_processes = 10
 
@@ -1341,7 +1164,10 @@ def test_servers_stay_alive_on_client_disconnects(
             # Spawn child processes instead of forking to imitate distributed training
             p = mp.get_context("spawn").Process(
                 target=_TrainingWorker(
-                    addresses, get_lib_name(), num_processes, workdir
+                    two_servers_multi_partition_graph_data,
+                    get_lib_name(),
+                    num_processes,
+                    workdir,
                 )
             )
             p.start()
@@ -1356,15 +1182,13 @@ def test_servers_stay_alive_on_client_disconnects(
         trainer.terminate()
 
     # final check: a client can connect to the servers after random terminations above.
-    cl = client.DistributedGraph(addresses)
+    cl = client.DistributedGraph(two_servers_multi_partition_graph_data)
     values = cl.node_features(
         np.array([9, 0], dtype=np.int64),
         features=np.array([[1, 2]], dtype=np.int32),
         dtype=np.float32,
     )
     npt.assert_array_almost_equal(values, [[-0.01, -0.02], [-0.03, -0.04]])
-    s2.reset()
-    s1.reset()
 
 
 @pytest.fixture(scope="module")
