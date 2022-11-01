@@ -465,7 +465,7 @@ def write_multi_binary(output_dir, partitions):
             ef = "0\n0"
         partition_meta += f"{i}\n3\n3\n3\n2\n2\n{nf}\n{ef}\n"
     meta = open(os.path.join(output_dir, "meta.txt"), "w+")
-    meta.write(f"3\n3\n3\n2\n15\n15\n2\n")
+    meta.write(f"v3\n3\n3\n2\n15\n15\n2\n")
     meta.write(partition_meta)
     meta.close()
 
