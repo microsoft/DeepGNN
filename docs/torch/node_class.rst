@@ -211,7 +211,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...
     ...     # Ray Dataset
     ...     dataset = ray.data.range(2708, parallelism=1)  # -> Dataset(num_blocks=1, num_rows=140, schema=<class 'int'>)
-    ...     pipe = dataset.window(blocks_per_window=10)  # -> DatasetPipeline(num_windows=1, num_stages=1)
+    ...     pipe = dataset.window(blocks_per_window=10).repeat(1)  # -> DatasetPipeline(num_windows=1, num_stages=1)
     ...     g = Client("/tmp/cora", [0], delayed_start=True)
     ...     q = GATQuery()
     ...     def transform_batch(batch: list) -> dict:
@@ -220,7 +220,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...
     ...     # Execute the training loop
     ...     model.train()
-    ...     for epoch, epoch_pipe in enumerate(pipe.repeat(1).iter_epochs()):
+    ...     for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
     ...         for i, batch in enumerate(epoch_pipe.random_shuffle_each_window().iter_torch_batches(batch_size=2708)):
     ...             scores = model(batch)
     ...             labels = batch["labels"][batch["input_mask"]].flatten()

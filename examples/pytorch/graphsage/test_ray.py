@@ -86,7 +86,7 @@ def train_func(config: Dict):
     loss_fn = nn.CrossEntropyLoss()
 
     dataset = ray.data.range(2708, parallelism=1)
-    pipe = dataset.window(blocks_per_window=2)
+    pipe = dataset.window(blocks_per_window=2).repeat(config["epochs"])
     g = Client("/tmp/cora", [0], delayed_start=True)
 
     def transform_batch(batch: list) -> dict:
@@ -95,7 +95,7 @@ def train_func(config: Dict):
     pipe = pipe.map_batches(transform_batch)
 
     model.train()
-    for train_dataloader in pipe.repeat(config["epochs"]).iter_epochs():
+    for train_dataloader in pipe.iter_epochs():
         for i, batch in enumerate(
             train_dataloader.random_shuffle_each_window().iter_torch_batches(
                 batch_size=worker_batch_size
