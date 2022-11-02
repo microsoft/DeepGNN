@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 """Snark districuted client implementation."""
+from itertools import repeat
 from typing import List, Dict
 import tempfile
 
@@ -63,7 +64,12 @@ class Server:
                 "ssl_root": ssl_root,
                 "ssl_cert": ssl_cert,
             }
-        partitions = list(range(index, partition_count, total_shards))
+        partitions = list(
+            zip(
+                repeat(data_path, partition_count),
+                range(index, partition_count, total_shards),
+            )
+        )
         self.server = server.Server(
             data_path,
             partitions,

@@ -43,9 +43,11 @@ void BM_DISTRIBUTED_GRAPH_SINGLE_NODE(benchmark::State &state)
 
     auto path = std::filesystem::temp_directory_path();
     TestGraph::convert(path, "0_0", std::move(m), 1);
-    snark::GRPCServer server(std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                                             snark::PartitionStorageType::memory, ""),
-                             {}, "0.0.0.0:0", {}, {}, {});
+    snark::Metadata metadata(path.string());
+    snark::GRPCServer server(
+        std::make_shared<snark::GraphEngineServiceImpl>(std::move(metadata), std::vector<std::string>{path.string()},
+                                                        std::vector<uint32_t>{0}, snark::PartitionStorageType::memory),
+        {}, "0.0.0.0:0", {}, {}, {});
     snark::GRPCClient c({server.InProcessChannel()}, 1, 1);
 
     std::vector<snark::NodeId> input_nodes(num_nodes);
@@ -83,12 +85,14 @@ void BM_DISTRIBUTED_GRAPH_MULTIPLE_NODES(benchmark::State &state)
                                                 .m_float_features = {std::move(vals)}});
         }
         auto path = std::filesystem::temp_directory_path();
+        snark::Metadata metadata(path.string());
         TestGraph::convert(path, "0_0", std::move(m), 1);
-        servers.emplace_back(std::make_unique<snark::GRPCServer>(
-            std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                            snark::PartitionStorageType::memory, ""),
-            std::shared_ptr<snark::GraphSamplerServiceImpl>{}, std::string("0.0.0.0:0"), std::string{}, std::string{},
-            std::string{}));
+        servers.emplace_back(
+            std::make_unique<snark::GRPCServer>(std::make_shared<snark::GraphEngineServiceImpl>(
+                                                    std::move(metadata), std::vector<std::string>{path.string()},
+                                                    std::vector<uint32_t>{0}, snark::PartitionStorageType::memory),
+                                                std::shared_ptr<snark::GraphSamplerServiceImpl>{},
+                                                std::string("0.0.0.0:0"), std::string{}, std::string{}, std::string{}));
         channels.emplace_back(servers.back()->InProcessChannel());
     }
 
@@ -122,7 +126,9 @@ static void BM_REGULAR_GRAPH(benchmark::State &state)
     }
     auto path = std::filesystem::temp_directory_path();
     TestGraph::convert(path, "0_0", std::move(m), 1);
-    snark::Graph g(path.string(), std::vector<uint32_t>{0}, snark::PartitionStorageType::memory, "");
+    snark::Metadata metadata(path.string());
+    snark::Graph g(std::move(metadata), std::vector<std::string>{path.string()}, std::vector<uint32_t>{0},
+                   snark::PartitionStorageType::memory);
     std::vector<snark::NodeId> input_nodes(num_nodes);
     std::iota(std::begin(input_nodes), std::end(input_nodes), 0);
     std::random_device rd;
@@ -180,10 +186,12 @@ void BM_DISTRIBUTED_SAMPLER_MULTIPLE_SERVERS(benchmark::State &state)
             meta << 0 << "\n";                   // num edges for type 0
             meta.close();
         }
+        snark::Metadata metadata(path.string());
         servers.emplace_back(std::make_unique<snark::GRPCServer>(
             std::shared_ptr<snark::GraphEngineServiceImpl>{},
-            std::make_shared<snark::GraphSamplerServiceImpl>(path, std::set<size_t>{0}), std::string("0.0.0.0:0"),
-            std::string{}, std::string{}, std::string{}));
+            std::make_shared<snark::GraphSamplerServiceImpl>(std::move(metadata), std::vector<std::string>{path},
+                                                             std::vector<size_t>{0}),
+            std::string("0.0.0.0:0"), std::string{}, std::string{}, std::string{}));
 
         dir_holders.emplace_back(std::move(path));
         channels.emplace_back(servers.back()->InProcessChannel());

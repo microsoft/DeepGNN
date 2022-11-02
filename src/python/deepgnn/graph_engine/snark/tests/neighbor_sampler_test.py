@@ -167,7 +167,9 @@ def multi_partition_graph_data():
 
 
 def test_neighbor_sampling_graph_multiple_partitions(multi_partition_graph_data):
-    g = client.MemoryGraph(multi_partition_graph_data, [0])
+    g = client.MemoryGraph(
+        multi_partition_graph_data, [(multi_partition_graph_data, 0)]
+    )
     ns, ws, ts = g.weighted_sample_neighbors(
         nodes=np.array([0, 1], dtype=np.int64),
         edge_types=1,
@@ -182,7 +184,10 @@ def test_neighbor_sampling_graph_multiple_partitions(multi_partition_graph_data)
 
 
 def test_full_neighbor_graph_multiple_partitions(multi_partition_graph_data):
-    g = client.MemoryGraph(multi_partition_graph_data, [0, 1])
+    g = client.MemoryGraph(
+        multi_partition_graph_data,
+        [(multi_partition_graph_data, 0), (multi_partition_graph_data, 1)],
+    )
     node_ids, weights, types, counts = g.neighbors(
         nodes=np.array([9, 0, 5], dtype=np.int64), edge_types=1
     )
@@ -193,7 +198,9 @@ def test_full_neighbor_graph_multiple_partitions(multi_partition_graph_data):
 
 
 def test_full_neighbor_graph_single_partition(multi_partition_graph_data):
-    g = client.MemoryGraph(multi_partition_graph_data, [1])
+    g = client.MemoryGraph(
+        multi_partition_graph_data, [(multi_partition_graph_data, 1)]
+    )
     node_ids, weights, types, counts = g.neighbors(
         nodes=np.array([9, 0, 5], dtype=np.int64), edge_types=1
     )
@@ -204,7 +211,9 @@ def test_full_neighbor_graph_single_partition(multi_partition_graph_data):
 
 
 def test_full_neighbor_graph_handle_empty_list(multi_partition_graph_data):
-    g = client.MemoryGraph(multi_partition_graph_data, [0])
+    g = client.MemoryGraph(
+        multi_partition_graph_data, [(multi_partition_graph_data, 0)]
+    )
     node_ids, types, weights, counts = g.neighbors(
         nodes=np.array([9], dtype=np.int64), edge_types=1
     )
@@ -215,7 +224,9 @@ def test_full_neighbor_graph_handle_empty_list(multi_partition_graph_data):
 
 
 def test_neighbor_count_graph_single_partition(multi_partition_graph_data):
-    g = client.MemoryGraph(multi_partition_graph_data, [1])
+    g = client.MemoryGraph(
+        multi_partition_graph_data, [(multi_partition_graph_data, 1)]
+    )
     output_node_counts = g.neighbor_counts(
         nodes=np.array([9, 0, 5], dtype=np.int64), edge_types=1
     )
@@ -224,7 +235,10 @@ def test_neighbor_count_graph_single_partition(multi_partition_graph_data):
 
 
 def test_neighbor_count_graph_multiple_partitions(multi_partition_graph_data):
-    g = client.MemoryGraph(multi_partition_graph_data, [0, 1])
+    g = client.MemoryGraph(
+        multi_partition_graph_data,
+        [(multi_partition_graph_data, 0), (multi_partition_graph_data, 1)],
+    )
     output_node_counts = g.neighbor_counts(
         nodes=np.array([9, 0, 5], dtype=np.int64), edge_types=1
     )
@@ -233,7 +247,9 @@ def test_neighbor_count_graph_multiple_partitions(multi_partition_graph_data):
 
 
 def test_neighbor_count_graph_handle_empty_list(multi_partition_graph_data):
-    g = client.MemoryGraph(multi_partition_graph_data, [0])
+    g = client.MemoryGraph(
+        multi_partition_graph_data, [(multi_partition_graph_data, 0)]
+    )
     output_node_counts = g.neighbor_counts(
         nodes=np.array([9], dtype=np.int64), edge_types=[100, 1]
     )
@@ -242,7 +258,9 @@ def test_neighbor_count_graph_handle_empty_list(multi_partition_graph_data):
 
 
 def test_neighbor_count_graph_nonmatching_edge_type(multi_partition_graph_data):
-    g = client.MemoryGraph(multi_partition_graph_data, [0])
+    g = client.MemoryGraph(
+        multi_partition_graph_data, [(multi_partition_graph_data, 0)]
+    )
     output_node_counts = g.neighbor_counts(
         nodes=np.array([9], dtype=np.int64), edge_types=100
     )
@@ -251,7 +269,9 @@ def test_neighbor_count_graph_nonmatching_edge_type(multi_partition_graph_data):
 
 
 def test_neighbor_count_graph_nonexistent_node(multi_partition_graph_data):
-    g = client.MemoryGraph(multi_partition_graph_data, [0])
+    g = client.MemoryGraph(
+        multi_partition_graph_data, [(multi_partition_graph_data, 0)]
+    )
     output_node_counts = g.neighbor_counts(
         nodes=np.array([4], dtype=np.int64), edge_types=1
     )
@@ -260,8 +280,12 @@ def test_neighbor_count_graph_nonexistent_node(multi_partition_graph_data):
 
 
 def test_neighbor_count_remote_client_single_partition(multi_partition_graph_data):
-    s1 = server.Server(multi_partition_graph_data, [0], "localhost:12344")
-    s2 = server.Server(multi_partition_graph_data, [1], "localhost:12354")
+    s1 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 0)], "localhost:12344"
+    )
+    s2 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 1)], "localhost:12354"
+    )
 
     cl = client.DistributedGraph(["localhost:12344", "localhost:12354"])
     output_node_counts = cl.neighbor_counts(
@@ -276,8 +300,12 @@ def test_neighbor_count_remote_client_single_partition(multi_partition_graph_dat
 
 
 def test_neighbor_count_remote_client_multiple_partitions(multi_partition_graph_data):
-    s1 = server.Server(multi_partition_graph_data, [0], "localhost:12345")
-    s2 = server.Server(multi_partition_graph_data, [1], "localhost:12355")
+    s1 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 0)], "localhost:12345"
+    )
+    s2 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 1)], "localhost:12355"
+    )
 
     cl = client.DistributedGraph(["localhost:12345", "localhost:12355"])
     output_node_counts = cl.neighbor_counts(
@@ -290,8 +318,12 @@ def test_neighbor_count_remote_client_multiple_partitions(multi_partition_graph_
 
 
 def test_neighbor_count_remote_client_handle_empty_list(multi_partition_graph_data):
-    s1 = server.Server(multi_partition_graph_data, [0], "localhost:12346")
-    s2 = server.Server(multi_partition_graph_data, [1], "localhost:12356")
+    s1 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 0)], "localhost:12346"
+    )
+    s2 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 1)], "localhost:12356"
+    )
 
     cl = client.DistributedGraph(["localhost:12346", "localhost:12356"])
     output_node_counts = cl.neighbor_counts(
@@ -305,8 +337,12 @@ def test_neighbor_count_remote_client_handle_empty_list(multi_partition_graph_da
 
 def test_neighbor_count_remote_client_nonmatching_edge_type(multi_partition_graph_data):
 
-    s1 = server.Server(multi_partition_graph_data, [0], "localhost:12347")
-    s2 = server.Server(multi_partition_graph_data, [1], "localhost:12357")
+    s1 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 0)], "localhost:12347"
+    )
+    s2 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 1)], "localhost:12357"
+    )
 
     cl = client.DistributedGraph(["localhost:12347", "localhost:12357"])
     output_node_counts = cl.neighbor_counts(
@@ -319,8 +355,12 @@ def test_neighbor_count_remote_client_nonmatching_edge_type(multi_partition_grap
 
 
 def test_neighbor_count_remote_client_nonexistent_node(multi_partition_graph_data):
-    s1 = server.Server(multi_partition_graph_data, [0], "localhost:12358")
-    s2 = server.Server(multi_partition_graph_data, [1], "localhost:12368")
+    s1 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 0)], "localhost:12358"
+    )
+    s2 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 1)], "localhost:12368"
+    )
 
     cl = client.DistributedGraph(["localhost:12358", "localhost:12368"])
     output_node_counts = cl.neighbor_counts(
@@ -333,7 +373,9 @@ def test_neighbor_count_remote_client_nonexistent_node(multi_partition_graph_dat
 
 
 def test_neighbor_sampling_after_reset(multi_partition_graph_data):
-    cl = client.MemoryGraph(multi_partition_graph_data, [0])
+    cl = client.MemoryGraph(
+        multi_partition_graph_data, [(multi_partition_graph_data, 0)]
+    )
     cl.reset()
     with pytest.raises(
         Exception, match="Failed to extract sampler neighbors with weights"
@@ -346,7 +388,9 @@ def test_neighbor_sampling_after_reset(multi_partition_graph_data):
 def test_uniform_neighbor_sampling_graph_multiple_partitions(
     multi_partition_graph_data,
 ):
-    g = client.MemoryGraph(multi_partition_graph_data, [0])
+    g = client.MemoryGraph(
+        multi_partition_graph_data, [(multi_partition_graph_data, 0)]
+    )
     for replacement in [True, False]:
         ns, ts = g.uniform_sample_neighbors(
             replacement,
@@ -366,7 +410,9 @@ def test_uniform_neighbor_sampling_graph_multiple_partitions(
 
 
 def test_uniform_neighbor_sampling_after_reset(multi_partition_graph_data):
-    cl = client.MemoryGraph(multi_partition_graph_data, [0])
+    cl = client.MemoryGraph(
+        multi_partition_graph_data, [(multi_partition_graph_data, 0)]
+    )
     cl.reset()
     with pytest.raises(
         Exception, match="Failed to sample neighbors with uniform distribution"
@@ -377,8 +423,12 @@ def test_uniform_neighbor_sampling_after_reset(multi_partition_graph_data):
 
 
 def test_remote_client_uniform_sampling_from_unsorted_types(multi_partition_graph_data):
-    s1 = server.Server(multi_partition_graph_data, [0], "localhost:12349")
-    s2 = server.Server(multi_partition_graph_data, [1], "localhost:12359")
+    s1 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 0)], "localhost:12349"
+    )
+    s2 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 1)], "localhost:12359"
+    )
 
     cl = client.DistributedGraph(["localhost:12349", "localhost:12359"])
     neighbors, types = cl.uniform_sample_neighbors(
@@ -394,8 +444,12 @@ def test_remote_client_uniform_sampling_from_unsorted_types(multi_partition_grap
 def test_remote_client_weighted_sampling_from_unsorted_types(
     multi_partition_graph_data,
 ):
-    s1 = server.Server(multi_partition_graph_data, [0], "localhost:12359")
-    s2 = server.Server(multi_partition_graph_data, [1], "localhost:12369")
+    s1 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 0)], "localhost:12359"
+    )
+    s2 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 1)], "localhost:12369"
+    )
 
     cl = client.DistributedGraph(["localhost:12359", "localhost:12369"])
     neighbors, weights, types = cl.weighted_sample_neighbors(
@@ -412,8 +466,12 @@ def test_remote_client_weighted_sampling_from_unsorted_types(
 def test_remote_client_weighted_sampling_with_missing_neighbors(
     multi_partition_graph_data,
 ):
-    s1 = server.Server(multi_partition_graph_data, [0], "localhost:12378")
-    s2 = server.Server(multi_partition_graph_data, [1], "localhost:12379")
+    s1 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 0)], "localhost:12378"
+    )
+    s2 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 1)], "localhost:12379"
+    )
 
     cl = client.DistributedGraph(["localhost:12378", "localhost:12379"])
     neighbors, weights, types = cl.weighted_sample_neighbors(
@@ -434,8 +492,12 @@ def test_remote_client_weighted_sampling_with_missing_neighbors(
 def test_remote_client_uniform_sampling_with_missing_neighbors(
     multi_partition_graph_data,
 ):
-    s1 = server.Server(multi_partition_graph_data, [0], "localhost:12358")
-    s2 = server.Server(multi_partition_graph_data, [1], "localhost:12368")
+    s1 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 0)], "localhost:12358"
+    )
+    s2 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 1)], "localhost:12368"
+    )
     cl = client.DistributedGraph(["localhost:12358", "localhost:12368"])
 
     for replacement in [True, False]:
@@ -496,7 +558,7 @@ def karate_club_graph():
             skip_edge_sampler=True,
             skip_node_sampler=True,
         ).convert()
-        yield client.MemoryGraph(workdir, [0, 1])
+        yield client.MemoryGraph(workdir, [(workdir, 0), (workdir, 1)])
 
 
 def test_karate_club_uniform_neighbor_sampling_different_result(

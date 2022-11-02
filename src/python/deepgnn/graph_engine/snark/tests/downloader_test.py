@@ -149,7 +149,11 @@ platform_check = pytest.mark.skipif(
 
 @platform_check
 def test_distributed_mode_feature(http_file_server):
-    s = server.Server(http_file_server, [0, 1], "localhost:98765")
+    s = server.Server(
+        http_file_server,
+        [(http_file_server, 0), (http_file_server, 1)],
+        "localhost:98765",
+    )
     c = client.DistributedGraph(["localhost:98765"])
     values = c.node_features(
         np.array([0, 1], dtype=np.int64),
@@ -163,7 +167,11 @@ def test_distributed_mode_feature(http_file_server):
 
 @platform_check
 def test_distributed_mode_sampling(http_file_server):
-    s = server.Server(http_file_server, [0, 1], "localhost:98766")
+    s = server.Server(
+        http_file_server,
+        [(http_file_server, 0), (http_file_server, 1)],
+        "localhost:98766",
+    )
     c = client.DistributedGraph(["localhost:98766"])
     sampler = client.NodeSampler(c, [0, 1])
     values = sampler.sample(5, seed=13)
@@ -175,7 +183,7 @@ def test_distributed_mode_sampling(http_file_server):
 
 @platform_check
 def test_memory_mode(http_file_server):
-    c = client.MemoryGraph(http_file_server, partitions=[1])
+    c = client.MemoryGraph(http_file_server, partitions=[(http_file_server, 1)])
     values = c.node_features(
         np.array([0, 1], dtype=np.int64),
         features=np.array([[0, 2]], dtype=np.int32),
