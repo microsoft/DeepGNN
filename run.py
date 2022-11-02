@@ -211,12 +211,12 @@ def train_func(config: Dict):
     train.torch.enable_reproducibility(seed=session.get_world_rank())
 
     model = SupervisedGraphSage(
-        num_classes=7,
-        label_idx=1,
-        label_dim=7,
+        num_classes=50,
+        label_idx=0,
+        label_dim=50,
         feature_type=np.float32,
-        feature_idx=0,
-        feature_dim=1433,
+        feature_idx=1,
+        feature_dim=300,
         edge_type=0,
         fanouts=[5, 5],
     )
@@ -239,15 +239,15 @@ def train_func(config: Dict):
     pipe = pipe.map_batches(transform_batch)
     """
 
-    g = Client("/tmp/cora", [0])
+    g = Client("/tmp/reddit", [0])
     dataset = TorchDeepGNNDataset(
         sampler_class=GENodeSampler,
         backend=type("Backend", (object,), {"graph": g})(),  # type: ignore
-        sample_num=2708,
+        sample_num=152410,
         num_workers=1,
         worker_index=1,
         node_types=np.array([0], dtype=np.int32),
-        batch_size=2708,
+        batch_size=512,
         query_fn=model_original.query,
         strategy=SamplingStrategy.RandomWithoutReplacement,
     )
@@ -263,6 +263,7 @@ def train_func(config: Dict):
             # ):
             scores = model(batch)[0]
             labels = batch["label"]  # .flatten()
+            #assert False, (scores.shape, labels.shape)
             loss = loss_fn(scores.type(torch.float32), labels.squeeze().float())
             optimizer.zero_grad()
             loss.backward()
