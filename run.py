@@ -22,9 +22,19 @@ from deepgnn.graph_engine.snark.local import Client
 from azureml.core import Workspace
 from ray_on_aml.core import Ray_On_AML
 
+from deepgnn.graph_engine import Graph
+from deepgnn.pytorch.common import MeanAggregator, BaseMetric, MRR
+from deepgnn.pytorch.modeling import BaseSupervisedModel, BaseUnsupervisedModel
+from deepgnn.pytorch.encoding import FeatureEncoder, SageEncoder
 
-# from deepgnn.graph_engine.data.citation import Cora
-# Cora("/tmp/cora/")
+from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
+from deepgnn.graph_engine import FileNodeSampler
+from deepgnn.graph_engine import (
+    CSVNodeSampler,
+    GENodeSampler,
+    SamplingStrategy,
+    GraphEngineBackend,
+)
 
 
 @dataclass
@@ -35,107 +45,183 @@ class GATQuery:
     label_meta: list = field(default_factory=lambda: np.array([[1, 1]]))
     feature_type: np.dtype = np.float32
     label_type: np.dtype = np.float32
-    neighbor_edge_types: list = field(default_factory=lambda: [0])
-    num_hops: int = 2
 
-    def query(self, g: Client, idx: int) -> Dict[Any, np.ndarray]:
-        """Query used to generate data for training."""
-        if isinstance(idx, (int, float)):
-            idx = [idx]
-        inputs = np.array(idx, np.int64)
-        nodes, edges, src_idx = graph_ops.sub_graph(
-            g,
-            inputs,
-            edge_types=np.array(self.neighbor_edge_types, np.int64),
-            num_hops=self.num_hops,
-            self_loop=True,
-            undirected=True,
-            return_edges=True,
+    def query(self, graph, inputs: np.ndarray) -> dict:
+        """Fetch training data from graph."""
+        if isinstance(inputs, (int, float)):
+            inputs = [inputs]
+
+        context = {"inputs": inputs}
+        context["label"] = graph.node_features(
+            context["inputs"],
+            self.label_meta,
+            np.int64,
         )
-        input_mask = np.zeros(nodes.size, np.bool)
-        input_mask[src_idx] = True
-
-        feat = g.node_features(nodes, self.feature_meta, self.feature_type)
-        label = g.node_features(nodes, self.label_meta, self.label_type).astype(
-            np.int64
+        context["encoder"] = self.enc.query(
+            context["inputs"],
+            graph,
+            self.feature_type,
+            self.feature_meta[0],
+            self.feature_meta[1],
         )
-        return {
-            "nodes": np.expand_dims(nodes, 0),
-            "feat": np.expand_dims(feat, 0),
-            "labels": np.expand_dims(label, 0),
-            "input_mask": np.expand_dims(input_mask, 0),
-            "edges": np.expand_dims(edges, 0),
-        }
+        # self.transform(context)
+        return {k: np.expand_dims(v, 0) for k, v in context.items()}
 
 
-class GAT(BaseModel):
-    """GAT Model."""
+class SupervisedGraphSage(BaseSupervisedModel):
+    """Simple supervised GraphSAGE model."""
 
     def __init__(
         self,
-        in_dim: int,
-        head_num: List = [8, 1],
-        hidden_dim: int = 8,
-        num_classes: int = -1,
-        ffd_drop: float = 0.0,
-        attn_drop: float = 0.0,
+        num_classes: int,
+        label_idx: int,
+        label_dim: int,
+        feature_type: np.dtype,
+        feature_idx: int,
+        feature_dim: int,
+        edge_type: int,
+        fanouts: list,
+        embed_dim: int = 128,
+        feature_enc=None,
     ):
-        """GAT Model init."""
-        super().__init__(np.float32, 0, 0, None)
-        self.num_classes = num_classes
-        self.out_dim = num_classes
-
-        self.input_layer = GATConv(
-            in_dim=in_dim,
-            attn_heads=head_num[0],
-            out_dim=hidden_dim,
-            act=F.elu,
-            in_drop=ffd_drop,
-            coef_drop=attn_drop,
-            attn_aggregate="concat",
-        )
-        layer0_output_dim = head_num[0] * hidden_dim
-        assert len(head_num) == 2
-        self.out_layer = GATConv(
-            in_dim=layer0_output_dim,
-            attn_heads=head_num[1],
-            out_dim=self.out_dim,
-            act=None,
-            in_drop=ffd_drop,
-            coef_drop=attn_drop,
-            attn_aggregate="average",
+        """Initialize a graphsage model for node classification."""
+        super(SupervisedGraphSage, self).__init__(
+            feature_type=feature_type,
+            feature_idx=feature_idx,
+            feature_dim=feature_dim,
+            feature_enc=feature_enc,
         )
 
-    def forward(self, context: Dict[Any, np.ndarray]):
-        """GAT forward."""
-        nodes = torch.squeeze(context["nodes"])  # [N], N: num of nodes in subgraph
-        feat = torch.squeeze(context["feat"])  # [N, F]
-        mask = torch.squeeze(context["input_mask"])  # [N]
-        # labels = torch.squeeze(context["labels"])  # [N]
-        edges = torch.squeeze(
-            context["edges"].reshape((-1, 2))
-        )  # [X, 2], X: num of edges in subgraph
+        # only 1 or 2 hops are allowed.
+        assert len(fanouts) in [1, 2]
+        self.fanouts = fanouts
+        self.edge_type = edge_type
 
-        edges = np.transpose(edges)
+        def feature_func(features):
+            return features.squeeze(0)
 
-        # TODO This is not stable, when doing batch_size < graph size ends up with size < index values. use torch.unique to remap edges
-        sp_adj = torch.sparse_coo_tensor(
-            edges,
-            torch.ones(edges.shape[1], dtype=torch.float32),
-            (nodes.shape[0], nodes.shape[0]),
+        first_layer_enc = SageEncoder(
+            features=feature_func,
+            query_func=None,
+            feature_dim=self.feature_dim,
+            intermediate_dim=self.feature_enc.embed_dim
+            if self.feature_enc
+            else self.feature_dim,
+            aggregator=MeanAggregator(feature_func),
+            embed_dim=embed_dim,
+            edge_type=self.edge_type,
+            num_sample=self.fanouts[0],
         )
-        h_1 = self.input_layer(feat, sp_adj)
-        scores = self.out_layer(h_1, sp_adj)
 
-        scores = scores[mask]  # [batch_size]
+        self.enc = (
+            SageEncoder(
+                features=lambda context: first_layer_enc(context),
+                query_func=first_layer_enc.query,
+                feature_dim=self.feature_dim,
+                intermediate_dim=embed_dim,
+                aggregator=MeanAggregator(lambda context: first_layer_enc(context)),
+                embed_dim=embed_dim,
+                edge_type=self.edge_type,
+                num_sample=self.fanouts[1],
+                base_model=first_layer_enc,
+            )
+            if len(self.fanouts) == 2
+            else first_layer_enc
+        )
+
+        self.label_idx = label_idx
+        self.label_dim = label_dim
+        self.weight = nn.Parameter(
+            torch.empty(embed_dim, num_classes, dtype=torch.float32)
+        )
+        nn.init.xavier_uniform_(self.weight)
+
+    def get_score(self, context: dict) -> torch.Tensor:  # type: ignore[override]
+        """Generate scores for a list of nodes."""
+        self.encode_feature(context)
+        embeds = self.enc(context["encoder"])
+        scores = torch.matmul(embeds, self.weight)
+
         return scores
+
+    def metric_name(self):
+        """Metric used for model evaluation."""
+        return self.metric.name()
+
+    def get_embedding(self, context: dict) -> torch.Tensor:  # type: ignore[override]
+        """Generate embedding."""
+        return self.enc(context["encoder"])
+
+    def query(self, graph, inputs: np.ndarray) -> dict:
+        """Fetch training data from graph."""
+        # if isinstance(inputs, (int, float)):
+        #    inputs = [inputs]
+
+        context = {"inputs": inputs}
+        context["label"] = graph.node_features(
+            context["inputs"],
+            np.array([[self.label_idx, self.label_dim]]),
+            np.int64,
+        ).reshape((-1, self.label_dim))
+        context["encoder"] = self.enc.query(
+            context["inputs"],
+            graph,
+            self.feature_type,
+            self.feature_idx,
+            self.feature_dim,
+        )
+        # self.transform(context)
+        # assert False, context
+        return context  # {k: np.expand_dims(v, 0) for k, v in context.items()}
+
+    def _loss_inner(self, context):
+        """Cross entropy loss for a list of nodes."""
+        if isinstance(context, dict):
+            labels = context["label"].squeeze()  # type: ignore
+        elif isinstance(context, torch.Tensor):
+            labels = context.squeeze()  # type: ignore
+        else:
+            raise TypeError("Invalid input type.")
+        device = labels.device
+
+        # TODO(chaoyl): Due to the bug of pytorch argmax, we have to copy labels to numpy for argmax
+        # then copy back to Tensor. The fix has been merged to pytorch master branch but not included
+        # in latest stable version. Revisit this part after updating pytorch with the fix included.
+        # issue: https://github.com/pytorch/pytorch/issues/32343
+        # fix: https://github.com/pytorch/pytorch/pull/37864
+        labels = labels.cpu().numpy().argmax(1)
+        scores = self.get_score(context)
+        return (
+            # self.xent(
+            #    scores,
+            #    Variable(torch.tensor(labels.squeeze(), dtype=torch.int64).to(device)),
+            # ),
+            scores,
+            scores.argmax(dim=1),
+            torch.tensor(labels.squeeze(), dtype=torch.int64),
+        )
+
+    def forward(self, context):
+        """Return cross entropy loss."""
+        return self._loss_inner(context)
 
 
 def train_func(config: Dict):
     """Train function main."""
     train.torch.enable_reproducibility(seed=session.get_world_rank())
 
-    model = GAT(in_dim=1433, num_classes=7)
+    model = SupervisedGraphSage(
+        num_classes=7,
+        label_idx=1,
+        label_dim=7,
+        feature_type=np.float32,
+        feature_idx=0,
+        feature_dim=1433,
+        edge_type=0,
+        fanouts=[5, 5],
+    )
+
+    model_original = model
     model = train.torch.prepare_model(model)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.0005)
@@ -143,30 +229,50 @@ def train_func(config: Dict):
 
     loss_fn = nn.CrossEntropyLoss()
 
+    """
     dataset = ray.data.range(2708, parallelism=1)
     pipe = dataset.window(blocks_per_window=10).repeat(10)
     g = Client("/tmp/cora", [0], delayed_start=True)
     q = GATQuery()
-
     def transform_batch(batch: list) -> dict:
-        return q.query(g, batch)
-
+        return model.query(g, batch)
     pipe = pipe.map_batches(transform_batch)
+    """
+
+    g = Client("/tmp/cora", [0])
+    dataset = TorchDeepGNNDataset(
+        sampler_class=GENodeSampler,
+        backend=type("Backend", (object,), {"graph": g})(),  # type: ignore
+        sample_num=2708,
+        num_workers=1,
+        worker_index=1,
+        node_types=np.array([0], dtype=np.int32),
+        batch_size=2708,
+        query_fn=model_original.query,
+        strategy=SamplingStrategy.RandomWithoutReplacement,
+    )
+    dataset = torch.utils.data.DataLoader(
+        dataset=dataset,
+        num_workers=0,
+    )
 
     model.train()
-    for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
-        for i, batch in enumerate(
-            epoch_pipe.random_shuffle_each_window().iter_torch_batches(batch_size=2708)
-        ):
-            scores = model(batch)
-            labels = batch["labels"][batch["input_mask"]].flatten()
-            loss = loss_fn(scores.type(torch.float32), labels)
+    for epoch in range(10):  # , epoch_pipe in enumerate(pipe.iter_epochs()):
+        for i, batch in enumerate(dataset):  # enumerate(
+            # epoch_pipe.random_shuffle_each_window().iter_torch_batches(batch_size=2708)
+            # ):
+            scores = model(batch)[0]
+            labels = batch["label"]  # .flatten()
+            loss = loss_fn(scores.type(torch.float32), labels.squeeze().float())
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
             session.report(
-                {"metric": (scores.argmax(1) == labels).sum(), "loss": loss.item()}
+                {
+                    "metric": (scores.squeeze().argmax(0) == labels.squeeze()).sum(),
+                    "loss": loss.item(),
+                }
             )
 
 
@@ -174,9 +280,11 @@ ws = Workspace.from_config("config.json")
 
 
 ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="multi-node", maxnode=2)
-ray = ray_on_aml.getRay()
+# ray = ray_on_aml.getRay()
 
-# ray.init()
+import ray
+
+ray.init()
 
 trainer = TorchTrainer(
     train_func,
