@@ -139,7 +139,7 @@ class MultiWorkersConverter:
         else:
             assert (
                 self.partition_count == 1
-            ), "Num_workers = 0 does not support multiple partitions."
+            ), "Debug mode does not support multiple partitions."
             if isinstance(self.decoder, type):
                 self.decoder = self.decoder()
             writer = BinaryWriter(self.output_dir, 0)
