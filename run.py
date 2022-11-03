@@ -218,7 +218,7 @@ def train_func(config: Dict):
         feature_idx=1,
         feature_dim=300,
         edge_type=0,
-        fanouts=[5, 5],
+        fanouts=[25, 25],
     )
 
     model_original = model
@@ -239,15 +239,18 @@ def train_func(config: Dict):
     pipe = pipe.map_batches(transform_batch)
     """
 
+    SAMPLE_NUM = 152410
+    BATCH_SIZE = 512
+
     g = Client("/tmp/reddit", [0])
     dataset = TorchDeepGNNDataset(
         sampler_class=GENodeSampler,
         backend=type("Backend", (object,), {"graph": g})(),  # type: ignore
-        sample_num=152410,
+        sample_num=SAMPLE_NUM,
         num_workers=1,
         worker_index=1,
         node_types=np.array([0], dtype=np.int32),
-        batch_size=512,
+        batch_size=BATCH_SIZE,
         query_fn=model_original.query,
         strategy=SamplingStrategy.RandomWithoutReplacement,
     )
@@ -258,40 +261,49 @@ def train_func(config: Dict):
 
     model.train()
     for epoch in range(10):  # , epoch_pipe in enumerate(pipe.iter_epochs()):
+        metrics = []
+        losses = []
         for i, batch in enumerate(dataset):  # enumerate(
             # epoch_pipe.random_shuffle_each_window().iter_torch_batches(batch_size=2708)
             # ):
             scores = model(batch)[0]
-            labels = batch["label"]  # .flatten()
-            #assert False, (scores.shape, labels.shape)
+            labels = batch["label"]
+
             loss = loss_fn(scores.type(torch.float32), labels.squeeze().float())
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            session.report(
-                {
-                    "metric": (scores.squeeze().argmax(0) == labels.squeeze()).sum(),
-                    "loss": loss.item(),
-                }
-            )
+            metrics.append((scores.squeeze().argmax(1) == labels.squeeze().argmax(1)).float().mean())
+            losses.append(loss.item())
 
+            if i >= SAMPLE_NUM / BATCH_SIZE / session.get_world_size():
+                break
 
+        print("RESULTS:!", np.mean(metrics), np.mean(losses))
+
+        session.report(
+            {
+                "metric": np.mean(metrics),
+                "loss": np.mean(losses),
+            }
+        )
+
+           
 ws = Workspace.from_config("config.json")
 
 
 ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="multi-node", maxnode=2)
-# ray = ray_on_aml.getRay()
+ray = ray_on_aml.getRay()
 
-import ray
-
-ray.init()
+#import ray
+#ray.init()
 
 trainer = TorchTrainer(
     train_func,
     train_loop_config={},
     run_config=RunConfig(),
-    scaling_config=ScalingConfig(num_workers=2, use_gpu=False),
+    scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
 )
 result = trainer.fit()
 
