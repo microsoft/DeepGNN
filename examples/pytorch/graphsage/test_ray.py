@@ -129,7 +129,12 @@ def test_graphsage_ppi_hvd_trainer():
     ray.init()
     trainer = TorchTrainer(
         train_func,
-        train_loop_config={"data_dir": working_dir.name, "lr": 1e-3, "batch_size": 64, "epochs": 4},
+        train_loop_config={
+            "data_dir": working_dir.name,
+            "lr": 1e-3,
+            "batch_size": 64,
+            "epochs": 4,
+        },
         scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     )
     result = trainer.fit()
