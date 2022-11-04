@@ -97,7 +97,7 @@ def train_func(config: Dict):
         query_fn=NeuralNetwork.query,
         prefetch_queue_size=2,
         prefetch_worker_size=2,
-        sample_files="/tmp/cora/train.nodes",
+        sample_files=f"{config['data_dir']}/train.nodes",
         batch_size=worker_batch_size,
         shuffle=True,
         drop_last=True,
