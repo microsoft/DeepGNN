@@ -124,7 +124,7 @@ def test_graphsage_ppi_hvd_trainer():
     trainer = TorchTrainer(
         train_func,
         train_loop_config={"lr": 1e-3, "batch_size": 64, "epochs": 4},
-        scaling_config=ScalingConfig(num_workers=2, use_gpu=False),
+        scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     )
     result = trainer.fit()
     print(f"Results: {result.metrics}")
