@@ -5,6 +5,7 @@ import pytest
 import sys
 import os
 import platform
+import tempfile
 from typing import Dict
 
 import numpy as np
@@ -23,6 +24,8 @@ from deepgnn.graph_engine.snark.local import Client
 
 from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.graph_engine import FileNodeSampler
+from deepgnn.graph_engine.data.citation import Cora
+
 
 feature_idx = 1
 feature_dim = 50
@@ -87,7 +90,7 @@ def train_func(config: Dict):
 
     loss_fn = nn.CrossEntropyLoss()
 
-    g = Client("/tmp/cora", [0])
+    g = Client(config["data_dir"], [0])
     dataset = TorchDeepGNNDataset(
         sampler_class=FileNodeSampler,
         backend=g,  # type: ignore
@@ -120,14 +123,18 @@ def train_func(config: Dict):
 
 
 def test_graphsage_ppi_hvd_trainer():
+    working_dir = tempfile.TemporaryDirectory()
+    Cora(working_dir.name)
+
     ray.init()
     trainer = TorchTrainer(
         train_func,
-        train_loop_config={"lr": 1e-3, "batch_size": 64, "epochs": 4},
+        train_loop_config={"data_dir": working_dir.name, "lr": 1e-3, "batch_size": 64, "epochs": 4},
         scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     )
     result = trainer.fit()
     print(f"Results: {result.metrics}")
+    working_dir.cleanup()
 
 
 if __name__ == "__main__":
