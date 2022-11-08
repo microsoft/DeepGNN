@@ -58,7 +58,11 @@ def setter(output, key, value):
             output[u_key] = {}
         setter(output[u_key], o_key, value)
     else:
-        output[key] = value
+        if len(value.shape) > 2:
+            value = value.reshape((value.shape[0] * value.shape[1], *value.shape[2:]))
+        elif len(value.shape) == 2:
+            value = value.reshape((value.shape[0] * value.shape[1]))
+        output[key] = value.squeeze(0)
 
 
 def roll_dict(inputs):
@@ -66,37 +70,6 @@ def roll_dict(inputs):
     for key, value in inputs.items():
         setter(output, key, value)
     return output
-
-
-@dataclass
-class GATQuery:
-    """GAT Query."""
-
-    feature_meta: list = field(default_factory=lambda: np.array([[0, 1433]]))
-    label_meta: list = field(default_factory=lambda: np.array([[1, 1]]))
-    feature_type: np.dtype = np.float32
-    label_type: np.dtype = np.float32
-
-    def query(self, graph, inputs: np.ndarray) -> dict:
-        """Fetch training data from graph."""
-        if isinstance(inputs, (int, float)):
-            inputs = [inputs]
-
-        context = {"inputs": inputs}
-        context["label"] = graph.node_features(
-            context["inputs"],
-            self.label_meta,
-            np.int64,
-        )
-        context["encoder"] = self.enc.query(
-            context["inputs"],
-            graph,
-            self.feature_type,
-            self.feature_meta[0],
-            self.feature_meta[1],
-        )
-        # self.transform(context)
-        return {k: np.expand_dims(v, 0) for k, v in context.items()}
 
 
 class SupervisedGraphSage(BaseSupervisedModel):
@@ -261,14 +234,13 @@ def train_func(config: Dict):
 
     loss_fn = nn.CrossEntropyLoss()
 
-    SAMPLE_NUM = 152410
-    BATCH_SIZE = 2#512  # TODO OTODO
+    SAMPLE_NUM = 15  # 152410
+    BATCH_SIZE = 1#512  # TODO OTODO
 
     dataset = ray.data.range(SAMPLE_NUM, parallelism=1).repartition(SAMPLE_NUM // 10)
     #assert False, dataset
-    pipe = dataset.window(blocks_per_window=1).repeat(10)
+    pipe = dataset.window(blocks_per_window=1)#.repeat(10)
     g = Client("/tmp/reddit", [0], delayed_start=True)
-    q = GATQuery()
     def transform_batch(batch: list) -> dict:
         return model_original.query(g, batch)
     pipe = pipe.map_batches(transform_batch)
@@ -303,10 +275,8 @@ def train_func(config: Dict):
             }
         )
 
-           
-ws = Workspace.from_config("config.json")
 
-
+#ws = Workspace.from_config("config.json")
 #ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="multi-node", maxnode=2)
 #ray = ray_on_aml.getRay()
 
