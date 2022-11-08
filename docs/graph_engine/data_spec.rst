@@ -57,12 +57,22 @@ edge does not have to have the same number of features or feature types.
 
 .. code-block:: text
 
-	features[dense]: dtype_name,length,v1,v2,...,dtype_name2,length2,v1,v2,...
-	features[sparse]: dtype_name,values_length/coords_dim,c1,c2,...,v1,v2,...
+	features[dense]: dtype,length,v1,v2,...,dtype2,length2,v1,v2,...
+	features[sparse]: dtype,values_length/coords_dim,c1,c2,...,v1,v2,...
 
 This sparse feature representation will generate a values vector with shape (values_length) and coordinates vector
 with shape (values_length, coords_dim). If coordinates vector should be flat, use values_length/0 to get the
 coordinates vector shape (values_length).
+
+Feature data types supported values
+
+.. code-block:: text
+
+	binary: string feature, requires length=1 but string can be any length, e.g. "binary,1,example".
+	bool: array of bools.
+	int8/16/32/64: integer array with N bytes per value.
+	uint8/16/32/64: unsigned integer array with N bytes per value.
+	uint8/16/32/64: float array with N bytes per value.
 
 Here is a concrete example: a graph with 2 nodes {0, 1} each with type = 1, weight = .5 and
 feature vectors [1, 1, 1] dtype=int32 and [1.1, 1.1] dtype=float32.
