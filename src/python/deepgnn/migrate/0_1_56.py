@@ -34,6 +34,7 @@ if __name__ == "__main__":
             "from numpy import dtype_temp", "import numpy as np"
         )
         raw_output = raw_output.replace("dtype_temp", "np.dtype")
+        raw_output = raw_output.replace("get_feature_type", "get_python_type")
 
         with open(filename, "w") as file:
             file.write(raw_output)
