@@ -247,16 +247,19 @@ def train_func(config: Dict):
         sampler_class=GENodeSampler,
         backend=type("Backend", (object,), {"graph": g})(),  # type: ignore
         sample_num=SAMPLE_NUM,
-        num_workers=1,
-        worker_index=1,
+        num_workers=2,
+        worker_index=0,
         node_types=np.array([0], dtype=np.int32),
         batch_size=BATCH_SIZE,
         query_fn=model_original.query,
         strategy=SamplingStrategy.RandomWithoutReplacement,
+        prefetch_queue_size=10,
+        prefetch_worker_size=2,
+
     )
     dataset = torch.utils.data.DataLoader(
         dataset=dataset,
-        num_workers=0,
+        num_workers=1,
     )
 
     model.train()
@@ -290,20 +293,20 @@ def train_func(config: Dict):
         )
 
            
-ws = Workspace.from_config("config.json")
+#ws = Workspace.from_config("config.json")
 
 
-ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="multi-node", maxnode=2)
-ray = ray_on_aml.getRay()
+#ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="multi-node", maxnode=2)
+#ray = ray_on_aml.getRay()
 
-#import ray
-#ray.init()
+import ray
+ray.init()
 
 trainer = TorchTrainer(
     train_func,
     train_loop_config={},
     run_config=RunConfig(),
-    scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
+    scaling_config=ScalingConfig(num_workers=1, use_gpu=False, trainer_resources={"CPU": 2}, resources_per_worker={"CPU": 2}),
 )
 result = trainer.fit()
 
