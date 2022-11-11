@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Breaking. Rename get_feature_type -> get_python_type.
+
 ## [0.1.56] - 2022-11-02
 
 ### Added
@@ -21,8 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Breaking. Remove FeatureType enum, replace with np.dtype. FeatureType.BINARY -> np.uint8, FeatureType.FLOAT -> np.float32, FeatureType.INT64 -> np.int64.
-
-- Breaking. Rename get_feature_type -> get_python_type.
 
 - Rename function deepgnn.graph_engine.data.to_json_node -> deepgnn.graph_engine.data.to_edge_list_node and update functionality accordingly.
 

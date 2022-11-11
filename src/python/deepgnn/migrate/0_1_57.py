@@ -4,7 +4,6 @@
 import argparse
 from pathlib import Path
 import pasta
-from pasta.augment import rename
 
 
 if __name__ == "__main__":
@@ -18,22 +17,11 @@ if __name__ == "__main__":
         with open(filename, "r") as file:
             raw_input = file.read()
 
-        raw_input = raw_input.replace("FeatureType.FLOAT", "np.float32")
-        raw_input = raw_input.replace("FeatureType.INT64", "np.int64")
-        raw_input = raw_input.replace("FeatureType.BINARY", "np.uint8")
-
         tree = pasta.parse(raw_input)
-
-        rename.rename_external(
-            tree, "deepgnn.graph_engine.FeatureType", "numpy.dtype_temp"
-        )
 
         raw_output = pasta.dump(tree)
 
-        raw_output = raw_output.replace(
-            "from numpy import dtype_temp", "import numpy as np"
-        )
-        raw_output = raw_output.replace("dtype_temp", "np.dtype")
+        raw_output = raw_output.replace("get_feature_type", "get_python_type")
 
         with open(filename, "w") as file:
             file.write(raw_output)
