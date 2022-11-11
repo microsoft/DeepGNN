@@ -259,7 +259,7 @@ def train_func(config: Dict):
     )
     dataset = torch.utils.data.DataLoader(
         dataset=dataset,
-        num_workers=1,
+        num_workers=2,  # data_parralel_num = 2
     )
 
     model.train()
