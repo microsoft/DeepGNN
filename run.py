@@ -270,14 +270,14 @@ def train_func(config: Dict):
             # epoch_pipe.random_shuffle_each_window().iter_torch_batches(batch_size=2708)
             # ):
             scores = model(batch)[0]
-            labels = batch["label"]
+            labels = batch["label"].squeeze().argmax(1)
 
-            loss = loss_fn(scores.type(torch.float32), labels.squeeze().float())
+            loss = loss_fn(scores, labels)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            metrics.append((scores.squeeze().argmax(1) == labels.squeeze().argmax(1)).float().mean())
+            metrics.append((scores.squeeze().argmax(1) == labels).float().mean())
             losses.append(loss.item())
 
             if i >= SAMPLE_NUM / BATCH_SIZE / session.get_world_size():
