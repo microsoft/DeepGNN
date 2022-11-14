@@ -1,12 +1,13 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 """AML."""
-from typing import List, Any, Dict
+from typing import List, Any, Dict, Optional
 from dataclasses import dataclass, field
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch_geometric.nn as pyg_nn
 
 # import ray
 import ray.train as train
@@ -36,44 +37,8 @@ from deepgnn.graph_engine import (
     GraphEngineBackend,
 )
 
-
-def unroll_dict(inputs):
-    output = {}
-    for key, value in inputs.items():
-        if isinstance(value, dict):
-            unrolled = unroll_dict(value)
-            for u_key, u_value in unrolled.items():
-                output[f"!{key}?{u_key}"] = u_value
-        elif isinstance(value, (int, float)):
-            output[key] = np.array([value])
-        else:
-            output[key] = np.expand_dims(np.array(value), 0)
-    return output
-
-
-def setter(output, key, value):
-    if key[0] == "!":
-        u_key, o_key = key[1:].split("?", maxsplit=1)
-        if u_key not in output:
-            output[u_key] = {}
-        setter(output[u_key], o_key, value)
-    else:
-        if len(value.shape) > 2:
-            value = value.reshape((value.shape[0] * value.shape[1], *value.shape[2:]))
-        elif len(value.shape) == 2:
-            value = value.reshape((value.shape[0] * value.shape[1]))
-        output[key] = value.squeeze(0)
-
-
-def roll_dict(inputs):
-    output = {}
-    for key, value in inputs.items():
-        setter(output, key, value)
-    return output
-
-
-class SupervisedGraphSage(BaseSupervisedModel):
-    """Simple supervised GraphSAGE model."""
+class PTGSupervisedGraphSage(BaseSupervisedModel):
+    """Supervised graphsage model implementation with torch geometric."""
 
     def __init__(
         self,
@@ -86,97 +51,100 @@ class SupervisedGraphSage(BaseSupervisedModel):
         edge_type: int,
         fanouts: list,
         embed_dim: int = 128,
-        feature_enc=None,
+        metric: BaseMetric = MRR(),
+        feature_enc: Optional[FeatureEncoder] = None,
     ):
         """Initialize a graphsage model for node classification."""
-        super(SupervisedGraphSage, self).__init__(
+        super(PTGSupervisedGraphSage, self).__init__(
             feature_type=feature_type,
             feature_idx=feature_idx,
             feature_dim=feature_dim,
             feature_enc=feature_enc,
         )
 
-        # only 1 or 2 hops are allowed.
-        assert len(fanouts) in [1, 2]
+        # only 2 hops are allowed.
+        assert len(fanouts) == 2
         self.fanouts = fanouts
         self.edge_type = edge_type
 
-        def feature_func(features):
-            return features.squeeze(0)
-
-        first_layer_enc = SageEncoder(
-            features=feature_func,
-            query_func=None,
-            feature_dim=self.feature_dim,
-            intermediate_dim=self.feature_enc.embed_dim
-            if self.feature_enc
-            else self.feature_dim,
-            aggregator=MeanAggregator(feature_func),
-            embed_dim=embed_dim,
-            edge_type=self.edge_type,
-            num_sample=self.fanouts[0],
-        )
-
-        self.enc = (
-            SageEncoder(
-                features=lambda context: first_layer_enc(context),
-                query_func=first_layer_enc.query,
-                feature_dim=self.feature_dim,
-                intermediate_dim=embed_dim,
-                aggregator=MeanAggregator(lambda context: first_layer_enc(context)),
-                embed_dim=embed_dim,
-                edge_type=self.edge_type,
-                num_sample=self.fanouts[1],
-                base_model=first_layer_enc,
-            )
-            if len(self.fanouts) == 2
-            else first_layer_enc
-        )
+        conv_model = pyg_nn.SAGEConv
+        self.convs = nn.ModuleList()
+        self.convs.append(conv_model(feature_dim, embed_dim))
+        self.convs.append(conv_model(embed_dim, embed_dim))
 
         self.label_idx = label_idx
         self.label_dim = label_dim
         self.weight = nn.Parameter(
             torch.empty(embed_dim, num_classes, dtype=torch.float32)
         )
+        self.metric = metric
         nn.init.xavier_uniform_(self.weight)
+
+    def build_edges_tensor(self, N, K):
+        """Build edge matrix."""
+        nk = torch.arange((N * K).item(), dtype=torch.long, device=N.device)
+        src = (nk // K).reshape(1, -1)
+        dst = (N + nk).reshape(1, -1)
+        elist = torch.cat([src, dst], dim=0)
+        return elist
+
+    def query(self, graph: Graph, inputs: np.ndarray) -> dict:
+        """Query graph for training data."""
+        context = {"inputs": np.array(inputs)}
+        context["label"] = graph.node_features(
+            context["inputs"],
+            np.array([[self.label_idx, self.label_dim]]),
+            np.float32,
+        )
+
+        n2_out = context["inputs"]  # Output nodes of 2nd (final) layer of convolution
+        # input nodes of 2nd layer of convolution (besides the output nodes themselves)
+        n2_in = graph.sample_neighbors(n2_out, self.edge_type, self.fanouts[1])[
+            0
+        ].flatten()
+        #  output nodes of first layer of convolution (all nodes that affect output of 2nd layer)
+        n1_out = np.concatenate([n2_out, n2_in])
+        # input nodes to 1st layer of convolution (besides the output)
+        n1_in = graph.sample_neighbors(n1_out, self.edge_type, self.fanouts[0])[
+            0
+        ].flatten()
+        # Nodes for which we need features (layer 0)
+        n0_out = np.concatenate([n1_out, n1_in])
+        x0 = graph.node_features(
+            n0_out, np.array([[self.feature_idx, self.feature_dim]]), self.feature_type
+        )
+
+        context["x0"] = x0.reshape((context["inputs"].shape[0], -1, self.feature_dim))
+        context["out_1"] = n1_out.shape[0]  # Number of output nodes of layer 1
+        context["out_2"] = n2_out.shape[0]  # Number of output nodes of layer 2
+        return {k: np.array([v] * context["inputs"].shape[0]) if isinstance(v, (int, float)) else np.array(v) for k, v in context.items()}
 
     def get_score(self, context: dict) -> torch.Tensor:  # type: ignore[override]
         """Generate scores for a list of nodes."""
         self.encode_feature(context)
-        embeds = self.enc(context["encoder"])
+        embeds = self.get_embedding(context)
         scores = torch.matmul(embeds, self.weight)
-
         return scores
 
     def metric_name(self):
-        """Metric used for model evaluation."""
+        """Metric used for training."""
         return self.metric.name()
 
     def get_embedding(self, context: dict) -> torch.Tensor:  # type: ignore[override]
         """Generate embedding."""
-        return self.enc(context["encoder"])
-
-    def query(self, graph, inputs: np.ndarray) -> dict:
-        """Fetch training data from graph."""
-        # if isinstance(inputs, (int, float)):
-        #    inputs = [inputs]
-
-        context = {"inputs": inputs}
-        context["label"] = graph.node_features(
-            context["inputs"],
-            np.array([[self.label_idx, self.label_dim]]),
-            np.int64,
-        ).reshape((-1, self.label_dim))
-        context["encoder"] = self.enc.query(
-            context["inputs"],
-            graph,
-            self.feature_type,
-            self.feature_idx,
-            self.feature_dim,
-        )
-        # self.transform(context)
-        # assert False, context
-        return unroll_dict(context)  # {k: np.expand_dims(v, 0) for k, v in context.items()}
+        out_1 = context["out_1"][0]  # 0 valid for multiple blocks?
+        out_2 = context["out_2"][0]
+        edges_1 = self.build_edges_tensor(out_1, self.fanouts[0])  # Edges for 1st layer
+        x1 = self.convs[0](context["x0"].squeeze(), edges_1)[
+            :out_1, :
+        ]  # Output of 1st layer (cut out 2 hop nodes)
+        x1 = F.relu(x1)
+        edges_2 = self.build_edges_tensor(out_2, self.fanouts[1])  # Edges for 2nd layer
+        x2 = self.convs[1](x1, edges_2)[
+            :out_2, :
+        ]  # Output of second layer (nodes for which loss is computed)
+        x2 = F.relu(x2)
+        return x2
 
     def _loss_inner(self, context):
         """Cross entropy loss for a list of nodes."""
@@ -207,15 +175,14 @@ class SupervisedGraphSage(BaseSupervisedModel):
 
     def forward(self, context):
         """Return cross entropy loss."""
-        #assert False, (list(context.keys()), list(roll_dict(context).keys()))
-        return self._loss_inner(roll_dict(context))
+        return self._loss_inner(context)
 
 
 def train_func(config: Dict):
     """Train function main."""
     train.torch.enable_reproducibility(seed=session.get_world_rank())
 
-    model = SupervisedGraphSage(
+    model = PTGSupervisedGraphSage(
         num_classes=50,
         label_idx=0,
         label_dim=50,
@@ -234,38 +201,64 @@ def train_func(config: Dict):
 
     loss_fn = nn.CrossEntropyLoss()
 
-    SAMPLE_NUM = 15  # 152410
-    BATCH_SIZE = 1#512  # TODO OTODO
+    SAMPLE_NUM = 152410
+    BATCH_SIZE = 256
 
-    dataset = ray.data.range(SAMPLE_NUM, parallelism=1).repartition(SAMPLE_NUM // 10)
-    #assert False, dataset
-    pipe = dataset.window(blocks_per_window=1)#.repeat(10)
     g = Client("/tmp/reddit", [0], delayed_start=True)
+    dataset = ray.data.range(SAMPLE_NUM, parallelism=1).repartition(SAMPLE_NUM // BATCH_SIZE)
+    pipe = dataset.window(blocks_per_window=1).repeat(10)
     def transform_batch(batch: list) -> dict:
-        return model_original.query(g, batch)
+        return model_original.query(g, batch)  # todo [batch] w/ .map()
     pipe = pipe.map_batches(transform_batch)
+    """
+    g = Client("/tmp/reddit", [0])
+    dataset = TorchDeepGNNDataset(
+        sampler_class=GENodeSampler,
+        backend=type("Backend", (object,), {"graph": g})(),  # type: ignore
+        sample_num=SAMPLE_NUM,
+        num_workers=2,
+        worker_index=0,
+        node_types=np.array([0], dtype=np.int32),
+        batch_size=BATCH_SIZE,
+        query_fn=model_original.query,
+        strategy=SamplingStrategy.RandomWithoutReplacement,
+        prefetch_queue_size=10,
+        prefetch_worker_size=2,
 
+    )
+    dataset = torch.utils.data.DataLoader(
+        dataset=dataset,
+        num_workers=2,  # data_parralel_num = 2
+    )
+    """
+    from time import sleep
     model.train()
     for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
         metrics = []
         losses = []
         for i, batch in enumerate(
-                epoch_pipe.random_shuffle_each_window().iter_torch_batches(batch_size=BATCH_SIZE)
+                epoch_pipe.iter_torch_batches(batch_size=BATCH_SIZE)
             ):
+            batch = {k: v.squeeze() for k, v in batch.items()}
+            print("STEP:", i)
+            #assert False, ({k: v.shape for k, v in batch.items()})
             scores = model(batch)[0]
-            labels = batch["label"]
+            labels = batch["label"].squeeze().argmax(1)
 
-            loss = loss_fn(scores.type(torch.float32), labels.squeeze().float())
+            print("XXXX", scores.shape, labels.shape, {k: v.shape for k, v in batch.items()})
+
+            #assert False, (scores, labels, batch)
+            loss = loss_fn(scores, labels)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            metrics.append((scores.squeeze().argmax(1) == labels.squeeze().argmax(1)).float().mean())
+            metrics.append((scores.squeeze().argmax(1) == labels).float().mean())
             losses.append(loss.item())
 
             if i >= SAMPLE_NUM / BATCH_SIZE / session.get_world_size():
                 break
-
+        continue
         print("RESULTS:!", np.mean(metrics), np.mean(losses))
 
         session.report(
@@ -287,7 +280,7 @@ trainer = TorchTrainer(
     train_func,
     train_loop_config={},
     run_config=RunConfig(),
-    scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
+    scaling_config=ScalingConfig(num_workers=1, use_gpu=False, resources_per_worker={"CPU": 2}),
 )
 result = trainer.fit()
 
