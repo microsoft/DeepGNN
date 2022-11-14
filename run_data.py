@@ -135,9 +135,13 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         out_1 = context["out_1"][0]  # 0 valid for multiple blocks?
         out_2 = context["out_2"][0]
         edges_1 = self.build_edges_tensor(out_1, self.fanouts[0])  # Edges for 1st layer
-        x1 = self.convs[0](context["x0"].squeeze(), edges_1)[
-            :out_1, :
-        ]  # Output of 1st layer (cut out 2 hop nodes)
+
+        #assert False, (context["x0"].shape, edges_1.shape, out_1, self.fanouts, edges_1, out_1)
+        x1 = self.convs[0](context["x0"].squeeze(), edges_1)
+        #[
+        #    :out_1, :
+        #]  # Output of 1st layer (cut out 2 hop nodes)
+        assert False, "W"
         x1 = F.relu(x1)
         edges_2 = self.build_edges_tensor(out_2, self.fanouts[1])  # Edges for 2nd layer
         x2 = self.convs[1](x1, edges_2)[
@@ -202,7 +206,7 @@ def train_func(config: Dict):
     loss_fn = nn.CrossEntropyLoss()
 
     SAMPLE_NUM = 152410
-    BATCH_SIZE = 256
+    BATCH_SIZE = 32
 
     g = Client("/tmp/reddit", [0], delayed_start=True)
     dataset = ray.data.range(SAMPLE_NUM, parallelism=1).repartition(SAMPLE_NUM // BATCH_SIZE)
@@ -231,7 +235,7 @@ def train_func(config: Dict):
         num_workers=2,  # data_parralel_num = 2
     )
     """
-    from time import sleep
+
     model.train()
     for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
         metrics = []
@@ -239,6 +243,12 @@ def train_func(config: Dict):
         for i, batch in enumerate(
                 epoch_pipe.iter_torch_batches(batch_size=BATCH_SIZE)
             ):
+            """
+    for epoch in range(10):
+        metrics = []
+        losses = []
+        for i, batch in enumerate(dataset):
+    """
             batch = {k: v.squeeze() for k, v in batch.items()}
             print("STEP:", i)
             #assert False, ({k: v.shape for k, v in batch.items()})
@@ -258,7 +268,7 @@ def train_func(config: Dict):
 
             if i >= SAMPLE_NUM / BATCH_SIZE / session.get_world_size():
                 break
-        continue
+
         print("RESULTS:!", np.mean(metrics), np.mean(losses))
 
         session.report(
