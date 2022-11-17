@@ -3,21 +3,19 @@
 """AML."""
 from typing import List, Any, Dict, Optional
 from dataclasses import dataclass, field
+import psutil
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch_geometric.nn as pyg_nn
 
-# import ray
+import ray
 import ray.train as train
 from ray.train.torch import TorchTrainer
 from ray.air import session
 from ray.air.config import ScalingConfig, RunConfig
 
-from deepgnn.pytorch.nn.gat_conv import GATConv
-from deepgnn.graph_engine import graph_ops
-from deepgnn.pytorch.modeling import BaseModel
 from deepgnn.graph_engine.snark.local import Client
 
 from azureml.core import Workspace
@@ -28,16 +26,54 @@ from deepgnn.pytorch.common import MeanAggregator, BaseMetric, MRR
 from deepgnn.pytorch.modeling import BaseSupervisedModel, BaseUnsupervisedModel
 from deepgnn.pytorch.encoding import FeatureEncoder, SageEncoder
 
-from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
-from deepgnn.graph_engine import FileNodeSampler
 from deepgnn.graph_engine import (
-    CSVNodeSampler,
-    GENodeSampler,
     SamplingStrategy,
-    GraphEngineBackend,
 )
 
-class PTGSupervisedGraphSage(BaseSupervisedModel):
+@dataclass
+class PTGSupervisedGraphSageQuery:
+    """GAT Query."""
+
+    feature_meta: list # = field(default_factory=lambda: np.array([[0, 1433]]))
+    label_meta: list # = field(default_factory=lambda: np.array([[1, 1]]))
+    feature_type: np.dtype = np.float32
+    label_type: np.dtype = np.float32
+    edge_type: int = 0
+    fanouts: list = field(default_factory=lambda: np.array([[25, 25]]))
+
+    def query(self, graph: Graph, inputs: np.ndarray) -> dict:
+        """Query graph for training data."""
+        context = {"inputs": np.array(inputs)}
+        context["label"] = graph.node_features(
+            context["inputs"],
+            self.label_meta,
+            self.label_type,
+        )
+
+        n2_out = context["inputs"]  # Output nodes of 2nd (final) layer of convolution
+        # input nodes of 2nd layer of convolution (besides the output nodes themselves)
+        n2_in = graph.sample_neighbors(n2_out, self.edge_type, self.fanouts[1])[
+            0
+        ].flatten()
+        #  output nodes of first layer of convolution (all nodes that affect output of 2nd layer)
+        n1_out = np.concatenate([n2_out, n2_in])
+        # input nodes to 1st layer of convolution (besides the output)
+        n1_in = graph.sample_neighbors(n1_out, self.edge_type, self.fanouts[0])[
+            0
+        ].flatten()
+        # Nodes for which we need features (layer 0)
+        n0_out = np.concatenate([n1_out, n1_in])
+        x0 = graph.node_features(
+            n0_out, self.feature_meta, self.feature_type
+        )
+
+        context["x0"] = x0.reshape((context["inputs"].shape[0], -1, self.feature_meta[0, 1]))
+        context["out_1"] =  np.array([n1_out.shape[0]] * context["inputs"].shape[0])  # Number of output nodes of layer 1
+        context["out_2"] =  np.array([n2_out.shape[0]] * context["inputs"].shape[0])  # Number of output nodes of layer 2
+        return context
+
+
+class PTGSupervisedGraphSage(nn.Module):
     """Supervised graphsage model implementation with torch geometric."""
 
     def __init__(
@@ -55,14 +91,8 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         feature_enc: Optional[FeatureEncoder] = None,
     ):
         """Initialize a graphsage model for node classification."""
-        super(PTGSupervisedGraphSage, self).__init__(
-            feature_type=feature_type,
-            feature_idx=feature_idx,
-            feature_dim=feature_dim,
-            feature_enc=feature_enc,
-        )
-
         # only 2 hops are allowed.
+        super().__init__()
         assert len(fanouts) == 2
         self.fanouts = fanouts
         self.edge_type = edge_type
@@ -88,37 +118,6 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         elist = torch.cat([src, dst], dim=0)
         return elist
 
-    def query(self, graph: Graph, inputs: np.ndarray) -> dict:
-        """Query graph for training data."""
-        context = {"inputs": np.array(inputs)}
-        context["label"] = graph.node_features(
-            context["inputs"],
-            np.array([[self.label_idx, self.label_dim]]),
-            np.float32,
-        )
-
-        n2_out = context["inputs"]  # Output nodes of 2nd (final) layer of convolution
-        # input nodes of 2nd layer of convolution (besides the output nodes themselves)
-        n2_in = graph.sample_neighbors(n2_out, self.edge_type, self.fanouts[1])[
-            0
-        ].flatten()
-        #  output nodes of first layer of convolution (all nodes that affect output of 2nd layer)
-        n1_out = np.concatenate([n2_out, n2_in])
-        # input nodes to 1st layer of convolution (besides the output)
-        n1_in = graph.sample_neighbors(n1_out, self.edge_type, self.fanouts[0])[
-            0
-        ].flatten()
-        # Nodes for which we need features (layer 0)
-        n0_out = np.concatenate([n1_out, n1_in])
-        x0 = graph.node_features(
-            n0_out, np.array([[self.feature_idx, self.feature_dim]]), self.feature_type
-        )
-
-        context["x0"] = x0.reshape((context["inputs"].shape[0], -1, self.feature_dim))
-        context["out_1"] = n1_out.shape[0]  # Number of output nodes of layer 1
-        context["out_2"] = n2_out.shape[0]  # Number of output nodes of layer 2
-        return {k: np.array([v] * context["inputs"].shape[0]) if isinstance(v, (int, float)) else np.array(v) for k, v in context.items()}
-
     def get_score(self, context: dict) -> torch.Tensor:  # type: ignore[override]
         """Generate scores for a list of nodes."""
         self.encode_feature(context)
@@ -132,16 +131,14 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
 
     def get_embedding(self, context: dict) -> torch.Tensor:  # type: ignore[override]
         """Generate embedding."""
-        out_1 = context["out_1"][0]  # 0 valid for multiple blocks?
+        out_1 = context["out_1"][0]  # TODO 0 valid for multiple blocks?
         out_2 = context["out_2"][0]
         edges_1 = self.build_edges_tensor(out_1, self.fanouts[0])  # Edges for 1st layer
 
-        #assert False, (context["x0"].shape, edges_1.shape, out_1, self.fanouts, edges_1, out_1)
-        x1 = self.convs[0](context["x0"].squeeze(), edges_1)
-        #[
-        #    :out_1, :
-        #]  # Output of 1st layer (cut out 2 hop nodes)
-        assert False, "W"
+        # TODO note reshape
+        x1 = self.convs[0](context["x0"].reshape((-1, context["x0"].shape[-1])), edges_1)[
+            :out_1, :
+        ]  # Output of 1st layer (cut out 2 hop nodes)
         x1 = F.relu(x1)
         edges_2 = self.build_edges_tensor(out_2, self.fanouts[1])  # Edges for 2nd layer
         x2 = self.convs[1](x1, edges_2)[
@@ -182,38 +179,65 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         return self._loss_inner(context)
 
 
+@ray.remote
+class Counter(object):
+    def __init__(self):
+        self.value = 0
+        self.g = Client("/tmp/reddit", [0])#, delayed_start=True)
+
+        self.query_obj = PTGSupervisedGraphSageQuery(
+            label_meta=np.array([[0, 50]]),
+            feature_meta=np.array([[1, 300]]),
+            feature_type=np.float32,
+            edge_type=0,
+            fanouts=[25, 25],
+        )
+
+    def increment(self, batch):
+        self.value += 1
+        return self.query_obj.query(self.g, batch)
+
+    def get_counter(self):
+        return self.value
+
+
 def train_func(config: Dict):
     """Train function main."""
     train.torch.enable_reproducibility(seed=session.get_world_rank())
 
+    feature_dim = 10
+    fanouts = [5, 5]
+
+
+    """
     model = PTGSupervisedGraphSage(
         num_classes=50,
         label_idx=0,
         label_dim=50,
         feature_type=np.float32,
         feature_idx=1,
-        feature_dim=300,
+        feature_dim=feature_dim,
         edge_type=0,
-        fanouts=[25, 25],
+        fanouts=fanouts,
     )
+    """
+    #model = train.torch.prepare_model(model)
 
-    model_original = model
-    model = train.torch.prepare_model(model)
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.0005)
-    optimizer = train.torch.prepare_optimizer(optimizer)
+    #optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.0005)
+    #optimizer = train.torch.prepare_optimizer(optimizer)
 
     loss_fn = nn.CrossEntropyLoss()
 
     SAMPLE_NUM = 152410
-    BATCH_SIZE = 32
+    BATCH_SIZE = 128
 
-    g = Client("/tmp/reddit", [0], delayed_start=True)
+    actor = Counter.remote()
+
     dataset = ray.data.range(SAMPLE_NUM, parallelism=1).repartition(SAMPLE_NUM // BATCH_SIZE)
-    pipe = dataset.window(blocks_per_window=1).repeat(10)
+    pipe = dataset.window(blocks_per_window=1)#.repeat(10)
     def transform_batch(batch: list) -> dict:
-        return model_original.query(g, batch)  # todo [batch] w/ .map()
-    pipe = pipe.map_batches(transform_batch)
+        return query_obj.query(None, batch)
+    pipe = pipe.map_batches(lambda batch: ray.get(actor.increment.remote(batch)))#transform_batch)
     """
     g = Client("/tmp/reddit", [0])
     dataset = TorchDeepGNNDataset(
@@ -236,20 +260,23 @@ def train_func(config: Dict):
     )
     """
 
-    model.train()
-    for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
+    #model.train()
+    for epoch, epoch_pipe in enumerate([pipe]):#.iter_epochs()):
         metrics = []
         losses = []
         for i, batch in enumerate(
                 epoch_pipe.iter_torch_batches(batch_size=BATCH_SIZE)
             ):
+            print("STEP:", i)
+            print('RAM Used (GB):', psutil.virtual_memory()[3]/1000000000)
+            print("STEP:", i, ray.get(actor.get_counter.remote()))
             """
     for epoch in range(10):
         metrics = []
         losses = []
         for i, batch in enumerate(dataset):
     """
-            batch = {k: v.squeeze() for k, v in batch.items()}
+            '''
             print("STEP:", i)
             #assert False, ({k: v.shape for k, v in batch.items()})
             scores = model(batch)[0]
@@ -263,11 +290,12 @@ def train_func(config: Dict):
             loss.backward()
             optimizer.step()
 
-            metrics.append((scores.squeeze().argmax(1) == labels).float().mean())
-            losses.append(loss.item())
+            #metrics.append((scores.squeeze().argmax(1) == labels).float().mean())
+            #losses.append(loss.item())
 
             if i >= SAMPLE_NUM / BATCH_SIZE / session.get_world_size():
                 break
+            '''
 
         print("RESULTS:!", np.mean(metrics), np.mean(losses))
 
@@ -284,13 +312,13 @@ def train_func(config: Dict):
 #ray = ray_on_aml.getRay()
 
 import ray
-ray.init()
+ray.init()#_memory=2*10**9)
 
 trainer = TorchTrainer(
     train_func,
     train_loop_config={},
     run_config=RunConfig(),
-    scaling_config=ScalingConfig(num_workers=1, use_gpu=False, resources_per_worker={"CPU": 2}),
+    scaling_config=ScalingConfig(num_workers=1, use_gpu=False, resources_per_worker={"CPU": 1}),
 )
 result = trainer.fit()
 
