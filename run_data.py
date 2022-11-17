@@ -26,7 +26,9 @@ from deepgnn.pytorch.common import MeanAggregator, BaseMetric, MRR
 from deepgnn.pytorch.modeling import BaseSupervisedModel, BaseUnsupervisedModel
 from deepgnn.pytorch.encoding import FeatureEncoder, SageEncoder
 
+from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.graph_engine import (
+    GENodeSampler,
     SamplingStrategy,
 )
 
@@ -139,6 +141,11 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         """Generate embedding."""
         out_1 = context["out_1"][0]  # TODO 0 valid for multiple blocks?
         out_2 = context["out_2"][0]
+        try:
+            out_1 = out_1[0]
+            out_2 = out_2[0]
+        except IndexError:
+            pass
         edges_1 = self.build_edges_tensor(out_1, self.fanouts[0])  # Edges for 1st layer
 
         # TODO note reshape
@@ -231,6 +238,13 @@ def train_func(config: Dict):
     pipe = pipe.map_batches(lambda batch: ray.get(worker.increment.remote(batch)))
     """
     g = Client("/tmp/reddit", [0])
+    query_obj = PTGSupervisedGraphSageQuery(
+        label_meta=np.array([[0, 50]]),
+        feature_meta=np.array([[1, 300]]),
+        feature_type=np.float32,
+        edge_type=0,
+        fanouts=[5, 5],
+    )
     dataset = TorchDeepGNNDataset(
         sampler_class=GENodeSampler,
         backend=type("Backend", (object,), {"graph": g})(),  # type: ignore
@@ -239,7 +253,7 @@ def train_func(config: Dict):
         worker_index=0,
         node_types=np.array([0], dtype=np.int32),
         batch_size=BATCH_SIZE,
-        query_fn=model_original.query,
+        query_fn=query_obj.query,
         strategy=SamplingStrategy.RandomWithoutReplacement,
         prefetch_queue_size=10,
         prefetch_worker_size=2,
@@ -252,6 +266,12 @@ def train_func(config: Dict):
     """
 
     model.train()
+    """
+    for epoch in range(5):
+        metrics = []
+        losses = []
+        for i, batch in enumerate(dataset):
+            """
     for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
         metrics = []
         losses = []
