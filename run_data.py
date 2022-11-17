@@ -73,7 +73,7 @@ class PTGSupervisedGraphSageQuery:
         return context
 
 
-class PTGSupervisedGraphSage(nn.Module):
+class PTGSupervisedGraphSage(BaseSupervisedModel):
     """Supervised graphsage model implementation with torch geometric."""
 
     def __init__(
@@ -91,8 +91,14 @@ class PTGSupervisedGraphSage(nn.Module):
         feature_enc: Optional[FeatureEncoder] = None,
     ):
         """Initialize a graphsage model for node classification."""
+        super(PTGSupervisedGraphSage, self).__init__(
+            feature_type=feature_type,
+            feature_idx=feature_idx,
+            feature_dim=feature_dim,
+            feature_enc=feature_enc,
+        )
+
         # only 2 hops are allowed.
-        super().__init__()
         assert len(fanouts) == 2
         self.fanouts = fanouts
         self.edge_type = edge_type
@@ -182,9 +188,7 @@ class PTGSupervisedGraphSage(nn.Module):
 @ray.remote
 class Counter(object):
     def __init__(self):
-        self.value = 0
-        self.g = Client("/tmp/reddit", [0])#, delayed_start=True)
-
+        self.g = Client("/tmp/reddit", [0])
         self.query_obj = PTGSupervisedGraphSageQuery(
             label_meta=np.array([[0, 50]]),
             feature_meta=np.array([[1, 300]]),
@@ -194,50 +198,37 @@ class Counter(object):
         )
 
     def increment(self, batch):
-        self.value += 1
         return self.query_obj.query(self.g, batch)
-
-    def get_counter(self):
-        return self.value
 
 
 def train_func(config: Dict):
     """Train function main."""
     train.torch.enable_reproducibility(seed=session.get_world_rank())
 
-    feature_dim = 10
-    fanouts = [5, 5]
-
-
-    """
     model = PTGSupervisedGraphSage(
         num_classes=50,
         label_idx=0,
         label_dim=50,
         feature_type=np.float32,
         feature_idx=1,
-        feature_dim=feature_dim,
+        feature_dim=300,
         edge_type=0,
-        fanouts=fanouts,
+        fanouts=[25, 25],
     )
-    """
-    #model = train.torch.prepare_model(model)
+    model = train.torch.prepare_model(model)
 
-    #optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.0005)
-    #optimizer = train.torch.prepare_optimizer(optimizer)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.0005)
+    optimizer = train.torch.prepare_optimizer(optimizer)
 
     loss_fn = nn.CrossEntropyLoss()
 
     SAMPLE_NUM = 152410
     BATCH_SIZE = 128
 
-    actor = Counter.remote()
-
     dataset = ray.data.range(SAMPLE_NUM, parallelism=1).repartition(SAMPLE_NUM // BATCH_SIZE)
-    pipe = dataset.window(blocks_per_window=1)#.repeat(10)
-    def transform_batch(batch: list) -> dict:
-        return query_obj.query(None, batch)
-    pipe = pipe.map_batches(lambda batch: ray.get(actor.increment.remote(batch)))#transform_batch)
+    pipe = dataset.window(blocks_per_window=1).repeat(10)
+    worker = Counter.remote()
+    pipe = pipe.map_batches(lambda batch: ray.get(worker.increment.remote(batch)))
     """
     g = Client("/tmp/reddit", [0])
     dataset = TorchDeepGNNDataset(
@@ -260,42 +251,28 @@ def train_func(config: Dict):
     )
     """
 
-    #model.train()
-    for epoch, epoch_pipe in enumerate([pipe]):#.iter_epochs()):
+    model.train()
+    for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
         metrics = []
         losses = []
         for i, batch in enumerate(
                 epoch_pipe.iter_torch_batches(batch_size=BATCH_SIZE)
             ):
-            print("STEP:", i)
-            print('RAM Used (GB):', psutil.virtual_memory()[3]/1000000000)
-            print("STEP:", i, ray.get(actor.get_counter.remote()))
-            """
-    for epoch in range(10):
-        metrics = []
-        losses = []
-        for i, batch in enumerate(dataset):
-    """
-            '''
-            print("STEP:", i)
-            #assert False, ({k: v.shape for k, v in batch.items()})
+            #print("STEP:", i, 'RAM Used (GB):', psutil.virtual_memory()[3]/1000000000)
+
             scores = model(batch)[0]
             labels = batch["label"].squeeze().argmax(1)
 
-            print("XXXX", scores.shape, labels.shape, {k: v.shape for k, v in batch.items()})
-
-            #assert False, (scores, labels, batch)
             loss = loss_fn(scores, labels)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            #metrics.append((scores.squeeze().argmax(1) == labels).float().mean())
-            #losses.append(loss.item())
+            metrics.append((scores.squeeze().argmax(1) == labels).float().mean())
+            losses.append(loss.item())
 
             if i >= SAMPLE_NUM / BATCH_SIZE / session.get_world_size():
                 break
-            '''
 
         print("RESULTS:!", np.mean(metrics), np.mean(losses))
 
@@ -312,14 +289,12 @@ def train_func(config: Dict):
 #ray = ray_on_aml.getRay()
 
 import ray
-ray.init()#_memory=2*10**9)
+ray.init()
 
 trainer = TorchTrainer(
     train_func,
     train_loop_config={},
     run_config=RunConfig(),
-    scaling_config=ScalingConfig(num_workers=1, use_gpu=False, resources_per_worker={"CPU": 1}),
+    scaling_config=ScalingConfig(num_workers=1, use_gpu=False, resources_per_worker={"CPU": 2}),
 )
 result = trainer.fit()
-
-# ray_on_aml.shutdown()
