@@ -194,7 +194,7 @@ class Counter(object):
             feature_meta=np.array([[1, 300]]),
             feature_type=np.float32,
             edge_type=0,
-            fanouts=[25, 25],
+            fanouts=[5, 5],
         )
 
     def increment(self, batch):
@@ -213,7 +213,7 @@ def train_func(config: Dict):
         feature_idx=1,
         feature_dim=300,
         edge_type=0,
-        fanouts=[25, 25],
+        fanouts=[5, 5],
     )
     model = train.torch.prepare_model(model)
 
@@ -223,10 +223,10 @@ def train_func(config: Dict):
     loss_fn = nn.CrossEntropyLoss()
 
     SAMPLE_NUM = 152410
-    BATCH_SIZE = 128
+    BATCH_SIZE = 512
 
-    dataset = ray.data.range(SAMPLE_NUM, parallelism=1).repartition(SAMPLE_NUM // BATCH_SIZE)
-    pipe = dataset.window(blocks_per_window=1).repeat(10)
+    dataset = ray.data.range(SAMPLE_NUM - (SAMPLE_NUM % BATCH_SIZE), parallelism=2).repartition(SAMPLE_NUM // BATCH_SIZE)
+    pipe = dataset.window(blocks_per_window=2).repeat(5)
     worker = Counter.remote()
     pipe = pipe.map_batches(lambda batch: ray.get(worker.increment.remote(batch)))
     """
@@ -247,7 +247,7 @@ def train_func(config: Dict):
     )
     dataset = torch.utils.data.DataLoader(
         dataset=dataset,
-        num_workers=2,  # data_parralel_num = 2
+        num_workers=2,
     )
     """
 
@@ -256,7 +256,7 @@ def train_func(config: Dict):
         metrics = []
         losses = []
         for i, batch in enumerate(
-                epoch_pipe.iter_torch_batches(batch_size=BATCH_SIZE)
+                epoch_pipe.iter_torch_batches(prefetch_blocks=0, batch_size=BATCH_SIZE)
             ):
             #print("STEP:", i, 'RAM Used (GB):', psutil.virtual_memory()[3]/1000000000)
 
