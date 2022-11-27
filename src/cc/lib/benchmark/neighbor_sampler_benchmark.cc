@@ -97,7 +97,8 @@ snark::Graph create_graph(size_t num_types, size_t num_nodes_per_partition, size
 {
     snark::Xoroshiro128PlusGenerator gen(42);
     auto path = std::filesystem::temp_directory_path();
-    std::vector<uint32_t> partitions;
+    std::vector<uint32_t> partition_indices;
+    std::vector<std::string> partition_paths;
     std::vector<size_t> partition_num_nodes;
     size_t num_nodes = 0;
     size_t num_edges = 0;
@@ -129,7 +130,8 @@ snark::Graph create_graph(size_t num_types, size_t num_nodes_per_partition, size
         num_nodes += partition_nodes_edges.first;
         num_edges += partition_nodes_edges.second;
 
-        partitions.emplace_back(p);
+        partition_paths.emplace_back(path.string());
+        partition_indices.emplace_back(p);
     }
 
     {
@@ -152,8 +154,9 @@ snark::Graph create_graph(size_t num_types, size_t num_nodes_per_partition, size
         meta << num_nodes << "\n";
         meta << num_edges << "\n";
         meta.close();
-    }
-    return snark::Graph(path, partitions, snark::PartitionStorageType::memory, "");
+    };
+    return snark::Graph(snark::Metadata{path.string()}, std::move(partition_paths), std::move(partition_indices),
+                        snark::PartitionStorageType::memory);
 }
 
 static void BM_ONE_NODE_TYPE_WEIGHTED(benchmark::State &state)

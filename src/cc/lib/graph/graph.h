@@ -24,8 +24,8 @@ namespace snark
 class Graph
 {
   public:
-    Graph(std::string path, std::vector<uint32_t> partitions, PartitionStorageType storage_type,
-          std::string config_path);
+    Graph(snark::Metadata metadata, std::vector<std::string> paths, std::vector<uint32_t> partitions,
+          PartitionStorageType storage_type);
 
     void GetNodeType(std::span<const NodeId> node_ids, std::span<Type> output, Type default_type) const;
 

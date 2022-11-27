@@ -48,7 +48,7 @@ class Sampler
 class SamplerFactory
 {
   public:
-    virtual std::unique_ptr<Sampler> Create(std::set<Type> tp, std::set<size_t> partitions) = 0;
+    virtual std::unique_ptr<Sampler> Create(std::set<Type> tp) = 0;
     virtual ~SamplerFactory() = default;
 };
 
@@ -99,13 +99,14 @@ template <typename Partition, SamplerElement element = Node> class SamplerImpl f
 template <typename Partition, SamplerElement element = Node> class AbstractSamplerFactory final : public SamplerFactory
 {
   public:
-    explicit AbstractSamplerFactory(std::string path);
+    AbstractSamplerFactory(snark::Metadata metadata, std::vector<std::string> partition_paths,
+                           std::vector<size_t> partition_indices);
 
     // We are using a regular set to keep type order consistent.
-    std::unique_ptr<Sampler> Create(std::set<Type> tp, std::set<size_t> partitions) override;
+    std::unique_ptr<Sampler> Create(std::set<Type> tp) override;
 
   private:
-    void Read(Type type, const std::set<size_t> &partitions);
+    void Read(Type type);
 
     Metadata m_metadata;
 
@@ -115,6 +116,12 @@ template <typename Partition, SamplerElement element = Node> class AbstractSampl
 
     // Synchronize loading of partitions inside the factory.
     std::mutex m_mtx;
+
+    // Folders with alias tables.
+    std::vector<std::string> m_partition_paths;
+
+    // Partition indices in the folders above to download.
+    std::vector<size_t> m_partition_indices;
 };
 
 struct WeightedNodeSamplerRecord
@@ -131,7 +138,7 @@ class WeightedNodeSamplerPartition
     WeightedNodeSamplerPartition(const WeightedNodeSamplerPartition &) = default;
     WeightedNodeSamplerPartition(std::vector<WeightedNodeSamplerRecord> records, float weight);
 
-    WeightedNodeSamplerPartition(Metadata meta, Type tp, size_t partition);
+    WeightedNodeSamplerPartition(Metadata meta, Type tp, size_t partition_index, std::string partition_path);
 
     void Sample(int64_t seed, std::span<NodeId> out) const;
 
@@ -159,7 +166,7 @@ class WeightedEdgeSamplerPartition
     WeightedEdgeSamplerPartition(const WeightedEdgeSamplerPartition &) = default;
     WeightedEdgeSamplerPartition(std::vector<WeightedEdgeSamplerRecord> records, float weight);
 
-    WeightedEdgeSamplerPartition(Metadata meta, Type tp, size_t partition);
+    WeightedEdgeSamplerPartition(Metadata meta, Type tp, size_t partition_index, std::string partition_path);
 
     void Sample(int64_t seed, std::span<NodeId> out_src, std::span<NodeId> out_dst) const;
     float Weight() const;
@@ -176,7 +183,7 @@ template <bool WithReplacement> class UniformEdgeSamplerPartition
     UniformEdgeSamplerPartition(UniformEdgeSamplerPartition &&) = default;
     UniformEdgeSamplerPartition(const UniformEdgeSamplerPartition &) = default;
     explicit UniformEdgeSamplerPartition(std::vector<std::pair<NodeId, NodeId>> records);
-    UniformEdgeSamplerPartition(Metadata meta, Type tp, size_t partition);
+    UniformEdgeSamplerPartition(Metadata meta, Type tp, size_t partition_index, std::string partition_path);
 
     void Sample(int64_t seed, std::span<NodeId> out_src, std::span<NodeId> out_dst) const;
     float Weight() const;
@@ -194,7 +201,7 @@ template <bool WithReplacement> class UniformNodeSamplerPartition
     UniformNodeSamplerPartition(UniformNodeSamplerPartition &&) = default;
     UniformNodeSamplerPartition(const UniformNodeSamplerPartition &) = default;
     explicit UniformNodeSamplerPartition(std::vector<NodeId> records);
-    UniformNodeSamplerPartition(Metadata meta, Type tp, size_t partition);
+    UniformNodeSamplerPartition(Metadata meta, Type tp, size_t partition_index, std::string partition_path);
 
     void Sample(int64_t seed, std::span<NodeId> out) const;
     float Weight() const;

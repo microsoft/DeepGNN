@@ -64,7 +64,7 @@ static void BM_NODE_FEATURES(benchmark::State &state, snark::PartitionStorageTyp
     if (state.thread_index() == 0)
     {
         path = create_features_graph(num_nodes, fv_size);
-        g_client = std::make_shared<snark::Graph>(snark::Graph(path, {0}, storage_type, ""));
+        g_client = std::make_shared<snark::Graph>(snark::Graph(snark::Metadata{path}, {path}, {0}, storage_type));
     }
     const auto total_nodes = num_nodes;
     std::vector<snark::NodeId> input_nodes(total_nodes);
@@ -150,7 +150,7 @@ static void BM_NODE_STRING_FEATURES(benchmark::State &state, snark::PartitionSto
     if (state.thread_index() == 0)
     {
         path = create_features_graph(num_nodes, fv_size);
-        g_client = std::make_shared<snark::Graph>(snark::Graph(path, {0}, storage_type, ""));
+        g_client = std::make_shared<snark::Graph>(snark::Graph(snark::Metadata{path}, {path}, {0}, storage_type));
     }
     const auto total_nodes = num_nodes;
     std::vector<snark::NodeId> input_nodes(total_nodes);

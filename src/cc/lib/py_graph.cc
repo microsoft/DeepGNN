@@ -62,7 +62,6 @@ absl::flat_hash_map<SamplerType, snark::CreateSamplerRequest_Category> localToRe
 struct GraphInternal
 {
     std::unique_ptr<snark::Graph> graph;
-    std::set<size_t> partitions;
     absl::flat_hash_map<SamplerType, std::shared_ptr<snark::SamplerFactory>> node_sampler_factory;
     absl::flat_hash_map<SamplerType, std::shared_ptr<snark::SamplerFactory>> edge_sampler_factory;
     std::shared_ptr<snark::GRPCClient> client;
@@ -143,8 +142,7 @@ int create_sampler(PyGraph *py_graph, PySampler *py_sampler, size_t count, int32
     }
 
     auto &factory = is_node ? internal_graph->node_sampler_factory : internal_graph->edge_sampler_factory;
-    py_sampler->sampler =
-        factory[samplerType]->Create(std::set<snark::Type>(types, types + count), py_graph->graph->partitions);
+    py_sampler->sampler = factory[samplerType]->Create(std::set<snark::Type>(types, types + count));
     if (py_sampler->sampler == nullptr)
     {
         RAW_LOG_ERROR("Failed to create %s: sampler", (is_node ? "node" : "edge"));
@@ -230,28 +228,39 @@ int32_t SampleEdges(PySampler *py_sampler, int64_t seed, size_t count, NodeID *o
     }
 }
 
-int32_t CreateLocalGraph(PyGraph *py_graph, size_t count, uint32_t *partitions, const char *filename,
-                         PyPartitionStorageType storage_type_, const char *config_path)
+int32_t CreateLocalGraph(PyGraph *py_graph, const char *meta_location, size_t count, uint32_t *partitions,
+                         const char **partition_locations, PyPartitionStorageType storage_type_,
+                         const char *config_path)
 {
     snark::PartitionStorageType storage_type = static_cast<snark::PartitionStorageType>(storage_type_);
+    snark::Metadata metadata(meta_location, config_path);
+
+    std::vector<std::string> partition_paths;
+    partition_paths.reserve(count);
+    for (size_t i = 0; i < count; ++i)
+    {
+        partition_paths.emplace_back(partition_locations[i]);
+    }
+
     py_graph->graph = std::make_unique<GraphInternal>();
-    py_graph->graph->partitions = std::set<size_t>(partitions, partitions + count);
-    py_graph->graph->graph =
-        std::make_unique<snark::Graph>(std::string(filename), std::vector<uint32_t>(partitions, partitions + count),
-                                       storage_type, std::string(config_path));
+    std::vector<size_t> partition_indices(partitions, partitions + count);
+    py_graph->graph->graph = std::make_unique<snark::Graph>(
+        metadata, partition_paths, std::vector<uint32_t>(partitions, partitions + count), storage_type);
     py_graph->graph->node_sampler_factory[SamplerType::Weighted] =
-        std::make_shared<snark::WeightedNodeSamplerFactory>(filename);
+        std::make_shared<snark::WeightedNodeSamplerFactory>(metadata, partition_paths, partition_indices);
     py_graph->graph->node_sampler_factory[SamplerType::Uniform] =
-        std::make_shared<snark::UniformNodeSamplerFactory>(filename);
+        std::make_shared<snark::UniformNodeSamplerFactory>(metadata, partition_paths, partition_indices);
     py_graph->graph->node_sampler_factory[SamplerType::UniformWithoutReplacement] =
-        std::make_shared<snark::UniformNodeSamplerFactoryWithoutReplacement>(filename);
+        std::make_shared<snark::UniformNodeSamplerFactoryWithoutReplacement>(metadata, partition_paths,
+                                                                             partition_indices);
 
     py_graph->graph->edge_sampler_factory[SamplerType::Weighted] =
-        std::make_shared<snark::WeightedEdgeSamplerFactory>(filename);
+        std::make_shared<snark::WeightedEdgeSamplerFactory>(metadata, partition_paths, partition_indices);
     py_graph->graph->edge_sampler_factory[SamplerType::Uniform] =
-        std::make_shared<snark::UniformEdgeSamplerFactory>(filename);
+        std::make_shared<snark::UniformEdgeSamplerFactory>(metadata, partition_paths, partition_indices);
     py_graph->graph->edge_sampler_factory[SamplerType::UniformWithoutReplacement] =
-        std::make_shared<snark::UniformEdgeSamplerFactoryWithoutReplacement>(filename);
+        std::make_shared<snark::UniformEdgeSamplerFactoryWithoutReplacement>(metadata, std::move(partition_paths),
+                                                                             std::move(partition_indices));
     if (py_graph->graph == nullptr)
     {
         RAW_LOG_ERROR("Internal graph wasn't initialized");

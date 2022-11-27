@@ -22,7 +22,7 @@ from ctypes import (
     c_size_t,
     c_uint32,
 )
-from typing import Any, List, Tuple, Union, Optional
+from typing import Any, List, Tuple, Union, Optional, Sequence
 from enum import IntEnum
 
 import numpy as np
@@ -147,8 +147,8 @@ class MemoryGraph:
 
     def __init__(
         self,
-        path: str,
-        partitions: List[int] = [0],
+        meta_path: str,
+        partitions: Sequence[Union[int, Tuple[str, int]]] = None,
         storage_type: PartitionStorageType = PartitionStorageType.memory,
         config_path: str = "",
         stream: bool = False,
@@ -156,17 +156,34 @@ class MemoryGraph:
         """Load graph to memory.
 
         Args:
-            path (str): location of graph binary files. If given hdfs:// or adl:// path see config_path and stream parameters,
-                adl://name.azuredatalakestore.net/path/to
-                hdfs://localhost:9000/path/to
-            partitions (List[int], optional): binary partitions to load. Defaults to [0].
+            meta_path: location of meta.txt file with global graph information. If given hdfs:// or adl:// path
+                use config_path and stream parameters, for additional configuration.
+            partitions (Sequence[Union[int,Tuple[str, int]]]): Partition ids to load from meta_path folder.
+                List can contain a tuple of path and partition id to load to override location of a binary file for given partition.
+                For additional path configuration see `meta_path` parameter.
             storage_type (PartitionStorageType, default=memory): What type of feature / index storage to use in GE.
             config_path (str, optional): Path to folder with configuration files.
             stream (bool, default=False): If remote path is given: by default, download files first then load,
                 if stream = True and libhdfs present, stream data directly to memory -- see docs/advanced/hdfs.md for setup and usage.
         """
+        if partitions is None:
+            partitions = [(meta_path, 0)]
+        partitions_with_path: List[Tuple[str, int]] = []
+        for p in partitions:
+            if isinstance(p, int):
+                partitions_with_path.append((meta_path, p))
+            elif len(p) == 2:
+                assert isinstance(p[1], int) and isinstance(p[0], str)
+                partitions_with_path.append((p[0], p[1]))
+            else:
+                assert False, f"Unrecognized type for partition {p}"
+
         self.seed = datetime.now()
-        self.path = GraphPath(path) if stream else download_graph_data(path, partitions)
+        self.path = (
+            GraphPath(meta_path)
+            if stream
+            else download_graph_data(meta_path, partitions_with_path)
+        )
         self.meta = Meta(self.path.name, config_path)
 
         self.g_ = _DEEP_GRAPH()
@@ -174,9 +191,10 @@ class MemoryGraph:
 
         self.lib.CreateLocalGraph.argtypes = [
             POINTER(_DEEP_GRAPH),
+            c_char_p,
             c_size_t,
             POINTER(c_uint32),
-            c_char_p,
+            POINTER(c_char_p),
             c_int32,
             c_char_p,
         ]
@@ -184,13 +202,23 @@ class MemoryGraph:
         self.lib.CreateLocalGraph.errcheck = _ErrCallback(  # type: ignore
             "initialize graph"
         )
-        PartitionArray = c_uint32 * len(partitions)
-        partitions_array = PartitionArray(*partitions)
+
+        PartitionArray = c_uint32 * len(partitions_with_path)
+        partition_array = PartitionArray()
+        for i in range(len(partitions_with_path)):
+            partition_array[i] = c_uint32(partitions_with_path[i][1])
+
+        LocationArray = c_char_p * len(partitions_with_path)
+        location_array = LocationArray()
+        for i in range(len(partitions_with_path)):
+            location_array[i] = c_char_p(bytes(partitions_with_path[i][0], "utf-8"))
+
         self.lib.CreateLocalGraph(
             byref(self.g_),
-            c_size_t(len(partitions)),
-            partitions_array,
             c_char_p(bytes(self.path.name, "utf-8")),
+            c_size_t(len(partitions_with_path)),
+            partition_array,
+            location_array,
             c_int32(storage_type),
             c_char_p(bytes(config_path, "utf-8")),
         )

@@ -176,6 +176,7 @@ snark::Partition convert(std::filesystem::path path, std::string suffix, MemoryG
         feature_data_out.close();
     }
 
-    return snark::Partition(path, suffix, snark::PartitionStorageType::memory);
+    return snark::Partition(snark::Metadata(path.string(), path.string()), path, suffix,
+                            snark::PartitionStorageType::memory);
 }
 } // namespace TestGraph
