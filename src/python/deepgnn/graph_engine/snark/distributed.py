@@ -42,7 +42,6 @@ class Server:
         storage_type: client.PartitionStorageType = client.PartitionStorageType.memory,
         config_path: str = "",
         stream: bool = False,
-        enable_threadpool: bool = False,
     ):
         """Init snark server."""
         temp_dir = tempfile.TemporaryDirectory()
@@ -73,7 +72,6 @@ class Server:
             storage_type,
             config_path,
             stream,  # type: ignore
-            enable_threadpool,
         )
 
     def reset(self):

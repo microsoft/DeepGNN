@@ -119,7 +119,6 @@ Now we can initialize the graph engine in local mode:
     ...    storage_type=PartitionStorageType.memory,
     ...    config_path="",
     ...    stream=False,
-    ...    enable_threadpool=False,
     ... )
     >>> ge = SnarkLocalBackend(args)
 

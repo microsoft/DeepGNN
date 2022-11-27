@@ -26,9 +26,8 @@ namespace snark
 {
 
 GraphEngineServiceImpl::GraphEngineServiceImpl(std::string path, std::vector<uint32_t> partitions,
-                                               PartitionStorageType storage_type, std::string config_path,
-                                               bool enable_threadpool)
-    : m_metadata(path, config_path), m_thread_pool_enabled(enable_threadpool)
+                                               PartitionStorageType storage_type, std::string config_path)
+    : m_metadata(path, config_path)
 {
     std::vector<std::string> suffixes;
     absl::flat_hash_set<uint32_t> partition_set(std::begin(partitions), std::end(partitions));
@@ -70,20 +69,10 @@ GraphEngineServiceImpl::GraphEngineServiceImpl(std::string path, std::vector<uin
         ReadNodeMap(path, suffixes[i], i);
     }
 
-    if (!m_thread_pool_enabled)
-    {
-        for (size_t i = 0; i < suffixes.size(); ++i)
-        {
-            m_partitions[i] = std::make_shared<Partition>(path, suffixes[i], storage_type);
-        }
-    }
-    else
-    {
-        ThreadPool::GetInstance().RunInParallel(
-            suffixes.begin(), suffixes.end(), [this, &storage_type, &path](std::size_t index, std::string content) {
-                m_partitions[index] = std::make_shared<Partition>(path, content, storage_type);
-            });
-    }
+    ThreadPool::GetInstance().RunInParallel(
+        suffixes, [this, &storage_type, &path](std::size_t index, std::string content) {
+            m_partitions[index] = std::make_shared<Partition>(path, content, storage_type);
+        });
 }
 
 grpc::Status GraphEngineServiceImpl::GetNodeTypes(::grpc::ServerContext *context,
@@ -164,19 +153,19 @@ grpc::Status GraphEngineServiceImpl::GetNodeFeatures(::grpc::ServerContext *cont
         }
     };
 
-    if (!m_thread_pool_enabled)
+    if (!UseThreadPoolWhenGettingFeatures(request->node_ids().size(), fv_size))
     {
         func(0, request->node_ids().size());
     }
     else
     {
         auto groups = SplitIntoGroups(request->node_ids().size());
-        ThreadPool::GetInstance().RunInParallel(groups.begin(), groups.end(),
-                                                [func](std::size_t index, std::tuple<std::size_t, std::size_t> range) {
-                                                    auto offset = std::get<0>(range);
-                                                    auto length = std::get<1>(range);
-                                                    func(offset, offset + length);
-                                                });
+        ThreadPool::GetInstance().RunInParallel(
+            groups, [feature_func = std::move(func)](std::size_t index, std::tuple<std::size_t, std::size_t> range) {
+                auto offset = std::get<0>(range);
+                auto length = std::get<1>(range);
+                feature_func(offset, offset + length);
+            });
     }
 
     return grpc::Status::OK;
@@ -231,19 +220,19 @@ grpc::Status GraphEngineServiceImpl::GetEdgeFeatures(::grpc::ServerContext *cont
         }
     };
 
-    if (!m_thread_pool_enabled)
+    if (!UseThreadPoolWhenGettingFeatures(len, fv_size))
     {
         func(0, len);
     }
     else
     {
         auto groups = SplitIntoGroups(len);
-        ThreadPool::GetInstance().RunInParallel(groups.begin(), groups.end(),
-                                                [func](std::size_t index, std::tuple<std::size_t, std::size_t> range) {
-                                                    auto offset = std::get<0>(range);
-                                                    auto length = std::get<1>(range);
-                                                    func(offset, offset + length);
-                                                });
+        ThreadPool::GetInstance().RunInParallel(
+            groups, [feature_func = std::move(func)](std::size_t index, std::tuple<std::size_t, std::size_t> range) {
+                auto offset = std::get<0>(range);
+                auto length = std::get<1>(range);
+                feature_func(offset, offset + length);
+            });
     }
 
     return grpc::Status::OK;
@@ -498,9 +487,34 @@ grpc::Status GraphEngineServiceImpl::WeightedSampleNeighbors(::grpc::ServerConte
     response->mutable_neighbor_types()->Resize(node_size * count, 0);
     response->mutable_neighbor_weights()->Resize(node_size * count, 0);
 
+    auto seed_func = [this, &request](const std::size_t &start_node_id, const std::size_t &end_node_id,
+                                      std::size_t seed_index, std::vector<std::size_t> &seed_start_per_thread) {
+        for (size_t node_index = start_node_id; node_index < end_node_id; ++node_index)
+        {
+            const auto node_id = request->node_ids()[node_index];
+            auto internal_id = m_node_map.find(node_id);
+            if (internal_id != std::end(m_node_map))
+            {
+                const auto index = internal_id->second;
+                size_t partition_count = m_counts[index];
+                for (size_t partition = 0; partition < partition_count; ++partition)
+                {
+                    seed_start_per_thread[seed_index]++;
+                }
+            }
+        }
+    };
+
     std::mutex mutex;
-    auto func = [this, &request, &count, &response, &mutex, &seed, &input_edge_types](const std::size_t &start_node_id,
-                                                                                      const std::size_t &end_node_id) {
+    auto neighbor_func = [this, &request, &count, &response, &mutex, &seed,
+                          &input_edge_types](const std::size_t &start_node_id, const std::size_t &end_node_id,
+                                             std::size_t seed_index, std::vector<std::size_t> &seed_start_per_thread) {
+        std::size_t start_seed = seed;
+        if (seed_index > 0)
+        {
+            start_seed += std::accumulate(seed_start_per_thread.begin(), seed_start_per_thread.begin() + seed_index, 0);
+        }
+
         for (size_t node_index = start_node_id; node_index < end_node_id; ++node_index)
         {
             const auto node_id = request->node_ids()[node_index];
@@ -530,7 +544,7 @@ grpc::Status GraphEngineServiceImpl::WeightedSampleNeighbors(::grpc::ServerConte
             for (size_t partition = 0; partition < partition_count; ++partition)
             {
                 m_partitions[m_partitions_indices[index + partition]]->SampleNeighbor(
-                    seed++, m_internal_indices[index + partition], input_edge_types, count,
+                    start_seed++, m_internal_indices[index + partition], input_edge_types, count,
                     std::span(response->mutable_neighbor_ids()->mutable_data() + offset, count),
                     std::span(response->mutable_neighbor_types()->mutable_data() + offset, count),
                     std::span(response->mutable_neighbor_weights()->mutable_data() + offset, count), last_shard_weight,
@@ -539,18 +553,29 @@ grpc::Status GraphEngineServiceImpl::WeightedSampleNeighbors(::grpc::ServerConte
         }
     };
 
-    if (!m_thread_pool_enabled)
+    std::vector<std::size_t> seed_start_per_thread;
+    if (!UseThreadPoolWhenGettingNeighbors(request->node_ids().size(), count))
     {
-        func(0, request->node_ids().size());
+        neighbor_func(0, request->node_ids().size(), 0, seed_start_per_thread);
     }
     else
     {
         auto groups = SplitIntoGroups(request->node_ids().size());
-        ThreadPool::GetInstance().RunInParallel(groups.begin(), groups.end(),
-                                                [func](std::size_t, std::tuple<std::size_t, std::size_t> range) {
+        seed_start_per_thread.resize(groups.size());
+        // calculate seed for each thread
+        for (size_t i = 0; i < groups.size(); i++)
+        {
+            seed_func(std::get<0>(groups[i]), std::get<1>(groups[i]) + std::get<0>(groups[i]), i,
+                      seed_start_per_thread);
+        }
+
+        // get node neighbors using the seed calucated above.
+        ThreadPool::GetInstance().RunInParallel(groups,
+                                                [func = std::move(neighbor_func), &seed_start_per_thread](
+                                                    std::size_t index, std::tuple<std::size_t, std::size_t> range) {
                                                     auto offset = std::get<0>(range);
                                                     auto length = std::get<1>(range);
-                                                    func(offset, length + offset);
+                                                    func(offset, length + offset, index, seed_start_per_thread);
                                                 });
     }
 
@@ -573,9 +598,33 @@ grpc::Status GraphEngineServiceImpl::UniformSampleNeighbors(::grpc::ServerContex
     response->mutable_neighbor_ids()->Resize(node_size * count, 0);
     response->mutable_neighbor_types()->Resize(node_size * count, 0);
 
+    auto seed_func = [this, &request](const std::size_t &start_node_id, const std::size_t &end_node_id,
+                                      std::size_t seed_index, std::vector<std::size_t> &seed_start_per_thread) {
+        for (size_t node_index = start_node_id; node_index < end_node_id; ++node_index)
+        {
+            const auto node_id = request->node_ids()[node_index];
+            auto internal_id = m_node_map.find(node_id);
+            if (internal_id != std::end(m_node_map))
+            {
+                const auto index = internal_id->second;
+                size_t partition_count = m_counts[index];
+                for (size_t partition = 0; partition < partition_count; ++partition)
+                {
+                    seed_start_per_thread[seed_index]++;
+                }
+            }
+        }
+    };
+
     std::mutex mutex;
-    auto func = [this, &request, &count, &response, &mutex, &seed, &input_edge_types,
-                 &without_replacement](const std::size_t &start_node_id, const std::size_t &end_node_id) {
+    auto neighbor_func = [this, &request, &count, &response, &mutex, &seed, &input_edge_types, &without_replacement](
+                             const std::size_t &start_node_id, const std::size_t &end_node_id, std::size_t seed_index,
+                             std::vector<std::size_t> &seed_start_per_thread) {
+        std::size_t start_seed = seed;
+        if (seed_index > 0)
+        {
+            start_seed += std::accumulate(seed_start_per_thread.begin(), seed_start_per_thread.begin() + seed_index, 0);
+        }
         for (size_t node_index = start_node_id; node_index < end_node_id; ++node_index)
         {
             const auto node_id = request->node_ids()[node_index];
@@ -603,7 +652,7 @@ grpc::Status GraphEngineServiceImpl::UniformSampleNeighbors(::grpc::ServerContex
             for (size_t partition = 0; partition < partition_count; ++partition)
             {
                 m_partitions[m_partitions_indices[index + partition]]->UniformSampleNeighbor(
-                    without_replacement, seed++, m_internal_indices[index + partition], input_edge_types, count,
+                    without_replacement, start_seed++, m_internal_indices[index + partition], input_edge_types, count,
                     std::span(response->mutable_neighbor_ids()->mutable_data() + offset, count),
                     std::span(response->mutable_neighbor_types()->mutable_data() + offset, count), last_shard_weight,
                     request->default_node_id(), request->default_edge_type());
@@ -611,18 +660,28 @@ grpc::Status GraphEngineServiceImpl::UniformSampleNeighbors(::grpc::ServerContex
         }
     };
 
-    if (!m_thread_pool_enabled)
+    std::vector<std::size_t> seed_start_per_thread;
+    if (!UseThreadPoolWhenGettingNeighbors(request->node_ids().size(), count))
     {
-        func(0, request->node_ids().size());
+        neighbor_func(0, request->node_ids().size(), 0, seed_start_per_thread);
     }
     else
     {
         auto groups = SplitIntoGroups(request->node_ids().size());
-        ThreadPool::GetInstance().RunInParallel(groups.begin(), groups.end(),
-                                                [func](std::size_t, std::tuple<std::size_t, std::size_t> range) {
+        seed_start_per_thread.resize(groups.size());
+        // calculate seed for each thread
+        for (size_t i = 0; i < groups.size(); i++)
+        {
+            seed_func(std::get<0>(groups[i]), std::get<1>(groups[i]) + std::get<0>(groups[i]), i,
+                      seed_start_per_thread);
+        }
+        // get node neighbors using the seed calucated above.
+        ThreadPool::GetInstance().RunInParallel(groups,
+                                                [func = std::move(neighbor_func), &seed_start_per_thread](
+                                                    std::size_t index, std::tuple<std::size_t, std::size_t> range) {
                                                     auto offset = std::get<0>(range);
                                                     auto length = std::get<1>(range);
-                                                    func(offset, length + offset);
+                                                    func(offset, length + offset, index, seed_start_per_thread);
                                                 });
     }
 
@@ -660,6 +719,23 @@ grpc::Status GraphEngineServiceImpl::GetMetadata(::grpc::ServerContext *context,
                                                 std::end(m_metadata.m_edge_count_per_type)};
 
     return grpc::Status::OK;
+}
+
+bool GraphEngineServiceImpl::UseThreadPoolWhenGettingFeatures(std::size_t count, std::size_t feature_size_in_byte) const
+{
+    return (feature_size_in_byte < 128 && count >= 1024) ||
+           (feature_size_in_byte >= 128 && feature_size_in_byte < 1024 && count >= 512) ||
+           (feature_size_in_byte >= 1024 && feature_size_in_byte < 2048 && count >= 1024) ||
+           (feature_size_in_byte >= 2048 && feature_size_in_byte < 4096 && count >= 256) ||
+           (feature_size_in_byte >= 4096 && feature_size_in_byte < 8192 && count >= 64) ||
+           (feature_size_in_byte >= 8192 && count >= 128);
+}
+
+bool GraphEngineServiceImpl::UseThreadPoolWhenGettingNeighbors(std::size_t count, std::size_t neighbor_count) const
+{
+    return (neighbor_count >= 128 && neighbor_count < 256 && count >= 1024) ||
+           (neighbor_count >= 256 && neighbor_count < 1024 && count >= 128) ||
+           (neighbor_count >= 1024 && neighbor_count < 2048 && count >= 32) || (neighbor_count >= 2048 && count >= 8);
 }
 
 std::vector<std::tuple<std::size_t, std::size_t>> GraphEngineServiceImpl::SplitIntoGroups(std::size_t count,

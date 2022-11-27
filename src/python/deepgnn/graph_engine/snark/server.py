@@ -3,16 +3,7 @@
 
 """Stanalone graph engine server."""
 from datetime import datetime
-from ctypes import (
-    POINTER,
-    Structure,
-    byref,
-    c_char_p,
-    c_size_t,
-    c_uint32,
-    c_int32,
-    c_bool,
-)
+from ctypes import POINTER, Structure, byref, c_char_p, c_size_t, c_uint32, c_int32
 from typing import Any, Dict, List
 
 from deepgnn.graph_engine.snark._lib import _get_c_lib
@@ -48,7 +39,6 @@ class Server:
         storage_type: PartitionStorageType = PartitionStorageType.memory,
         config_path: str = "",
         stream: bool = False,
-        enable_threadpool: bool = False,
     ):
         """Create server and start it.
 
@@ -91,7 +81,6 @@ class Server:
             c_char_p,
             c_int32,
             c_char_p,
-            c_bool,
         ]
 
         self.lib.StartServer.errcheck = _ErrCallback("start server")  # type: ignore
@@ -117,7 +106,6 @@ class Server:
             ssl_root,
             c_int32(storage_type),
             c_char_p(bytes(config_path, "utf-8")),
-            enable_threadpool,
         )
 
     def reset(self):
@@ -189,19 +177,6 @@ if __name__ == "__main__":
         help="If ADL data path, stream directly to memory or download to disk first.",
     )
 
-    # Note: 'enable_threadpool' is used to create a thread pool when starting the
-    # graph engine, and use this thread pool to get features in parallel.
-    # This flag is OFF by default which means when client submit a get feature request,
-    # graph engine will use single thread to iterate each node/edge and get its feature.
-    # When this flag is enabled, graph engine will split node/edge into several groups and use
-    # thread pool to get the feautres.
-    parser.add_argument(
-        "--enable_threadpool",
-        action="store_true",
-        default=False,
-        help="Whether or not to enable thread pool in graph engine.",
-    )
-
     args, _ = parser.parse_known_args()
     if args.server_group is not None:
         assert (
@@ -220,7 +195,6 @@ if __name__ == "__main__":
         storage_type=args.storage_type,
         config_path=args.config_path,
         stream=args.stream,
-        enable_threadpool=args.enable_threadpool,
     )
     logger.info("Server started...")
     try:

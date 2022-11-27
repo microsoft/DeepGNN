@@ -33,7 +33,6 @@ class SnarkLocalBackend(GraphEngineBackend):
             options.storage_type,
             options.config_path,
             options.stream,
-            options.enable_threadpool,
         )
 
     @property
@@ -117,7 +116,6 @@ class SnarkDistributedBackend(GraphEngineBackend):
                 storage_type=options.storage_type,
                 config_path=options.config_path,
                 stream=options.stream,
-                enable_threadpool=options.enable_threadpool,
             )
         assert client_rank is not None, "Client rank should be always initialized"
         self._client = SynchronizedClient(  # type: ignore

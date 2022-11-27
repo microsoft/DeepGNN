@@ -43,14 +43,6 @@ def init_trainer_args(parser: argparse.ArgumentParser):
     group.add_argument("--config_path", type=str, default="", help="Directory where HDFS or other config files are stored.")
     group.add_argument("--stream", action="store_true", default=False, help="If ADL data path, stream directly to memory or download to disk first.")
 
-    # Note: 'enable_threadpool' is used to create a thread pool when starting the
-    # graph engine, and use this thread pool to get features in parallel.
-    # This flag is OFF by default which means when client submit a get feature request,
-    # graph engine will use single thread to iterate each node/edge and get its feature.
-    # When this flag is enabled, graph engine will split node/edge into several groups and use
-    # thread pool to get the feautres.
-    group.add_argument("--enable_threadpool", action="store_true", default=False, help="Whether or not to enable thread pool in graph engine.")
-
 
 def init_fp16_args(parser: argparse.ArgumentParser):
     """Configure arguments for training with half-precision floats."""

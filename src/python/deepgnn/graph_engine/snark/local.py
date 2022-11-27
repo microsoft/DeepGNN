@@ -29,7 +29,6 @@ class Client(Graph):
         storage_type: client.PartitionStorageType = client.PartitionStorageType.memory,
         config_path: str = "",
         stream: bool = False,
-        enable_threadpool: bool = False,
     ):
         """Provide a convenient wrapper around ctypes API of native graph."""
         self.logger = get_logger()
@@ -37,10 +36,10 @@ class Client(Graph):
             self.logger.info("Partitions not set, defaulting to [0]")
             partitions = [0]
         self.logger.info(
-            f"Graph data path: {path}. Partitions {partitions}. Storage type {storage_type}. Config path {config_path}. Stream {stream}. ThreadPool {enable_threadpool}"
+            f"Graph data path: {path}. Partitions {partitions}. Storage type {storage_type}. Config path {config_path}. Stream {stream}."
         )
         self.graph = client.MemoryGraph(
-            path, partitions, storage_type, config_path, stream, enable_threadpool
+            path, partitions, storage_type, config_path, stream
         )
         self.node_samplers: Dict[str, client.NodeSampler] = {}
         self.edge_samplers: Dict[str, client.EdgeSampler] = {}

@@ -7,7 +7,6 @@
 #include "src/cc/lib/graph/partition.h"
 #include "src/cc/lib/graph/sampler.h"
 #include "src/cc/lib/graph/xoroshiro.h"
-#include "src/cc/lib/utils/thread_pool.h"
 #include "src/cc/tests/mocks.h"
 
 #include <algorithm>
@@ -74,16 +73,7 @@ struct TempFolder
 };
 } // namespace
 
-class ThreadPoolGraphTest : public testing::TestWithParam<bool>
-{
-  protected:
-    void SetUp() override
-    {
-        snark::ThreadPool::SetThreadPoolSize(1);
-    }
-};
-
-TEST_P(ThreadPoolGraphTest, NodeFeaturesSingleServer)
+TEST(DistributedTest, NodeFeaturesSingleServer)
 {
     const size_t num_nodes = 100;
     const size_t fv_size = 2;
@@ -100,16 +90,50 @@ TEST_P(ThreadPoolGraphTest, NodeFeaturesSingleServer)
     auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
 
     snark::GRPCServer server(std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                                             snark::PartitionStorageType::memory, "",
-                                                                             GetParam()),
+                                                                             snark::PartitionStorageType::memory, ""),
                              {}, "localhost:0", "", "", "");
     snark::GRPCClient c({server.InProcessChannel()}, 1, 1);
+
     std::vector<snark::NodeId> input_nodes = {0, 1, 2};
     std::vector<float> output(fv_size * input_nodes.size());
     std::vector<snark::FeatureMeta> features = {{snark::FeatureId(0), snark::FeatureSize(sizeof(float) * fv_size)}};
     c.GetNodeFeature(std::span(input_nodes), std::span(features),
                      std::span(reinterpret_cast<uint8_t *>(output.data()), sizeof(float) * output.size()));
     EXPECT_EQ(output, std::vector<float>({0, 1, 1, 2, 2, 3}));
+}
+
+TEST(DistributedTest, NodeFeaturesSingleServerThreadPool)
+{
+    const size_t num_nodes = 10000;
+    const size_t fv_size = 512;
+    TestGraph::MemoryGraph m;
+    for (size_t n = 0; n < num_nodes; n++)
+    {
+        std::vector<float> vals(fv_size);
+        std::iota(std::begin(vals), std::end(vals), float(n));
+        m.m_nodes.push_back(TestGraph::Node{
+            .m_id = snark::NodeId(n), .m_type = 0, .m_weight = 1.0f, .m_float_features = {std::move(vals)}});
+    }
+
+    TempFolder path("NodeFeaturesSingleServerThreadPool");
+    auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
+
+    snark::GRPCServer server(std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
+                                                                             snark::PartitionStorageType::memory, ""),
+                             {}, "localhost:0", "", "", "");
+    snark::GRPCClient c({server.InProcessChannel()}, 1, 1);
+
+    std::vector<snark::NodeId> input_nodes;
+    for (int64_t i = 0; i < 256; i++)
+    {
+        input_nodes.push_back(i);
+    }
+
+    std::vector<float> output(fv_size * input_nodes.size());
+    std::vector<snark::FeatureMeta> features = {{snark::FeatureId(0), snark::FeatureSize(sizeof(float) * fv_size)}};
+    c.GetNodeFeature(std::span(input_nodes), std::span(features),
+                     std::span(reinterpret_cast<uint8_t *>(output.data()), sizeof(float) * output.size()));
+    EXPECT_EQ(std::vector<float>(std::begin(output), std::begin(output) + 5), std::vector<float>({0, 1, 2, 3, 4}));
 }
 
 TEST(DistributedTest, NodeStringFeaturesMultipleServers)
@@ -396,8 +420,7 @@ namespace
 {
 using TestChannels = std::vector<std::shared_ptr<grpc::Channel>>;
 using TestServers = std::vector<std::unique_ptr<snark::GRPCServer>>;
-std::pair<TestChannels, TestServers> MockServers(size_t num_partitions, std::string name, size_t num_node_types = 1,
-                                                 bool enable_threadpool = false)
+std::pair<TestChannels, TestServers> MockServers(size_t num_partitions, std::string name, size_t num_node_types = 1)
 {
     std::vector<std::unique_ptr<snark::GRPCServer>> servers;
     std::vector<std::shared_ptr<grpc::Channel>> channels;
@@ -420,7 +443,7 @@ std::pair<TestChannels, TestServers> MockServers(size_t num_partitions, std::str
 
         servers.emplace_back(std::make_unique<snark::GRPCServer>(
             std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                            snark::PartitionStorageType::memory, "", enable_threadpool),
+                                                            snark::PartitionStorageType::memory, ""),
             std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", ""));
         channels.emplace_back(servers.back()->InProcessChannel());
 
@@ -436,9 +459,9 @@ std::pair<TestChannels, TestServers> MockServers(size_t num_partitions, std::str
 }
 } // namespace
 
-TEST_P(ThreadPoolGraphTest, NodeFeaturesMultipleServers)
+TEST(DistributedTest, NodeFeaturesMultipleServers)
 {
-    auto mocks = MockServers(10, "NodeFeaturesMultipleServers", 1, GetParam());
+    auto mocks = MockServers(10, "NodeFeaturesMultipleServers");
     snark::GRPCClient c(std::move(mocks.first), 1, 1);
 
     std::vector<snark::NodeId> input_nodes = {0, 11, 22};
@@ -459,9 +482,9 @@ TEST(DistributedTest, NodeTypeMultipleServers)
     EXPECT_EQ(types, std::vector<snark::Type>({0, 0, 2, 1, -1}));
 }
 
-TEST_P(ThreadPoolGraphTest, NodeFeaturesMultipleServersMissingFeatureId)
+TEST(DistributedTest, NodeFeaturesMultipleServersMissingFeatureId)
 {
-    auto mocks = MockServers(10, "NodeFeaturesMultipleServersMissingFeatureId", 1, GetParam());
+    auto mocks = MockServers(10, "NodeFeaturesMultipleServersMissingFeatureId");
     snark::GRPCClient c(std::move(mocks.first), 1, 1);
 
     std::vector<snark::NodeId> input_nodes = {0, 11, 22};
@@ -472,9 +495,9 @@ TEST_P(ThreadPoolGraphTest, NodeFeaturesMultipleServersMissingFeatureId)
     EXPECT_EQ(output, std::vector<float>(fv_size * input_nodes.size(), 0));
 }
 
-TEST_P(ThreadPoolGraphTest, NodeFeaturesMultipleServersBackFillLargeRequestFeatureSize)
+TEST(DistributedTest, NodeFeaturesMultipleServersBackFillLargeRequestFeatureSize)
 {
-    auto mocks = MockServers(10, "NodeFeaturesMultipleServersBackFillLargeRequestFeatureSize", 1, GetParam());
+    auto mocks = MockServers(10, "NodeFeaturesMultipleServersBackFillLargeRequestFeatureSize");
     snark::GRPCClient c(std::move(mocks.first), 1, 1);
 
     std::vector<snark::NodeId> input_nodes = {0, 11, 22};
@@ -486,31 +509,45 @@ TEST_P(ThreadPoolGraphTest, NodeFeaturesMultipleServersBackFillLargeRequestFeatu
 }
 
 std::pair<std::shared_ptr<snark::GRPCServer>, std::shared_ptr<snark::GRPCClient>> CreateSingleServerEnvironment(
-    std::string name, bool use_thread_pool = false)
+    std::string name, std::size_t node_count = 100, std::size_t neighbors_count = 4)
 {
     TestGraph::MemoryGraph m;
     size_t curr_node = 0;
-    const size_t num_nodes = 100;
     const size_t fv_size = 2;
-    for (size_t n = 0; n < num_nodes; n++, curr_node++)
+    for (size_t n = 0; n < node_count; n++, curr_node++)
     {
+        std::vector<TestGraph::NeighborRecord> neighbors;
+        std::vector<std::vector<std::vector<float>>> edge_features;
+        for (size_t i = 0; i < neighbors_count; i += 4)
+        {
+            neighbors.push_back(TestGraph::NeighborRecord{curr_node + i + 1, 0, 1.0f});
+            neighbors.push_back(TestGraph::NeighborRecord{curr_node + i + 2, 0, 2.0f});
+            neighbors.push_back(TestGraph::NeighborRecord{curr_node + i + 3, 0, 2.0f});
+            neighbors.push_back(TestGraph::NeighborRecord{curr_node + i + 4, 0, 1.0f});
+            std::vector<std::vector<float>> f1{{1.0f}};
+            std::vector<std::vector<float>> f2{{2.0f}};
+            std::vector<std::vector<float>> f3{{3.0f}};
+            std::vector<std::vector<float>> f4{{4.0f}};
+            edge_features.push_back(f1);
+            edge_features.push_back(f2);
+            edge_features.push_back(f3);
+            edge_features.push_back(f4);
+        }
+
         std::vector<float> vals(fv_size);
         std::iota(std::begin(vals), std::end(vals), float(n));
         m.m_nodes.push_back(TestGraph::Node{.m_id = snark::NodeId(curr_node),
                                             .m_type = 0,
                                             .m_weight = 1.0f,
-                                            .m_neighbors = {TestGraph::NeighborRecord{curr_node + 1, 0, 1.0f},
-                                                            TestGraph::NeighborRecord{curr_node + 2, 0, 2.0f},
-                                                            TestGraph::NeighborRecord{curr_node + 3, 0, 2.0f},
-                                                            TestGraph::NeighborRecord{curr_node + 4, 0, 1.0f}},
-                                            .m_edge_features = {{{1.0f}}, {{2.0f}}, {{3.0f}}, {{4.0f}}}});
+                                            .m_neighbors = neighbors,
+                                            .m_edge_features = edge_features});
     }
 
     TempFolder path(name);
     auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
 
-    auto service = std::make_shared<snark::GraphEngineServiceImpl>(
-        path.string(), std::vector<uint32_t>{0}, snark::PartitionStorageType::memory, "", use_thread_pool);
+    auto service = std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
+                                                                   snark::PartitionStorageType::memory, "");
     auto server = std::make_shared<snark::GRPCServer>(
         std::move(service), std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", "");
     auto client = std::make_shared<snark::GRPCClient>(
@@ -518,9 +555,9 @@ std::pair<std::shared_ptr<snark::GRPCServer>, std::shared_ptr<snark::GRPCClient>
     return {server, client};
 }
 
-TEST_P(ThreadPoolGraphTest, EdgeFeaturesSingleServer)
+TEST(DistributedTest, EdgeFeaturesSingleServer)
 {
-    auto env = CreateSingleServerEnvironment("EdgeFeaturesSingleServer", GetParam());
+    auto env = CreateSingleServerEnvironment("EdgeFeaturesSingleServer");
     auto &client = *env.second;
     std::vector<snark::NodeId> edge_src_ids = {0, 1, 2};
     std::vector<snark::NodeId> edge_dst_ids = {1, 3, 5};
@@ -533,9 +570,9 @@ TEST_P(ThreadPoolGraphTest, EdgeFeaturesSingleServer)
     EXPECT_EQ(output, std::vector<float>({1.0f, 2.0f, 3.0f}));
 }
 
-TEST_P(ThreadPoolGraphTest, SampleNeighborsSingleServer)
+TEST(DistributedTest, SampleNeighborsSingleServer)
 {
-    auto env = CreateSingleServerEnvironment("SampleNeighborsSingleServer", GetParam());
+    auto env = CreateSingleServerEnvironment("SampleNeighborsSingleServer");
     auto &client = *env.second;
     std::vector<snark::NodeId> input_nodes = {0, 1, 2};
     std::vector<snark::Type> input_types = {0};
@@ -550,9 +587,33 @@ TEST_P(ThreadPoolGraphTest, SampleNeighborsSingleServer)
     EXPECT_EQ(output_weights, std::vector<float>({2, 2, 2, 2, 2, 2}));
 }
 
-TEST_P(ThreadPoolGraphTest, UniformSampleNeighborsSingleServer)
+TEST(DistributedTest, SampleNeighborsSingleServerThreadPool)
 {
-    auto env = CreateSingleServerEnvironment("UniformSampleNeighborsSingleServer", GetParam());
+    auto env = CreateSingleServerEnvironment("SampleNeighborsSingleServerThreadPool", 2048, 128);
+    auto &client = *env.second;
+    std::vector<snark::NodeId> input_nodes;
+    for (int64_t i = 0; i < 1024; i++)
+    {
+        input_nodes.push_back(i);
+    }
+
+    std::vector<snark::Type> input_types = {0};
+    const size_t nb_count = 128;
+    std::vector<snark::NodeId> output_nodes(nb_count * input_nodes.size());
+    std::vector<float> output_weights(nb_count * input_nodes.size());
+    std::vector<snark::Type> output_types(nb_count * input_nodes.size(), -1);
+    client.WeightedSampleNeighbor(21, std::span(input_nodes), std::span(input_types), nb_count, std::span(output_nodes),
+                                  std::span(output_types), std::span(output_weights), -1, 0.0f, -1);
+    EXPECT_EQ(output_types, std::vector<snark::Type>(1024 * 128, 0));
+    EXPECT_EQ(std::vector<snark::NodeId>(std::begin(output_nodes), std::begin(output_nodes) + 5),
+              std::vector<snark::NodeId>({79, 71, 106, 2, 55}));
+    EXPECT_EQ(std::vector<float>(std::begin(output_weights), std::begin(output_weights) + 5),
+              std::vector<float>({2, 2, 2, 2, 2}));
+}
+
+TEST(DistributedTest, UniformSampleNeighborsSingleServer)
+{
+    auto env = CreateSingleServerEnvironment("UniformSampleNeighborsSingleServer");
     auto &client = *env.second;
     std::vector<snark::NodeId> input_nodes = {0, 1, 2};
     std::vector<snark::Type> input_types = {0};
@@ -565,9 +626,30 @@ TEST_P(ThreadPoolGraphTest, UniformSampleNeighborsSingleServer)
     EXPECT_EQ(output_nodes, std::vector<snark::NodeId>({3, 3, 3, 5, 5, 6}));
 }
 
-TEST_P(ThreadPoolGraphTest, UniformSampleNeighborsWithoutReplacementSingleServer)
+TEST(DistributedTest, UniformSampleNeighborsSingleServerThreadPool)
 {
-    auto env = CreateSingleServerEnvironment("UniformSampleNeighborsSingleServer", GetParam());
+    auto env = CreateSingleServerEnvironment("UniformSampleNeighborsSingleServerThreadPool", 2048, 128);
+    auto &client = *env.second;
+    std::vector<snark::NodeId> input_nodes;
+    for (int64_t i = 0; i < 1024; i++)
+    {
+        input_nodes.push_back(i);
+    }
+
+    std::vector<snark::Type> input_types = {0};
+    const size_t nb_count = 128;
+    std::vector<snark::NodeId> output_nodes(nb_count * input_nodes.size());
+    std::vector<snark::Type> output_types(nb_count * input_nodes.size(), -1);
+    client.UniformSampleNeighbor(false, 21, std::span(input_nodes), std::span(input_types), nb_count,
+                                 std::span(output_nodes), std::span(output_types), -1, -1);
+    EXPECT_EQ(output_types, std::vector<snark::Type>(1024 * 128, 0));
+    EXPECT_EQ(std::vector<snark::NodeId>(std::begin(output_nodes), std::begin(output_nodes) + 5),
+              std::vector<snark::NodeId>({79, 71, 106, 1, 55}));
+}
+
+TEST(DistributedTest, UniformSampleNeighborsWithoutReplacementSingleServer)
+{
+    auto env = CreateSingleServerEnvironment("UniformSampleNeighborsSingleServer");
     auto &client = *env.second;
     std::vector<snark::NodeId> input_nodes = {0, 1, 2};
     std::vector<snark::Type> input_types = {0};
@@ -581,8 +663,7 @@ TEST_P(ThreadPoolGraphTest, UniformSampleNeighborsWithoutReplacementSingleServer
 }
 
 using ServerList = std::vector<std::shared_ptr<snark::GRPCServer>>;
-std::pair<ServerList, std::shared_ptr<snark::GRPCClient>> CreateMultiServerEnvironment(std::string name,
-                                                                                       bool enable_thread_pool = false)
+std::pair<ServerList, std::shared_ptr<snark::GRPCClient>> CreateMultiServerEnvironment(std::string name)
 {
     const size_t num_servers = 10;
     ServerList servers;
@@ -607,8 +688,8 @@ std::pair<ServerList, std::shared_ptr<snark::GRPCClient>> CreateMultiServerEnvir
         TempFolder path(name);
         auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
         servers.emplace_back(std::make_shared<snark::GRPCServer>(
-            std::make_shared<snark::GraphEngineServiceImpl>(
-                path.string(), std::vector<uint32_t>{0}, snark::PartitionStorageType::memory, "", enable_thread_pool),
+            std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
+                                                            snark::PartitionStorageType::memory, ""),
             std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", ""));
         channels.emplace_back(servers.back()->InProcessChannel());
     }
@@ -616,9 +697,9 @@ std::pair<ServerList, std::shared_ptr<snark::GRPCClient>> CreateMultiServerEnvir
     return std::make_pair(std::move(servers), std::make_shared<snark::GRPCClient>(std::move(channels), 1, 1));
 }
 
-TEST_P(ThreadPoolGraphTest, SampleNeighborsMultipleServers)
+TEST(DistributedTest, SampleNeighborsMultipleServers)
 {
-    auto environment = CreateMultiServerEnvironment("SampleNeighborsMultipleServers", GetParam());
+    auto environment = CreateMultiServerEnvironment("SampleNeighborsMultipleServers");
     auto &c = *environment.second;
 
     std::vector<snark::NodeId> input_nodes = {0, 55, 77};
@@ -634,9 +715,9 @@ TEST_P(ThreadPoolGraphTest, SampleNeighborsMultipleServers)
     EXPECT_EQ(output_weights, std::vector<float>({2, 2, 2, 1, 1, 2}));
 }
 
-TEST_P(ThreadPoolGraphTest, SampleNeighborsMultipleServersMissingNeighbors)
+TEST(DistributedTest, SampleNeighborsMultipleServersMissingNeighbors)
 {
-    auto environment = CreateMultiServerEnvironment("SampleNeighborsMultipleServersMissingNeighbors", GetParam());
+    auto environment = CreateMultiServerEnvironment("SampleNeighborsMultipleServersMissingNeighbors");
     auto &c = *environment.second;
 
     std::vector<snark::NodeId> input_nodes = {0, 55, 77};
@@ -652,9 +733,9 @@ TEST_P(ThreadPoolGraphTest, SampleNeighborsMultipleServersMissingNeighbors)
     EXPECT_EQ(output_weights, std::vector<float>(6, 0));
 }
 
-TEST_P(ThreadPoolGraphTest, UniformSampleNeighborsMultipleServers)
+TEST(DistributedTest, UniformSampleNeighborsMultipleServers)
 {
-    auto environment = CreateMultiServerEnvironment("UniformSampleNeighborsMultipleServers", GetParam());
+    auto environment = CreateMultiServerEnvironment("UniformSampleNeighborsMultipleServers");
     auto &c = *environment.second;
 
     std::vector<snark::NodeId> input_nodes = {0, 55, 77};
@@ -668,15 +749,9 @@ TEST_P(ThreadPoolGraphTest, UniformSampleNeighborsMultipleServers)
     EXPECT_EQ(output_nodes, std::vector<snark::NodeId>({2, 2, 57, 56, 80, 81}));
 }
 
-TEST_P(ThreadPoolGraphTest, UniformSampleNeighborsWithoutReplacementMultipleServers)
+TEST(DistributedTest, UniformSampleNeighborsWithoutReplacementMultipleServers)
 {
-    auto enable_thread_pool = GetParam();
-    if (enable_thread_pool)
-    {
-        snark::ThreadPool::SetThreadPoolSize(1);
-    }
-    auto environment =
-        CreateMultiServerEnvironment("UniformSampleNeighborsWithoutReplacementMultipleServers", enable_thread_pool);
+    auto environment = CreateMultiServerEnvironment("UniformSampleNeighborsWithoutReplacementMultipleServers");
     auto &c = *environment.second;
 
     std::vector<snark::NodeId> input_nodes = {0, 55, 77};
@@ -907,7 +982,7 @@ TEST(DistributedTest, FullNeighborsMultipleServers)
 
 std::pair<ServerList, std::shared_ptr<snark::GRPCClient>> CreateMultiServerSplitFeaturesEnvironment(
     std::string name, std::vector<std::vector<float>> f0, std::vector<std::vector<float>> f1,
-    std::vector<std::vector<float>> f2, bool enable_threadpool = false)
+    std::vector<std::vector<float>> f2)
 {
     const size_t num_servers = 2;
     ServerList servers;
@@ -928,7 +1003,7 @@ std::pair<ServerList, std::shared_ptr<snark::GRPCClient>> CreateMultiServerSplit
         auto partition = TestGraph::convert(path.path, "0_0", std::move(test_graphs[server]), 3);
         servers.emplace_back(std::make_shared<snark::GRPCServer>(
             std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                            snark::PartitionStorageType::memory, "", enable_threadpool),
+                                                            snark::PartitionStorageType::memory, ""),
             std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", ""));
         channels.emplace_back(servers.back()->InProcessChannel());
     }
@@ -953,14 +1028,14 @@ TEST(DistributedTest, NodeTypesMultipleTypesNeighborsSpreadAcrossPartitions)
     EXPECT_EQ(std::vector<snark::Type>({0, 1, 2}), types);
 }
 
-TEST_P(ThreadPoolGraphTest, NodeFeaturesMultipleTypesNeighborsSpreadAcrossPartitions)
+TEST(DistributedTest, NodeFeaturesMultipleTypesNeighborsSpreadAcrossPartitions)
 {
     std::vector<std::vector<float>> f0 = {std::vector<float>{1.0f, 2.0f, 3.0f}};
     std::vector<std::vector<float>> f1 = {std::vector<float>{4.0f, 5.0f, 6.0f}};
     std::vector<std::vector<float>> f2 = {std::vector<float>{7.0f, 8.0f, 9.0f}};
 
     auto environment = CreateMultiServerSplitFeaturesEnvironment(
-        "NodeFeaturesMultipleTypesNeighborsSpreadAcrossPartitions", f0, f1, f2, GetParam());
+        "NodeFeaturesMultipleTypesNeighborsSpreadAcrossPartitions", f0, f1, f2);
     auto &c = *environment.second;
 
     // 0 is a normal node
@@ -1262,5 +1337,3 @@ TEST(DistributedTest, TestSamplerFromGEOnlyServer)
     EXPECT_EQ(output_nodes, std::vector<snark::NodeId>(3, -2));
     EXPECT_EQ(output_types, std::vector<snark::Type>(3, -1));
 }
-
-INSTANTIATE_TEST_SUITE_P(ThreadPoolGroup, ThreadPoolGraphTest, testing::Values(false, true));

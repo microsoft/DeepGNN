@@ -78,12 +78,12 @@ extern "C"
 
     DEEPGNN_DLL extern int32_t CreateLocalGraph(PyGraph *graph, size_t count, uint32_t *partitions,
                                                 const char *filename, PyPartitionStorageType storage_type,
-                                                const char *config_path, bool enable_threadpool = false);
+                                                const char *config_path);
 
     DEEPGNN_DLL extern int32_t StartServer(PyServer *graph, size_t count, uint32_t *partitions, const char *filename,
                                            const char *host_name, const char *ssl_key, const char *ssl_cert,
                                            const char *ssl_root, const PyPartitionStorageType storage_type,
-                                           const char *config_path, bool enable_threadpool = false);
+                                           const char *config_path);
 
     DEEPGNN_DLL extern int32_t CreateRemoteClient(PyGraph *graph, const char *output_folder, const char **connection,
                                                   size_t connection_count, const char *ssl_cert, size_t num_threads,

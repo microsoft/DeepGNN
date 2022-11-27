@@ -152,7 +152,6 @@ class MemoryGraph:
         storage_type: PartitionStorageType = PartitionStorageType.memory,
         config_path: str = "",
         stream: bool = False,
-        enable_threadpool: bool = False,
     ):
         """Load graph to memory.
 
@@ -180,7 +179,6 @@ class MemoryGraph:
             c_char_p,
             c_int32,
             c_char_p,
-            c_bool,
         ]
 
         self.lib.CreateLocalGraph.errcheck = _ErrCallback(  # type: ignore
@@ -195,7 +193,6 @@ class MemoryGraph:
             c_char_p(bytes(self.path.name, "utf-8")),
             c_int32(storage_type),
             c_char_p(bytes(config_path, "utf-8")),
-            enable_threadpool,
         )
         self._describe_clib_functions()
 

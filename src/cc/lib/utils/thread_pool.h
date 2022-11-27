@@ -25,22 +25,16 @@ class ThreadPool
     static void SetThreadPoolSize(const std::size_t &size);
     static ThreadPool &GetInstance();
 
-    template <typename _Iterator, typename _Function>
-    void RunInParallel(_Iterator _First, _Iterator _Last, const _Function &_Func)
+    template <typename _Range, typename _Function> void RunInParallel(_Range _RangeItem, const _Function &_Func)
     {
-        typedef typename ::std::iterator_traits<_Iterator>::difference_type _Index_type;
-
-        _Index_type _Range_size = _Last - _First;
-        _Index_type _I;
-
         std::size_t index = 0;
         std::vector<std::shared_ptr<std::promise<void>>> promise_list;
         // Split the available work in chunks
-        for (_I = 0; _I < _Range_size; _I++)
+        for (auto &_Item : _RangeItem)
         {
             auto p = std::make_shared<std::promise<void>>();
             boost::asio::post(m_thread_pool, [=]() {
-                _Func(index, _First[_I]);
+                _Func(index, _Item);
                 p->set_value();
             });
             promise_list.push_back(p);

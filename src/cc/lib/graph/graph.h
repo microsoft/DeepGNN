@@ -25,7 +25,7 @@ class Graph
 {
   public:
     Graph(std::string path, std::vector<uint32_t> partitions, PartitionStorageType storage_type,
-          std::string config_path, bool enable_threadpool = false);
+          std::string config_path);
 
     void GetNodeType(std::span<const NodeId> node_ids, std::span<Type> output, Type default_type) const;
 
@@ -75,7 +75,9 @@ class Graph
     void ReadNodeMap(std::filesystem::path path, std::string suffix, uint32_t index);
 
     std::vector<std::tuple<std::size_t, std::size_t>> SplitIntoGroups(
-        std::size_t count, std::size_t parts = std::thread::hardware_concurrency()) const;
+        std::size_t count, std::size_t parts = std::thread::hardware_concurrency() - 1) const;
+    bool UseThreadPoolWhenGettingFeatures(std::size_t count, std::size_t feature_size) const;
+    bool UseThreadPoolWhenGettingNeighbors(std::size_t count, std::size_t neighbor_count) const;
 
     std::vector<std::shared_ptr<Partition>> m_partitions;
     absl::flat_hash_map<NodeId, uint64_t> m_node_map;
@@ -83,7 +85,6 @@ class Graph
     std::vector<uint64_t> m_internal_indices;
     std::vector<uint32_t> m_counts;
     Metadata m_metadata;
-    bool m_thread_pool_enabled;
 };
 
 } // namespace snark

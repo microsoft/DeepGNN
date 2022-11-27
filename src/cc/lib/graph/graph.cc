@@ -40,8 +40,8 @@ bool check_sorted_unique_types(const Type *in_edge_types, size_t count)
 } // namespace
 
 Graph::Graph(std::string path, std::vector<uint32_t> partitions, PartitionStorageType storage_type,
-             std::string config_path, bool enable_threadpool)
-    : m_metadata(path, config_path), m_thread_pool_enabled(enable_threadpool)
+             std::string config_path)
+    : m_metadata(path, config_path)
 {
     std::vector<std::string> suffixes;
     absl::flat_hash_set<uint32_t> partition_set(std::begin(partitions), std::end(partitions));
@@ -85,20 +85,10 @@ Graph::Graph(std::string path, std::vector<uint32_t> partitions, PartitionStorag
         ReadNodeMap(path, suffixes[i], i);
     }
 
-    if (!m_thread_pool_enabled)
-    {
-        for (size_t i = 0; i < suffixes.size(); ++i)
-        {
-            m_partitions[i] = std::make_shared<Partition>(path, suffixes[i], storage_type);
-        }
-    }
-    else
-    {
-        ThreadPool::GetInstance().RunInParallel(
-            suffixes.begin(), suffixes.end(), [this, &path, &storage_type](std::size_t index, std::string content) {
-                m_partitions[index] = std::make_shared<Partition>(path, content, storage_type);
-            });
-    }
+    ThreadPool::GetInstance().RunInParallel(
+        suffixes, [this, &path, &storage_type](std::size_t index, std::string content) {
+            m_partitions[index] = std::make_shared<Partition>(path, content, storage_type);
+        });
 }
 
 void Graph::GetNodeType(std::span<const NodeId> node_ids, std::span<Type> output, Type default_type) const
@@ -167,7 +157,7 @@ void Graph::GetNodeFeature(std::span<const NodeId> node_ids, std::span<snark::Fe
         }
     };
 
-    if (!m_thread_pool_enabled)
+    if (!UseThreadPoolWhenGettingFeatures(node_ids.size(), feature_size))
     {
         // process the full node list if no thread pool is used.
         func(0, node_ids.size(), output);
@@ -176,14 +166,13 @@ void Graph::GetNodeFeature(std::span<const NodeId> node_ids, std::span<snark::Fe
     {
         // split node list into sevaral parts and calculate each part in parallel.
         auto groups = SplitIntoGroups(node_ids.size());
-        ThreadPool::GetInstance().RunInParallel(
-            groups.begin(), groups.end(),
-            [&output, func, feature_size](std::size_t, std::tuple<std::size_t, std::size_t> range) {
-                auto offset = std::get<0>(range);
-                auto length = std::get<1>(range);
-                auto sub_span = output.subspan(offset * feature_size, length * feature_size);
-                func(offset, offset + length, sub_span);
-            });
+        ThreadPool::GetInstance().RunInParallel(groups, [&output, feature_func = std::move(func), feature_size](
+                                                            std::size_t, std::tuple<std::size_t, std::size_t> range) {
+            auto offset = std::get<0>(range);
+            auto length = std::get<1>(range);
+            auto sub_span = output.subspan(offset * feature_size, length * feature_size);
+            feature_func(offset, offset + length, sub_span);
+        });
     }
 }
 
@@ -290,7 +279,7 @@ void Graph::GetEdgeFeature(std::span<const NodeId> input_edge_src, std::span<con
         }
     };
 
-    if (!m_thread_pool_enabled)
+    if (!UseThreadPoolWhenGettingFeatures(input_edge_src.size(), feature_size))
     {
         func(0, input_edge_src.size(), output);
     }
@@ -298,14 +287,13 @@ void Graph::GetEdgeFeature(std::span<const NodeId> input_edge_src, std::span<con
     {
         // divide the output into sevaral parts and each part is processed in one task.
         auto groups = SplitIntoGroups(input_edge_src.size());
-        ThreadPool::GetInstance().RunInParallel(
-            groups.begin(), groups.end(),
-            [&output, func, feature_size](std::size_t, std::tuple<std::size_t, std::size_t> range) {
-                auto offset = std::get<0>(range);
-                auto length = std::get<1>(range);
-                auto sub_span = output.subspan(offset * feature_size, length * feature_size);
-                func(offset, length, sub_span);
-            });
+        ThreadPool::GetInstance().RunInParallel(groups, [&output, feature_func = std::move(func), feature_size](
+                                                            std::size_t, std::tuple<std::size_t, std::size_t> range) {
+            auto offset = std::get<0>(range);
+            auto length = std::get<1>(range);
+            auto sub_span = output.subspan(offset * feature_size, length * feature_size);
+            feature_func(offset, length, sub_span);
+        });
     }
 }
 
@@ -440,9 +428,34 @@ void Graph::SampleNeighbor(int64_t seed, std::span<const NodeId> input_node_ids,
         input_edge_types = input_edge_types.subspan(0, last - std::begin(input_edge_types));
     }
 
-    auto func = [this, &input_node_ids, &output_neighbor_ids, &count, &default_node_id, &default_edge_type,
-                 &default_weight, &neighbors_weights, &output_neighbor_types, &seed, &input_edge_types,
-                 &neighbors_total_weights](const std::size_t &start_node_id, const std::size_t &end_node_id) {
+    auto seed_func = [this, &input_node_ids](const std::size_t &start_node_id, const std::size_t &end_node_id,
+                                             std::size_t seed_index, std::vector<std::size_t> &seed_start_per_thread) {
+        for (size_t node_index = start_node_id; node_index < end_node_id; ++node_index)
+        {
+            auto internal_id = m_node_map.find(input_node_ids[node_index]);
+            if (internal_id != std::end(m_node_map))
+            {
+                const auto index = internal_id->second;
+                size_t partition_count = m_counts[index];
+                for (size_t partition = 0; partition < partition_count; ++partition)
+                {
+                    seed_start_per_thread[seed_index]++;
+                }
+            }
+        }
+    };
+
+    auto neighbor_func = [this, &input_node_ids, &output_neighbor_ids, &count, &default_node_id, &default_edge_type,
+                          &default_weight, &neighbors_weights, &output_neighbor_types, &seed, &input_edge_types,
+                          &neighbors_total_weights](const std::size_t &start_node_id, const std::size_t &end_node_id,
+                                                    std::size_t seed_index,
+                                                    std::vector<std::size_t> &seed_start_per_thread) {
+        std::size_t start_seed = seed;
+        if (seed_index > 0)
+        {
+            start_seed += std::accumulate(seed_start_per_thread.begin(), seed_start_per_thread.begin() + seed_index, 0);
+        }
+
         for (size_t node_index = start_node_id; node_index < end_node_id; ++node_index)
         {
             auto internal_id = m_node_map.find(input_node_ids[node_index]);
@@ -459,7 +472,7 @@ void Graph::SampleNeighbor(int64_t seed, std::span<const NodeId> input_node_ids,
                 for (size_t partition = 0; partition < partition_count; ++partition)
                 {
                     m_partitions[m_partitions_indices[index + partition]]->SampleNeighbor(
-                        seed++, m_internal_indices[index + partition], input_edge_types, count,
+                        start_seed++, m_internal_indices[index + partition], input_edge_types, count,
                         output_neighbor_ids.subspan(count * node_index, count),
                         output_neighbor_types.subspan(count * node_index, count),
                         neighbors_weights.subspan(count * node_index, count), neighbors_total_weights[node_index],
@@ -469,18 +482,29 @@ void Graph::SampleNeighbor(int64_t seed, std::span<const NodeId> input_node_ids,
         }
     };
 
-    if (!m_thread_pool_enabled)
+    std::vector<std::size_t> seed_start_per_thread;
+    if (!UseThreadPoolWhenGettingNeighbors(input_node_ids.size(), count))
     {
-        func(0, input_node_ids.size());
+        neighbor_func(0, input_node_ids.size(), 0, seed_start_per_thread);
     }
     else
     {
         auto groups = SplitIntoGroups(input_node_ids.size());
-        ThreadPool::GetInstance().RunInParallel(groups.begin(), groups.end(),
-                                                [func](std::size_t, std::tuple<std::size_t, std::size_t> range) {
+        seed_start_per_thread.resize(groups.size());
+        // calculate seed for each thread
+        for (size_t i = 0; i < groups.size(); i++)
+        {
+            seed_func(std::get<0>(groups[i]), std::get<1>(groups[i]) + std::get<0>(groups[i]), i,
+                      seed_start_per_thread);
+        }
+
+        // get node neighbors using the seed calucated above.
+        ThreadPool::GetInstance().RunInParallel(groups,
+                                                [func = std::move(neighbor_func), &seed_start_per_thread](
+                                                    std::size_t index, std::tuple<std::size_t, std::size_t> range) {
                                                     auto offset = std::get<0>(range);
                                                     auto length = std::get<1>(range);
-                                                    func(offset, length + offset);
+                                                    func(offset, length + offset, index, seed_start_per_thread);
                                                 });
     }
 }
@@ -497,9 +521,34 @@ void Graph::UniformSampleNeighbor(bool without_replacement, int64_t seed, std::s
         input_edge_types = input_edge_types.subspan(0, last - std::begin(input_edge_types));
     }
 
-    auto func = [this, &input_node_ids, &output_neighbor_ids, &count, &default_node_id, &default_edge_type,
-                 &output_neighbor_types, &seed, &input_edge_types, &without_replacement,
-                 &neighbors_total_count](const std::size_t &start_node_id, const std::size_t &end_node_id) {
+    auto seed_func = [this, &input_node_ids](const std::size_t &start_node_id, const std::size_t &end_node_id,
+                                             std::size_t seed_index, std::vector<std::size_t> &seed_start_per_thread) {
+        for (size_t node_index = start_node_id; node_index < end_node_id; ++node_index)
+        {
+            auto internal_id = m_node_map.find(input_node_ids[node_index]);
+            if (internal_id != std::end(m_node_map))
+            {
+                const auto index = internal_id->second;
+                size_t partition_count = m_counts[index];
+                for (size_t partition = 0; partition < partition_count; ++partition)
+                {
+                    seed_start_per_thread[seed_index]++;
+                }
+            }
+        }
+    };
+
+    auto neighbor_func = [this, &input_node_ids, &output_neighbor_ids, &count, &default_node_id, &default_edge_type,
+                          &output_neighbor_types, &seed, &input_edge_types, &without_replacement,
+                          &neighbors_total_count](const std::size_t &start_node_id, const std::size_t &end_node_id,
+                                                  std::size_t seed_index,
+                                                  std::vector<std::size_t> &seed_start_per_thread) {
+        std::size_t start_seed = seed;
+        if (seed_index > 0)
+        {
+            start_seed += std::accumulate(seed_start_per_thread.begin(), seed_start_per_thread.begin() + seed_index, 0);
+        }
+
         for (size_t node_index = start_node_id; node_index < end_node_id; ++node_index)
         {
             auto internal_id = m_node_map.find(input_node_ids[node_index]);
@@ -514,8 +563,8 @@ void Graph::UniformSampleNeighbor(bool without_replacement, int64_t seed, std::s
                 for (size_t partition = 0; partition < m_counts[index]; ++partition)
                 {
                     m_partitions[m_partitions_indices[index + partition]]->UniformSampleNeighbor(
-                        without_replacement, seed++, m_internal_indices[index + partition], input_edge_types, count,
-                        output_neighbor_ids.subspan(count * node_index, count),
+                        without_replacement, start_seed++, m_internal_indices[index + partition], input_edge_types,
+                        count, output_neighbor_ids.subspan(count * node_index, count),
                         output_neighbor_types.subspan(count * node_index, count), neighbors_total_count[node_index],
                         default_node_id, default_edge_type);
                 }
@@ -523,18 +572,28 @@ void Graph::UniformSampleNeighbor(bool without_replacement, int64_t seed, std::s
         }
     };
 
-    if (!m_thread_pool_enabled)
+    std::vector<std::size_t> seed_start_per_thread;
+    if (!UseThreadPoolWhenGettingNeighbors(input_node_ids.size(), count))
     {
-        func(0, input_node_ids.size());
+        neighbor_func(0, input_node_ids.size(), 0, seed_start_per_thread);
     }
     else
     {
         auto groups = SplitIntoGroups(input_node_ids.size());
-        ThreadPool::GetInstance().RunInParallel(groups.begin(), groups.end(),
-                                                [func](std::size_t, std::tuple<std::size_t, std::size_t> range) {
+        seed_start_per_thread.resize(groups.size());
+        // calculate seed for each thread
+        for (size_t i = 0; i < groups.size(); i++)
+        {
+            seed_func(std::get<0>(groups[i]), std::get<1>(groups[i]) + std::get<0>(groups[i]), i,
+                      seed_start_per_thread);
+        }
+        // get node neighbors using the seed calucated above.
+        ThreadPool::GetInstance().RunInParallel(groups,
+                                                [func = std::move(neighbor_func), &seed_start_per_thread](
+                                                    std::size_t index, std::tuple<std::size_t, std::size_t> range) {
                                                     auto offset = std::get<0>(range);
                                                     auto length = std::get<1>(range);
-                                                    func(offset, length + offset);
+                                                    func(offset, length + offset, index, seed_start_per_thread);
                                                 });
     }
 }
@@ -542,6 +601,22 @@ void Graph::UniformSampleNeighbor(bool without_replacement, int64_t seed, std::s
 Metadata Graph::GetMetadata() const
 {
     return m_metadata;
+}
+
+bool Graph::UseThreadPoolWhenGettingFeatures(std::size_t count, std::size_t feature_size_in_byte) const
+{
+    return (feature_size_in_byte >= 1024 && feature_size_in_byte < 2048 && count >= 2048) ||
+           (feature_size_in_byte >= 2048 && feature_size_in_byte < 4096 && count >= 1024) ||
+           (feature_size_in_byte >= 4096 && feature_size_in_byte < 8192 && count >= 512) ||
+           (feature_size_in_byte >= 8192 && count >= 256 && count <= 1024);
+}
+
+bool Graph::UseThreadPoolWhenGettingNeighbors(std::size_t count, std::size_t neighbor_count) const
+{
+    auto total = count * neighbor_count;
+    return (neighbor_count < 64 && total >= 16384) ||
+           (neighbor_count >= 64 && neighbor_count < 1024 && total >= 8192) ||
+           (neighbor_count >= 1024 && total >= 16384);
 }
 
 std::vector<std::tuple<std::size_t, std::size_t>> Graph::SplitIntoGroups(std::size_t count, std::size_t parts) const

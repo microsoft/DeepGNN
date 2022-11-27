@@ -25,18 +25,18 @@
 namespace
 {
 const size_t min_batch_size = 1 << 8;
-const size_t max_batch_size = 1 << 12;
+const size_t max_batch_size = 1 << 10;
 const size_t num_nodes = 100000;
-const size_t min_num_nodes = 1 << 10;
-const size_t max_num_nodes = 1 << 13;
 const size_t min_partition_count = 1 << 2;
-const size_t max_partition_count = 1 << 4;
+const size_t max_partition_count = 1 << 3;
 const size_t min_fv_size = 1 << 6;
-const size_t max_fv_size = 1 << 8;
+const size_t max_fv_size = 1 << 9;
+const size_t min_neighbor_size = 1 << 3;
+const size_t max_neighbor_size = 1 << 8;
 
 } // namespace
 
-void RUN_DISTRIBUTED_GRAPH_SINGLE_NODE(benchmark::State &state, bool enable_thread_pool)
+void RUN_DISTRIBUTED_GRAPH_SINGLE_NODE(benchmark::State &state)
 {
     TestGraph::MemoryGraph m;
     const size_t fv_size = state.range(1);
@@ -51,8 +51,50 @@ void RUN_DISTRIBUTED_GRAPH_SINGLE_NODE(benchmark::State &state, bool enable_thre
     auto path = std::filesystem::temp_directory_path();
     TestGraph::convert(path, "0_0", std::move(m), 1);
     snark::GRPCServer server(std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                                             snark::PartitionStorageType::memory, "",
-                                                                             enable_thread_pool),
+                                                                             snark::PartitionStorageType::memory, ""),
+                             {}, "0.0.0.0:0", {}, {}, {});
+    snark::GRPCClient c({server.InProcessChannel()}, 1, 1);
+
+    std::vector<snark::NodeId> input_nodes(num_nodes);
+    std::iota(std::begin(input_nodes), std::end(input_nodes), 0);
+    std::random_device rd;
+    snark::Xoroshiro128PlusGenerator gen(rd());
+    std::shuffle(std::begin(input_nodes), std::end(input_nodes), gen);
+    std::vector<uint8_t> output(4 * fv_size * num_nodes);
+    boost::random::uniform_int_distribution<size_t> distrib(0, num_nodes - (max_batch_size)-1);
+    std::vector<snark::FeatureMeta> feature = {{0, fv_size * 4}};
+    for (auto _ : state)
+    {
+        const size_t batch_size = state.range(0);
+        c.GetNodeFeature(std::span(std::begin(input_nodes) + distrib(gen), batch_size), std::span(feature),
+                         std::span(std::begin(output), batch_size));
+    }
+}
+
+void RUN_DISTRIBUTED_GRAPH_NEIGHBOR_SINGLE_NODE(benchmark::State &state)
+{
+    std::size_t nodes_count = 10000;
+    TestGraph::MemoryGraph m;
+    const size_t neighbor_count = state.range(1);
+    const size_t fv_size = 64;
+    for (size_t n = 0; n < nodes_count; n++)
+    {
+        std::vector<float> vals(fv_size);
+        std::iota(std::begin(vals), std::end(vals), n);
+        auto node = TestGraph::Node{
+            .m_id = snark::NodeId(n), .m_type = 0, .m_weight = 1.0f, .m_float_features = {std::move(vals)}};
+
+        for (size_t k = 1; k <= neighbor_count; k++)
+        {
+            node.m_neighbors.push_back(TestGraph::NeighborRecord{n + k, 0, 1.0f});
+        }
+
+        m.m_nodes.push_back(node);
+    }
+    auto path = std::filesystem::temp_directory_path();
+    TestGraph::convert(path, "0_0", std::move(m), 1);
+    snark::GRPCServer server(std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
+                                                                             snark::PartitionStorageType::memory, ""),
                              {}, "0.0.0.0:0", {}, {}, {});
     snark::GRPCClient c({server.InProcessChannel()}, 1, 1);
 
@@ -64,11 +106,19 @@ void RUN_DISTRIBUTED_GRAPH_SINGLE_NODE(benchmark::State &state, bool enable_thre
     std::vector<uint8_t> output(4 * fv_size * num_nodes);
     boost::random::uniform_int_distribution<size_t> distrib(0, num_nodes - (max_batch_size)-1);
     std::vector<snark::FeatureMeta> feature = {{0, fv_size}};
+
     for (auto _ : state)
     {
         const size_t batch_size = state.range(0);
-        c.GetNodeFeature(std::span(std::begin(input_nodes) + distrib(gen), batch_size), std::span(feature),
-                         std::span(std::begin(output), batch_size));
+
+        std::vector<snark::Type> types = {0};
+        std::vector<snark::NodeId> neighbor_nodes(neighbor_count * batch_size, -1);
+        std::vector<snark::Type> neighbor_types(neighbor_count * batch_size, -1);
+        std::vector<float> neighbor_weights(neighbor_count * batch_size, -1);
+
+        c.WeightedSampleNeighbor(42, std::span(std::begin(input_nodes) + distrib(gen), batch_size), std::span(types),
+                                 neighbor_count, std::span(neighbor_nodes), std::span(neighbor_types),
+                                 std::span(neighbor_weights), 0, 0, -1);
     }
 }
 
@@ -214,11 +264,11 @@ void BM_DISTRIBUTED_SAMPLER_MULTIPLE_SERVERS(benchmark::State &state)
     }
 }
 
-static void BM_LOAD_GRAPH(benchmark::State &state, bool enable_threadpool = false)
+static void BM_LOAD_GRAPH(benchmark::State &state)
 {
-    const size_t num_nodes = state.range(0);
-    const size_t partition = state.range(1);
-    const size_t fv_size = state.range(2);
+    const size_t num_nodes = 100000;
+    const size_t partition = state.range(0);
+    const size_t fv_size = state.range(1);
     std::string path;
     std::vector<uint32_t> partition_list;
 
@@ -244,8 +294,7 @@ static void BM_LOAD_GRAPH(benchmark::State &state, bool enable_threadpool = fals
 
     for (auto _ : state)
     {
-        auto graph = snark::GraphEngineServiceImpl(path, partition_list, snark::PartitionStorageType::memory, "",
-                                                   enable_threadpool);
+        auto graph = snark::GraphEngineServiceImpl(path, partition_list, snark::PartitionStorageType::memory, "");
     }
     if (state.thread_index() == 0)
     {
@@ -253,48 +302,24 @@ static void BM_LOAD_GRAPH(benchmark::State &state, bool enable_threadpool = fals
     }
 }
 
-void BM_DISTRIBUTED_GRAPH_SINGLE_NODE(benchmark::State &state)
-{
-    RUN_DISTRIBUTED_GRAPH_SINGLE_NODE(state, false);
-}
-
-void BM_DISTRIBUTED_GRAPH_SINGLE_NODE_THREADPOOL(benchmark::State &state)
-{
-    RUN_DISTRIBUTED_GRAPH_SINGLE_NODE(state, true);
-}
-
-static void BM_LOAD_GRAPH_THREADPOOL(benchmark::State &state)
-{
-    BM_LOAD_GRAPH(state, true);
-}
-
-static void BM_LOAD_GRAPH_NO_THREADPOOL(benchmark::State &state)
-{
-    BM_LOAD_GRAPH(state, false);
-}
-
 // Use a fixed number of iterations for easier comparison.
-BENCHMARK(BM_LOAD_GRAPH_NO_THREADPOOL)
+BENCHMARK(RUN_DISTRIBUTED_GRAPH_SINGLE_NODE)
     ->RangeMultiplier(2)
-    ->Ranges({{min_num_nodes, max_num_nodes}, {min_partition_count, max_partition_count}, {1 << 8, 1 << 9}})
-    ->Iterations(100);
-BENCHMARK(BM_LOAD_GRAPH_THREADPOOL)
-    ->RangeMultiplier(2)
-    ->Ranges({{min_num_nodes, max_num_nodes}, {min_partition_count, max_partition_count}, {1 << 8, 1 << 9}})
-    ->Iterations(100);
-BENCHMARK(BM_DISTRIBUTED_GRAPH_SINGLE_NODE)
-    ->RangeMultiplier(4)
     ->Ranges({{min_batch_size, max_batch_size}, {min_fv_size, max_fv_size}})
     ->Iterations(10000);
-BENCHMARK(BM_DISTRIBUTED_GRAPH_SINGLE_NODE_THREADPOOL)
-    ->RangeMultiplier(4)
-    ->Ranges({{min_batch_size, max_batch_size}, {min_fv_size, max_fv_size}})
-    ->Iterations(10000);
-BENCHMARK(BM_REGULAR_GRAPH)->RangeMultiplier(4)->Range(min_batch_size, max_batch_size)->Iterations(10000);
 BENCHMARK(BM_DISTRIBUTED_GRAPH_MULTIPLE_NODES)
     ->RangeMultiplier(4)
-    ->Ranges({{min_batch_size, max_batch_size}, {min_fv_size, min_fv_size}})
+    ->Ranges({{min_batch_size, max_batch_size}, {min_fv_size, max_fv_size}})
     ->Iterations(10000);
+BENCHMARK(RUN_DISTRIBUTED_GRAPH_NEIGHBOR_SINGLE_NODE)
+    ->RangeMultiplier(2)
+    ->Ranges({{min_batch_size, max_batch_size}, {min_neighbor_size, max_neighbor_size}})
+    ->Iterations(10000);
+BENCHMARK(BM_LOAD_GRAPH)
+    ->RangeMultiplier(2)
+    ->Ranges({{min_partition_count, max_partition_count}, {1 << 6, 1 << 7}})
+    ->Iterations(10);
+BENCHMARK(BM_REGULAR_GRAPH)->RangeMultiplier(4)->Range(min_batch_size, max_batch_size)->Iterations(10000);
 BENCHMARK(BM_DISTRIBUTED_SAMPLER_MULTIPLE_SERVERS)
     ->RangeMultiplier(4)
     ->Range(min_batch_size, max_batch_size)

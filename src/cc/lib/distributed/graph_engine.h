@@ -21,7 +21,7 @@ class GraphEngineServiceImpl final : public snark::GraphEngine::Service
 {
   public:
     GraphEngineServiceImpl(std::string path, std::vector<uint32_t> partitions, PartitionStorageType storage_type,
-                           std::string config_path, bool enable_threadpool = false);
+                           std::string config_path);
     grpc::Status GetNodeTypes(::grpc::ServerContext *context, const snark::NodeTypesRequest *request,
                               snark::NodeTypesReply *response) override;
 
@@ -54,7 +54,9 @@ class GraphEngineServiceImpl final : public snark::GraphEngine::Service
     void ReadNodeMap(std::filesystem::path path, std::string suffix, uint32_t index);
 
     std::vector<std::tuple<std::size_t, std::size_t>> SplitIntoGroups(
-        std::size_t count, std::size_t parts = std::thread::hardware_concurrency()) const;
+        std::size_t count, std::size_t parts = std::thread::hardware_concurrency() - 1) const;
+    bool UseThreadPoolWhenGettingFeatures(std::size_t count, std::size_t feature_size) const;
+    bool UseThreadPoolWhenGettingNeighbors(std::size_t count, std::size_t neighbor_count) const;
 
     std::vector<std::shared_ptr<Partition>> m_partitions;
     absl::flat_hash_map<NodeId, uint64_t> m_node_map;
@@ -62,7 +64,6 @@ class GraphEngineServiceImpl final : public snark::GraphEngine::Service
     std::vector<uint64_t> m_internal_indices;
     std::vector<uint32_t> m_counts;
     Metadata m_metadata;
-    bool m_thread_pool_enabled;
 };
 
 } // namespace snark
