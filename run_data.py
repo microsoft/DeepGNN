@@ -191,9 +191,10 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         """Return cross entropy loss."""
         return self._loss_inner(context)
 
+import asyncio
 
 @ray.remote
-class Counter(object):
+class Counter:
     def __init__(self):
         self.g = Client("/tmp/reddit", [0])
         self.query_obj = PTGSupervisedGraphSageQuery(
@@ -204,7 +205,7 @@ class Counter(object):
             fanouts=[5, 5],
         )
 
-    def increment(self, batch):
+    def call(self, batch):
         return self.query_obj.query(self.g, batch)
 
 
@@ -232,10 +233,12 @@ def train_func(config: Dict):
     SAMPLE_NUM = 152410
     BATCH_SIZE = 512
 
-    dataset = ray.data.range(SAMPLE_NUM - (SAMPLE_NUM % BATCH_SIZE), parallelism=2).repartition(SAMPLE_NUM // BATCH_SIZE)
-    pipe = dataset.window(blocks_per_window=2).repeat(5)
+    dataset = ray.data.range(SAMPLE_NUM - (SAMPLE_NUM % BATCH_SIZE), parallelism=-1).repartition(SAMPLE_NUM // BATCH_SIZE)
+    #dataset = ray.data.read_text("/tmp/reddit/notes.train").repartition(SAMPLE_NUM // BATCH_SIZE)
+    print(dataset)
+    pipe = dataset.window(blocks_per_window=4).repeat(5)
     worker = Counter.remote()
-    pipe = pipe.map_batches(lambda batch: ray.get(worker.increment.remote(batch)))
+    pipe = pipe.map_batches(lambda batch: ray.get(worker.call.remote(batch)), batch_size=BATCH_SIZE)
     """
     g = Client("/tmp/reddit", [0])
     query_obj = PTGSupervisedGraphSageQuery(
@@ -276,7 +279,7 @@ def train_func(config: Dict):
         metrics = []
         losses = []
         for i, batch in enumerate(
-                epoch_pipe.iter_torch_batches(prefetch_blocks=0, batch_size=BATCH_SIZE)
+                epoch_pipe.iter_torch_batches(prefetch_blocks=10, batch_size=BATCH_SIZE)
             ):
             #print("STEP:", i, 'RAM Used (GB):', psutil.virtual_memory()[3]/1000000000)
 
@@ -293,6 +296,8 @@ def train_func(config: Dict):
 
             if i >= SAMPLE_NUM / BATCH_SIZE / session.get_world_size():
                 break
+
+        print(epoch_pipe.stats())
 
         print("RESULTS:!", np.mean(metrics), np.mean(losses))
 
