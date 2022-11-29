@@ -72,6 +72,9 @@ Use `map_batches <https://docs.ray.io/en/latest/data/api/dataset.html#ray.data.D
 to map node ids from the sampler to a dictionary of node features and labels for the model forward function.
 Since this is run on the dataset pipeline, the node ids will not be mapped all at once, only when needed during iteration.
 
+
+First dimensions all need to be same shape == len(input_ids)
+
 .. code-block:: python
 
     >>> g = Client(data_dir.name, [0], delayed_start=True)
