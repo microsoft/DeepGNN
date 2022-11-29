@@ -258,6 +258,6 @@ Finally we call trainer.fit() to execute the training loop.
     ...     train_func,
     ...     train_loop_config={},
     ...     run_config=RunConfig(verbose=0),
-    ...     scaling_config=ScalingConfig(num_workers=2, use_gpu=False),
+    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     ... )
     >>> result = trainer.fit()
