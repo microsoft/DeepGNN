@@ -50,8 +50,8 @@ class MultiWorkersConverter:
             output_dir: the output directory to put the generated graph binary files.
             decoder (Decoder): Decoder object which is used to parse the raw graph data file.
             partition_count: how many partitions will be generated.
-            worker_index: the work index when running in multi worker mode.
-            worker_count: how many workers will be started to convert the data, use 0 with 1 partition for debug mode.
+            worker_index: If using multiple MultiWorkersConverters, worker_index is the id of this converter.
+            worker_count: If using multiple MultiWorkersConverters, worker_count is the number of converters.
             record_per_step: how many lines will be read from the raw graph file to process in each step.
             buffer_size: buffer size in MB used to process the raw graph lines.
             queue_size: the queue size when generating the bin files.
@@ -139,7 +139,7 @@ class MultiWorkersConverter:
         else:
             assert (
                 self.partition_count == 1
-            ), "Num_workers = 0 does not support multiple partitions."
+            ), "Debug mode does not support multiple partitions."
             if isinstance(self.decoder, type):
                 self.decoder = self.decoder()
             writer = BinaryWriter(self.output_dir, 0)

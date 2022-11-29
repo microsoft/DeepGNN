@@ -88,7 +88,10 @@ def binary_karate_club_data():
 
 
 def test_karate_club_random_walk_memory(binary_karate_club_data):
-    cl = client.MemoryGraph(binary_karate_club_data, [0, 1])
+    cl = client.MemoryGraph(
+        binary_karate_club_data,
+        [(binary_karate_club_data, 0), (binary_karate_club_data, 1)],
+    )
     walks = cl.random_walk(
         node_ids=np.array([1, 7, 15], dtype=np.int64),
         edge_types=0,
@@ -102,7 +105,10 @@ def test_karate_club_random_walk_memory(binary_karate_club_data):
 
 
 def test_karate_club_random_walk_missing_connections(binary_karate_club_data):
-    cl = client.MemoryGraph(binary_karate_club_data, [0, 1])
+    cl = client.MemoryGraph(
+        binary_karate_club_data,
+        [(binary_karate_club_data, 0), (binary_karate_club_data, 1)],
+    )
     walks = cl.random_walk(
         node_ids=np.array([2, 9, 13], dtype=np.int64),
         edge_types=1,
@@ -119,7 +125,10 @@ def test_karate_club_random_walk_missing_connections(binary_karate_club_data):
 def test_karate_club_random_walk_no_repetition_in_default_values(
     binary_karate_club_data,
 ):
-    cl = client.MemoryGraph(binary_karate_club_data, [0, 1])
+    cl = client.MemoryGraph(
+        binary_karate_club_data,
+        [(binary_karate_club_data, 0), (binary_karate_club_data, 1)],
+    )
     walks = []
     for _ in range(2):
         walks.append(
@@ -136,7 +145,10 @@ def test_karate_club_random_walk_no_repetition_in_default_values(
 
 
 def test_karate_club_random_walk_statistical(binary_karate_club_data):
-    cl = client.MemoryGraph(binary_karate_club_data, [0, 1])
+    cl = client.MemoryGraph(
+        binary_karate_club_data,
+        [(binary_karate_club_data, 0), (binary_karate_club_data, 1)],
+    )
     walk_len = 3
     minibatch_size = 10
     actual_counts = [{} for _ in range(walk_len)]
@@ -246,7 +258,11 @@ def test_karate_club_random_walk_statistical(binary_karate_club_data):
 
 
 def test_karate_club_random_walk_single_server(binary_karate_club_data):
-    s = server.Server(binary_karate_club_data, [0, 1], "localhost:9997")
+    s = server.Server(
+        binary_karate_club_data,
+        [(binary_karate_club_data, 0), (binary_karate_club_data, 1)],
+        "localhost:9997",
+    )
     cl = client.DistributedGraph(["localhost:9997"])
     walks = cl.random_walk(
         node_ids=np.array([1, 7, 15], dtype=np.int64),
@@ -262,8 +278,12 @@ def test_karate_club_random_walk_single_server(binary_karate_club_data):
 
 
 def test_karate_club_random_walk_multiple_servers(binary_karate_club_data):
-    s1 = server.Server(binary_karate_club_data, [0], "localhost:9996")
-    s2 = server.Server(binary_karate_club_data, [1], "localhost:9995")
+    s1 = server.Server(
+        binary_karate_club_data, [(binary_karate_club_data, 0)], "localhost:9996"
+    )
+    s2 = server.Server(
+        binary_karate_club_data, [(binary_karate_club_data, 1)], "localhost:9995"
+    )
     cl = client.DistributedGraph(["localhost:9996", "localhost:9995"])
     walks = cl.random_walk(
         node_ids=np.array([1, 7, 15], dtype=np.int64),

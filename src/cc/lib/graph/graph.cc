@@ -38,51 +38,63 @@ bool check_sorted_unique_types(const Type *in_edge_types, size_t count)
 
 } // namespace
 
-Graph::Graph(std::string path, std::vector<uint32_t> partitions, PartitionStorageType storage_type,
-             std::string config_path)
-    : m_metadata(path, config_path)
+Graph::Graph(Metadata metadata, std::vector<std::string> paths, std::vector<uint32_t> partitions,
+             PartitionStorageType storage_type)
+    : m_metadata(std::move(metadata))
 {
-    std::vector<std::string> suffixes;
-    absl::flat_hash_set<uint32_t> partition_set(std::begin(partitions), std::end(partitions));
-    // Go through the path folder with graph binary files.
-    // For data generation flexibility we are going to load all files
-    // starting with the [file_type(feat/nbs)]_[partition][anything else]
-    if (!is_hdfs_path(path))
+    if (paths.size() != partitions.size())
     {
-        for (auto &p : std::filesystem::directory_iterator(path))
-        {
-            auto full = p.path().stem().string();
-
-            // Use files with neighbor lists to detect eligible suffixes.
-            if (full.starts_with(neighbors_prefix) &&
-                partition_set.contains(std::stoi(full.substr(neighbors_prefix_len))))
-            {
-                suffixes.push_back(full.substr(neighbors_prefix_len));
-            }
-        }
-    }
-    else
-    {
-        auto filenames = hdfs_list_directory(path, m_metadata.m_config_path);
-        for (auto &full : filenames)
-        {
-            // Use files with neighbor lists to detect eligible suffixes.
-            auto loc = full.find(neighbors_prefix);
-            if (loc != std::string::npos && partition_set.contains(std::stoi(full.substr(loc + neighbors_prefix_len))))
-            {
-                std::filesystem::path full_path = full.substr(loc + neighbors_prefix_len);
-                suffixes.push_back(full_path.stem().string());
-            }
-        }
+        RAW_LOG_FATAL("Not enough %ld paths provided. Expected %ld for each partition.", paths.size(),
+                      partitions.size());
     }
 
-    // Fix loading order to obtain deterministic results for sampling.
-    std::sort(std::begin(suffixes), std::end(suffixes));
-    m_partitions.reserve(suffixes.size());
-    for (size_t i = 0; i < suffixes.size(); ++i)
+    for (size_t partition_index = 0; partition_index < paths.size(); ++partition_index)
     {
-        m_partitions.emplace_back(path, suffixes[i], storage_type);
-        ReadNodeMap(path, suffixes[i], i);
+        std::vector<std::string> suffixes;
+        // Go through the path folder with graph binary files.
+        // For data generation flexibility we are going to load all files
+        // starting with the [file_type(feat/nbs)]_[partition][anything else]
+        if (!is_hdfs_path(paths[partition_index]))
+        {
+            for (auto &p : std::filesystem::directory_iterator(paths[partition_index]))
+            {
+                auto full = p.path().stem().string();
+                if (full.size() <= neighbors_prefix_len)
+                {
+                    continue;
+                }
+
+                // Use files with neighbor lists to detect eligible suffixes.
+                if (full.starts_with(neighbors_prefix) &&
+                    int(partitions[partition_index]) == stoi(full.substr(neighbors_prefix_len)))
+                {
+                    suffixes.push_back(full.substr(neighbors_prefix_len));
+                }
+            }
+        }
+        else
+        {
+            auto filenames = hdfs_list_directory(paths[partition_index], m_metadata.m_config_path);
+            for (auto &full : filenames)
+            {
+                // Use files with neighbor lists to detect eligible suffixes.
+                auto loc = full.find(neighbors_prefix);
+                if (loc != std::string::npos &&
+                    int(partitions[partition_index]) == stoi(full.substr(loc + neighbors_prefix_len)))
+                {
+                    std::filesystem::path full_path = full.substr(loc + neighbors_prefix_len);
+                    suffixes.push_back(full_path.stem().string());
+                }
+            }
+        }
+
+        // Fix loading order to obtain deterministic results for sampling.
+        std::sort(std::begin(suffixes), std::end(suffixes));
+        for (size_t i = 0; i < suffixes.size(); ++i)
+        {
+            m_partitions.emplace_back(m_metadata, paths[partition_index], suffixes[i], storage_type);
+            ReadNodeMap(paths[partition_index], suffixes[i], partition_index);
+        }
     }
 }
 
