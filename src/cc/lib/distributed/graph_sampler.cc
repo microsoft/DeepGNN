@@ -12,21 +12,30 @@
 namespace snark
 {
 
-GraphSamplerServiceImpl::GraphSamplerServiceImpl(std::string path, std::set<size_t> partitions)
-    : m_partitions(std::move(partitions))
+GraphSamplerServiceImpl::GraphSamplerServiceImpl(snark::Metadata metadata, std::vector<std::string> partition_paths,
+                                                 std::vector<size_t> partition_indices)
+    : m_metadata(std::move(metadata)), m_partition_indices(std::move(partition_indices)),
+      m_patrition_paths(std::move(partition_paths))
 {
+    if (m_patrition_paths.size() != m_partition_indices.size())
+    {
+        RAW_LOG_FATAL("Not enough %ld paths provided. Expected %ld for each alias table.", m_patrition_paths.size(),
+                      m_partition_indices.size());
+    }
     m_node_sampler_factory[snark::CreateSamplerRequest_Category_WEIGHTED] =
-        std::make_shared<WeightedNodeSamplerFactory>(path);
+        std::make_shared<WeightedNodeSamplerFactory>(m_metadata, m_patrition_paths, m_partition_indices);
     m_node_sampler_factory[snark::CreateSamplerRequest_Category_UNIFORM_WITH_REPLACEMENT] =
-        std::make_shared<UniformNodeSamplerFactory>(path);
+        std::make_shared<UniformNodeSamplerFactory>(m_metadata, m_patrition_paths, m_partition_indices);
     m_node_sampler_factory[snark::CreateSamplerRequest_Category_UNIFORM_WITHOUT_REPLACEMENT] =
-        std::make_shared<UniformNodeSamplerFactoryWithoutReplacement>(path);
+        std::make_shared<UniformNodeSamplerFactoryWithoutReplacement>(m_metadata, m_patrition_paths,
+                                                                      m_partition_indices);
     m_edge_sampler_factory[snark::CreateSamplerRequest_Category_WEIGHTED] =
-        std::make_shared<WeightedEdgeSamplerFactory>(path);
+        std::make_shared<WeightedEdgeSamplerFactory>(m_metadata, m_patrition_paths, m_partition_indices);
     m_edge_sampler_factory[snark::CreateSamplerRequest_Category_UNIFORM_WITH_REPLACEMENT] =
-        std::make_shared<UniformEdgeSamplerFactory>(path);
+        std::make_shared<UniformEdgeSamplerFactory>(m_metadata, m_patrition_paths, m_partition_indices);
     m_edge_sampler_factory[snark::CreateSamplerRequest_Category_UNIFORM_WITHOUT_REPLACEMENT] =
-        std::make_shared<UniformEdgeSamplerFactoryWithoutReplacement>(path);
+        std::make_shared<UniformEdgeSamplerFactoryWithoutReplacement>(m_metadata, m_patrition_paths,
+                                                                      m_partition_indices);
 }
 
 grpc::Status GraphSamplerServiceImpl::Create(::grpc::ServerContext *context, const snark::CreateSamplerRequest *request,
@@ -40,8 +49,8 @@ grpc::Status GraphSamplerServiceImpl::Create(::grpc::ServerContext *context, con
         return grpc::Status(grpc::StatusCode::FAILED_PRECONDITION, "Failed to find sampler in path");
     }
 
-    auto sampler = it->second->Create(
-        std::set<Type>(std::begin(request->enitity_types()), std::end(request->enitity_types())), m_partitions);
+    auto sampler =
+        it->second->Create(std::set<Type>(std::begin(request->enitity_types()), std::end(request->enitity_types())));
     if (!sampler)
     {
         return grpc::Status(grpc::StatusCode::FAILED_PRECONDITION, "Failed to create sampler");

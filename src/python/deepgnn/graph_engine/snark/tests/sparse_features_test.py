@@ -6,6 +6,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
+from itertools import repeat
 
 import numpy as np
 import numpy.testing as npt
@@ -139,7 +140,11 @@ def graph_with_sparse_features(request):
         skip_edge_sampler=True,
         skip_node_sampler=True,
     ).convert()
-    yield client.MemoryGraph(workdir.name, list(range(partition_count)))
+    partitions = list(
+        zip(repeat(workdir.name, partition_count), range(partition_count))
+    )
+    yield client.MemoryGraph(workdir.name, partitions)
+
     workdir.cleanup()
 
 
@@ -234,8 +239,8 @@ def multi_server_sparse_features_graph(request):
         skip_edge_sampler=True,
         skip_node_sampler=True,
     ).convert()
-    s1 = server.Server(workdir.name, [0], hostname="localhost:1257")
-    s2 = server.Server(workdir.name, [1], hostname="localhost:1258")
+    s1 = server.Server(workdir.name, [(workdir.name, 0)], hostname="localhost:1257")
+    s2 = server.Server(workdir.name, [(workdir.name, 1)], hostname="localhost:1258")
 
     yield client.DistributedGraph(["localhost:1257", "localhost:1258"])
 
@@ -465,14 +470,17 @@ def write_multi_binary(output_dir, partitions):
             ef = "0\n0"
         partition_meta += f"{i}\n3\n3\n3\n2\n2\n{nf}\n{ef}\n"
     meta = open(os.path.join(output_dir, "meta.txt"), "w+")
-    meta.write(f"3\n3\n3\n2\n15\n15\n2\n")
+    meta.write(f"v3\n3\n3\n2\n15\n15\n2\n")
     meta.write(partition_meta)
     meta.close()
 
 
 @pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_sparse_node_features_graph_multiple_partitions(multi_partition_graph_data):
-    cl = client.MemoryGraph(multi_partition_graph_data, [0, 1])
+    cl = client.MemoryGraph(
+        multi_partition_graph_data,
+        [(multi_partition_graph_data, 0), (multi_partition_graph_data, 1)],
+    )
     indices, values, dimensions = cl.node_sparse_features(
         np.array([9, 0, 5], dtype=np.int64),
         features=np.array([2], dtype=np.int32),
@@ -488,7 +496,10 @@ def test_sparse_node_features_graph_multiple_partitions(multi_partition_graph_da
 
 @pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
 def test_sparse_edge_features_graph_multiple_partitions(multi_partition_graph_data):
-    cl = client.MemoryGraph(multi_partition_graph_data, [0, 1])
+    cl = client.MemoryGraph(
+        multi_partition_graph_data,
+        [(multi_partition_graph_data, 0), (multi_partition_graph_data, 1)],
+    )
     indices, values, dimensions = cl.edge_sparse_features(
         edge_src=np.array([9, 5, 0], dtype=np.int64),
         edge_dst=np.array([0, 9, 5], dtype=np.int64),
@@ -507,8 +518,12 @@ def test_remote_client_sparse_node_features_graph_multiple_partitions(
     multi_partition_graph_data,
 ):
     address = ["localhost:1336", "localhost:1337"]
-    s1 = server.Server(multi_partition_graph_data, [0], address[0])
-    s2 = server.Server(multi_partition_graph_data, [1], address[1])
+    s1 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 0)], address[0]
+    )
+    s2 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 1)], address[1]
+    )
     cl = client.DistributedGraph(address)
     indices, values, dimensions = cl.node_sparse_features(
         np.array([9, 0, 5], dtype=np.int64),
@@ -530,8 +545,12 @@ def test_remote_client_sparse_edge_features_graph_multiple_partitions(
     multi_partition_graph_data,
 ):
     address = ["localhost:1338", "localhost:1339"]
-    s1 = server.Server(multi_partition_graph_data, [0], address[0])
-    s2 = server.Server(multi_partition_graph_data, [1], address[1])
+    s1 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 0)], address[0]
+    )
+    s2 = server.Server(
+        multi_partition_graph_data, [(multi_partition_graph_data, 1)], address[1]
+    )
     cl = client.DistributedGraph(address)
     indices, values, dimensions = cl.edge_sparse_features(
         edge_src=np.array([9, 5, 0], dtype=np.int64),

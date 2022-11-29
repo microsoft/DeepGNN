@@ -154,13 +154,16 @@ template <typename Partition, SamplerElement element> float SamplerImpl<Partitio
 }
 
 template <typename Partition, SamplerElement element>
-AbstractSamplerFactory<Partition, element>::AbstractSamplerFactory(std::string path) : m_metadata(path)
+AbstractSamplerFactory<Partition, element>::AbstractSamplerFactory(snark::Metadata metadata,
+                                                                   std::vector<std::string> partition_paths,
+                                                                   std::vector<size_t> partition_indices)
+    : m_metadata(std::move(metadata)), m_partition_paths(std::move(partition_paths)),
+      m_partition_indices(std::move(partition_indices))
 {
 }
 
 template <typename Partition, SamplerElement element>
-std::unique_ptr<Sampler> AbstractSamplerFactory<Partition, element>::Create(std::set<Type> tp,
-                                                                            std::set<size_t> partition_indices)
+std::unique_ptr<Sampler> AbstractSamplerFactory<Partition, element>::Create(std::set<Type> tp)
 {
     std::vector<Type> types;
     std::vector<std::shared_ptr<std::vector<Partition>>> partitions;
@@ -187,7 +190,7 @@ std::unique_ptr<Sampler> AbstractSamplerFactory<Partition, element>::Create(std:
 
             if (!m_types.contains(t))
             {
-                Read(t, partition_indices);
+                Read(t);
             }
 
             types.emplace_back(t);
@@ -198,30 +201,30 @@ std::unique_ptr<Sampler> AbstractSamplerFactory<Partition, element>::Create(std:
     return std::make_unique<SamplerImpl<Partition, element>>(std::move(types), std::move(partitions));
 }
 
-template <typename Partition, SamplerElement element>
-void AbstractSamplerFactory<Partition, element>::Read(Type type, const std::set<size_t> &partition_indices)
+template <typename Partition, SamplerElement element> void AbstractSamplerFactory<Partition, element>::Read(Type type)
 {
     std::vector<Partition> res;
-    for (auto p : partition_indices)
+    for (size_t index = 0; index < m_partition_indices.size(); ++index)
     {
-        res.emplace_back(m_metadata, type, p);
+        res.emplace_back(m_metadata, type, m_partition_indices[index], m_partition_paths[index]);
     }
 
     m_types[type] = std::make_shared<std::vector<Partition>>(std::move(res));
 }
 
-WeightedNodeSamplerPartition::WeightedNodeSamplerPartition(Metadata meta, Type tp, size_t partition)
-    : m_weight(meta.m_partition_node_weights[partition][tp])
+WeightedNodeSamplerPartition::WeightedNodeSamplerPartition(Metadata meta, Type tp, size_t partition_index,
+                                                           std::string partition_path)
+    : m_weight(meta.m_partition_node_weights[partition_index][tp])
 {
     std::shared_ptr<BaseStorage<uint8_t>> node_weights;
-    if (!is_hdfs_path(meta.m_path))
+    if (!is_hdfs_path(partition_path))
     {
-        node_weights = std::make_shared<DiskStorage<uint8_t>>(meta.m_path, partition, tp, open_node_alias);
+        node_weights = std::make_shared<DiskStorage<uint8_t>>(partition_path, partition_index, tp, open_node_alias);
     }
     else
     {
-        auto full_path = std::filesystem::path(meta.m_path) /
-                         ("node_" + std::to_string(tp) + "_" + std::to_string(partition) + ".alias");
+        auto full_path = std::filesystem::path(partition_path) /
+                         ("node_" + std::to_string(tp) + "_" + std::to_string(partition_index) + ".alias");
         node_weights = std::make_shared<HDFSStreamStorage<uint8_t>>(full_path.c_str(), meta.m_config_path);
     }
     auto node_weights_ptr = node_weights->start();
@@ -281,18 +284,20 @@ bool WeightedNodeSamplerPartition::Replacement() const
 }
 
 template <bool WithReplacement>
-UniformNodeSamplerPartition<WithReplacement>::UniformNodeSamplerPartition(Metadata meta, Type tp, size_t partition)
+UniformNodeSamplerPartition<WithReplacement>::UniformNodeSamplerPartition(Metadata meta, Type tp,
+                                                                          size_t partition_index,
+                                                                          std::string partition_path)
 {
     absl::flat_hash_set<NodeId> node_set;
     std::shared_ptr<BaseStorage<uint8_t>> node_weights;
-    if (!is_hdfs_path(meta.m_path))
+    if (!is_hdfs_path(partition_path))
     {
-        node_weights = std::make_shared<DiskStorage<uint8_t>>(meta.m_path, partition, tp, open_node_alias);
+        node_weights = std::make_shared<DiskStorage<uint8_t>>(partition_path, partition_index, tp, open_node_alias);
     }
     else
     {
-        auto full_path = std::filesystem::path(meta.m_path) /
-                         ("node_" + std::to_string(tp) + "_" + std::to_string(partition) + ".alias");
+        auto full_path = std::filesystem::path(partition_path) /
+                         ("node_" + std::to_string(tp) + "_" + std::to_string(partition_index) + ".alias");
         node_weights = std::make_shared<HDFSStreamStorage<uint8_t>>(full_path.c_str(), meta.m_config_path);
     }
     auto node_weights_ptr = node_weights->start();
@@ -335,18 +340,19 @@ WeightedEdgeSamplerPartition::WeightedEdgeSamplerPartition(std::vector<WeightedE
 {
 }
 
-WeightedEdgeSamplerPartition::WeightedEdgeSamplerPartition(Metadata meta, Type tp, size_t partition)
-    : m_weight(meta.m_partition_edge_weights[partition][tp])
+WeightedEdgeSamplerPartition::WeightedEdgeSamplerPartition(Metadata meta, Type tp, size_t partition_index,
+                                                           std::string partition_path)
+    : m_weight(meta.m_partition_edge_weights[partition_index][tp])
 {
     std::shared_ptr<BaseStorage<uint8_t>> edge_weights;
     if (!is_hdfs_path(meta.m_path))
     {
-        edge_weights = std::make_shared<DiskStorage<uint8_t>>(meta.m_path, partition, tp, open_edge_alias);
+        edge_weights = std::make_shared<DiskStorage<uint8_t>>(meta.m_path, partition_index, tp, open_edge_alias);
     }
     else
     {
-        auto full_path = std::filesystem::path(meta.m_path) /
-                         ("edge_" + std::to_string(tp) + "_" + std::to_string(partition) + ".alias");
+        auto full_path = std::filesystem::path(partition_path) /
+                         ("edge_" + std::to_string(tp) + "_" + std::to_string(partition_index) + ".alias");
         edge_weights = std::make_shared<HDFSStreamStorage<uint8_t>>(full_path.c_str(), meta.m_config_path);
     }
     auto edge_weights_ptr = edge_weights->start();
@@ -442,7 +448,9 @@ void UniformNodeSamplerPartition<WithReplacement>::Sample(int64_t seed, std::spa
 }
 
 template <bool WithReplacement>
-UniformEdgeSamplerPartition<WithReplacement>::UniformEdgeSamplerPartition(Metadata meta, Type tp, size_t partition)
+UniformEdgeSamplerPartition<WithReplacement>::UniformEdgeSamplerPartition(Metadata meta, Type tp,
+                                                                          size_t partition_index,
+                                                                          std::string partition_path)
 {
     struct pair_hash
     {
@@ -453,14 +461,14 @@ UniformEdgeSamplerPartition<WithReplacement>::UniformEdgeSamplerPartition(Metada
     };
     absl::flat_hash_set<std::pair<NodeId, NodeId>, pair_hash> edge_set;
     std::shared_ptr<BaseStorage<uint8_t>> edge_alias;
-    if (!is_hdfs_path(meta.m_path))
+    if (!is_hdfs_path(partition_path))
     {
-        edge_alias = std::make_shared<DiskStorage<uint8_t>>(meta.m_path, partition, tp, open_edge_alias);
+        edge_alias = std::make_shared<DiskStorage<uint8_t>>(partition_path, partition_index, tp, open_edge_alias);
     }
     else
     {
-        auto full_path = std::filesystem::path(meta.m_path) /
-                         ("edge_" + std::to_string(tp) + "_" + std::to_string(partition) + ".alias");
+        auto full_path = std::filesystem::path(partition_path) /
+                         ("edge_" + std::to_string(tp) + "_" + std::to_string(partition_index) + ".alias");
         edge_alias = std::make_shared<HDFSStreamStorage<uint8_t>>(full_path.c_str(), meta.m_config_path);
     }
 

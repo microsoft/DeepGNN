@@ -6,7 +6,7 @@ jobs:
   pre-commit:
     strategy:
       matrix:
-        python-version: ["3.8", "3.9"]
+        python-version: ["3.8", "3.9", "3.10"]
         os: ["ubuntu-22.04", "macos-11", "windows-2019"]
     runs-on: ${{ matrix.os }}
     steps:

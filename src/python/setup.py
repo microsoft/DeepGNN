@@ -43,7 +43,7 @@ def graph_engine(version: str):
             fo.write("include python/deepgnn/graph_engine/snark/%s\n" % libname)
 
     here = pathlib.Path(__file__).parent.parent.resolve()
-    long_description = (here / "../../README.md").read_text(encoding="utf-8")
+    long_description = (here / "../README.md").read_text(encoding="utf-8")
 
     setuptools.setup(
         name="deepgnn-ge",
