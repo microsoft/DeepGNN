@@ -901,6 +901,8 @@ class DistributedGraph(MemoryGraph):
             servers (List[str]): List of server hostnames to connect to.
             ssl_cert (str, optional): Certificates to use for connection if needed. Defaults to None.
         """
+        self._init_args = (servers, ssl_cert, num_threads, num_cq_per_thread)
+
         assert len(servers) > 0
         self.g_ = _DEEP_GRAPH()
         self.lib = _get_c_lib()

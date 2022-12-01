@@ -17,6 +17,7 @@ from ray.air import session
 from ray.air.config import ScalingConfig, RunConfig
 
 from deepgnn.graph_engine.snark.local import Client
+from deepgnn.graph_engine.snark.distributed import Client as DistributedClient
 
 from azureml.core import Workspace
 from ray_on_aml.core import Ray_On_AML
@@ -31,6 +32,9 @@ from deepgnn.graph_engine import (
     GENodeSampler,
     SamplingStrategy,
 )
+import deepgnn.graph_engine.snark.server as server
+import deepgnn.graph_engine.snark.client as client
+
 
 @dataclass
 class PTGSupervisedGraphSageQuery:
@@ -192,11 +196,13 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         return self._loss_inner(context)
 
 import asyncio
+address = f"localhost:9999"
 
-@ray.remote
+@ray.remote #(num_cpus=.5)
 class Counter:
     def __init__(self):
-        self.g = Client("/tmp/reddit", [0])
+        self.cl = DistributedClient([address])
+        self.g = self.cl#Client("/tmp/reddit", [0])
         self.query_obj = PTGSupervisedGraphSageQuery(
             label_meta=np.array([[0, 50]]),
             feature_meta=np.array([[1, 300]]),
@@ -212,6 +218,8 @@ class Counter:
 def train_func(config: Dict):
     """Train function main."""
     train.torch.enable_reproducibility(seed=session.get_world_rank())
+
+    s = server.Server("/tmp/reddit", [0], address)
 
     model = PTGSupervisedGraphSage(
         num_classes=50,
@@ -237,8 +245,49 @@ def train_func(config: Dict):
     #dataset = ray.data.read_text("/tmp/reddit/notes.train").repartition(SAMPLE_NUM // BATCH_SIZE)
     print(dataset)
     pipe = dataset.window(blocks_per_window=4).repeat(5)
-    worker = Counter.remote()
+
+    worker = Counter.remote()#num_cpus=.5)
     pipe = pipe.map_batches(lambda batch: ray.get(worker.call.remote(batch)), batch_size=BATCH_SIZE)
+    """
+    worker1, worker2 = Counter.remote(), Counter.remote() 
+    pool = ray.util.actor_pool.ActorPool([worker1, worker2]) 
+    #list(pool.map(lambda a, v: a.double.remote(v), [1, 2, 3, 4]))
+    def transform(batch):
+        pool.submit(lambda a, b: a.call.remote(b), batch)
+        return pool.get_next()
+
+    pipe = pipe.map_batches(transform, batch_size=BATCH_SIZE)
+    """
+    """
+    # Not work, foreach cant iterate over dataset must transform it inplace
+    worker1, worker2 = Counter.remote(), Counter.remote() 
+    pool = ray.util.actor_pool.ActorPool([worker1, worker2]) 
+    #
+    def transform(dataset):
+        #pool.submit(lambda a, b: a.call.remote(b), batch)
+        assert False, dataset
+        assert False, list(pool.map(lambda a, b: a.call.remote(b), dataset.iter_batches()))
+        return ray.data.from_items(list(pool.map(lambda a, b: a.call.remote(b), dataset.iter_batches())))
+
+    pipe = pipe.foreach_window(transform)
+    """
+    """
+    pipe = pipe.map_batches(Counter(), compute=ray.data.ActorPoolStrategy(2, 2))
+    """
+    """
+    g = DistributedClient([address])
+    query_obj = PTGSupervisedGraphSageQuery(
+        label_meta=np.array([[0, 50]]),
+        feature_meta=np.array([[1, 300]]),
+        feature_type=np.float32,
+        edge_type=0,
+        fanouts=[5, 5],
+    )
+
+    def transform(batch):
+        return query_obj.query(g, batch)
+    pipe = pipe.map_batches(transform)
+    """
     """
     g = Client("/tmp/reddit", [0])
     query_obj = PTGSupervisedGraphSageQuery(

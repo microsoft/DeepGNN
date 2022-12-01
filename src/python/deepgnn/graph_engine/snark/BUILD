@@ -11,6 +11,7 @@ py_library(
         "alias.py",
         "client.py",
         "convert.py",
+        "distributed.py",
         "meta_merger.py",
         "converter/__init__.py",
         "converter/process.py",
