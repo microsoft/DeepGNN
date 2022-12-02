@@ -32,8 +32,10 @@ from deepgnn.graph_engine import (
     GENodeSampler,
     SamplingStrategy,
 )
+
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.client as client
+from ray.data.extensions.tensor_extension import ArrowTensorArray
 
 
 @dataclass
@@ -76,6 +78,7 @@ class PTGSupervisedGraphSageQuery:
         context["x0"] = x0.reshape((context["inputs"].shape[0], -1, self.feature_meta[0, 1]))
         context["out_1"] =  np.array([n1_out.shape[0]] * context["inputs"].shape[0])  # Number of output nodes of layer 1
         context["out_2"] =  np.array([n2_out.shape[0]] * context["inputs"].shape[0])  # Number of output nodes of layer 2
+
         return context
 
 
@@ -195,13 +198,15 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         """Return cross entropy loss."""
         return self._loss_inner(context)
 
-import asyncio
-address = f"localhost:9999"
 
-@ray.remote #(num_cpus=.5)
+address = f"localhost:9999"
+SAMPLE_NUM = 152410
+
+
+@ray.remote
 class Counter:
     def __init__(self):
-        self.g = DistributedClient([address])  #Client("/tmp/reddit", [0])
+        self.g = DistributedClient([address])
         self.query_obj = PTGSupervisedGraphSageQuery(
             label_meta=np.array([[0, 50]]),
             feature_meta=np.array([[1, 300]]),
@@ -212,6 +217,88 @@ class Counter:
 
     def call(self, batch):
         return self.query_obj.query(self.g, batch)
+
+
+from ray.data.block import Block
+from typing import Any, Dict, List, Optional
+from ray.data.datasource.datasource import Datasource, Reader, ReadTask
+from ray.data.block import BlockMetadata
+import pyarrow as pa
+class _GEDatasourceReader(Reader):
+    """
+    A bound read operation for a datasource.
+
+    This is a stateful class so that reads can be prepared in multiple stages. For example, it is useful for Datasets to know the in-memory size of the read prior to executing it.
+
+    PublicAPI: This API is stable across Ray releases.
+    """
+    def __init__(self, address, **kwargs):
+        self._address = address
+        self._kwargs = kwargs
+
+    def estimate_inmemory_data_size(self) -> Optional[int]:
+        return None
+
+    # Create a list of ``ReadTask``, one for each pipeline (i.e. a partition of
+    # the MongoDB collection). Those tasks will be executed in parallel.
+    # Note: The ``parallelism`` which is supposed to indicate how many ``ReadTask`` to
+    # return will have no effect here, since we map each query into a ``ReadTask``.
+    def get_read_tasks(self, parallelism: int) -> List[ReadTask]:
+        g = DistributedClient([address])  # TODO add delayed_start
+        query_obj = PTGSupervisedGraphSageQuery(
+            label_meta=np.array([[0, 50]]),
+            feature_meta=np.array([[1, 300]]),
+            feature_type=np.float32,
+            edge_type=0,
+            fanouts=[5, 5],
+        )
+
+        # This connects to MongoDB, executes the pipeline against it, converts the result
+        # into Arrow format and returns the result as a Block.
+        def _read_single_partition() -> Block:
+            batch = np.random.randint(0, SAMPLE_NUM, size=512)
+            result = query_obj.query(g, batch)
+            result = {k: ArrowTensorArray.from_numpy(v) for k, v in result.items()}
+            return [pa.Table.from_pydict(result)]#([pa.array(np.ones((512)))], names=["odd"])
+
+
+        #return []
+
+        # The metadata about the block that we know prior to actually executing
+        # the read task.
+        metadata = BlockMetadata(
+            num_rows=None,
+            size_bytes=None,
+            schema=None,#self._schema,
+            input_files=None,
+            exec_stats=None,
+        )
+
+        # Supply a no-arg read function (which returns a block) and pre-read
+        # block metadata.
+        read_task = ReadTask(_read_single_partition, metadata)
+        #    lambda address=self._address, kwargs=self._kwargs: [
+        #        _read_single_partition(
+        #            uri, database, collection, pipeline, schema, **kwargs
+        #        )
+        #    ],
+        #    metadata,
+        #)
+
+        return [read_task]
+
+
+class GEDatasource(Datasource):
+    """
+    For reading from GE.
+    """
+    def create_reader(
+        self, address, **kwargs
+    ) -> Reader:
+        """
+        The reader object will be responsible for querying the read metadata, and generating the actual read tasks to retrieve the data blocks upon request.
+        """
+        return _GEDatasourceReader(address, **kwargs)
 
 
 def train_func(config: Dict):
@@ -240,89 +327,19 @@ def train_func(config: Dict):
     SAMPLE_NUM = 152410
     BATCH_SIZE = 512
 
+    # Read from datasource and create dataset
+    ds = ray.data.read_datasource(GEDatasource(), address=address)
+    pipe = ds.repeat(1)
+    """
     dataset = ray.data.range(SAMPLE_NUM - (SAMPLE_NUM % BATCH_SIZE), parallelism=-1).repartition(SAMPLE_NUM // BATCH_SIZE)
     #dataset = ray.data.read_text("/tmp/reddit/notes.train").repartition(SAMPLE_NUM // BATCH_SIZE)
     print(dataset)
     pipe = dataset.window(blocks_per_window=4).repeat(5)
-
-    worker = Counter.remote()#num_cpus=.5)
+    worker = Counter.remote()
     pipe = pipe.map_batches(lambda batch: ray.get(worker.call.remote(batch)), batch_size=BATCH_SIZE)
-    """
-    worker1, worker2 = Counter.remote(), Counter.remote() 
-    pool = ray.util.actor_pool.ActorPool([worker1, worker2]) 
-    #list(pool.map(lambda a, v: a.double.remote(v), [1, 2, 3, 4]))
-    def transform(batch):
-        pool.submit(lambda a, b: a.call.remote(b), batch)
-        return pool.get_next()
-
-    pipe = pipe.map_batches(transform, batch_size=BATCH_SIZE)
-    """
-    """
-    # Not work, foreach cant iterate over dataset must transform it inplace
-    worker1, worker2 = Counter.remote(), Counter.remote() 
-    pool = ray.util.actor_pool.ActorPool([worker1, worker2]) 
-    #
-    def transform(dataset):
-        #pool.submit(lambda a, b: a.call.remote(b), batch)
-        assert False, dataset
-        assert False, list(pool.map(lambda a, b: a.call.remote(b), dataset.iter_batches()))
-        return ray.data.from_items(list(pool.map(lambda a, b: a.call.remote(b), dataset.iter_batches())))
-
-    pipe = pipe.foreach_window(transform)
-    """
-    """
-    pipe = pipe.map_batches(Counter(), compute=ray.data.ActorPoolStrategy(2, 2))
-    """
-    """
-    g = DistributedClient([address])
-    query_obj = PTGSupervisedGraphSageQuery(
-        label_meta=np.array([[0, 50]]),
-        feature_meta=np.array([[1, 300]]),
-        feature_type=np.float32,
-        edge_type=0,
-        fanouts=[5, 5],
-    )
-
-    def transform(batch):
-        return query_obj.query(g, batch)
-    pipe = pipe.map_batches(transform)
-    """
-    """
-    g = Client("/tmp/reddit", [0])
-    query_obj = PTGSupervisedGraphSageQuery(
-        label_meta=np.array([[0, 50]]),
-        feature_meta=np.array([[1, 300]]),
-        feature_type=np.float32,
-        edge_type=0,
-        fanouts=[5, 5],
-    )
-    dataset = TorchDeepGNNDataset(
-        sampler_class=GENodeSampler,
-        backend=type("Backend", (object,), {"graph": g})(),  # type: ignore
-        sample_num=SAMPLE_NUM,
-        num_workers=2,
-        worker_index=0,
-        node_types=np.array([0], dtype=np.int32),
-        batch_size=BATCH_SIZE,
-        query_fn=query_obj.query,
-        strategy=SamplingStrategy.RandomWithoutReplacement,
-        prefetch_queue_size=10,
-        prefetch_worker_size=2,
-
-    )
-    dataset = torch.utils.data.DataLoader(
-        dataset=dataset,
-        num_workers=2,
-    )
     """
 
     model.train()
-    """
-    for epoch in range(5):
-        metrics = []
-        losses = []
-        for i, batch in enumerate(dataset):
-            """
     for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
         metrics = []
         losses = []
