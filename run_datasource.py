@@ -244,6 +244,9 @@ class _GEDatasourceReader(Reader):
     # Note: The ``parallelism`` which is supposed to indicate how many ``ReadTask`` to
     # return will have no effect here, since we map each query into a ``ReadTask``.
     def get_read_tasks(self, parallelism: int) -> List[ReadTask]:
+        """
+        parallelism: int Number of batches, will be processed in parralel.
+        """
         g = DistributedClient([address])  # TODO add delayed_start
         query_obj = PTGSupervisedGraphSageQuery(
             label_meta=np.array([[0, 50]]),
@@ -261,9 +264,6 @@ class _GEDatasourceReader(Reader):
             result = {k: ArrowTensorArray.from_numpy(v) for k, v in result.items()}
             return [pa.Table.from_pydict(result)]#([pa.array(np.ones((512)))], names=["odd"])
 
-
-        #return []
-
         # The metadata about the block that we know prior to actually executing
         # the read task.
         metadata = BlockMetadata(
@@ -274,18 +274,15 @@ class _GEDatasourceReader(Reader):
             exec_stats=None,
         )
 
-        # Supply a no-arg read function (which returns a block) and pre-read
-        # block metadata.
-        read_task = ReadTask(_read_single_partition, metadata)
-        #    lambda address=self._address, kwargs=self._kwargs: [
-        #        _read_single_partition(
-        #            uri, database, collection, pipeline, schema, **kwargs
-        #        )
-        #    ],
-        #    metadata,
-        #)
+        read_tasks: List[ReadTask] = []
+        for batch in range(parallelism):
+            # Supply a no-arg read function (which returns a block) and pre-read
+            # block metadata.
+            read_task = ReadTask(_read_single_partition, metadata)
+            read_tasks.append(read_task)
 
-        return [read_task]
+        ## EACH READ task is executed in parallel
+        return read_tasks
 
 
 class GEDatasource(Datasource):

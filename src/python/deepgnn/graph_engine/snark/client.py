@@ -206,10 +206,10 @@ class MemoryGraph:
         """Serialize object."""
         class_fn = type(self)
 
-        print("REDUCE GE")
+        #print("REDUCE GE")
 
         def deserializer(*args):
-            print("UNREDUCE GE")
+            #print("UNREDUCE GE")
             return class_fn(*args)
 
         return deserializer, self._init_args
