@@ -196,12 +196,12 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         return self._loss_inner(context)
 
 import asyncio
-address = f"localhost:9999"
+address = [f"localhost:9990", f"localhost:9991"]
 
 @ray.remote #(num_cpus=.5)
 class Counter:
     def __init__(self):
-        self.g = DistributedClient([address])  #Client("/tmp/reddit", [0])
+        self.g = DistributedClient(address)  #Client("/tmp/reddit", [0])
         self.query_obj = PTGSupervisedGraphSageQuery(
             label_meta=np.array([[0, 50]]),
             feature_meta=np.array([[1, 300]]),
@@ -218,7 +218,10 @@ def train_func(config: Dict):
     """Train function main."""
     train.torch.enable_reproducibility(seed=session.get_world_rank())
 
-    s = server.Server("/tmp/reddit", [0], address)
+    s = [
+        server.Server("/tmp/reddit", [0], address[0]),
+        server.Server("/tmp/reddit", [1], address[1])
+    ]
 
     model = PTGSupervisedGraphSage(
         num_classes=50,
