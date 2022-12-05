@@ -43,22 +43,24 @@ class Reddit(Client):
     - Node Feature Dim: 300 (id:1)
     """
 
-    def __init__(self, output_dir: str = None, edge_downsample_pct: float = 0.1):
+    def __init__(self, output_dir: str = None, edge_downsample_pct: float = 0.1, n_partitions: int = 2):
         """
         Initialize Reddit dataset.
 
         Args:
           output_dir (string): file directory for graph data.
           edge_downsample_pct (float, default=.1): Percent of edges to use, default reddit graph has 100M edges.
+          n_partitions (int, default=2): Number of partitions
         """
         self._edge_downsample_pct = edge_downsample_pct
+        self._n_partitions = n_partitions
         self.url = "https://snap.stanford.edu/graphsage/reddit.zip"
         self.GRAPH_NAME = "reddit"
         self.output_dir = output_dir
         if self.output_dir is None:
             self.output_dir = os.path.join("/tmp/", self.GRAPH_NAME)
         self._build_graph(self.output_dir)
-        super().__init__(path=self.output_dir, partitions=[0])
+        super().__init__(path=self.output_dir, partitions=list(range(self._n_partitions)))
 
     def data_dir(self):
         """Graph location on disk."""
@@ -74,7 +76,6 @@ class Reddit(Client):
         train_nodes = []
         NODE_TYPE_ID = {"train": 0, "val": 1, "test": 2}
         for nid, node in enumerate(g["nodes"]):
-            # id_map[node["id"]] = nid
             nid = id_map[node["id"]]
             if node["test"]:
                 ntype = NODE_TYPE_ID["test"]
@@ -160,7 +161,7 @@ class Reddit(Client):
         # convert graph: edge_list -> Binary
         convert.MultiWorkersConverter(
             graph_path=graph_file,
-            partition_count=1,
+            partition_count=self._n_partitions,
             output_dir=data_dir,
             decoder=decoders.EdgeListDecoder(),
         ).convert()
@@ -204,10 +205,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir", default="/tmp/reddit", type=str)
     parser.add_argument("--edge_downsample_pct", default=0.1, type=float)
+    parser.add_argument("--n_partitions", default=2, type=int)
 
     args = parser.parse_args()
 
-    g = Reddit(args.data_dir, args.edge_downsample_pct)
+    g = Reddit(args.data_dir, args.edge_downsample_pct, args.n_partitions)
 
     print(g.node_features([1], np.array([[0, 50]]), np.float32))
     print(g.node_features([1], np.array([[1, 300]]), np.float32))
