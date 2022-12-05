@@ -198,10 +198,11 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
 import asyncio
 address = [f"localhost:9990", f"localhost:9991"]
 
-@ray.remote #(num_cpus=.5)
+import random
+@ray.remote(scheduling_strategy="SPREAD")
 class Counter:
     def __init__(self):
-        self.g = DistributedClient(address)  #Client("/tmp/reddit", [0])
+        self.g = DistributedClient([address[random.random() > .5]])  #Client("/tmp/reddit", [0])
         self.query_obj = PTGSupervisedGraphSageQuery(
             label_meta=np.array([[0, 50]]),
             feature_meta=np.array([[1, 300]]),
@@ -219,8 +220,8 @@ def train_func(config: Dict):
     train.torch.enable_reproducibility(seed=session.get_world_rank())
 
     s = [
-        server.Server("/tmp/reddit", [0], address[0]),
-        server.Server("/tmp/reddit", [1], address[1])
+        server.Server("/tmp/reddit", [0, 1], address[0]),
+        #server.Server("/tmp/reddit", [0, 1], address[1])
     ]
 
     model = PTGSupervisedGraphSage(
@@ -234,26 +235,47 @@ def train_func(config: Dict):
         fanouts=[5, 5],
     )
     model = train.torch.prepare_model(model)
+    model.train()
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.0005)
     optimizer = train.torch.prepare_optimizer(optimizer)
 
     loss_fn = nn.CrossEntropyLoss()
 
-    SAMPLE_NUM = 152410
+    SAMPLE_NUM = 152410 // 2
     BATCH_SIZE = 512
 
     dataset = ray.data.range(SAMPLE_NUM - (SAMPLE_NUM % BATCH_SIZE), parallelism=-1).repartition(SAMPLE_NUM // BATCH_SIZE)
     #dataset = ray.data.read_text("/tmp/reddit/notes.train").repartition(SAMPLE_NUM // BATCH_SIZE)
     print(dataset)
-    pipe = dataset.window(blocks_per_window=4).repeat(5)
+    pipe = dataset.window(blocks_per_window=4).repeat(1)  # map batches gets run once per each window full reset for actor pool
 
+    """
     worker = Counter.remote()#num_cpus=.5)
     pipe = pipe.map_batches(lambda batch: ray.get(worker.call.remote(batch)), batch_size=BATCH_SIZE)
     """
+    # 44.5297 on 1/2 data N_BATCHES 75 metric 0.453588 - fixed and now times match
+    #list(pool.map(lambda a, v: a.double.remote(v), [1, 2, 3, 4]))
+    def transform(batch):
+        g = DistributedClient([address[0]])#random.random() > .5]])  #Client("/tmp/reddit", [0])
+        query_obj = PTGSupervisedGraphSageQuery(
+            label_meta=np.array([[0, 50]]),
+            feature_meta=np.array([[1, 300]]),
+            feature_type=np.float32,
+            edge_type=0,
+            fanouts=[5, 5],
+        )
+        output = query_obj.query(g, batch)
+        print("DONE")
+        return output
+
+    pipe = pipe.map_batches(transform)#Counter(), compute=ray.data.ActorPoolStrategy(2, 2))
+
+    #pipe = pipe.map_batches(transform, batch_size=BATCH_SIZE)
+    """
     worker1, worker2 = Counter.remote(), Counter.remote() 
     pool = ray.util.actor_pool.ActorPool([worker1, worker2]) 
-    #list(pool.map(lambda a, v: a.double.remote(v), [1, 2, 3, 4]))
+    #
     def transform(batch):
         pool.submit(lambda a, b: a.call.remote(b), batch)
         return pool.get_next()
@@ -299,29 +321,25 @@ def train_func(config: Dict):
         edge_type=0,
         fanouts=[5, 5],
     )
+    N_WORKERS = 2
     dataset = TorchDeepGNNDataset(
         sampler_class=GENodeSampler,
         backend=type("Backend", (object,), {"graph": g})(),  # type: ignore
         sample_num=SAMPLE_NUM,
-        num_workers=2,
+        num_workers=1,  # sampler sample count is divided by num_workers and data parralele count
         worker_index=0,
         node_types=np.array([0], dtype=np.int32),
         batch_size=BATCH_SIZE,
         query_fn=query_obj.query,
         strategy=SamplingStrategy.RandomWithoutReplacement,
         prefetch_queue_size=10,
-        prefetch_worker_size=2,
-
+        prefetch_worker_size=N_WORKERS,
     )
     dataset = torch.utils.data.DataLoader(
         dataset=dataset,
-        num_workers=2,
+        num_workers=N_WORKERS,
     )
-    """
-
-    model.train()
-    """
-    for epoch in range(5):
+    for epoch in range(1):
         metrics = []
         losses = []
         for i, batch in enumerate(dataset):
@@ -333,6 +351,7 @@ def train_func(config: Dict):
                 epoch_pipe.iter_torch_batches(prefetch_blocks=10, batch_size=BATCH_SIZE)
             ):
             #print("STEP:", i, 'RAM Used (GB):', psutil.virtual_memory()[3]/1000000000)
+            #"""
 
             scores = model(batch)[0]
             labels = batch["label"].squeeze().argmax(1)
@@ -348,9 +367,12 @@ def train_func(config: Dict):
             if i >= SAMPLE_NUM / BATCH_SIZE / session.get_world_size():
                 break
 
-        print(epoch_pipe.stats())
+        try:
+            print(epoch_pipe.stats())
+        except NameError:
+            pass
 
-        print("RESULTS:!", np.mean(metrics), np.mean(losses))
+        print("RESULTS:!", np.mean(metrics), np.mean(losses), "N_BATCHES", i)
 
         session.report(
             {
