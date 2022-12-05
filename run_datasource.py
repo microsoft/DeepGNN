@@ -37,6 +37,12 @@ import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.client as client
 from ray.data.extensions.tensor_extension import ArrowTensorArray
 
+from ray.data.block import Block
+from typing import Any, Dict, List, Optional
+from ray.data.datasource.datasource import Datasource, Reader, ReadTask
+from ray.data.block import BlockMetadata
+import pyarrow as pa
+
 
 @dataclass
 class PTGSupervisedGraphSageQuery:
@@ -219,11 +225,27 @@ class Counter:
         return self.query_obj.query(self.g, batch)
 
 
-from ray.data.block import Block
-from typing import Any, Dict, List, Optional
-from ray.data.datasource.datasource import Datasource, Reader, ReadTask
-from ray.data.block import BlockMetadata
-import pyarrow as pa
+# TODO fsater w/ this in worker or global?
+# This connects to MongoDB, executes the pipeline against it, converts the result
+# into Arrow format and returns the result as a Block.
+def _read_single_partition() -> Block:
+    #from ray.data.extensions.tensor_extension import ArrowTensorArray
+    #from deepgnn.graph_engine.snark.distributed import Client as DistributedClient
+
+    g = DistributedClient([address])
+    query_obj = PTGSupervisedGraphSageQuery(
+        label_meta=np.array([[0, 50]]),
+        feature_meta=np.array([[1, 300]]),
+        feature_type=np.float32,
+        edge_type=0,
+        fanouts=[5, 5],
+    )
+    batch = np.random.randint(0, 152410, size=512)
+    result = query_obj.query(g, batch)
+    result = {k: ArrowTensorArray.from_numpy(v) for k, v in result.items()}
+    return [pa.Table.from_pydict(result)]
+
+
 class _GEDatasourceReader(Reader):
     """
     A bound read operation for a datasource.
@@ -247,23 +269,6 @@ class _GEDatasourceReader(Reader):
         """
         parallelism: int Number of batches, will be processed in parralel.
         """
-        g = DistributedClient([address])  # TODO add delayed_start
-        query_obj = PTGSupervisedGraphSageQuery(
-            label_meta=np.array([[0, 50]]),
-            feature_meta=np.array([[1, 300]]),
-            feature_type=np.float32,
-            edge_type=0,
-            fanouts=[5, 5],
-        )
-
-        # This connects to MongoDB, executes the pipeline against it, converts the result
-        # into Arrow format and returns the result as a Block.
-        def _read_single_partition() -> Block:
-            batch = np.random.randint(0, SAMPLE_NUM, size=512)
-            result = query_obj.query(g, batch)
-            result = {k: ArrowTensorArray.from_numpy(v) for k, v in result.items()}
-            return [pa.Table.from_pydict(result)]#([pa.array(np.ones((512)))], names=["odd"])
-
         # The metadata about the block that we know prior to actually executing
         # the read task.
         metadata = BlockMetadata(
@@ -323,10 +328,13 @@ def train_func(config: Dict):
 
     SAMPLE_NUM = 152410
     BATCH_SIZE = 512
+    PARALLELISM = 2
 
     # Read from datasource and create dataset
-    ds = ray.data.read_datasource(GEDatasource(), address=address)
-    pipe = ds.repeat(1)
+    ds = lambda: ray.data.read_datasource(GEDatasource(), parallelism=PARALLELISM, address=address)
+    pipe = ray.data.dataset_pipeline.DatasetPipeline.from_iterable([ds for _ in range(SAMPLE_NUM // BATCH_SIZE // PARALLELISM)])
+    #assert False, (ds(), pipe)
+    pipe = pipe.repeat(1)
     """
     dataset = ray.data.range(SAMPLE_NUM - (SAMPLE_NUM % BATCH_SIZE), parallelism=-1).repartition(SAMPLE_NUM // BATCH_SIZE)
     #dataset = ray.data.read_text("/tmp/reddit/notes.train").repartition(SAMPLE_NUM // BATCH_SIZE)

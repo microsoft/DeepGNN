@@ -16,11 +16,11 @@ from deepgnn.graph_engine.snark.meta import download_meta
 class Client(ge_snark.Client):
     """Distributed client."""
 
-    def __init__(self, servers: List[str], ssl_cert: str = None):
+    def __init__(self, servers: List[str], ssl_cert: str = None, delayed_start: bool = False):
         """Init snark client to wrapper around ctypes API of distributed graph."""
         self.logger = get_logger()
         self.logger.info(f"servers: {servers}. SSL: {ssl_cert}")
-        self.graph = client.DistributedGraph(servers, ssl_cert)
+        self.graph = client.DistributedGraph(servers, ssl_cert, delayed_start)
         self.node_samplers: Dict[str, client.NodeSampler] = {}
         self.edge_samplers: Dict[str, client.EdgeSampler] = {}
         self.logger.info(

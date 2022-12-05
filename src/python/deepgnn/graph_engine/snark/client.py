@@ -894,14 +894,18 @@ class DistributedGraph(MemoryGraph):
         ssl_cert: str = None,
         num_threads: int = None,
         num_cq_per_thread: int = None,
+        delayed_start: bool = False
     ):
         """Create a client to work with a graph in a distributed mode.
 
         Args:
             servers (List[str]): List of server hostnames to connect to.
             ssl_cert (str, optional): Certificates to use for connection if needed. Defaults to None.
+            delayed_start (bool, optional=False): Delay start of GE until after re-serialize.
         """
         self._init_args = (servers, ssl_cert, num_threads, num_cq_per_thread)
+        if delayed_start:
+            return
 
         assert len(servers) > 0
         self.g_ = _DEEP_GRAPH()
