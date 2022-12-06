@@ -215,6 +215,21 @@ class Counter:
         return self.query_obj.query(self.g, batch)
 
 
+class Counter2:
+    def __init__(self):
+        self.g = DistributedClient([address[0]])  #Client("/tmp/reddit", [0])
+        self.query_obj = PTGSupervisedGraphSageQuery(
+            label_meta=np.array([[0, 50]]),
+            feature_meta=np.array([[1, 300]]),
+            feature_type=np.float32,
+            edge_type=0,
+            fanouts=[5, 5],
+        )
+
+    def __call__(self, batch):
+        return self.query_obj.query(self.g, batch)
+
+
 def train_func(config: Dict):
     """Train function main."""
     train.torch.enable_reproducibility(seed=session.get_world_rank())
@@ -242,13 +257,13 @@ def train_func(config: Dict):
 
     loss_fn = nn.CrossEntropyLoss()
 
-    SAMPLE_NUM = 152410 // 2
+    SAMPLE_NUM = 152410
     BATCH_SIZE = 512
 
     dataset = ray.data.range(SAMPLE_NUM - (SAMPLE_NUM % BATCH_SIZE), parallelism=-1).repartition(SAMPLE_NUM // BATCH_SIZE)
     #dataset = ray.data.read_text("/tmp/reddit/notes.train").repartition(SAMPLE_NUM // BATCH_SIZE)
     print(dataset)
-    pipe = dataset.window(blocks_per_window=4).repeat(1)  # map batches gets run once per each window full reset for actor pool
+    pipe = dataset.window(blocks_per_window=10).repeat(5)  # map batches gets run once per each window full reset for actor pool
 
     """
     worker = Counter.remote()#num_cpus=.5)
@@ -266,12 +281,11 @@ def train_func(config: Dict):
             fanouts=[5, 5],
         )
         output = query_obj.query(g, batch)
-        print("DONE")
+        #del g
+        #del query_obj
         return output
 
-    pipe = pipe.map_batches(transform)#Counter(), compute=ray.data.ActorPoolStrategy(2, 2))
-
-    #pipe = pipe.map_batches(transform, batch_size=BATCH_SIZE)
+    pipe = pipe.map_batches(transform)
     """
     worker1, worker2 = Counter.remote(), Counter.remote() 
     pool = ray.util.actor_pool.ActorPool([worker1, worker2]) 
@@ -296,7 +310,7 @@ def train_func(config: Dict):
     pipe = pipe.foreach_window(transform)
     """
     """
-    pipe = pipe.map_batches(Counter(), compute=ray.data.ActorPoolStrategy(2, 2))
+    pipe = pipe.map_batches(Counter2(), compute=ray.data.ActorPoolStrategy(2, 2))
     """
     """
     g = DistributedClient([address])
