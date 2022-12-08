@@ -50,6 +50,9 @@ class PTGSupervisedGraphSageQuery:
     def query(self, graph: Graph, inputs: np.ndarray) -> dict:
         """Query graph for training data."""
         context = {"inputs": np.array(inputs)}
+
+        #context["0"] = np.ones((len(inputs), 30000))
+
         context["label"] = graph.node_features(
             context["inputs"],
             self.label_meta,
@@ -263,7 +266,7 @@ def train_func(config: Dict):
     dataset = ray.data.range(SAMPLE_NUM - (SAMPLE_NUM % BATCH_SIZE), parallelism=-1).repartition(SAMPLE_NUM // BATCH_SIZE)
     #dataset = ray.data.read_text("/tmp/reddit/notes.train").repartition(SAMPLE_NUM // BATCH_SIZE)
     print(dataset)
-    pipe = dataset.window(blocks_per_window=10).repeat(5)  # map batches gets run once per each window full reset for actor pool
+    pipe = dataset.window(blocks_per_window=4).repeat(20)  # map batches gets run once per each window full reset for actor pool
 
     """
     worker = Counter.remote()#num_cpus=.5)
@@ -272,7 +275,7 @@ def train_func(config: Dict):
     # 44.5297 on 1/2 data N_BATCHES 75 metric 0.453588 - fixed and now times match
     #list(pool.map(lambda a, v: a.double.remote(v), [1, 2, 3, 4]))
     def transform(batch):
-        g = DistributedClient([address[0]])#random.random() > .5]])  #Client("/tmp/reddit", [0])
+        g = DistributedClient([f"localhost:9990"])
         query_obj = PTGSupervisedGraphSageQuery(
             label_meta=np.array([[0, 50]]),
             feature_meta=np.array([[1, 300]]),
@@ -281,8 +284,6 @@ def train_func(config: Dict):
             fanouts=[5, 5],
         )
         output = query_obj.query(g, batch)
-        #del g
-        #del query_obj
         return output
 
     pipe = pipe.map_batches(transform)
@@ -362,11 +363,10 @@ def train_func(config: Dict):
         metrics = []
         losses = []
         for i, batch in enumerate(
-                epoch_pipe.iter_torch_batches(prefetch_blocks=10, batch_size=BATCH_SIZE)
+                epoch_pipe.iter_torch_batches(prefetch_blocks=0, batch_size=BATCH_SIZE)
             ):
             #print("STEP:", i, 'RAM Used (GB):', psutil.virtual_memory()[3]/1000000000)
             #"""
-
             scores = model(batch)[0]
             labels = batch["label"].squeeze().argmax(1)
 
@@ -375,18 +375,18 @@ def train_func(config: Dict):
             loss.backward()
             optimizer.step()
 
-            metrics.append((scores.squeeze().argmax(1) == labels).float().mean())
-            losses.append(loss.item())
+            #metrics.append((scores.squeeze().argmax(1) == labels).float().mean().item())
+            #losses.append(loss.item())
 
-            if i >= SAMPLE_NUM / BATCH_SIZE / session.get_world_size():
-                break
+            #if i >= SAMPLE_NUM / BATCH_SIZE / session.get_world_size():
+            #    break
 
         try:
-            print(epoch_pipe.stats())
+            pass#print(epoch_pipe.stats())
         except NameError:
             pass
 
-        print("RESULTS:!", np.mean(metrics), np.mean(losses), "N_BATCHES", i)
+        #print("RESULTS:!", np.mean(metrics), np.mean(losses), "N_BATCHES", i)
 
         session.report(
             {
