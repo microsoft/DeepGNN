@@ -953,6 +953,13 @@ class DistributedGraph(MemoryGraph):
 
         super()._describe_clib_functions()
 
+    def __del__(self):
+        self.lib.DeleteRemoteClient.errcheck = _ErrCallback(  # type: ignore
+            "delete remote client"
+        )
+        self.lib.DeleteRemoteClient(byref(self.g_))
+
+
 
 class NodeSampler:
     """Sampler to fetch nodes from a graph."""

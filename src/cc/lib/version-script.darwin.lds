@@ -3,6 +3,7 @@
 _CreateLocalGraph
 _StartServer
 _CreateRemoteClient
+_DeleteRemoteClient
 _GetNodeFeature
 _GetNodeSparseFeature
 _GetNodeStringFeature

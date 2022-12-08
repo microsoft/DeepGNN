@@ -89,6 +89,9 @@ extern "C"
                                                   size_t connection_count, const char *ssl_cert, size_t num_threads,
                                                   size_t num_threads_per_cq);
 
+    DEEPGNN_DLL extern int32_t DeleteRemoteClient(PyGraph *py_graph);
+
+
     DEEPGNN_DLL extern int32_t GetNodeType(PyGraph *graph, NodeID *node_ids, size_t node_ids_size, Type *output,
                                            Type default_type);
     DEEPGNN_DLL extern int32_t GetNodeFeature(PyGraph *graph, NodeID *node_ids, size_t node_ids_size, Feature *features,

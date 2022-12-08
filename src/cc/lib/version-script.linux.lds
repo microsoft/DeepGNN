@@ -5,6 +5,7 @@
         CreateLocalGraph;
         StartServer;
         CreateRemoteClient;
+        DeleteRemoteClient;
         GetNodeFeature;
         GetNodeSparseFeature;
         GetNodeStringFeature;

@@ -286,6 +286,12 @@ int32_t CreateRemoteClient(PyGraph *py_graph, const char *output_folder, const c
     return 0;
 }
 
+int32_t DeleteRemoteClient(PyGraph *py_graph)
+{
+    py_graph->~PyGraph();
+    return 0;
+}
+
 std::vector<snark::FeatureMeta> ExtractFeatureInfo(Feature *features, size_t features_size)
 {
     std::vector<snark::FeatureMeta> features_info;
