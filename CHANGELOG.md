@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Replace custom trainers with Ray Train, see [docs/torch/node_class.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/torch/node_class.rst).
+
+- Breaking. Rename get_feature_type -> get_python_type.
+
+## [0.1.56] - 2022-11-02
+
 ### Added
 - Add new converter input format "EdgeList" with EdgeListDecoder. Format has nodes and edges on separate lines, is smaller and faster to convert.
 
@@ -14,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add migrate script to pull to new version of deepgnn.
 
 - Add debug mode to MultiWorkersConverter, using debug=True will now disable multiprocessing and show error messages.
+
+- Load graph partitions from separate folders.
+
+- Add Reddit dataset download tool at deepgnn.graph_engine.data.reddit.
 
 ### Changed
 - Breaking. Remove FeatureType enum, replace with np.dtype. FeatureType.BINARY -> np.uint8, FeatureType.FLOAT -> np.float32, FeatureType.INT64 -> np.int64.

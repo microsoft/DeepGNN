@@ -15,7 +15,7 @@ instructions provided by the bot. You will only need to do this once across all 
 
 ## Linux
 
-You'll need [bazel](https://docs.bazel.build/versions/master/install-ubuntu.html) and g++-10 to use project from source:
+You'll need [bazel](https://docs.bazel.build/versions/master/install-ubuntu.html) and g++-11 to use project from source:
 
 ```bash
 sudo apt install curl gnupg
@@ -23,7 +23,7 @@ curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel.gpg
 sudo mv bazel.gpg /etc/apt/trusted.gpg.d/
 echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
 
-sudo apt update && sudo apt install bazel clang-format g++-10
+sudo apt update && sudo apt install bazel clang-format g++-11
 ```
 
 ## MacOS
@@ -58,11 +58,11 @@ For Debug builds use:
 bazel build -c dbg //src/cc/lib:* --config=linux
 ```
 
-## Install python package:
+## Install python packages:
 
 ```bash
 cd src/python
-export BUILD_VERSION=0.0.1
+export BUILD_VERSION=0.1.54
 python setup.py deepgnn-ge bdist_wheel --plat-name manylinux1_x86_64 clean --all
 python setup.py deepgnn-tf bdist_wheel --plat-name manylinux1_x86_64 clean --all
 python setup.py deepgnn-torch bdist_wheel --plat-name manylinux1_x86_64 clean --all
@@ -89,7 +89,7 @@ Install and run linters(same on all systems):
 ```sh
 pip install --upgrade pip
 pip install -r tests/requirements.txt
-pip install wheel pre-commit==2.17.0 mypy==0.971 numpy==1.21.6 torch==1.11.0 tensorflow==2.7.2
+pip install wheel pre-commit==2.17.0 mypy==0.971 numpy==1.22.4 torch==1.11.0 tensorflow==2.8.3
 pre-commit install
 pre-commit run --all-files
 ```
@@ -117,3 +117,16 @@ bazel test //src/python/deepgnn/graph_engine/snark/tests:python_test --test_outp
 ```
 
 This command will run all tests with prefix `test_sanity_neighbors_index`.
+
+# Create PR
+
+Follow these steps to create a pull request from a forked repo:
+1. Create [a fork repo](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks).
+2. Create a new branch locally based off main with some descriptive name.
+3. Make some changes.
+4. Push changes to remote(your fork).
+5. Run [a CI action](https://github.com/microsoft/DeepGNN/actions/workflows/ci.yml) in your forked repo to make sure all tests pass.
+6. In [a pulls page](https://github.com/microsoft/DeepGNN/pulls), click `New` button and publish a PR.
+
+If your fork is out of sync with this repo, you can still work [with multiple remotes](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/configuring-a-remote-for-a-fork)
+and rebase your branch to the main branch of this repo.

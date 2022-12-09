@@ -11,6 +11,7 @@ so clients wait until that number of server sync files appear in a sync folder(u
 To synchronize shutdown we track every client created via a sync file with snark_{client_id}.client pattern.
 Servers will stop only after all these files are deleted by clients.
 """
+from itertools import repeat
 from typing import Optional, List, Dict, Any, Callable
 import tempfile
 import concurrent
@@ -82,7 +83,12 @@ class Server:
                 "ssl_root": ssl_root,
                 "ssl_cert": ssl_cert,
             }
-        partitions = list(range(index, partition_count, total_shards))
+        partitions = list(
+            zip(
+                repeat(data_path, partition_count),
+                range(index, partition_count, total_shards),
+            )
+        )
         self.server = server.Server(
             data_path,
             partitions,

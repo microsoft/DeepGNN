@@ -9,7 +9,7 @@ jobs:
     if: ${{ github.event.workflow_run == null || github.event.workflow_run.conclusion == 'success'}}
     strategy:
       matrix:
-        python-version: ["3.8", "3.9"]
+        python-version: ["3.10"]
         os: ["ubuntu-22.04", "macos-11", "windows-2019"]
     steps:
       - uses: actions/checkout@v3

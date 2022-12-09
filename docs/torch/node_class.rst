@@ -196,7 +196,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
 
     >>> def train_func(config: Dict):
     ...     # Set random seed
-    ...     train.torch.enable_reproducibility(seed=0)
+    ...     train.torch.enable_reproducibility(seed=session.get_world_rank())
     ...
     ...     # Initialize the model and wrap it with Ray
     ...     model = GAT(in_dim=1433, num_classes=7)
@@ -246,6 +246,6 @@ Finally we call trainer.fit() to execute the training loop.
     ...     train_func,
     ...     train_loop_config={},
     ...     run_config=RunConfig(verbose=0),
-    ...     scaling_config=ScalingConfig(num_workers=2, use_gpu=False),
+    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     ... )
     >>> result = trainer.fit()

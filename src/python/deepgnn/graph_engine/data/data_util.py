@@ -103,7 +103,7 @@ class Dataset(Client):
         if self.output_dir is None:
             self.output_dir = os.path.join("/tmp/citation", self.GRAPH_NAME)
         self._build_graph_impl(self.output_dir, train_node_ratio, random_selection)
-        super().__init__(path=self.output_dir, partitions=[0])
+        super().__init__(self.output_dir, partitions=[0])
 
     def data_dir(self):
         """Graph location on disk."""

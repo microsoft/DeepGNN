@@ -89,8 +89,9 @@ TEST(DistributedTest, NodeFeaturesSingleServer)
     TempFolder path("NodeFeaturesSingleServer");
     auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
 
-    snark::GRPCServer server(std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                                             snark::PartitionStorageType::memory, ""),
+    snark::GRPCServer server(std::make_shared<snark::GraphEngineServiceImpl>(
+                                 snark::Metadata(path.string()), std::vector<std::string>{path.string()},
+                                 std::vector<uint32_t>{0}, snark::PartitionStorageType::memory),
                              {}, "localhost:0", "", "", "");
     snark::GRPCClient c({server.InProcessChannel()}, 1, 1);
 
@@ -126,18 +127,21 @@ TEST(DistributedTest, NodeStringFeaturesMultipleServers)
 
         TempFolder path("NodeStringFeaturesMultipleServers");
         auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
+        snark::Metadata metadata(path.string());
 
         servers.emplace_back(std::make_unique<snark::GRPCServer>(
-            std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                            snark::PartitionStorageType::memory, ""),
+            std::make_shared<snark::GraphEngineServiceImpl>(metadata, std::vector<std::string>{path.string()},
+                                                            std::vector<uint32_t>{0},
+                                                            snark::PartitionStorageType::memory),
             std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", ""));
         channels.emplace_back(servers.back()->InProcessChannel());
 
         // Verify client correctly parses empty messages.
         servers.emplace_back(std::make_unique<snark::GRPCServer>(
             std::shared_ptr<snark::GraphEngineServiceImpl>{},
-            std::make_shared<snark::GraphSamplerServiceImpl>(path.string(), std::set<size_t>{0}), "localhost:0", "", "",
-            ""));
+            std::make_shared<snark::GraphSamplerServiceImpl>(metadata, std::vector<std::string>{path.string()},
+                                                             std::vector<size_t>{0}),
+            "localhost:0", "", "", ""));
         channels.emplace_back(servers.back()->InProcessChannel());
     }
 
@@ -182,8 +186,9 @@ TEST(DistributedTest, NodeSparseFeaturesMultipleServers)
         auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
 
         servers.emplace_back(std::make_unique<snark::GRPCServer>(
-            std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                            snark::PartitionStorageType::memory, ""),
+            std::make_shared<snark::GraphEngineServiceImpl>(
+                snark::Metadata(path.string()), std::vector<std::string>{path.string()}, std::vector<uint32_t>{0},
+                snark::PartitionStorageType::memory),
             std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", ""));
         channels.emplace_back(servers.back()->InProcessChannel());
     }
@@ -223,8 +228,9 @@ TEST(DistributedTest, NodeSparseFeaturesSingleServerMissingFeatures)
     auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
 
     auto server = std::make_unique<snark::GRPCServer>(
-        std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                        snark::PartitionStorageType::memory, ""),
+        std::make_shared<snark::GraphEngineServiceImpl>(snark::Metadata(path.string()),
+                                                        std::vector<std::string>{path.string()},
+                                                        std::vector<uint32_t>{0}, snark::PartitionStorageType::memory),
         std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", "");
     auto channel = server->InProcessChannel();
 
@@ -319,8 +325,9 @@ TEST(DistributedTest, NodeSparseFeaturesMultipleServersMissingFeatures)
         auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
 
         servers.emplace_back(std::make_unique<snark::GRPCServer>(
-            std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                            snark::PartitionStorageType::memory, ""),
+            std::make_shared<snark::GraphEngineServiceImpl>(
+                snark::Metadata(path.string()), std::vector<std::string>{path.string()}, std::vector<uint32_t>{0},
+                snark::PartitionStorageType::memory),
             std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", ""));
         channels.emplace_back(servers.back()->InProcessChannel());
     }
@@ -357,15 +364,16 @@ TEST(DistributedTest, NodeSparseFeaturesServerMixWithEmptyGE)
         .m_id = snark::NodeId(42), .m_type = 0, .m_weight = 1.0f, .m_float_features = std::move(input_features)});
     TempFolder path("NodeSparseFeaturesSingleServerMissingFeatures");
     auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
-
+    snark::Metadata metadata(path.string());
     auto server = std::make_unique<snark::GRPCServer>(
-        std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                        snark::PartitionStorageType::memory, ""),
+        std::make_shared<snark::GraphEngineServiceImpl>(metadata, std::vector<std::string>{path.string()},
+                                                        std::vector<uint32_t>{0}, snark::PartitionStorageType::memory),
         std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", "");
     auto empty_server = std::make_unique<snark::GRPCServer>(
         std::shared_ptr<snark::GraphEngineServiceImpl>{},
-        std::make_shared<snark::GraphSamplerServiceImpl>(path.string(), std::set<size_t>{0}), "localhost:0", "", "",
-        "");
+        std::make_shared<snark::GraphSamplerServiceImpl>(metadata, std::vector<std::string>{path.string()},
+                                                         std::vector<size_t>{0}),
+        "localhost:0", "", "", "");
 
     snark::GRPCClient c({server->InProcessChannel(), empty_server->InProcessChannel()}, 1, 1);
 
@@ -407,17 +415,20 @@ std::pair<TestChannels, TestServers> MockServers(size_t num_partitions, std::str
         TempFolder path(name);
         auto partition = TestGraph::convert(path.path, "0_0", std::move(m), num_node_types);
 
+        snark::Metadata metadata(path.string());
         servers.emplace_back(std::make_unique<snark::GRPCServer>(
-            std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                            snark::PartitionStorageType::memory, ""),
+            std::make_shared<snark::GraphEngineServiceImpl>(metadata, std::vector<std::string>{path.string()},
+                                                            std::vector<uint32_t>{0},
+                                                            snark::PartitionStorageType::memory),
             std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", ""));
         channels.emplace_back(servers.back()->InProcessChannel());
 
         // Verify clients correctly process empty messages.
         servers.emplace_back(std::make_unique<snark::GRPCServer>(
             std::shared_ptr<snark::GraphEngineServiceImpl>{},
-            std::make_shared<snark::GraphSamplerServiceImpl>(path.string(), std::set<size_t>{0}), "localhost:0", "", "",
-            ""));
+            std::make_shared<snark::GraphSamplerServiceImpl>(metadata, std::vector<std::string>{path.string()},
+                                                             std::vector<size_t>{0}),
+            "localhost:0", "", "", ""));
         channels.emplace_back(servers.back()->InProcessChannel());
     }
 
@@ -497,8 +508,9 @@ std::pair<std::shared_ptr<snark::GRPCServer>, std::shared_ptr<snark::GRPCClient>
     TempFolder path(name);
     auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
 
-    auto service = std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                                   snark::PartitionStorageType::memory, "");
+    auto service = std::make_shared<snark::GraphEngineServiceImpl>(
+        snark::Metadata(path.string()), std::vector<std::string>{path.string()}, std::vector<uint32_t>{0},
+        snark::PartitionStorageType::memory);
     auto server = std::make_shared<snark::GRPCServer>(
         std::move(service), std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", "");
     auto client = std::make_shared<snark::GRPCClient>(
@@ -579,8 +591,9 @@ std::pair<ServerList, std::shared_ptr<snark::GRPCClient>> CreateMultiServerEnvir
         TempFolder path(name);
         auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
         servers.emplace_back(std::make_shared<snark::GRPCServer>(
-            std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                            snark::PartitionStorageType::memory, ""),
+            std::make_shared<snark::GraphEngineServiceImpl>(
+                snark::Metadata(path.string()), std::vector<std::string>{path.string()}, std::vector<uint32_t>{0},
+                snark::PartitionStorageType::memory),
             std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", ""));
         channels.emplace_back(servers.back()->InProcessChannel());
     }
@@ -681,8 +694,9 @@ TEST(DistributedTest, NeighborCountMultipleServers)
         TempFolder path("NeighborCountMultipleServers");
         auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
         servers.emplace_back(std::make_shared<snark::GRPCServer>(
-            std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                            snark::PartitionStorageType::memory, ""),
+            std::make_shared<snark::GraphEngineServiceImpl>(
+                snark::Metadata(path.string()), std::vector<std::string>{path.string()}, std::vector<uint32_t>{0},
+                snark::PartitionStorageType::memory),
             std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", ""));
         channels.emplace_back(servers.back()->InProcessChannel());
     }
@@ -722,8 +736,9 @@ TEST(DistributedTest, NeighborCountMismatchingOutputSize)
         TempFolder path("NeighborCountMismatchingOutputSize");
         auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
         servers.emplace_back(std::make_shared<snark::GRPCServer>(
-            std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                            snark::PartitionStorageType::memory, ""),
+            std::make_shared<snark::GraphEngineServiceImpl>(
+                snark::Metadata(path.string()), std::vector<std::string>{path.string()}, std::vector<uint32_t>{0},
+                snark::PartitionStorageType::memory),
             std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", ""));
         channels.emplace_back(servers.back()->InProcessChannel());
     }
@@ -769,8 +784,9 @@ TEST(DistributedTest, NeighborCountEmptyGraph)
         // EmptyGraphEngine as engine service
         servers.emplace_back(std::make_shared<snark::GRPCServer>(
             std::shared_ptr<snark::GraphEngineServiceImpl>{},
-            std::make_shared<snark::GraphSamplerServiceImpl>(path.string(), std::set<size_t>{0}), "localhost:0", "", "",
-            ""));
+            std::make_shared<snark::GraphSamplerServiceImpl>(
+                snark::Metadata(path.string()), std::vector<std::string>{path.string()}, std::vector<size_t>{0}),
+            "localhost:0", "", "", ""));
         channels.emplace_back(servers.back()->InProcessChannel());
     }
 
@@ -823,17 +839,20 @@ TEST(DistributedTest, FullNeighborsMultipleTypesMultipleServers)
 
         TempFolder path("FullNeighborsMultipleTypesMultipleServers");
         auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
+        snark::Metadata metadata(path.string());
         servers.emplace_back(std::make_shared<snark::GRPCServer>(
-            std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                            snark::PartitionStorageType::memory, ""),
+            std::make_shared<snark::GraphEngineServiceImpl>(metadata, std::vector<std::string>{path.string()},
+                                                            std::vector<uint32_t>{0},
+                                                            snark::PartitionStorageType::memory),
             std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", ""));
         channels.emplace_back(servers.back()->InProcessChannel());
 
         // Verify client correctly parses empty messages.
         servers.emplace_back(std::make_unique<snark::GRPCServer>(
             std::shared_ptr<snark::GraphEngineServiceImpl>{},
-            std::make_shared<snark::GraphSamplerServiceImpl>(path.string(), std::set<size_t>{0}), "localhost:0", "", "",
-            ""));
+            std::make_shared<snark::GraphSamplerServiceImpl>(metadata, std::vector<std::string>{path.string()},
+                                                             std::vector<size_t>{0}),
+            "localhost:0", "", "", ""));
         channels.emplace_back(servers.back()->InProcessChannel());
     }
 
@@ -893,8 +912,9 @@ std::pair<ServerList, std::shared_ptr<snark::GRPCClient>> CreateMultiServerSplit
         TempFolder path(name);
         auto partition = TestGraph::convert(path.path, "0_0", std::move(test_graphs[server]), 3);
         servers.emplace_back(std::make_shared<snark::GRPCServer>(
-            std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                            snark::PartitionStorageType::memory, ""),
+            std::make_shared<snark::GraphEngineServiceImpl>(
+                snark::Metadata(path.string()), std::vector<std::string>{path.string()}, std::vector<uint32_t>{0},
+                snark::PartitionStorageType::memory),
             std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", ""));
         channels.emplace_back(servers.back()->InProcessChannel());
     }
@@ -1071,8 +1091,9 @@ struct SamplerData
 
             servers.emplace_back(std::make_unique<snark::GRPCServer>(
                 std::shared_ptr<snark::GraphEngineServiceImpl>{},
-                std::make_shared<snark::GraphSamplerServiceImpl>(path.string(), std::set<size_t>{0}), "localhost:0", "",
-                "", ""));
+                std::make_shared<snark::GraphSamplerServiceImpl>(
+                    snark::Metadata(path.string()), std::vector<std::string>{path.string()}, std::vector<size_t>{0}),
+                "localhost:0", "", "", ""));
             channels.emplace_back(servers.back()->InProcessChannel());
         }
 
@@ -1213,8 +1234,9 @@ TEST(DistributedTest, TestSamplerFromGEOnlyServer)
 
     TempFolder path("TestSamplerFromGEOnlyServer");
     auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
-    snark::GRPCServer server(std::make_shared<snark::GraphEngineServiceImpl>(path.string(), std::vector<uint32_t>{0},
-                                                                             snark::PartitionStorageType::memory, ""),
+    snark::GRPCServer server(std::make_shared<snark::GraphEngineServiceImpl>(
+                                 snark::Metadata(path.string()), std::vector<std::string>{path.string()},
+                                 std::vector<uint32_t>{0}, snark::PartitionStorageType::memory),
                              {}, "localhost:0", "", "", "");
     snark::GRPCClient client({server.InProcessChannel()}, 1, 1);
     std::vector<snark::NodeId> output_nodes(3, -2);

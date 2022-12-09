@@ -86,7 +86,7 @@ def memory_graph(request):
     worker_count = 1 if not hasattr(request, "param") else request.param[1]
     caveman_data(partitions, worker_count, output_dir.name)
 
-    yield LocalClient(path=output_dir.name, partitions=[0, 1])
+    yield LocalClient(output_dir.name, partitions=[0, 1])
     output_dir.cleanup()
 
 
@@ -141,8 +141,8 @@ def distributed_graph(request):
     worker_count = 1 if not hasattr(request, "param") else request.param[1]
     caveman_data(partitions, worker_count, output_dir.name)
 
-    s1 = server.Server(output_dir.name, [0], "localhost:11234")
-    s2 = server.Server(output_dir.name, [1], "localhost:11235")
+    s1 = server.Server(output_dir.name, [(output_dir.name, 0)], "localhost:11234")
+    s2 = server.Server(output_dir.name, [(output_dir.name, 1)], "localhost:11235")
     cl = distributed.DistributedClient(["localhost:11234", "localhost:11235"])
 
     yield cl
