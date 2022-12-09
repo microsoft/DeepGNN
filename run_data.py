@@ -198,11 +198,11 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         """Return cross entropy loss."""
         return self._loss_inner(context)
 
-import asyncio
+
 address = [f"localhost:9990", f"localhost:9991"]
 
 import random
-@ray.remote(scheduling_strategy="SPREAD")
+@ray.remote(scheduling_strategy="SPREAD")  # double check if use
 class Counter:
     def __init__(self):
         self.g = DistributedClient([address[random.random() > .5]])  #Client("/tmp/reddit", [0])
@@ -266,14 +266,8 @@ def train_func(config: Dict):
     dataset = ray.data.range(SAMPLE_NUM - (SAMPLE_NUM % BATCH_SIZE), parallelism=-1).repartition(SAMPLE_NUM // BATCH_SIZE)
     #dataset = ray.data.read_text("/tmp/reddit/notes.train").repartition(SAMPLE_NUM // BATCH_SIZE)
     print(dataset)
-    pipe = dataset.window(blocks_per_window=4).repeat(20)  # map batches gets run once per each window full reset for actor pool
+    pipe = dataset.window(blocks_per_window=4).repeat(5)  # map batches gets run once per each window full reset for actor pool
 
-    """
-    worker = Counter.remote()#num_cpus=.5)
-    pipe = pipe.map_batches(lambda batch: ray.get(worker.call.remote(batch)), batch_size=BATCH_SIZE)
-    """
-    # 44.5297 on 1/2 data N_BATCHES 75 metric 0.453588 - fixed and now times match
-    #list(pool.map(lambda a, v: a.double.remote(v), [1, 2, 3, 4]))
     def transform(batch):
         g = DistributedClient([f"localhost:9990"])
         query_obj = PTGSupervisedGraphSageQuery(
@@ -287,6 +281,10 @@ def train_func(config: Dict):
         return output
 
     pipe = pipe.map_batches(transform)
+    """
+    worker = Counter.remote()#num_cpus=.5)
+    pipe = pipe.map_batches(lambda batch: ray.get(worker.call.remote(batch)), batch_size=BATCH_SIZE)
+    """
     """
     worker1, worker2 = Counter.remote(), Counter.remote() 
     pool = ray.util.actor_pool.ActorPool([worker1, worker2]) 
@@ -354,7 +352,7 @@ def train_func(config: Dict):
         dataset=dataset,
         num_workers=N_WORKERS,
     )
-    for epoch in range(1):
+    for epoch in range(5):
         metrics = []
         losses = []
         for i, batch in enumerate(dataset):
@@ -365,18 +363,16 @@ def train_func(config: Dict):
         for i, batch in enumerate(
                 epoch_pipe.iter_torch_batches(prefetch_blocks=0, batch_size=BATCH_SIZE)
             ):
-            #print("STEP:", i, 'RAM Used (GB):', psutil.virtual_memory()[3]/1000000000)
-            #"""
             scores = model(batch)[0]
-            labels = batch["label"].squeeze().argmax(1)
+            labels = batch["label"].squeeze().argmax(1).detach()
 
             loss = loss_fn(scores, labels)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            #metrics.append((scores.squeeze().argmax(1) == labels).float().mean().item())
-            #losses.append(loss.item())
+            metrics.append((scores.squeeze().argmax(1) == labels).float().mean().item())
+            losses.append(loss.item())
 
             #if i >= SAMPLE_NUM / BATCH_SIZE / session.get_world_size():
             #    break
@@ -386,7 +382,7 @@ def train_func(config: Dict):
         except NameError:
             pass
 
-        #print("RESULTS:!", np.mean(metrics), np.mean(losses), "N_BATCHES", i)
+        print("RESULTS:!", np.mean(metrics), np.mean(losses), "N_BATCHES", i)
 
         session.report(
             {
@@ -394,11 +390,6 @@ def train_func(config: Dict):
                 "loss": np.mean(losses),
             }
         )
-
-
-#ws = Workspace.from_config("config.json")
-#ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="multi-node", maxnode=2)
-#ray = ray_on_aml.getRay()
 
 import ray
 ray.init()
