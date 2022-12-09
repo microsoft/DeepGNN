@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Load graph partitions from separate folders.
 
+- Add Reddit dataset download tool at deepgnn.graph_engine.data.reddit.
+
 ### Changed
 - Breaking. Remove FeatureType enum, replace with np.dtype. FeatureType.BINARY -> np.uint8, FeatureType.FLOAT -> np.float32, FeatureType.INT64 -> np.int64.
 
