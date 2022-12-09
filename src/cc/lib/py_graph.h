@@ -90,6 +90,8 @@ extern "C"
                                                   size_t connection_count, const char *ssl_cert, size_t num_threads,
                                                   size_t num_threads_per_cq);
 
+    DEEPGNN_DLL extern int32_t DeleteClient(PyGraph *py_graph);
+
     DEEPGNN_DLL extern int32_t GetNodeType(PyGraph *graph, NodeID *node_ids, size_t node_ids_size, Type *output,
                                            Type default_type);
     DEEPGNN_DLL extern int32_t GetNodeFeature(PyGraph *graph, NodeID *node_ids, size_t node_ids_size, Feature *features,
@@ -151,6 +153,7 @@ extern "C"
     DEEPGNN_DLL extern int32_t SampleEdges(PySampler *sampler, int64_t seed, size_t count, NodeID *out_src_id,
                                            NodeID *out_dst_id, Type *out_type);
 
+    DEEPGNN_DLL extern int32_t DeleteSampler(PySampler *sampler);
     DEEPGNN_DLL extern int32_t ResetSampler(PySampler *sampler);
     DEEPGNN_DLL extern int32_t ResetGraph(PyGraph *graph);
     DEEPGNN_DLL extern int32_t ResetServer(PyServer *graph);

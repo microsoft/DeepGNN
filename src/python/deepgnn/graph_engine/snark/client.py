@@ -168,7 +168,7 @@ class MemoryGraph:
                 if stream = True and libhdfs present, stream data directly to memory -- see docs/advanced/hdfs.md for setup and usage.
             delayed_start (bool, default=False): Delay loading graph engine until after serialization reduce.
         """
-        self._init_args = (path, partitions, storage_type, config_path, stream)
+        self._init_args = (meta_path, partitions, storage_type, config_path, stream)
 
         if partitions is None:
             partitions = [(meta_path, 0)]
@@ -229,6 +229,13 @@ class MemoryGraph:
             c_char_p(bytes(config_path, "utf-8")),
         )
         self._describe_clib_functions()
+
+    def __del__(self):
+        if hasattr(self, "lib"):
+            self.lib.DeleteClient.errcheck = _ErrCallback(  # type: ignore
+                "delete client"
+            )
+            self.lib.DeleteClient(byref(self.g_))
 
     def __reduce__(self):
         """Serialize object."""
@@ -919,13 +926,19 @@ class DistributedGraph(MemoryGraph):
         ssl_cert: str = None,
         num_threads: int = None,
         num_cq_per_thread: int = None,
+        delayed_start: bool = False
     ):
         """Create a client to work with a graph in a distributed mode.
 
         Args:
             servers (List[str]): List of server hostnames to connect to.
             ssl_cert (str, optional): Certificates to use for connection if needed. Defaults to None.
+            delayed_start (bool, optional=False): Delay start of GE until after re-serialize.
         """
+        self._init_args = (servers, ssl_cert, num_threads, num_cq_per_thread)
+        if delayed_start:
+            return
+
         assert len(servers) > 0
         self.g_ = _DEEP_GRAPH()
         self.lib = _get_c_lib()
@@ -1056,6 +1069,12 @@ class NodeSampler:
             "reset node sampler"
         )
 
+    def __del__(self):
+        self.lib.DeleteSampler.errcheck = _ErrCallback(  # type: ignore
+            "delete samper"
+        )
+        self.lib.DeleteSampler(byref(self.ns_))
+
     def __reduce__(self):
         """Serialize object."""
         class_fn = type(self)
@@ -1175,6 +1194,12 @@ class EdgeSampler:
         self.lib.ResetSampler.errcheck = _ErrCallback(
             "reset edge sampler"
         )  # type: ignore
+
+    def __del__(self):
+        self.lib.DeleteSampler.errcheck = _ErrCallback(  # type: ignore
+            "delete samper"
+        )
+        self.lib.DeleteSampler(byref(self.es_))
 
     def __reduce__(self):
         """Serialize object."""
