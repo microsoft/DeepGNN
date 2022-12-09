@@ -418,4 +418,4 @@ trainer = TorchTrainer(
 )
 result = trainer.fit()
 
-# ray_on_aml.shutdown()
+ray_on_aml.shutdown()  # Important else job dont quit
