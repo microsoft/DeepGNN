@@ -231,6 +231,7 @@ class MemoryGraph:
         self._describe_clib_functions()
 
     def __del__(self):
+        """Delete graph engine client."""
         if hasattr(self, "lib"):
             self.lib.DeleteClient.errcheck = _ErrCallback(  # type: ignore
                 "delete client"
@@ -926,7 +927,7 @@ class DistributedGraph(MemoryGraph):
         ssl_cert: str = None,
         num_threads: int = None,
         num_cq_per_thread: int = None,
-        delayed_start: bool = False
+        delayed_start: bool = False,
     ):
         """Create a client to work with a graph in a distributed mode.
 
@@ -935,7 +936,7 @@ class DistributedGraph(MemoryGraph):
             ssl_cert (str, optional): Certificates to use for connection if needed. Defaults to None.
             delayed_start (bool, optional=False): Delay start of GE until after re-serialize.
         """
-        self._init_args = (servers, ssl_cert, num_threads, num_cq_per_thread)
+        self._init_args = (servers, ssl_cert, num_threads, num_cq_per_thread)  # type: ignore
         if delayed_start:
             return
 
@@ -1070,9 +1071,8 @@ class NodeSampler:
         )
 
     def __del__(self):
-        self.lib.DeleteSampler.errcheck = _ErrCallback(  # type: ignore
-            "delete samper"
-        )
+        """Delete node sampler."""
+        self.lib.DeleteSampler.errcheck = _ErrCallback("delete samper")  # type: ignore
         self.lib.DeleteSampler(byref(self.ns_))
 
     def __reduce__(self):
@@ -1196,9 +1196,8 @@ class EdgeSampler:
         )  # type: ignore
 
     def __del__(self):
-        self.lib.DeleteSampler.errcheck = _ErrCallback(  # type: ignore
-            "delete samper"
-        )
+        """Delete edge sampler."""
+        self.lib.DeleteSampler.errcheck = _ErrCallback("delete samper")  # type: ignore
         self.lib.DeleteSampler(byref(self.es_))
 
     def __reduce__(self):

@@ -6,10 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Add delayed_start parameter to graph engine to enable delaying loading graph lib until after deserialization, for use in Ray data.
+
 ### Changed
 - Replace custom trainers with Ray Train, see [docs/torch/node_class.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/torch/node_class.rst).
 
+- Replace DeepGNN Samplers, TorchDeepGNNDataset and Torch Dataloader usage with Ray data usage, see [docs/graph_engine/dataset.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/graph_engine/dataset.rst).
+
 - Breaking. Rename get_feature_type -> get_python_type.
+
+### Fixed
+- ~1Mb leak when deleting graph engine.
 
 ## [0.1.56] - 2022-11-02
 

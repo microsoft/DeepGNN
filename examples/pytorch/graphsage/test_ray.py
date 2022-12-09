@@ -76,7 +76,7 @@ def onehot(values, size):
 
 
 def train_func(config: Dict):
-    worker_batch_size = config["batch_size"]  # // session.get_world_size()
+    worker_batch_size = config["batch_size"]
 
     model = NeuralNetwork()
     model = train.torch.prepare_model(model)
@@ -88,7 +88,7 @@ def train_func(config: Dict):
 
     dataset = ray.data.range(2708, parallelism=1)
     pipe = dataset.window(blocks_per_window=2).repeat(config["epochs"])
-    g = Client(config.data_dir, [0], delayed_start=True)
+    g = Client(config["data_dir"], [0], delayed_start=True)
 
     def transform_batch(batch: list) -> dict:
         return NeuralNetwork.query(g, batch)

@@ -43,7 +43,12 @@ class Client(Graph):
             f"Graph data path: {path}. Partitions {partitions}. Storage type {storage_type}. Config path {config_path}. Stream {stream}."
         )
         self.graph = client.MemoryGraph(
-            path, partitions_with_paths, storage_type, config_path, stream, delayed_start
+            path,
+            partitions_with_paths,
+            storage_type,
+            config_path,
+            stream,
+            delayed_start,
         )
         self.node_samplers: Dict[str, client.NodeSampler] = {}
         self.edge_samplers: Dict[str, client.EdgeSampler] = {}
