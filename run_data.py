@@ -202,7 +202,7 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
 address = [f"localhost:9990", f"localhost:9991"]
 
 import random
-@ray.remote(scheduling_strategy="SPREAD")  # double check if use
+@ray.remote(scheduling_strategy="SPREAD")  # double check if use https://docs.ray.io/en/latest/ray-core/scheduling/placement-group.html
 class Counter:
     def __init__(self):
         self.g = DistributedClient([address[random.random() > .5]])  #Client("/tmp/reddit", [0])
