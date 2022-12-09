@@ -43,7 +43,12 @@ class Reddit(Client):
     - Node Feature Dim: 300 (id:1)
     """
 
-    def __init__(self, output_dir: str = None, edge_downsample_pct: float = 0.1, n_partitions: int = 2):
+    def __init__(
+        self,
+        output_dir: str = None,
+        edge_downsample_pct: float = 0.1,
+        n_partitions: int = 2,
+    ):
         """
         Initialize Reddit dataset.
 
@@ -60,7 +65,9 @@ class Reddit(Client):
         if self.output_dir is None:
             self.output_dir = os.path.join("/tmp/", self.GRAPH_NAME)
         self._build_graph(self.output_dir)
-        super().__init__(path=self.output_dir, partitions=list(range(self._n_partitions)))
+        super().__init__(
+            path=self.output_dir, partitions=list(range(self._n_partitions))
+        )
 
     def data_dir(self):
         """Graph location on disk."""
