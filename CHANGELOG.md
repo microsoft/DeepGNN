@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Replace custom trainers with Ray Train, see [docs/torch/node_class.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/torch/node_class.rst).
+
 - Breaking. Rename get_feature_type -> get_python_type.
 
 ## [0.1.56] - 2022-11-02
