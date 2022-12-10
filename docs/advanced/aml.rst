@@ -19,11 +19,11 @@ See docs/torch/node_class.rst for more details. This will work on TF as well.
     >>> import torch.nn as nn
     >>> import torch.nn.functional as F
 
-    >>> import ray
-    >>> import ray.train as train
-    >>> from ray.train.torch import TorchTrainer
-    >>> from ray.air import session
-    >>> from ray.air.config import ScalingConfig, RunConfig
+    >>> #import ray
+    >>> #import ray.train as train
+    >>> #from ray.train.torch import TorchTrainer
+    >>> #from ray.air import session
+    >>> #from ray.air.config import ScalingConfig, RunConfig
 
     >>> import deepgnn.pytorch
     >>> from deepgnn.pytorch.nn.gat_conv import GATConv
@@ -157,22 +157,54 @@ Ray Connect to AML
     >>> import os
     >>> os.environ["HOME"] = "."
 
+    >>> from azureml.core import Workspace
+    >>> from ray_on_aml.core import Ray_On_AML
+
+    >>> ws = Workspace.from_config("../config.json")
+    >>> ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="multi-node", maxnode=2)
+    >>> ray = ray_on_aml.getRay(gpu_support=False)
+
+    >>> trainer = TorchTrainer(
+    ...     train_func,
+    ...     train_loop_config={},
+    ...     run_config=RunConfig(),
+    ...     scaling_config=ScalingConfig(
+    ...         num_workers=1, resources_per_worker={"CPU": 1, "GPU": 0}, use_gpu=False
+    ...     ),
+    ... )
+    >>> result = trainer.fit()
+    == Status ==...
+
+    >>> ray_on_aml.shutdown()
+    Cancel active AML runs if any
+    Shutting down ray if any
+
+GPU Mode
+========
+
+.. code-block:: python
+
+    >>> import os
+    >>> os.environ["HOME"] = "."
 
     >>> from azureml.core import Workspace
     >>> from ray_on_aml.core import Ray_On_AML
-    >>> ws = Workspace.from_config("config.json")
-    >>> #ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="multi-node", maxnode=1)
-    >>> #ray = ray_on_aml.getRay()
-    # may take 7 mintues or longer.Check the AML run under ray_on_aml experiment for cluster status.
 
-    >>> #ray.init()
-    RayContext(...)
-    >>> '''trainer = TorchTrainer(
+    >>> ws = Workspace.from_config("../config.json")
+    >>> ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="gpu-cluster", maxnode=2)
+    >>> ray = ray_on_aml.getRay(gpu_support=True)
+
+    >>> trainer = TorchTrainer(
     ...     train_func,
     ...     train_loop_config={},
-    ...     run_config=RunConfig(verbose=0),
-    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
-    ... )'''
-    >>> #result = trainer.fit()
+    ...     run_config=RunConfig(),
+    ...     scaling_config=ScalingConfig(
+    ...         num_workers=1, resources_per_worker={"CPU": 1, "GPU": 0}, use_gpu=False
+    ...     ),
+    ... )
+    >>> result = trainer.fit()
+    == Status ==...
 
-    >>> #ray_on_aml.shutdown()
+    >>> ray_on_aml.shutdown()
+    Cancel active AML runs if any
+    Shutting down ray if any
