@@ -36,11 +36,19 @@ class Client(Graph):
         if len(partitions) == 0:
             self.logger.info("Partitions not set, defaulting to [0]")
             partitions = [0]
+        partitions_with_paths = [
+            (path, partition) for partition in range(len(partitions))
+        ]
         self.logger.info(
             f"Graph data path: {path}. Partitions {partitions}. Storage type {storage_type}. Config path {config_path}. Stream {stream}."
         )
         self.graph = client.MemoryGraph(
-            path, partitions, storage_type, config_path, stream, delayed_start
+            path,
+            partitions_with_paths,
+            storage_type,
+            config_path,
+            stream,
+            delayed_start,
         )
         self.node_samplers: Dict[str, client.NodeSampler] = {}
         self.edge_samplers: Dict[str, client.EdgeSampler] = {}

@@ -26,8 +26,9 @@ struct EdgeRecord
     float m_weight;
 };
 } // namespace
-Partition::Partition(std::filesystem::path path, std::string suffix, PartitionStorageType storage_type)
-    : m_metadata(path), m_storage_type(storage_type)
+Partition::Partition(Metadata metadata, std::filesystem::path path, std::string suffix,
+                     PartitionStorageType storage_type)
+    : m_metadata(std::move(metadata)), m_storage_type(storage_type)
 {
     ReadNodeMap(path, suffix);
     ReadNodeFeatures(path, suffix);

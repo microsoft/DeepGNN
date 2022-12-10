@@ -5,7 +5,7 @@
         CreateLocalGraph;
         StartServer;
         CreateRemoteClient;
-        DeleteRemoteClient;
+        DeleteClient;
         GetNodeFeature;
         GetNodeSparseFeature;
         GetNodeStringFeature;
@@ -25,6 +25,7 @@
         CreateUniformEdgeSampler;
         CreateUniformEdgeSamplerWithoutReplacement;
         SampleEdges;
+        DeleteSampler;
         ResetSampler;
         ResetGraph;
         ResetServer;

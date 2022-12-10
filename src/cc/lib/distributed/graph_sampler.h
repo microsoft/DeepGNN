@@ -5,6 +5,8 @@
 #define SNARK_GRAPH_SAMPLER_SERVICE_H
 
 #include <mutex>
+#include <string>
+#include <vector>
 
 #include "absl/container/flat_hash_map.h"
 #include <grpc/grpc.h>
@@ -23,7 +25,8 @@ const uint64_t empty_sampler_id = std::numeric_limits<uint64_t>::max();
 class GraphSamplerServiceImpl final : public snark::GraphSampler::Service
 {
   public:
-    GraphSamplerServiceImpl(std::string path, std::set<size_t> partitions);
+    GraphSamplerServiceImpl(snark::Metadata metadata, std::vector<std::string> partition_paths,
+                            std::vector<size_t> partition_indices);
 
     grpc::Status Create(::grpc::ServerContext *context, const snark::CreateSamplerRequest *request,
                         snark::CreateSamplerReply *response) override;
@@ -37,7 +40,9 @@ class GraphSamplerServiceImpl final : public snark::GraphSampler::Service
     absl::flat_hash_map<snark::CreateSamplerRequest_Category, std::shared_ptr<snark::SamplerFactory>>
         m_edge_sampler_factory;
     std::vector<std::unique_ptr<snark::Sampler>> m_samplers;
-    std::set<size_t> m_partitions;
+    snark::Metadata m_metadata;
+    std::vector<size_t> m_partition_indices;
+    std::vector<std::string> m_patrition_paths;
     std::mutex m_mutex;
 };
 

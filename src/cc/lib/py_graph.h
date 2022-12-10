@@ -76,11 +76,12 @@ extern "C"
     typedef void (*GetSparseFeaturesCallback)(const int64_t **, size_t *, const uint8_t **, size_t *, int64_t *);
     typedef void (*GetStringFeaturesCallback)(size_t, const uint8_t *);
 
-    DEEPGNN_DLL extern int32_t CreateLocalGraph(PyGraph *graph, size_t count, uint32_t *partitions,
-                                                const char *filename, PyPartitionStorageType storage_type,
-                                                const char *config_path);
+    DEEPGNN_DLL extern int32_t CreateLocalGraph(PyGraph *graph, const char *meta_location, size_t count,
+                                                uint32_t *partition_indices, const char **partition_locations,
+                                                PyPartitionStorageType storage_type, const char *config_path);
 
-    DEEPGNN_DLL extern int32_t StartServer(PyServer *graph, size_t count, uint32_t *partitions, const char *filename,
+    DEEPGNN_DLL extern int32_t StartServer(PyServer *graph, const char *meta_location, size_t count,
+                                           uint32_t *partition_indices, const char **partition_locations,
                                            const char *host_name, const char *ssl_key, const char *ssl_cert,
                                            const char *ssl_root, const PyPartitionStorageType storage_type,
                                            const char *config_path);
@@ -89,8 +90,7 @@ extern "C"
                                                   size_t connection_count, const char *ssl_cert, size_t num_threads,
                                                   size_t num_threads_per_cq);
 
-    DEEPGNN_DLL extern int32_t DeleteRemoteClient(PyGraph *py_graph);
-
+    DEEPGNN_DLL extern int32_t DeleteClient(PyGraph *py_graph);
 
     DEEPGNN_DLL extern int32_t GetNodeType(PyGraph *graph, NodeID *node_ids, size_t node_ids_size, Type *output,
                                            Type default_type);
@@ -153,6 +153,7 @@ extern "C"
     DEEPGNN_DLL extern int32_t SampleEdges(PySampler *sampler, int64_t seed, size_t count, NodeID *out_src_id,
                                            NodeID *out_dst_id, Type *out_type);
 
+    DEEPGNN_DLL extern int32_t DeleteSampler(PySampler *sampler);
     DEEPGNN_DLL extern int32_t ResetSampler(PySampler *sampler);
     DEEPGNN_DLL extern int32_t ResetGraph(PyGraph *graph);
     DEEPGNN_DLL extern int32_t ResetServer(PyServer *graph);

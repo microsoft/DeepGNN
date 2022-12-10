@@ -3,7 +3,7 @@
 _CreateLocalGraph
 _StartServer
 _CreateRemoteClient
-_DeleteRemoteClient
+_DeleteClient
 _GetNodeFeature
 _GetNodeSparseFeature
 _GetNodeStringFeature
@@ -23,6 +23,7 @@ _CreateWeightedEdgeSampler
 _CreateUniformEdgeSampler
 _CreateUniformEdgeSamplerWithoutReplacement
 _SampleEdges
+_DeleteSampler
 _ResetSampler
 _ResetGraph
 _ResetServer

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Add delayed_start parameter to graph engine to enable delaying loading graph lib until after deserialization, for use in Ray data.
+
+### Changed
+- Replace custom trainers with Ray Train, see [docs/torch/node_class.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/torch/node_class.rst).
+
+- Replace DeepGNN Samplers, TorchDeepGNNDataset and Torch Dataloader usage with Ray data usage, see [docs/graph_engine/dataset.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/graph_engine/dataset.rst).
+
+- Breaking. Rename get_feature_type -> get_python_type.
+
+### Fixed
+- ~1Mb leak when deleting graph engine.
+
+## [0.1.56] - 2022-11-02
+
+### Added
 - Add new converter input format "EdgeList" with EdgeListDecoder. Format has nodes and edges on separate lines, is smaller and faster to convert.
 
 - Breaking. Added version checks for binary data. Requires to convert graph data or add v1 at the top of meta files.
@@ -14,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add migrate script to pull to new version of deepgnn.
 
 - Add debug mode to MultiWorkersConverter, using debug=True will now disable multiprocessing and show error messages.
+
+- Load graph partitions from separate folders.
 
 - Add Reddit dataset download tool at deepgnn.graph_engine.data.reddit.
 

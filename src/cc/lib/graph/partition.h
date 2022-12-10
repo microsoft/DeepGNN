@@ -23,7 +23,7 @@ namespace snark
 struct Partition
 {
     Partition() = default;
-    Partition(std::filesystem::path path, std::string suffix, PartitionStorageType storage_type);
+    Partition(Metadata m_metadata, std::filesystem::path path, std::string suffix, PartitionStorageType storage_type);
 
     Type GetNodeType(uint64_t internal_node_id) const;
     bool HasNodeFeatures(uint64_t internal_node_id) const;

@@ -5,6 +5,7 @@ import pytest
 import sys
 import os
 import platform
+import tempfile
 from typing import Dict
 
 import numpy as np
@@ -19,7 +20,9 @@ from ray.air import session
 from ray.air.config import ScalingConfig
 
 from deepgnn.graph_engine import SamplingStrategy
-from deepgnn.graph_engine.snark.local import Client
+from deepgnn.graph_engine.snark.distributed import Client as DistributedClient
+from deepgnn.graph_engine.data.citation import Cora
+import deepgnn.graph_engine.snark.server as server
 
 
 feature_idx = 1
@@ -75,7 +78,10 @@ def onehot(values, size):
 
 
 def train_func(config: Dict):
-    worker_batch_size = config["batch_size"]  # // session.get_world_size()
+    train.torch.enable_reproducibility(seed=session.get_world_rank())
+
+    address = "localhost:9999"
+    s = server.Server(config["data_dir"], [0], address)
 
     model = NeuralNetwork()
     model = train.torch.prepare_model(model)
@@ -85,21 +91,17 @@ def train_func(config: Dict):
 
     loss_fn = nn.CrossEntropyLoss()
 
-    dataset = ray.data.range(2708, parallelism=1)
-    pipe = dataset.window(blocks_per_window=2).repeat(config["epochs"])
-    g = Client("/tmp/cora", [0], delayed_start=True)
-
+    dataset = ray.data.range(2708).repartition(2708 // config["batch_size"])
+    pipe = dataset.window(blocks_per_window=4).repeat(config["epochs"])
     def transform_batch(batch: list) -> dict:
+        g = DistributedClient([address])
         return NeuralNetwork.query(g, batch)
-
     pipe = pipe.map_batches(transform_batch)
 
     model.train()
     for train_dataloader in pipe.iter_epochs():
         for i, batch in enumerate(
-            train_dataloader.random_shuffle_each_window().iter_torch_batches(
-                batch_size=worker_batch_size
-            )
+            train_dataloader.iter_torch_batches(batch_size=config["batch_size"])
         ):
             pred = model(batch["features"])
             loss = loss_fn(pred.squeeze(), onehot(batch["labels"], 10))
@@ -112,14 +114,23 @@ def train_func(config: Dict):
 
 
 def test_graphsage_ppi_hvd_trainer():
+    working_dir = tempfile.TemporaryDirectory()
+    Cora(working_dir.name)
+
     ray.init()
     trainer = TorchTrainer(
         train_func,
-        train_loop_config={"lr": 1e-3, "batch_size": 64, "epochs": 4},
-        scaling_config=ScalingConfig(num_workers=2, use_gpu=False),
+        train_loop_config={
+            "data_dir": working_dir.name,
+            "lr": 1e-3,
+            "batch_size": 64,
+            "epochs": 4,
+        },
+        scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     )
     result = trainer.fit()
     print(f"Results: {result.metrics}")
+    working_dir.cleanup()
 
 
 if __name__ == "__main__":
