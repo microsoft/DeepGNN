@@ -242,10 +242,7 @@ class MemoryGraph:
         """Serialize object."""
         class_fn = type(self)
 
-        # print("REDUCE GE")
-
         def deserializer(*args):
-            # print("UNREDUCE GE")
             return class_fn(*args)
 
         return deserializer, self._init_args
@@ -989,13 +986,6 @@ class DistributedGraph(MemoryGraph):
 
         super()._describe_clib_functions()
 
-    def __del__(self):
-        """Delete client."""
-        self.lib.DeleteRemoteClient.errcheck = _ErrCallback(  # type: ignore
-            "delete remote client"
-        )
-        self.lib.DeleteRemoteClient(byref(self.g_))
-
 
 class NodeSampler:
     """Sampler to fetch nodes from a graph."""
@@ -1089,10 +1079,7 @@ class NodeSampler:
         """Serialize object."""
         class_fn = type(self)
 
-        print("REDUCE NS")
-
         def deserializer(*args):
-            print("UNREDUCE NS")
             return class_fn(*args)
 
         return deserializer, self._init_args
@@ -1217,10 +1204,7 @@ class EdgeSampler:
         """Serialize object."""
         class_fn = type(self)
 
-        print("REDUCE ES")
-
         def deserializer(*args):
-            print("UNREDUCE ES")
             return class_fn(*args)
 
         return deserializer, self._init_args
