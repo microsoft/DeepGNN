@@ -93,9 +93,11 @@ def train_func(config: Dict):
 
     dataset = ray.data.range(2708).repartition(2708 // config["batch_size"])
     pipe = dataset.window(blocks_per_window=4).repeat(config["epochs"])
+
     def transform_batch(batch: list) -> dict:
         g = DistributedClient([address])
         return NeuralNetwork.query(g, batch)
+
     pipe = pipe.map_batches(transform_batch)
 
     model.train()
