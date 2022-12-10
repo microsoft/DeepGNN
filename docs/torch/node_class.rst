@@ -63,11 +63,11 @@ Setup
     >>> import deepgnn.pytorch
     >>> from deepgnn.pytorch.nn.gat_conv import GATConv
     >>> from deepgnn.graph_engine import Graph, graph_ops
-    >>> from deepgnn.graph_engine.snark.local import Client
     >>> from deepgnn.pytorch.modeling import BaseModel
 
-    >>> from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
-    >>> from deepgnn.graph_engine import FileNodeSampler
+    >>> import deepgnn.graph_engine.snark.server as server
+    >>> from deepgnn.graph_engine.snark.distributed import Client as DistributedClient
+    >>> from deepgnn.graph_engine.data.citation import Cora
 
 Query
 =====
@@ -95,7 +95,7 @@ All node and edge features in this sub-graph are pulled and added to the context
     ...     neighbor_edge_types: list = field(default_factory=lambda: [0])
     ...     num_hops: int = 2
     ...
-    ...     def query(self, g: Client, idx: int) -> Dict[Any, np.ndarray]:
+    ...     def query(self, g: DistributedClient, idx: int) -> Dict[Any, np.ndarray]:
     ...         """Query used to generate data for training."""
     ...         if isinstance(idx, (int, float)):
     ...             idx = [idx]
@@ -198,6 +198,10 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     # Set random seed
     ...     train.torch.enable_reproducibility(seed=session.get_world_rank())
     ...
+    ...     # Start server
+    ...     address = "localhost:9999"
+    ...     s = server.Server("/tmp/cora", [0], address)
+    ...
     ...     # Initialize the model and wrap it with Ray
     ...     model = GAT(in_dim=1433, num_classes=7)
     ...     model = train.torch.prepare_model(model)
@@ -210,18 +214,18 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     loss_fn = nn.CrossEntropyLoss()
     ...
     ...     # Ray Dataset
-    ...     dataset = ray.data.range(2708, parallelism=1)  # -> Dataset(num_blocks=1, num_rows=140, schema=<class 'int'>)
+    ...     dataset = ray.data.range(2708).repartition(2708 // config["batch_size"])  # -> Dataset(num_blocks=6, num_rows=2708, schema=<class 'int'>)
     ...     pipe = dataset.window(blocks_per_window=10).repeat(1)  # -> DatasetPipeline(num_windows=1, num_stages=1)
-    ...     g = Client("/tmp/cora", [0], delayed_start=True)
     ...     q = GATQuery()
     ...     def transform_batch(batch: list) -> dict:
+    ...         g = DistributedClient([address])
     ...         return q.query(g, batch)
     ...     pipe = pipe.map_batches(transform_batch)
     ...
     ...     # Execute the training loop
     ...     model.train()
     ...     for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
-    ...         for i, batch in enumerate(epoch_pipe.random_shuffle_each_window().iter_torch_batches(batch_size=2708)):
+    ...         for i, batch in enumerate(epoch_pipe.iter_torch_batches(batch_size=config["batch_size"])):
     ...             scores = model(batch)
     ...             labels = batch["labels"][batch["input_mask"]].flatten()
     ...             loss = loss_fn(scores.type(torch.float32), labels)
@@ -244,7 +248,7 @@ Finally we call trainer.fit() to execute the training loop.
     RayContext(...)
     >>> trainer = TorchTrainer(
     ...     train_func,
-    ...     train_loop_config={},
+    ...     train_loop_config={"batch_size": 2708},
     ...     run_config=RunConfig(verbose=0),
     ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     ... )

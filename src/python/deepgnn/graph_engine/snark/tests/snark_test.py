@@ -143,7 +143,7 @@ def distributed_graph(request):
 
     s1 = server.Server(output_dir.name, [(output_dir.name, 0)], "localhost:11234")
     s2 = server.Server(output_dir.name, [(output_dir.name, 1)], "localhost:11235")
-    cl = distributed.DistributedClient(["localhost:11234", "localhost:11235"])
+    cl = distributed.Client(["localhost:11234", "localhost:11235"])
 
     yield cl
 
