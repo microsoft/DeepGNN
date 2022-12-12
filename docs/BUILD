@@ -153,6 +153,8 @@ py_test(
         "//src/python/deepgnn/pytorch/modeling:deepgnn_pytorch_modeling",
         "//src/python/deepgnn/pytorch/nn:deepgnn_pytorch_nn",
         "//src/python/deepgnn/pytorch/training:deepgnn_pytorch_training",
+        requirement("ray"),
+        requirement("pyarrow"),
         requirement("azure-datalake-store"),
         requirement("fsspec"),
         requirement("numpy"),
