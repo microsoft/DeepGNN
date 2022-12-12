@@ -15,8 +15,10 @@ First we download the Cora dataset and convert it to a valid binary representati
 
 .. code-block:: python
 
+    >>> import tempfile
 	>>> from deepgnn.graph_engine.data.citation import Cora
-	>>> Cora("/tmp/cora/")
+    >>> data_dir = tempfile.TemporaryDirectory()
+	>>> Cora(data_dir.name)
 	<deepgnn.graph_engine.data.citation.Cora object at 0x...>
 
 GAT Model
@@ -48,7 +50,7 @@ Setup
 
     >>> from typing import List, Tuple, Any, Dict
     >>> from dataclasses import dataclass, field
-    >>> import tempfile
+    >>> import os
     >>> import numpy as np
     >>> import torch
     >>> import torch.nn as nn
@@ -200,6 +202,8 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...
     ...     # Initialize the model and wrap it with Ray
     ...     model = GAT(in_dim=1433, num_classes=7)
+    ...     if os.path.isfile(config["model_dir"]):
+    ...         model.load_state_dict(torch.load(config["model_dir"]))
     ...     model = train.torch.prepare_model(model)
     ...
     ...     # Initialize the optimizer and wrap it with Ray
@@ -210,7 +214,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     loss_fn = nn.CrossEntropyLoss()
     ...
     ...     # Dataset
-    ...     g = Client("/tmp/cora", [0])
+    ...     g = Client(config["data_dir"], [0])
     ...     q = GATQuery()
     ...     dataset = TorchDeepGNNDataset(
     ...         sampler_class=FileNodeSampler,
@@ -218,7 +222,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...         query_fn=q.query,
     ...         prefetch_queue_size=2,
     ...         prefetch_worker_size=2,
-    ...         sample_files="/tmp/cora/train.nodes",
+    ...         sample_files=f"{config['data_dir']}/{config['sample_filename']}",
     ...         batch_size=140,
     ...         shuffle=True,
     ...         drop_last=True,
@@ -232,7 +236,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...
     ...     # Execute the training loop
     ...     model.train()
-    ...     for epoch in range(1):
+    ...     for epoch in range(config["n_epochs"]):
     ...         for i, batch in enumerate(dataset):
     ...             scores = model(batch)
     ...             labels = batch["labels"][batch["input_mask"]].flatten()
@@ -242,6 +246,8 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...             optimizer.step()
     ...
     ...             session.report({"metric": (scores.argmax(1) == labels).sum(), "loss": loss.item()})
+    ...
+    ...     torch.save(model.state_dict(), config["model_dir"])
 
 In this step we start the training job.
 First we start a local ray cluster with `ray.init() <https://docs.ray.io/en/latest/ray-core/package-ref.html#ray-init>`.
@@ -252,12 +258,40 @@ Finally we call trainer.fit() to execute the training loop.
 
 .. code-block:: python
 
+    >>> model_dir = tempfile.TemporaryDirectory()
+
     >>> ray.init()
     RayContext(...)
     >>> trainer = TorchTrainer(
     ...     train_func,
-    ...     train_loop_config={},
+    ...     train_loop_config={
+    ...         "data_dir": data_dir.name,
+    ...         "sample_filename": "train.nodes",
+    ...         "n_epochs": 1,
+    ...         "model_dir": f"{model_dir.name}/model.pt",
+    ...     },
     ...     run_config=RunConfig(verbose=0),
     ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     ... )
     >>> result = trainer.fit()
+
+Evaluate
+========
+
+.. code-block:: python
+
+    >>> trainer = TorchTrainer(
+    ...     train_func,
+    ...     train_loop_config={
+    ...         "data_dir": data_dir.name,
+    ...         "sample_filename": "test.nodes",
+    ...         "n_epochs": 1,
+    ...         "model_dir": f"{model_dir.name}/model.pt",
+    ...     },
+    ...     run_config=RunConfig(verbose=0),
+    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
+    ... )
+    >>> result = trainer.fit()
+
+    >>> data_dir.cleanup()
+    >>> model_dir.cleanup()
