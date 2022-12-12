@@ -166,3 +166,38 @@ Ray Connect to AML
     >>> from ray_on_aml.core import Ray_On_AML
 
     >>> ws = Workspace.from_config("../config.json")
+    >>> ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="multi-node", maxnode=2)
+    >>> ray = ray_on_aml.getRay(gpu_support=False)
+
+    >>> trainer = TorchTrainer(
+    ...     train_func,
+    ...     train_loop_config={},
+    ...     run_config=RunConfig(),
+    ...     scaling_config=ScalingConfig(
+    ...         num_workers=1, resources_per_worker={"CPU": 1, "GPU": 0}, use_gpu=False
+    ...     ),
+    ... )
+    >>> result = trainer.fit()
+    == Status ==...
+
+    >>> ray_on_aml.shutdown()
+    Cancel active AML runs if any
+    Shutting down ray if any
+
+GPU Mode
+========
+
+Example configuration for using AML on GPU.
+
+.. code-block:: python
+
+    >>> ray = ray_on_aml.getRay(gpu_support=True)
+
+    >>> trainer = TorchTrainer(
+    ...     train_func,
+    ...     train_loop_config={},
+    ...     run_config=RunConfig(),
+    ...     scaling_config=ScalingConfig(
+    ...         num_workers=1, resources_per_worker={"CPU": 1, "GPU": 0}, use_gpu=False
+    ...     ),
+    ... )
