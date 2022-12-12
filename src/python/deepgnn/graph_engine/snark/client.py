@@ -232,11 +232,7 @@ class MemoryGraph:
 
     def __del__(self):
         """Delete graph engine client."""
-        if hasattr(self, "lib"):
-            self.lib.DeleteClient.errcheck = _ErrCallback(  # type: ignore
-                "delete client"
-            )
-            self.lib.DeleteClient(byref(self.g_))
+        self.reset()
 
     def __reduce__(self):
         """Serialize object."""
@@ -829,8 +825,9 @@ class MemoryGraph:
 
     def reset(self):
         """Reset graph and unload it from memory."""
-        self.lib.ResetGraph(self.g_)
-        self.path.reset()
+        if hasattr(self, "lib"):
+            self.lib.ResetGraph(self.g_)
+            self.path.reset()
 
     def get_node_type_count(self, types: List[int]) -> int:
         """Return the number of nodes of specified types."""
@@ -1072,8 +1069,7 @@ class NodeSampler:
 
     def __del__(self):
         """Delete node sampler."""
-        self.lib.DeleteSampler.errcheck = _ErrCallback("delete samper")  # type: ignore
-        self.lib.DeleteSampler(byref(self.ns_))
+        self.reset()
 
     def __reduce__(self):
         """Serialize object."""
@@ -1197,8 +1193,7 @@ class EdgeSampler:
 
     def __del__(self):
         """Delete edge sampler."""
-        self.lib.DeleteSampler.errcheck = _ErrCallback("delete samper")  # type: ignore
-        self.lib.DeleteSampler(byref(self.es_))
+        self.reset()
 
     def __reduce__(self):
         """Serialize object."""

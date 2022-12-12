@@ -295,12 +295,6 @@ int32_t CreateRemoteClient(PyGraph *py_graph, const char *output_folder, const c
     return 0;
 }
 
-int32_t DeleteClient(PyGraph *py_graph)
-{
-    py_graph->~PyGraph();
-    return 0;
-}
-
 std::vector<snark::FeatureMeta> ExtractFeatureInfo(Feature *features, size_t features_size)
 {
     std::vector<snark::FeatureMeta> features_info;
@@ -913,12 +907,6 @@ int32_t RandomWalk(PyGraph *py_graph, int64_t seed, float p, float q, NodeID def
             }
         }
     }
-    return 0;
-}
-
-int32_t DeleteSampler(PySampler *py_sampler)
-{
-    py_sampler->~PySampler();
     return 0;
 }
 
