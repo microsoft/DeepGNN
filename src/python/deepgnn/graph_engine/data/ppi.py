@@ -36,26 +36,36 @@ class PPI(Client):
     - Node Feature Dim: 50 (id:1)
     """
 
-    def __init__(self, output_dir: str = None):
+    def __init__(self, output_dir: str = None, n_partitions: int = 1):
         """
         Initialize PPI dataset.
 
         Args:
           output_dir (string): file directory for graph data.
+          n_partitions (int, default=1): Number of partitions
         """
         self.url = "https://deepgraphpub.blob.core.windows.net/public/testdata/ppi.zip"
+        self._n_partitions = n_partitions
         self.GRAPH_NAME = "ppi"
         self.output_dir = output_dir
         if self.output_dir is None:
             self.output_dir = os.path.join("/tmp/", self.GRAPH_NAME)
-        self._build_graph(self.output_dir)
+        load_graph_output = self._load_raw_graph(self.output_dir)
+        self._build_graph(self.output_dir, load_graph_output)
         super().__init__(path=self.output_dir, partitions=[0])
 
     def data_dir(self):
         """Graph location on disk."""
         return self.output_dir
 
-    def _load_raw_graph(self, data_dir: str):
+    def _load_raw_graph(self, output_dir: str):
+        raw_data_dir = os.path.join(output_dir, "raw")
+        data_dir = os.path.join(raw_data_dir, self.GRAPH_NAME)
+        fname = f"{data_dir}.zip"
+        download_file(self.url, raw_data_dir, f"{self.GRAPH_NAME}.zip")
+        with zipfile.ZipFile(fname) as z:
+            z.extractall(raw_data_dir)
+
         id_map = json.load(open(os.path.join(data_dir, "ppi-id_map.json")))
         id_map = {int(k): v for k, v in id_map.items()}
 
@@ -108,16 +118,16 @@ class PPI(Client):
 
         return nodes, nodes_type, train_neighbors, other_neighbors, feats, class_map
 
-    def _build_graph(self, output_dir: str) -> str:
+    def _build_graph(self, output_dir: str, load_graph_output: tuple) -> str:
         data_dir = output_dir
-        raw_data_dir = os.path.join(output_dir, "raw")
-        download_file(self.url, raw_data_dir, "ppi.zip")
-        fname = os.path.join(raw_data_dir, "ppi.zip")
-        with zipfile.ZipFile(fname) as z:
-            z.extractall(raw_data_dir)
-        d = self._load_raw_graph(os.path.join(raw_data_dir, "ppi"))
-        nodes, nodes_type, train_neighbors, other_neighbors, feats, class_map = d
-        assert feats.shape[0] == len(nodes)
+        (
+            nodes,
+            nodes_type,
+            train_neighbors,
+            other_neighbors,
+            feats,
+            class_map,
+        ) = load_graph_output
         self.NUM_NODES = len(nodes)
         self.FEATURE_DIM = feats.shape[1]
         self.NUM_CLASSES = len(class_map[0])
@@ -146,7 +156,7 @@ class PPI(Client):
         # convert graph: edge_list -> Binary
         convert.MultiWorkersConverter(
             graph_path=graph_file,
-            partition_count=1,
+            partition_count=self._n_partitions,
             output_dir=data_dir,
             decoder=decoders.EdgeListDecoder(),
         ).convert()
