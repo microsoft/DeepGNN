@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Add Reddit dataset download tool at deepgnn.graph_engine.data.reddit.
+
+### Changed
+- Breaking. Rename get_feature_type -> get_python_type.
+
+## [0.1.56] - 2022-11-02
+
+### Added
 - Add new converter input format "EdgeList" with EdgeListDecoder. Format has nodes and edges on separate lines, is smaller and faster to convert.
 
 - Breaking. Added version checks for binary data. Requires to convert graph data or add v1 at the top of meta files.
@@ -15,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add debug mode to MultiWorkersConverter, using debug=True will now disable multiprocessing and show error messages.
 
-- Add Reddit dataset download tool at deepgnn.graph_engine.data.reddit.
+- Load graph partitions from separate folders.
 
 ### Changed
 - Breaking. Remove FeatureType enum, replace with np.dtype. FeatureType.BINARY -> np.uint8, FeatureType.FLOAT -> np.float32, FeatureType.INT64 -> np.int64.

@@ -4,6 +4,9 @@
 #ifndef SNARK_SERVICE_H
 #define SNARK_SERVICE_H
 
+#include <string>
+#include <vector>
+
 #include "absl/container/flat_hash_map.h"
 #include <grpc/grpc.h>
 #include <grpcpp/channel.h>
@@ -17,8 +20,8 @@ namespace snark
 class GraphEngineServiceImpl final : public snark::GraphEngine::Service
 {
   public:
-    GraphEngineServiceImpl(std::string path, std::vector<uint32_t> partitions, PartitionStorageType storage_type,
-                           std::string config_path);
+    GraphEngineServiceImpl(snark::Metadata metadata, std::vector<std::string> paths, std::vector<uint32_t> partitions,
+                           PartitionStorageType storage_type);
     grpc::Status GetNodeTypes(::grpc::ServerContext *context, const snark::NodeTypesRequest *request,
                               snark::NodeTypesReply *response) override;
 

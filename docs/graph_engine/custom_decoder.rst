@@ -131,7 +131,7 @@ We load the generated binaries into a graph engine and demonstrate it working.
 
     >>> import deepgnn.graph_engine.snark.client as client
     >>> import numpy as np
-    >>> cl = client.MemoryGraph(working_dir.name, [0])
+    >>> cl = client.MemoryGraph(working_dir.name, [(working_dir.name, 0)])
     >>> cl.node_features(nodes=[0, 1], features=[[0, 2]], dtype=np.float32)
     array([[3.5, 6. ],
            [2. , 3. ]], dtype=float32)

@@ -82,7 +82,7 @@ Create a client to use from the temp folder:
 
 .. code-block:: python
 
-	>>> cl = client.MemoryGraph(working_dir.name, [0])
+	>>> cl = client.MemoryGraph(working_dir.name)
 	>>> cl.node_features(nodes=[1], features=[[0, 2]], dtype=np.float32)
 	array([[1.        , 0.51667684]], dtype=float32)
 
