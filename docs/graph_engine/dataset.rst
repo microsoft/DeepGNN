@@ -11,13 +11,14 @@ Generate Dataset
 ================
 
 First we generate a Cora dataset and load it into a server to use in our examples.
+We load up a server, when ray tries to pull it into a function, it will pull a
+client instead of the whole server.
 
 .. code-block:: python
 
     >>> import numpy as np
     >>> import ray
-    >>> import deepgnn.graph_engine.snark.server as server
-    >>> from deepgnn.graph_engine.snark.distributed import Client as DistributedClient
+    >>> from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
 
     >>> import tempfile
     >>> from deepgnn.graph_engine.data.citation import Cora
@@ -26,8 +27,7 @@ First we generate a Cora dataset and load it into a server to use in our example
     <deepgnn.graph_engine.data.citation.Cora object at 0x...>
 
     >>> address = "localhost:9999"
-    >>> server.Server(data_dir.name, [0], address)
-    <deepgnn.graph_engine.snark.server.Server object at 0x...>
+    >>> g = Server(address, data_dir.name, 0, 1)
 
 Simple Cora Dataset
 ===================
@@ -80,7 +80,6 @@ For each query output vector, each first dimension needs to be equal to the batc
 .. code-block:: python
 
     >>> def transform_batch(idx: list) -> dict:
-    ...     g = DistributedClient([address])
     ...     return {"features": g.node_features(idx, np.array([[1, 50]]), feature_type=np.float32), "labels": np.ones((len(idx)))}
     >>> pipe = pipe.map_batches(transform_batch)
     >>> pipe
@@ -107,20 +106,21 @@ Here we replace the node id sampler with a file line sampler, `ray.data.read_tex
 
 .. code-block:: python
 
+    >>> batch_size = 2
     >>> dataset = ray.data.read_text("/tmp/cora/train.nodes")
-    >>> #dataset = dataset.repartition(len(dataset) // batch_size)
+    >>> dataset = dataset.repartition(dataset.count() // batch_size)
     >>> dataset
-    Dataset(num_blocks=1, num_rows=140, schema=<class 'str'>)
+    Dataset(num_blocks=70, num_rows=140, schema=<class 'str'>)
 
     >>> pipe = dataset.window(blocks_per_window=2)
     >>> pipe
-    DatasetPipeline(num_windows=1, num_stages=2)
+    DatasetPipeline(num_windows=35, num_stages=1)
 
     >>> pipe = pipe.map_batches(transform_batch)
     >>> pipe
-    DatasetPipeline(num_windows=1, num_stages=3)
+    DatasetPipeline(num_windows=35, num_stages=2)
 
-    >>> batch = next(pipe.iter_torch_batches(batch_size=2))
+    >>> batch = next(pipe.iter_torch_batches(batch_size=batch_size))
     >>> batch
     {'features': tensor([[3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
              0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
@@ -141,8 +141,8 @@ with a generator as input, it streams the windows instead of loading them.
     >>> from ray.data import DatasetPipeline
     >>> from deepgnn.graph_engine import SamplingStrategy
 
-    >>> g = DistributedClient([address])
-    >>> node_batch_generator = (lambda: ray.data.from_numpy(g.sample_nodes(140, np.array([0], dtype=np.int32), SamplingStrategy.Weighted)[0]) for _ in range(10))
+    >>> cl = DistributedClient([address])
+    >>> node_batch_generator = (lambda: ray.data.from_numpy(cl.sample_nodes(140, np.array([0], dtype=np.int32), SamplingStrategy.Weighted)[0]) for _ in range(10))
     >>> pipe = DatasetPipeline.from_iterable(node_batch_generator)
     >>> pipe
     DatasetPipeline(num_windows=None, num_stages=1)
@@ -167,14 +167,13 @@ with a generator as input, it streams the windows instead of loading them.
     >>> from ray.data import DatasetPipeline
     >>> from deepgnn.graph_engine import SamplingStrategy
 
-    >>> g = DistributedClient([address])
-    >>> edge_batch_generator = (lambda: ray.data.from_numpy(g.sample_edges(140, np.array([0], dtype=np.int32), SamplingStrategy.Weighted)) for _ in range(10))
+    >>> cl = DistributedClient([address])
+    >>> edge_batch_generator = (lambda: ray.data.from_numpy(cl.sample_edges(140, np.array([0], dtype=np.int32), SamplingStrategy.Weighted)) for _ in range(10))
     >>> pipe = DatasetPipeline.from_iterable(edge_batch_generator)
     >>> pipe
     DatasetPipeline(num_windows=None, num_stages=1)
 
     >>> def transform_batch(idx: list) -> dict:
-    ...     g = DistributedClient([address])
     ...     return {"features": g.edge_features(idx, np.array([[0, 2]]), feature_type=np.float32), "labels": np.ones((len(idx)))}
     >>> pipe = pipe.map_batches(transform_batch)
     >>> pipe

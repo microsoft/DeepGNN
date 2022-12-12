@@ -47,6 +47,9 @@ class Server:
         stream: bool = False,
     ):
         """Init snark server."""
+        self._hostname = hostname
+        self._ssl_cert = ssl_cert
+
         temp_dir = tempfile.TemporaryDirectory()
         temp_path = temp_dir.name
         meta_path = download_meta(data_path, temp_path, config_path)
@@ -86,3 +89,7 @@ class Server:
         """Reset server."""
         if self.server is not None:
             self.server.reset()
+
+    def __reduce__(self):
+        """On serialize reload as Client."""
+        return Client, ([self._hostname], self._ssl_cert)
