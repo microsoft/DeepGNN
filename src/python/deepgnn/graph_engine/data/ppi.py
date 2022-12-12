@@ -36,16 +36,16 @@ class PPI(Client):
     - Node Feature Dim: 50 (id:1)
     """
 
-    def __init__(self, output_dir: str = None, n_partitions: int = 1):
+    def __init__(self, output_dir: str = None, num_partitions: int = 1):
         """
         Initialize PPI dataset.
 
         Args:
           output_dir (string): file directory for graph data.
-          n_partitions (int, default=1): Number of partitions
+          num_partitions (int, default=1): Number of partitions
         """
         self.url = "https://deepgraphpub.blob.core.windows.net/public/testdata/ppi.zip"
-        self._n_partitions = n_partitions
+        self._num_partitions = num_partitions
         self.GRAPH_NAME = "ppi"
         self.output_dir = output_dir
         if self.output_dir is None:
@@ -156,7 +156,7 @@ class PPI(Client):
         # convert graph: edge_list -> Binary
         convert.MultiWorkersConverter(
             graph_path=graph_file,
-            partition_count=self._n_partitions,
+            partition_count=self._num_partitions,
             output_dir=data_dir,
             decoder=decoders.EdgeListDecoder(),
         ).convert()

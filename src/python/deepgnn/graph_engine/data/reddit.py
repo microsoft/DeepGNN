@@ -15,7 +15,7 @@ from deepgnn.graph_engine.data.data_util import download_file
 from deepgnn.graph_engine.data.ppi import PPI
 
 
-def onehot(value, size):
+def _onehot(value, size):
     """Convert value to onehot vector."""
     output = [0] * size
     output[value] = 1
@@ -45,7 +45,7 @@ class Reddit(PPI):
         self,
         output_dir: str = None,
         edge_downsample_pct: float = 0.1,
-        n_partitions: int = 2,
+        num_partitions: int = 2,
     ):
         """
         Initialize Reddit dataset.
@@ -53,10 +53,10 @@ class Reddit(PPI):
         Args:
           output_dir (string): file directory for graph data.
           edge_downsample_pct (float, default=.1): Percent of edges to use, default reddit graph has 100M edges.
-          n_partitions (int, default=2): Number of partitions
+          num_partitions (int, default=2): Number of partitions
         """
         self._edge_downsample_pct = edge_downsample_pct
-        self._n_partitions = n_partitions
+        self._num_partitions = num_partitions
         self.url = "https://snap.stanford.edu/graphsage/reddit.zip"
         self.GRAPH_NAME = "reddit"
         self.output_dir = output_dir
@@ -65,7 +65,7 @@ class Reddit(PPI):
         load_graph_output = self._load_raw_graph(self.output_dir)
         self._build_graph(self.output_dir, load_graph_output)
         super(PPI, self).__init__(
-            path=self.output_dir, partitions=list(range(self._n_partitions))
+            path=self.output_dir, partitions=list(range(self._num_partitions))
         )
 
     def _load_raw_graph(self, output_dir: str):
@@ -121,7 +121,7 @@ class Reddit(PPI):
         # class map
         fname = os.path.join(data_dir, "reddit-class_map.json")
         class_map = json.load(open(fname))
-        class_map = {id_map[k]: onehot(v, 50) for k, v in class_map.items()}
+        class_map = {id_map[k]: _onehot(v, 50) for k, v in class_map.items()}
 
         # feat
         feats = np.load(os.path.join(data_dir, "reddit-feats.npy"))
@@ -137,11 +137,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir", default="/tmp/reddit", type=str)
     parser.add_argument("--edge_downsample_pct", default=0.1, type=float)
-    parser.add_argument("--n_partitions", default=2, type=int)
+    parser.add_argument("--num_partitions", default=2, type=int)
 
     args = parser.parse_args()
 
-    g = Reddit(args.data_dir, args.edge_downsample_pct, args.n_partitions)
+    g = Reddit(args.data_dir, args.edge_downsample_pct, args.num_partitions)
 
     print(g.node_features([1], np.array([[0, 50]]), np.float32))
     print(g.node_features([1], np.array([[1, 300]]), np.float32))
