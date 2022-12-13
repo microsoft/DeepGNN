@@ -12,7 +12,6 @@ py_library(
         "cora.py",
         "data_util.py",
         "ppi.py",
-        "reddit.py",
     ],
     visibility = ["//visibility:public"],
     deps = [

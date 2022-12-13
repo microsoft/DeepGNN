@@ -12,8 +12,8 @@ import torch.nn as nn
 import torch.nn.functional as fn
 
 from deepgnn.graph_engine import Graph
-from deepgnn.pytorch.modeling.base_model import BaseModel
-from deepgnn.pytorch.common.metrics import BaseMetric, MRR
+from deepgnn.pytorch.modeling.base_model import BaseModel, BaseMetric
+from deepgnn.pytorch.common.metrics import MRR
 
 EMB_INIT_EPS = 2.0
 
