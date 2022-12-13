@@ -152,7 +152,6 @@ class MemoryGraph:
         storage_type: PartitionStorageType = PartitionStorageType.memory,
         config_path: str = "",
         stream: bool = False,
-        delayed_start: bool = False,
     ):
         """Load graph to memory.
 
@@ -166,10 +165,7 @@ class MemoryGraph:
             config_path (str, optional): Path to folder with configuration files.
             stream (bool, default=False): If remote path is given: by default, download files first then load,
                 if stream = True and libhdfs present, stream data directly to memory -- see docs/advanced/hdfs.md for setup and usage.
-            delayed_start (bool, default=False): Delay loading graph engine until after serialization reduce.
         """
-        self._init_args = (meta_path, partitions, storage_type, config_path, stream)
-
         if partitions is None:
             partitions = [(meta_path, 0)]
         partitions_with_path: List[Tuple[str, int]] = []
@@ -189,8 +185,6 @@ class MemoryGraph:
             else download_graph_data(meta_path, partitions_with_path)
         )
         self.meta = Meta(self.path.name, config_path)
-        if delayed_start:
-            return
 
         self.g_ = _DEEP_GRAPH()
         self.lib = _get_c_lib()
@@ -233,15 +227,6 @@ class MemoryGraph:
     def __del__(self):
         """Delete graph engine client."""
         self.reset()
-
-    def __reduce__(self):
-        """Serialize object."""
-        class_fn = type(self)
-
-        def deserializer(*args):
-            return class_fn(*args)
-
-        return deserializer, self._init_args
 
     # Extract CDLL library functions descriptions in a separate method:
     # * describing C functions is not thread safe even if values are the same.
@@ -924,19 +909,13 @@ class DistributedGraph(MemoryGraph):
         ssl_cert: str = None,
         num_threads: int = None,
         num_cq_per_thread: int = None,
-        delayed_start: bool = False,
     ):
         """Create a client to work with a graph in a distributed mode.
 
         Args:
             servers (List[str]): List of server hostnames to connect to.
             ssl_cert (str, optional): Certificates to use for connection if needed. Defaults to None.
-            delayed_start (bool, optional=False): Delay start of GE until after re-serialize.
         """
-        self._init_args = (servers, ssl_cert, num_threads, num_cq_per_thread)  # type: ignore
-        if delayed_start:
-            return
-
         assert len(servers) > 0
         self.g_ = _DEEP_GRAPH()
         self.lib = _get_c_lib()
@@ -995,8 +974,6 @@ class NodeSampler:
             types (Union[List, int]): node types to sample.
             kind (str, optional): sampling strategy. Defaults to "weighted".
         """
-        self._init_args = (g, types, kind)
-
         if isinstance(types, int) and types == -1:
             types = []
             for tp in range(g.meta.node_type_count):
@@ -1071,15 +1048,6 @@ class NodeSampler:
         """Delete node sampler."""
         self.reset()
 
-    def __reduce__(self):
-        """Serialize object."""
-        class_fn = type(self)
-
-        def deserializer(*args):
-            return class_fn(*args)
-
-        return deserializer, self._init_args
-
     def sample(
         self, size: int, seed: Optional[int] = None
     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -1123,8 +1091,6 @@ class EdgeSampler:
             types (Union[List, int]): edge types to sample.
             kind (str, optional): sampling strategy. Defaults to "weighted".
         """
-        self._init_args = (g, types, kind)
-
         if isinstance(types, int) and types == -1:
             types = []
             for tp in range(g.meta.edge_type_count):
@@ -1194,15 +1160,6 @@ class EdgeSampler:
     def __del__(self):
         """Delete edge sampler."""
         self.reset()
-
-    def __reduce__(self):
-        """Serialize object."""
-        class_fn = type(self)
-
-        def deserializer(*args):
-            return class_fn(*args)
-
-        return deserializer, self._init_args
 
     def sample(
         self, size: int, seed: Optional[int] = None

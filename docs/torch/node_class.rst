@@ -2,40 +2,28 @@
 Node Classification with GAT
 ****************************
 
-In this guide we use a pre-built `Graph Attention Network(GAT) <https://arxiv.org/abs/1710.10903>`_ model
-to classify nodes in the `Cora dataset <https://graphsandnetworks.com/the-cora-dataset/>`_. Readers can
-expect an understanding of the DeepGNN experiment flow and details on model design.
+In this guide we use a pre-built `Graph Attention Network(GAT) <https://arxiv.org/abs/1710.10903>`_ model to classify nodes in the `Cora dataset <https://graphsandnetworks.com/the-cora-dataset/>`_. Readers can expect an understanding of the DeepGNN experiment flow and details on model design.
 
 Cora Dataset
 ============
-The Cora dataset consists of 2708 scientific publications represented as nodes interconnected by 5429
-reference links represented as edges. Each paper is described by a binary mask for 1433 pertinent
-dictionary words and an integer in {0..6} representing its type.
+The Cora dataset consists of 2708 scientific publications represented as nodes interconnected by 5429 reference links represented as edges. Each paper is described by a binary mask for 1433 pertinent dictionary words and an integer in {0..6} representing its type.
 First we download the Cora dataset and convert it to a valid binary representation via our built-in Cora downloader.
 
 .. code-block:: python
 
-    >>> import tempfile
 	>>> from deepgnn.graph_engine.data.citation import Cora
-    >>> data_dir = tempfile.TemporaryDirectory()
-	>>> Cora(data_dir.name)
+	>>> Cora("/tmp/cora/")
 	<deepgnn.graph_engine.data.citation.Cora object at 0x...>
 
 GAT Model
 =========
 
-Using this Graph Attention Network, we can accurately predict which category a specific paper belongs to
-based on its dictionary and the dictionaries of papers it references.
-This model leverages masked self-attentional layers to address the shortcomings of graph convolution
-based models. By stacking layers in which nodes are able to attend over their neighborhoods features,
-we enable the model to specify different weights to different nodes in a neighborhood, without requiring
-any kind of costly matrix operation (such as inversion) or the knowledge of the graph structure up front.
+Using this Graph Attention Network, we can accurately predict which category a specific paper belongs to based on its dictionary and the dictionaries of papers it references.
+This model leverages masked self-attentional layers to address the shortcomings of graph convolution based models. By stacking layers in which nodes are able to attend over their neighborhoods features, we enable the model to specify different weights to different nodes in a neighborhood, without requiring any kind of costly matrix operation (such as inversion) or the knowledge of the graph structure up front.
 
 `Paper <https://arxiv.org/abs/1710.10903>`_, `author's code <https://github.com/PetarV-/GAT>`_.
 
-Next we copy the GAT model from `DeepGNN's examples directory <https://github.com/microsoft/DeepGNN/blob/main/examples/pytorch/gat>`_.
-Pre-built models are kept out of the pip installation because it is rarely possible to inheret and selectively
-edit a single function of a graph model, instead it is best to copy the entire model and edit as needed.
+Next we copy the GAT model from `DeepGNN's examples directory <https://github.com/microsoft/DeepGNN/blob/main/examples/pytorch/gat>`_. Pre-built models are kept out of the pip installation because it is rarely possible to inheret and selectively edit a single function of a graph model, instead it is best to copy the entire model and edit as needed.
 DeepGNN models typically contain multiple parts:
 
 	1. Query struct and implementation
@@ -46,246 +34,261 @@ DeepGNN models typically contain multiple parts:
 Setup
 ======
 
+Combined imports from `model.py <https://github.com/microsoft/DeepGNN/blob/main/examples/pytorch/gat/model.py>`_ and `main.py <https://github.com/microsoft/DeepGNN/blob/main/examples/pytorch/gat/main.py>`_.
+
 .. code-block:: python
 
-    >>> from typing import List, Tuple, Any, Dict
-    >>> from dataclasses import dataclass, field
-    >>> import os
-    >>> import numpy as np
-    >>> import torch
-    >>> import torch.nn as nn
-    >>> import torch.nn.functional as F
-
-    >>> import ray
-    >>> import ray.train as train
-    >>> from ray.train.torch import TorchTrainer
-    >>> from ray.air import session
-    >>> from ray.air.config import ScalingConfig, RunConfig
-
-    >>> import deepgnn.pytorch
-    >>> from deepgnn.pytorch.nn.gat_conv import GATConv
-    >>> from deepgnn.graph_engine import Graph, graph_ops
-    >>> from deepgnn.pytorch.modeling import BaseModel
-
-    >>> import deepgnn.graph_engine.snark.server as server
-    >>> from deepgnn.graph_engine.snark.distributed import Client as DistributedClient
-    >>> from deepgnn.graph_engine.data.citation import Cora
+	>>> from typing import List
+	>>> from dataclasses import dataclass
+	>>> import argparse
+	>>> import numpy as np
+	>>> import torch
+	>>> import torch.nn as nn
+	>>> import torch.nn.functional as F
+	>>> import deepgnn.pytorch
+	>>> from deepgnn.pytorch.common import Accuracy
+	>>> from deepgnn.pytorch.modeling.base_model import BaseModel
+	>>> from deepgnn.pytorch.nn.gat_conv import GATConv
+	>>> from deepgnn.graph_engine import Graph, graph_ops
+	>>> from deepgnn import str2list_int
+	>>> from deepgnn.pytorch.common.utils import set_seed
+	>>> from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
+	>>> from deepgnn.pytorch.modeling import BaseModel
+	>>> from deepgnn.pytorch.training import run_dist
+	>>> from deepgnn.graph_engine import FileNodeSampler, GraphEngineBackend
 
 Query
 =====
-
-The Query function takes a set of node or edge ids and returns the
-neighbor and feature information about these items that will be given to the model forward function.
-Query is kept in a separate object from the model because it will be run in
-a ray data pipeline in the background, not in the main thread.
-Query returns can have several different return types, see `ray batch format docs <https://docs.ray.io/en/latest/data/api/dataset.html#ray.data.Dataset.map_batches:~:text=batch_format%20%E2%80%93%20Specify%20%E2%80%9Cnative,Default%20is%20%E2%80%9Cnative%E2%80%9D>`.
-In this example we use a dictionary
-with all shapes starting with dimension 0 having size 1.
-
-In the GAT model, query samples neighbors repeatedly `num_hops` times in
-order to generate a sub-graph.
-All node and edge features in this sub-graph are pulled and added to the context.
+Query is the interface between the model and graph engine. It is used by the trainer to fetch contexts which will be passed as input to the model forward function. Since query is a separate function, the trainer may pre-fetch contexts allowing graph engine operations and model training to occur in parallel.
+In the GAT model, query samples neighbors repeatedly `num_hops` times in order to generate a sub-graph. All node and edge features in this sub-graph are pulled and added to the context.
 
 .. code-block:: python
 
-    >>> @dataclass
-    ... class GATQuery:
-    ...     feature_meta: list = field(default_factory=lambda: np.array([[0, 1433]]))
-    ...     label_meta: list = field(default_factory=lambda: np.array([[1, 1]]))
-    ...     feature_type: np.dtype = np.float32
-    ...     label_type: np.dtype = np.float32
-    ...     neighbor_edge_types: list = field(default_factory=lambda: [0])
-    ...     num_hops: int = 2
-    ...
-    ...     def query(self, g: DistributedClient, idx: int) -> Dict[Any, np.ndarray]:
-    ...         """Query used to generate data for training."""
-    ...         if isinstance(idx, (int, float)):
-    ...             idx = [idx]
-    ...         inputs = np.array(idx, np.int64)
-    ...         nodes, edges, src_idx = graph_ops.sub_graph(
-    ...             g,
-    ...             inputs,
-    ...             edge_types=np.array(self.neighbor_edge_types, np.int64),
-    ...             num_hops=self.num_hops,
-    ...             self_loop=True,
-    ...             undirected=True,
-    ...             return_edges=True,
-    ...         )
-    ...         input_mask = np.zeros(nodes.size, np.bool)
-    ...         input_mask[src_idx] = True
-    ...
-    ...         feat = g.node_features(nodes, self.feature_meta, self.feature_type)
-    ...         label = g.node_features(nodes, self.label_meta, self.label_type).astype(np.int64)
-    ...         return {"nodes": np.expand_dims(nodes, 0), "feat": np.expand_dims(feat, 0), "labels": np.expand_dims(label, 0), "input_mask": np.expand_dims(input_mask, 0), "edges": np.expand_dims(edges, 0)}
-
+	>>> @dataclass
+	... class GATQueryParameter:
+	...     neighbor_edge_types: np.array
+	...     feature_idx: int
+	...     feature_dim: int
+	...     label_idx: int
+	...     label_dim: int
+	...     feature_type: np.dtype = np.float32
+	...     label_type: np.dtype = np.float32
+	...     num_hops: int = 2
+	>>> class GATQuery:
+	...     def __init__(self, p: GATQueryParameter):
+	...         self.p = p
+	...         self.label_meta = np.array([[p.label_idx, p.label_dim]], np.int32)
+	...         self.feat_meta = np.array([[p.feature_idx, p.feature_dim]], np.int32)
+	...
+	...     def query_training(self, graph: Graph, inputs):
+	...         nodes, edges, src_idx = graph_ops.sub_graph(
+	...             graph,
+	...             inputs,
+	...             edge_types=self.p.neighbor_edge_types,
+	...             num_hops=self.p.num_hops,
+	...             self_loop=True,
+	...             undirected=True,
+	...             return_edges=True,
+	...         )
+	...         input_mask = np.zeros(nodes.size, np.bool)
+	...         input_mask[src_idx] = True
+	...
+	...         feat = graph.node_features(nodes, self.feat_meta, self.p.feature_type)
+	...         label = graph.node_features(nodes, self.label_meta, self.p.label_type)
+	...         label = label.astype(np.int32)
+	...         edges_value = np.ones(edges.shape[0], np.float32)
+	...         edges = np.transpose(edges)
+	...         adj_shape = np.array([nodes.size, nodes.size], np.int64)
+	...
+	...         graph_tensor = (nodes, feat, input_mask, label, edges, edges_value, adj_shape)
+	...         return graph_tensor
 
 Model Forward and Init
 ======================
-The model init and forward functions look the same as any other pytorch model,
-except we base off of `deepgnn.pytorch.modeling.base_model.BaseModel` instead of `torch.nn.Module`.
-The forward function is expected to return the model scores for the given nodes.
-In the GAT model, forward pass uses two of our built-in
-`GATConv layers <https://github.com/microsoft/DeepGNN/blob/main/src/python/deepgnn/pytorch/nn/gat_conv.py>`_
-and computes the loss via cross entropy.
+The model init and forward functions look the same as any other pytorch model, except we base off of `deepgnn.pytorch.modeling.base_model.BaseModel` instead of `torch.nn.Module`. The forward function is expected to return three values: the batch loss, the model predictions for given nodes and corresponding labels.
+In the GAT model, forward pass uses two of our built-in `GATConv layers <https://github.com/microsoft/DeepGNN/blob/main/src/python/deepgnn/pytorch/nn/gat_conv.py>`_ and computes the loss via cross entropy.
 
 .. code-block:: python
 
-    >>> class GAT(nn.Module):
-    ...     def __init__(
-    ...         self,
-    ...         in_dim: int,
-    ...         head_num: List = [8, 1],
-    ...         hidden_dim: int = 8,
-    ...         num_classes: int = -1,
-    ...         ffd_drop: float = 0.0,
-    ...         attn_drop: float = 0.0,
-    ...     ):
-    ...         super().__init__()
-    ...         self.num_classes = num_classes
-    ...         self.out_dim = num_classes
-    ...
-    ...         self.input_layer = GATConv(
-    ...             in_dim=in_dim,
-    ...             attn_heads=head_num[0],
-    ...             out_dim=hidden_dim,
-    ...             act=F.elu,
-    ...             in_drop=ffd_drop,
-    ...             coef_drop=attn_drop,
-    ...             attn_aggregate="concat",
-    ...         )
-    ...         layer0_output_dim = head_num[0] * hidden_dim
-    ...         assert len(head_num) == 2
-    ...         self.out_layer = GATConv(
-    ...             in_dim=layer0_output_dim,
-    ...             attn_heads=head_num[1],
-    ...             out_dim=self.out_dim,
-    ...             act=None,
-    ...             in_drop=ffd_drop,
-    ...             coef_drop=attn_drop,
-    ...             attn_aggregate="average",
-    ...         )
-    ...
-    ...     def forward(self, context: Dict[Any, np.ndarray]):
-    ...         nodes = torch.squeeze(context["nodes"])                # [N], N: num of nodes in subgraph
-    ...         feat = torch.squeeze(context["feat"])                  # [N, F]
-    ...         mask = torch.squeeze(context["input_mask"])            # [N]
-    ...         labels = torch.squeeze(context["labels"])              # [N]
-    ...         edges = torch.squeeze(context["edges"].reshape((-1, 2)))                # [X, 2], X: num of edges in subgraph
-    ...
-    ...         edges = np.transpose(edges)
-    ...
-    ...         sp_adj = torch.sparse_coo_tensor(edges, torch.ones(edges.shape[1], dtype=torch.float32), (nodes.shape[0], nodes.shape[0]))
-    ...         h_1 = self.input_layer(feat, sp_adj)
-    ...         scores = self.out_layer(h_1, sp_adj)
-    ...
-    ...         scores = scores[mask]  # [batch_size]
-    ...         return scores
+	>>> class GAT(BaseModel):
+	...     def __init__(
+	...         self,
+	...         in_dim: int,
+	...         head_num: List = [8, 1],
+	...         hidden_dim: int = 8,
+	...         num_classes: int = -1,
+	...         ffd_drop: float = 0.0,
+	...         attn_drop: float = 0.0,
+	...         q_param: GATQueryParameter = None,
+	...     ):
+	...         self.q = GATQuery(q_param)
+	...         super().__init__(np.float32, 0, 0, None)
+	...         self.num_classes = num_classes
+	...
+	...         self.out_dim = num_classes
+	...
+	...         self.input_layer = GATConv(
+	...             in_dim=in_dim,
+	...             attn_heads=head_num[0],
+	...             out_dim=hidden_dim,
+	...             act=F.elu,
+	...             in_drop=ffd_drop,
+	...             coef_drop=attn_drop,
+	...             attn_aggregate="concat",
+	...         )
+	...         layer0_output_dim = head_num[0] * hidden_dim
+	...         assert len(head_num) == 2
+	...         self.out_layer = GATConv(
+	...             in_dim=layer0_output_dim,
+	...             attn_heads=head_num[1],
+	...             out_dim=self.out_dim,
+	...             act=None,
+	...             in_drop=ffd_drop,
+	...             coef_drop=attn_drop,
+	...             attn_aggregate="average",
+	...         )
+	...
+	...         self.metric = Accuracy()
+	...
+	...     def forward(self, inputs):
+	...         nodes, feat, mask, labels, edges, edges_value, adj_shape = inputs
+	...         nodes = torch.squeeze(nodes)                # [N], N: num of nodes in subgraph
+	...         feat = torch.squeeze(feat)                  # [N, F]
+	...         mask = torch.squeeze(mask)                  # [N]
+	...         labels = torch.squeeze(labels)              # [N]
+	...         edges = torch.squeeze(edges)                # [X, 2], X: num of edges in subgraph
+	...         edges_value = torch.squeeze(edges_value)    # [X]
+	...         adj_shape = torch.squeeze(adj_shape)        # [2]
+	...
+	...         sp_adj = torch.sparse_coo_tensor(edges, edges_value, adj_shape.tolist())
+	...         h_1 = self.input_layer(feat, sp_adj)
+	...         scores = self.out_layer(h_1, sp_adj)
+	...
+	...         labels = labels.type(torch.int64)
+	...         labels = labels[mask]  # [batch_size]
+	...         scores = scores[mask]  # [batch_size]
+	...         pred = scores.argmax(dim=1)
+	...         loss = self.xent(scores, labels)
+	...         return loss, pred, labels
 
+Model Init
+==========
+We need to implement `create_model` and `create_optimizer` functions to allow distributed workers initialize model and optimizer.
+
+.. code-block:: python
+
+	>>> def create_model(args: argparse.Namespace):
+	...     if args.seed:
+	...         set_seed(args.seed)
+	...
+	...     p = GATQueryParameter(
+	...         neighbor_edge_types=np.array([args.neighbor_edge_types], np.int32),
+	...         feature_idx=args.feature_idx,
+	...         feature_dim=args.feature_dim,
+	...         label_idx=args.label_idx,
+	...         label_dim=args.label_dim,
+	...     )
+	...
+	...     return GAT(
+	...         in_dim=args.feature_dim,
+	...         head_num=args.head_num,
+	...         hidden_dim=args.hidden_dim,
+	...         num_classes=args.num_classes,
+	...         ffd_drop=args.ffd_drop,
+	...         attn_drop=args.attn_drop,
+	...         q_param=p,
+	...     )
+	>>> def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):
+	...     return torch.optim.Adam(
+	...         filter(lambda p: p.requires_grad, model.parameters()),
+	...         lr=args.learning_rate * world_size,
+	...         weight_decay=0.0005,
+	...     )
+
+Dataset
+=======
+`create_dataset` function allows parameterization torch of the training data used by workers.
+Notably we use the `FileNodeSampler` here which loads `sample_files` and generates samples from them, otherwise in our `link prediction example <link_pred.html>`_ we use `GEEdgeSampler` which uses the backend to generate samples.
+
+.. code-block:: python
+
+	>>> def create_dataset(
+	...     args: argparse.Namespace,
+	...     model: BaseModel,
+	...     rank: int = 0,
+	...     world_size: int = 1,
+	...     backend: GraphEngineBackend = None,
+	... ):
+	...     return TorchDeepGNNDataset(
+	...         sampler_class=FileNodeSampler,
+	...         backend=backend,
+	...         query_fn=model.q.query_training,
+	...         prefetch_queue_size=2,
+	...         prefetch_worker_size=2,
+	...         sample_files=args.sample_file,
+	...         batch_size=args.batch_size,
+	...         shuffle=True,
+	...         drop_last=True,
+	...         worker_index=rank,
+	...         num_workers=world_size,
+	...     )
+
+Arguments
+=========
+`init_args` registers any model specific arguments.
+
+.. code-block:: python
+
+	>>> def init_args(parser):
+	...     parser.add_argument("--head_num", type=str2list_int, default="8,1", help="the number of attention headers.")
+	...     parser.add_argument("--hidden_dim", type=int, default=8, help="hidden layer dimension.")
+	...     parser.add_argument("--num_classes", type=int, default=-1, help="number of classes for category")
+	...     parser.add_argument("--ffd_drop", type=float, default=0.0, help="feature dropout rate.")
+	...     parser.add_argument("--attn_drop", type=float, default=0.0, help="attention layer dropout rate.")
+	...     parser.add_argument("--l2_coef", type=float, default=0.0005, help="l2 loss")
+	...     parser.add_argument("--neighbor_edge_types", type=str2list_int, default="0", help="Graph Edge for attention encoder.",)
+	...     parser.add_argument("--eval_file", default="", type=str, help="")
+
+NOTE Below code block is for jupyter notebooks only.
+
+.. code-block:: python
+
+	>>> MODEL_DIR = f"~/tmp/gat_{np.random.randint(9999999)}"
+	>>> arg_list = [
+	...     "--data_dir", "/tmp/cora",
+	...     "--mode", "train",
+	...     "--trainer", "base",
+	...     "--backend", "snark",
+	...     "--graph_type", "local",
+	...     "--converter", "skip",
+	...     "--sample_file", "/tmp/cora/train.nodes",
+	...     "--node_type", "0",
+	...     "--feature_idx", "0",
+	...     "--feature_dim", "1433",
+	...     "--label_idx", "1",
+	...     "--label_dim", "1",
+	...     "--num_classes", "7",
+	...     "--batch_size", "140",
+	...     "--learning_rate", ".005",
+	...     "--num_epochs", "20",
+	...     "--log_by_steps", "10",
+	...     "--use_per_step_metrics",
+	...     "--data_parallel_num", "0",
+	...     "--model_dir", MODEL_DIR,
+	...     "--metric_dir", MODEL_DIR,
+	...     "--save_path", MODEL_DIR,
+	... ]
 
 Train
 =====
-
-Here we define our training function.
-In the setup part we do two notable things things,
-
-* Wrap the model and optimizer with train.torch.prepare_model/optimizer for Ray multi worker usage.
-
-* Initialize the ray dataset, see more details in `docs/graph_engine/dataset.rst`.
-
-Then we define a standard torch training loop using the ray dataset, with no changes to model or optimizer usage.
+Finally we can train the model with `run_dist` function. We expect the loss to decrease with every epoch:
 
 .. code-block:: python
 
-    >>> def train_func(config: Dict):
-    ...     # Set random seed
-    ...     train.torch.enable_reproducibility(seed=session.get_world_rank())
-    ...
-    ...     # Start server
-    ...     address = "localhost:9999"
-    ...     s = server.Server("/tmp/cora", [0], address)
-    ...
-    ...     # Initialize the model and wrap it with Ray
-    ...     model = GAT(in_dim=1433, num_classes=7)
-    ...     if os.path.isfile(config["model_dir"]):
-    ...         model.load_state_dict(torch.load(config["model_dir"]))
-    ...     model = train.torch.prepare_model(model)
-    ...
-    ...     # Initialize the optimizer and wrap it with Ray
-    ...     optimizer = torch.optim.Adam(model.parameters(), lr=.005, weight_decay=0.0005)
-    ...     optimizer = train.torch.prepare_optimizer(optimizer)
-    ...
-    ...     # Define the loss function
-    ...     loss_fn = nn.CrossEntropyLoss()
-    ...
-    ...     # Ray Dataset
-    ...     dataset = ray.data.range(2708).repartition(2708 // config["batch_size"])  # -> Dataset(num_blocks=6, num_rows=2708, schema=<class 'int'>)
-    ...     pipe = dataset.window(blocks_per_window=10).repeat(config["n_epochs"])  # -> DatasetPipeline(num_windows=1, num_stages=1)
-    ...     q = GATQuery()
-    ...     def transform_batch(batch: list) -> dict:
-    ...         g = DistributedClient([address])
-    ...         return q.query(g, batch)
-    ...     pipe = pipe.map_batches(transform_batch)
-    ...
-    ...     # Execute the training loop
-    ...     model.train()
-    ...     for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
-    ...         for i, batch in enumerate(epoch_pipe.iter_torch_batches(batch_size=config["batch_size"])):
-    ...             scores = model(batch)
-    ...             labels = batch["labels"][batch["input_mask"]].flatten()
-    ...             loss = loss_fn(scores.type(torch.float32), labels)
-    ...             optimizer.zero_grad()
-    ...             loss.backward()
-    ...             optimizer.step()
-    ...
-    ...             session.report({"metric": (scores.argmax(1) == labels).sum(), "loss": loss.item()})
-    ...
-    ...     torch.save(model.state_dict(), config["model_dir"])
-
-In this step we start the training job.
-First we start a local ray cluster with `ray.init() <https://docs.ray.io/en/latest/ray-core/package-ref.html#ray-init>`.
-Next we initialize a `TorchTrainer <https://docs.ray.io/en/latest/ray-air/package-ref.html#pytorch>`
-object to wrap our training loop. This takes parameters that go to the training loop and parameters
-to define number workers and cpus/gpus used.
-Finally we call trainer.fit() to execute the training loop.
-
-.. code-block:: python
-
-    >>> model_dir = tempfile.TemporaryDirectory()
-
-    >>> ray.init()
-    RayContext(...)
-    >>> trainer = TorchTrainer(
-    ...     train_func,
-    ...     train_loop_config={
-    ...         "batch_size": 2708,
-    ...         "data_dir": data_dir.name,
-    ...         "sample_filename": "train.nodes",
-    ...         "n_epochs": 1,
-    ...         "model_dir": f"{model_dir.name}/model.pt",
-    ...     },
-    ...     run_config=RunConfig(verbose=0),
-    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
-    ... )
-    >>> result = trainer.fit()
-
-Evaluate
-========
-
-.. code-block:: python
-
-    >>> trainer = TorchTrainer(
-    ...     train_func,
-    ...     train_loop_config={
-    ...         "batch_size": 2708,
-    ...         "data_dir": data_dir.name,
-    ...         "sample_filename": "test.nodes",
-    ...         "n_epochs": 1,
-    ...         "model_dir": f"{model_dir.name}/model.pt",
-    ...     },
-    ...     run_config=RunConfig(verbose=0),
-    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
-    ... )
-    >>> result = trainer.fit()
-
-    >>> data_dir.cleanup()
-    >>> model_dir.cleanup()
+	>>> run_dist(
+	...     init_model_fn=create_model,
+	...     init_dataset_fn=create_dataset,
+	...     init_optimizer_fn=create_optimizer,
+	...     init_args_fn=init_args,
+	...		run_args=arg_list,
+	... )

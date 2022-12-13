@@ -6,18 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Add delayed_start parameter to graph engine to enable delaying loading graph lib until after deserialization, for use in Ray data.
-
 ### Changed
-- Replace custom trainers with Ray Train, see [docs/torch/node_class.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/torch/node_class.rst).
+- Add usage example for Ray Train, see [docs/torch/ray_usage.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/torch/node_class.rst).
 
-- Replace DeepGNN Samplers, TorchDeepGNNDataset and Torch Dataloader usage with Ray data usage, see [docs/graph_engine/dataset.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/graph_engine/dataset.rst).
+- Add documentation for Ray Data usage, see [tutorial at docs/graph_engine/dataset.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/graph_engine/dataset.rst) and [example at docs/graph_engine/dataset.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/graph_engine/ray_usage_advanced.rst)
 
 - Breaking. Rename get_feature_type -> get_python_type.
 
 ### Fixed
-- ~1Mb leak when deleting graph engine.
+- ~1Mb leak when reset is not called before deleting python graph engine object.
 
 ## [0.1.56] - 2022-11-02
 
@@ -31,8 +28,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add debug mode to MultiWorkersConverter, using debug=True will now disable multiprocessing and show error messages.
 
 - Load graph partitions from separate folders.
-
-- Add Reddit dataset download tool at deepgnn.graph_engine.data.reddit.
 
 ### Changed
 - Breaking. Remove FeatureType enum, replace with np.dtype. FeatureType.BINARY -> np.uint8, FeatureType.FLOAT -> np.float32, FeatureType.INT64 -> np.int64.
