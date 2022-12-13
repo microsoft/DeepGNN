@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- Add usage example for Ray Train, see [docs/torch/ray_usage.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/torch/node_class.rst).
+- Add usage example for Ray Train, see [docs/torch/ray_usage.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/torch/ray_usage.rst).
 
 - Add documentation for Ray Data usage, see [tutorial at docs/graph_engine/dataset.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/graph_engine/dataset.rst) and [example at docs/graph_engine/dataset.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/graph_engine/ray_usage_advanced.rst)
 
