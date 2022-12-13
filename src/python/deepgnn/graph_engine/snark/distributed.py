@@ -17,17 +17,23 @@ class Client(ge_snark.Client):
     """Distributed client."""
 
     def __init__(
-        self, servers: List[str], ssl_cert: str = None, delayed_start: bool = False
+        self,
+        servers: List[str],
+        ssl_cert: str = None,
+        silent: bool = False,
+        delayed_start: bool = False,
     ):
         """Init snark client to wrapper around ctypes API of distributed graph."""
         self.logger = get_logger()
-        # self.logger.info(f"servers: {servers}. SSL: {ssl_cert}")
+        if not silent:
+            self.logger.info(f"servers: {servers}. SSL: {ssl_cert}")
         self.graph = client.DistributedGraph(servers, ssl_cert, delayed_start)
         self.node_samplers: Dict[str, client.NodeSampler] = {}
         self.edge_samplers: Dict[str, client.EdgeSampler] = {}
-        # self.logger.info(
-        #    f"Loaded distributed snark client. Node counts: {self.graph.meta.node_count_per_type}. Edge counts: {self.graph.meta.edge_count_per_type}"
-        # )
+        if not silent:
+            self.logger.info(
+                f"Loaded distributed snark client. Node counts: {self.graph.meta.node_count_per_type}. Edge counts: {self.graph.meta.edge_count_per_type}"
+            )
 
 
 class Server:
@@ -92,4 +98,4 @@ class Server:
 
     def __reduce__(self):
         """On serialize reload as Client."""
-        return Client, ([self._hostname], self._ssl_cert)
+        return Client, ([self._hostname], self._ssl_cert, True, False)
