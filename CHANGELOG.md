@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- Replace custom trainers with Ray Train, see [docs/torch/node_class.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/torch/node_class.rst).
+- Add usage example for Ray Train, see [docs/torch/ray_usage.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/torch/node_class.rst).
 
 - Breaking. Rename get_feature_type -> get_python_type.
 
@@ -23,8 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add debug mode to MultiWorkersConverter, using debug=True will now disable multiprocessing and show error messages.
 
 - Load graph partitions from separate folders.
-
-- Add Reddit dataset download tool at deepgnn.graph_engine.data.reddit.
 
 ### Changed
 - Breaking. Remove FeatureType enum, replace with np.dtype. FeatureType.BINARY -> np.uint8, FeatureType.FLOAT -> np.float32, FeatureType.INT64 -> np.int64.
