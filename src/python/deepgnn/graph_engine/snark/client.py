@@ -810,9 +810,8 @@ class MemoryGraph:
 
     def reset(self):
         """Reset graph and unload it from memory."""
-        if hasattr(self, "lib"):
-            self.lib.ResetGraph(self.g_)
-            self.path.reset()
+        self.lib.ResetGraph(self.g_)
+        self.path.reset()
 
     def get_node_type_count(self, types: List[int]) -> int:
         """Return the number of nodes of specified types."""

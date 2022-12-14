@@ -44,17 +44,14 @@ Then we repartition it to be one block per batch.
     >>> dataset
     Dataset(num_blocks=5, num_rows=2708, schema=<class 'int'>)
 
-We convert this dataset to a data pipeline by splitting it into windows.
-
-"Dataset pipelines allow Dataset transformations to be executed incrementally
-on windows of the base data, instead of on all of the data at once.
-This can be used for streaming data loading into ML training, or to execute batch
-transformations on large datasets without needing to load the entire dataset into cluster memory."
+We convert this dataset to a data pipeline by splitting it into windows. Each window is effectively a separate
+dataset object and the dataset pipeline consists of multiple windows which each include mulitple blocks / batches.
+When we run a function on a dataset pipeline it is not executed immediately, instead it is staged and only run
+per window when required by iter_batches.
 More about dataset pipelines, `here <https://docs.ray.io/en/latest/data/pipelining-compute.html#pipelining-datasets>`.
 
-* "As a rule of thumb, higher parallelism settings perform better, however blocks_per_window == num_blocks effectively disables pipelining, since the DatasetPipeline will only contain a single Dataset.
-The other extreme is setting blocks_per_window=1, which minimizes the latency to initial output but only allows one concurrent transformation task per stage."
-* "As a rule of thumb, the cluster memory should be at least 2-5x the window size to avoid spilling."
+* Higher parallelism is generally better for performance. Lower blocks per window means lower latency but gives less room for concurrent tasks.
+* Cluster memory should be 2-5x the window size to avoid spilling, you can see window size by using `dataset.stats()`.
 
 .. code-block:: python
 
