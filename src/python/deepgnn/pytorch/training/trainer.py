@@ -448,8 +448,8 @@ class Trainer:
             "epoch": epoch,
             "step": self.step,
         }
-        if hasattr(self.model, "model_parameters"):
-            output.update({"model_parameters": self.model.model_parameters})
+        if hasattr(self.model, "init_parameters"):
+            output.update({"init_parameters": self.model.init_parameters})
         torch.save(output, save_path)
         self.logger.info(self._wrap_log(f"Saved checkpoint to {save_path}."))
         rotate_checkpoints(self.args.save_path, self.args.max_saved_ckpts)
