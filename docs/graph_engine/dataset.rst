@@ -68,8 +68,16 @@ If repeat is run after a transform, the result of the transform will be cached, 
 
 .. code-block:: python
 
-    >>> n_epochs = 1
+    >>> n_epochs = 2
     >>> pipe = pipe.repeat(n_epochs)
+    >>> pipe
+    DatasetPipeline(num_windows=6, num_stages=1)
+
+We add shuffling at this part of the dataset so that we only shuffle node ids, not the whole query return. It is important to add this after repeat so it does not get cached.
+
+    >>> pipe = pipe.random_shuffle_each_window(seed=0)
+    >>> pipe
+    DatasetPipeline(num_windows=6, num_stages=2)
 
 Use `map_batches <https://docs.ray.io/en/latest/data/api/dataset.html#ray.data.Dataset.map_batches>`
 to map node ids from the sampler to a dictionary of node features and labels for the model forward function.
@@ -83,19 +91,30 @@ For each query output vector, each first dimension needs to be equal to the batc
     ...     return {"features": g.node_features(idx, np.array([[1, 50]]), feature_type=np.float32), "labels": np.ones((len(idx)))}
     >>> pipe = pipe.map_batches(transform_batch)
     >>> pipe
-    DatasetPipeline(num_windows=3, num_stages=2)
+    DatasetPipeline(num_windows=6, num_stages=3)
 
 Finally we iterate over the dataset n_epochs times.
 
 .. code-block:: python
 
-    >>> epoch_pipe = next(pipe.iter_epochs())
+    >>> epoch_iter = pipe.iter_epochs()
+    >>> epoch_pipe = next(epoch_iter)
     >>> batch = next(epoch_pipe.iter_torch_batches(batch_size=2))
     >>> batch
-    {'features': tensor([[3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+    {'features': tensor([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
              0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
              0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-            [4., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+            [5., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
+
+    >>> epoch_pipe = next(epoch_iter)
+    >>> batch = next(epoch_pipe.iter_torch_batches(batch_size=2))
+    >>> batch
+    {'features': tensor([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
+            [5., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
              0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
              0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
 
