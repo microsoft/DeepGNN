@@ -97,4 +97,4 @@ class Server:
 
     def __reduce__(self):
         """On serialize reload as Client."""
-        return Client, ([self._hostname], self._ssl_cert, True, False)
+        return Client, ([self._hostname], self._ssl_cert, True)
