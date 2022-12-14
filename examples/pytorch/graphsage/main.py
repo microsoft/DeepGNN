@@ -63,7 +63,6 @@ def create_model(args: argparse.Namespace):
 
 def create_dataset(
     args: argparse.Namespace,
-    graph: Graph,
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
