@@ -4,6 +4,7 @@
 """Snark districuted client implementation."""
 from itertools import repeat
 from typing import List, Dict
+import logging
 import tempfile
 
 import deepgnn.graph_engine.snark.client as client
@@ -20,19 +21,16 @@ class Client(ge_snark.Client):
         self,
         servers: List[str],
         ssl_cert: str = None,
-        silent: bool = False,
     ):
         """Init snark client to wrapper around ctypes API of distributed graph."""
         self.logger = get_logger()
-        if not silent:
-            self.logger.info(f"servers: {servers}. SSL: {ssl_cert}")
+        self.logger.info(f"servers: {servers}. SSL: {ssl_cert}")
         self.graph = client.DistributedGraph(servers, ssl_cert)
         self.node_samplers: Dict[str, client.NodeSampler] = {}
         self.edge_samplers: Dict[str, client.EdgeSampler] = {}
-        if not silent:
-            self.logger.info(
-                f"Loaded distributed snark client. Node counts: {self.graph.meta.node_count_per_type}. Edge counts: {self.graph.meta.edge_count_per_type}"
-            )
+        self.logger.info(
+            f"Loaded distributed snark client. Node counts: {self.graph.meta.node_count_per_type}. Edge counts: {self.graph.meta.edge_count_per_type}"
+        )
 
 
 class Server:
@@ -97,4 +95,9 @@ class Server:
 
     def __reduce__(self):
         """On serialize reload as Client."""
-        return Client, ([self._hostname], self._ssl_cert, True)
+
+        def deserialize(*args):
+            get_logger().setLevel(logging.ERROR)
+            return Client(*args)
+
+        return deserialize, ([self._hostname], self._ssl_cert)
