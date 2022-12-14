@@ -5,10 +5,10 @@ load("@rules_python//python:defs.bzl", "py_test", "py_library")
 load("@pip_deps//:requirements.bzl", "requirement")
 
 py_library(
-    name = "example_torch_graphsage",
+    name = "example_torch_geo_graphsage",
     srcs = [
-        "model.py",
         "main.py",
+        "model.py",
     ],
     deps = [
         "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
@@ -21,25 +21,21 @@ py_library(
         "//src/python/deepgnn/pytorch/nn:deepgnn_pytorch_nn",
         "//src/python/deepgnn/pytorch/training:deepgnn_pytorch_training",
         "//examples/pytorch:example_torch_tests",
-        "//src/python/deepgnn/pytorch/encoding/twinbert:deepgnn_pytorch_encoding_twinbert",
-        "//src/python/deepgnn/pytorch/encoding/twinbert/deepspeed:deepgnn_pytorch_encoding_twinbert_ds",
     ],
 )
 
 py_test(
     name = "test_model",
     srcs = ["test_model.py"],
-    imports = ["../../../src/python/"],
+    imports = ["../../../../src/python/"],
     main = "test_model.py",
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
-        ":example_torch_graphsage",
+        ":example_torch_geo_graphsage",
         requirement("numpy"),
         requirement("pytest"),
         requirement("scikit-learn"),
-        requirement("torch"),
-        requirement("boto3"),
         requirement("fsspec"),
         requirement("transformers"),
         requirement("networkx"),
@@ -47,5 +43,10 @@ py_test(
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
         requirement("azure-datalake-store"),
+        requirement("torch"),
+        requirement("torch-cluster"),
+        requirement("torch-scatter"),
+        requirement("torch-sparse"),
+        requirement("torch_geometric"),
     ],
 )

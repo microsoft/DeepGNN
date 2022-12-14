@@ -4,28 +4,28 @@
 import argparse
 import torch
 import numpy as np
-import random
 from deepgnn import TrainMode, setup_default_logging_config
 from deepgnn import get_logger
-from deepgnn.pytorch.common import MRR, F1Score
+from deepgnn.pytorch.common import F1Score
+from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.pytorch.common.utils import get_python_type, set_seed
 from deepgnn.pytorch.encoding import get_feature_encoder
 from deepgnn.pytorch.modeling import BaseModel
 from deepgnn.pytorch.training import run_dist
-from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.graph_engine import (
+    Graph,
+    SamplingStrategy,
     CSVNodeSampler,
     GENodeSampler,
-    SamplingStrategy,
     GraphEngineBackend,
 )
-from model import SupervisedGraphSage, UnSupervisedGraphSage  # type: ignore
+from model import PTGSupervisedGraphSage  # type: ignore
 
 
 # fmt: off
 def init_args(parser: argparse.Namespace):
     group = parser.add_argument_group("GraphSAGE Parameters")
-    group.add_argument("--algo", type=str, default="unsupervised", choices=["unsupervised", "supervised"])
+    group.add_argument("--algo", type=str, default="supervised", choices=["supervised"])
 # fmt: on
 
 
@@ -39,7 +39,7 @@ def create_model(args: argparse.Namespace):
 
     if args.algo == "supervised":
         get_logger().info(f"Creating SupervisedGraphSage model with seed:{args.seed}.")
-        return SupervisedGraphSage(
+        return PTGSupervisedGraphSage(
             num_classes=args.label_dim,
             metric=F1Score(),
             label_idx=args.label_idx,
@@ -56,24 +56,14 @@ def create_model(args: argparse.Namespace):
         get_logger().info(
             f"Creating UnSupervisedGraphSage model with seed:{args.seed}."
         )
-        return UnSupervisedGraphSage(
-            num_classes=args.dim,
-            metric=MRR(),
-            num_negs=args.num_negs,
-            feature_dim=args.feature_dim,
-            feature_idx=args.feature_idx,
-            feature_type=get_python_type(args.feature_type),
-            edge_type=args.node_type,
-            fanouts=args.fanouts,
-            feature_enc=feature_enc,
-            embed_dim=args.dim,
-        )
+        raise NotImplementedError()
     else:
         raise RuntimeError(f"Unknown algo: {args.algo}")
 
 
 def create_dataset(
     args: argparse.Namespace,
+    graph: Graph,
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
@@ -118,7 +108,6 @@ def _main():
     # setup default logging component.
     setup_default_logging_config(enable_telemetry=True)
 
-    random.seed(42)
     # run_dist is the unified entry for pytorch model distributed training/evaluation/inference.
     # User only needs to prepare initializing function for model, dataset, optimizer and args.
     # reference: `deepgnn/pytorch/training/factory.py`

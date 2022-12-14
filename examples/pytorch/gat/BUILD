@@ -7,7 +7,7 @@ load("@pip_deps//:requirements.bzl", "requirement")
 py_library(
     name = "example_torch_gat",
     srcs = [
-        "model.py",
+        "model_geometric.py",
         "main.py",
     ],
     deps = [
@@ -26,7 +26,7 @@ py_library(
 py_test(
     name = "test_gat",
     srcs = ["test_gat.py"],
-    imports = ["../../../src/python/"],
+    imports = ["../../../../src/python/"],
     main = "test_gat.py",
     python_version = "PY3",
     srcs_version = "PY3",
@@ -43,5 +43,9 @@ py_test(
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
         requirement("azure-datalake-store"),
+        requirement("torch-cluster"),
+        requirement("torch-scatter"),
+        requirement("torch-sparse"),
+        requirement("torch_geometric"),
     ],
 )

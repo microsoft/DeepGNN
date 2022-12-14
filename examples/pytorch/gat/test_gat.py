@@ -5,23 +5,24 @@ import os
 import sys
 import pytest
 import tempfile
-import argparse
 import numpy as np
 import torch
+import argparse
 
-from deepgnn import get_logger
 from deepgnn.pytorch.common.utils import set_seed
 from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.graph_engine import (
     GraphType,
     BackendType,
-    BackendOptions,
     FileNodeSampler,
+    BackendOptions,
     create_backend,
 )
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
 from deepgnn.graph_engine.data.citation import Cora
-from model import GAT, GATQueryParameter  # type: ignore
+
+from model_geometric import GAT, GATQueryParameter  # type: ignore
+from deepgnn import get_logger
 
 
 def setup_test(main_file):
@@ -47,7 +48,7 @@ def test_pytorch_gat_cora():
         hidden_dim=8,
         num_classes=g.NUM_CLASSES,
         ffd_drop=0.6,
-        attn_drop=0.0,
+        attn_drop=0.6,
         q_param=qparam,
     )
 
@@ -55,7 +56,8 @@ def test_pytorch_gat_cora():
         data_dir=g.data_dir(),
         backend=BackendType.SNARK,
         graph_type=GraphType.LOCAL,
-        converter=DataConverterType.LOCAL,
+        converter=DataConverterType.SKIP,
+        partitions=[0],
     )
 
     backend = create_backend(BackendOptions(args), is_leader=True)
@@ -67,13 +69,14 @@ def test_pytorch_gat_cora():
             query_fn=model.q.query_training,
             prefetch_queue_size=1,
             prefetch_worker_size=1,
-            batch_size=140,
             sample_files=os.path.join(g.data_dir(), "train.nodes"),
+            batch_size=140,
             shuffle=True,
             drop_last=True,
             worker_index=0,
             num_workers=1,
         )
+
         return torch.utils.data.DataLoader(ds)
 
     optimizer = torch.optim.Adam(
@@ -81,6 +84,8 @@ def test_pytorch_gat_cora():
         lr=0.005,
         weight_decay=0.0005,
     )
+
+    # train
     num_epochs = 200
     ds = create_dataset()
     model.train()
@@ -95,6 +100,7 @@ def test_pytorch_gat_cora():
                 f"epoch {ei} - {si}, loss {loss.data.item() :.6f}, accuracy {acc.data.item():.6f}"
             )
 
+    # evaluate
     def create_eval_dataset():
         ds = TorchDeepGNNDataset(
             sampler_class=FileNodeSampler,
@@ -109,6 +115,7 @@ def test_pytorch_gat_cora():
             worker_index=0,
             num_workers=1,
         )
+
         return torch.utils.data.DataLoader(ds)
 
     test_dataset = create_eval_dataset()
@@ -119,7 +126,7 @@ def test_pytorch_gat_cora():
         get_logger().info(
             f"evaluate loss {loss.data.item(): .6f}, accuracy {acc.data.item(): .6f}"
         )
-        assert acc.data.item() >= 0.825
+        np.testing.assert_allclose(acc.data.item(), 0.83, atol=0.005)
 
 
 if __name__ == "__main__":

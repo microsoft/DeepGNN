@@ -7,12 +7,13 @@ import torch
 
 from deepgnn import str2list_int, setup_default_logging_config
 from deepgnn import get_logger
-from deepgnn.pytorch.common.utils import set_seed
 from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
+from deepgnn.pytorch.common.utils import set_seed
 from deepgnn.pytorch.modeling import BaseModel
 from deepgnn.pytorch.training import run_dist
+
 from deepgnn.graph_engine import FileNodeSampler, GraphEngineBackend
-from model import GAT, GATQueryParameter  # type: ignore
+from model_geometric import GAT, GATQueryParameter  # type: ignore
 
 
 # fmt: off
