@@ -42,7 +42,7 @@ Setup
     >>> from deepgnn.graph_engine import Graph, graph_ops
     >>> from deepgnn.pytorch.modeling import BaseModel
 
-    >>> from deepgnn.graph_engine.snark.distributed import Server
+    >>> from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
     >>> from deepgnn.graph_engine.data.citation import Cora
 
 Query
@@ -158,7 +158,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...
     ...     # Start server
     ...     address = "localhost:9999"
-    ...     s = Server("/tmp/cora", [0], address)
+    ...     g = Server(address, "/tmp/cora", 0, 1)
     ...
     ...     # Initialize the model and wrap it with Ray
     ...     model = GAT(in_dim=1433, num_classes=7)
@@ -178,7 +178,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     pipe = dataset.window(blocks_per_window=10).repeat(config["n_epochs"])  # -> DatasetPipeline(num_windows=1, num_stages=1)
     ...     q = GATQuery()
     ...     def transform_batch(batch: list) -> dict:
-    ...         return q.query(g, batch)
+    ...         return q.query(g, batch)  # When we reference the server g in transform, it uses Client instead
     ...     pipe = pipe.map_batches(transform_batch)
     ...
     ...     # Execute the training loop
