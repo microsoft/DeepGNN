@@ -79,15 +79,15 @@ def train_func(config: Dict):
         metrics = []
         losses = []
         for i, batch in enumerate(dataset):
-            scores = model(batch)[0]
-            labels = batch["label"].squeeze().argmax(1).detach()
+            loss, scores, labels = model(batch)
+            #labels = batch["label"].squeeze().argmax(1).detach()
 
-            loss = loss_fn(scores, labels)
+            #loss = loss_fn(scores, labels)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            metrics.append((scores.squeeze().argmax(1) == labels).float().mean().item())
+            #metrics.append((scores.squeeze().argmax(1) == labels).float().mean().item())
             losses.append(loss.item())
 
             #if i >= SAMPLE_NUM / BATCH_SIZE / session.get_world_size():
