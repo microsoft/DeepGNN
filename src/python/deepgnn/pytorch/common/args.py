@@ -5,7 +5,6 @@ from typing import Optional, List, Callable
 import argparse
 import uuid
 from deepgnn.graph_engine import define_param_graph_engine
-from deepgnn.pytorch.common.consts import FP16_AMP, FP16_APEX, FP16_NO
 from deepgnn import TrainerType, TrainMode, get_current_user, get_logger
 from deepgnn.graph_engine.snark.client import PartitionStorageType
 
@@ -97,8 +96,7 @@ def init_trainer_args(parser: argparse.ArgumentParser):
 def init_fp16_args(parser: argparse.ArgumentParser):
     """Configure arguments for training with half-precision floats."""
     group = parser.add_argument_group("FP16 Parameters")
-    group.add_argument("--fp16", type="store_true", default=False, help="Enable fp16 mix precision training.")
-    group.add_argument("--apex_opt_level", type=str, default="O2", help="Apex FP16 mixed precision training opt level.")
+    group.add_argument("--fp16", action="store_true", default=False, help="Enable fp16 mix precision training.")
 # fmt: on
 
 

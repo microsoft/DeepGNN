@@ -1,5 +1,6 @@
 """Baseline Ray Trainer."""
 from typing import Dict
+import os
 import platform
 import numpy as np
 import torch
@@ -12,16 +13,21 @@ from deepgnn import TrainMode
 from deepgnn.graph_engine import create_backend, BackendOptions
 from deepgnn.graph_engine.samplers import GENodeSampler, GEEdgeSampler
 from deepgnn.pytorch.common import get_args
+from deepgnn.pytorch.common.utils import rotate_checkpoints, get_sorted_checkpoints
+from deepgnn.pytorch.common.consts import PREFIX_CHECKPOINT
 
 
 def train_func(config: Dict):
     """Training loop for ray trainer."""
-    train.torch.enable_reproducibility(seed=session.get_world_rank())
-
     args = config["args"]
+    try:
+        os.mkdir(args.model_dir)
+    except FileExistsError:
+        pass
 
-    if args.fp16:
-        train.accelerate(True)
+    train.torch.accelerate(args.fp16)
+    if args.seed:
+        train.torch.enable_reproducibility(seed=args.seed + session.get_world_rank())
 
     model = config["init_model_fn"](args)
     model = train.torch.prepare_model(model, move_to_device=args.gpu)
@@ -71,8 +77,16 @@ def train_func(config: Dict):
             labels.append(label)
             losses.append(loss.item())
 
-            if i >= len(dataset) / args.batch_size / session.get_world_size():
-                break
+        if session.get_world_rank() == 0 and epoch % args.save_ckpt_by_epochs == 0:
+            save_path = os.path.join(
+                f"{args.save_path}",
+                f"{PREFIX_CHECKPOINT}-{epoch:03}-{i:06}.pt",
+            )
+            torch.save(
+                {"state_dict": model.state_dict(), "epoch": epoch, "step": i},
+                save_path,
+            )
+            rotate_checkpoints(args.model_dir, args.max_saved_ckpts)
 
         session.report(
             {

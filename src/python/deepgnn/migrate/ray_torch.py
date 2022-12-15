@@ -36,5 +36,14 @@ if __name__ == "__main__":
 
     raw_output = pasta.dump(tree)
 
+    raw_output = raw_output.replace("from deepgnn.pytorch.common.utils import set_seed", "")
+    raw_output = raw_output.replace(", set_seed", "")
+    raw_output = raw_output.replace("set_seed,", "")
+    raw_output = raw_output.replace("""    if args.seed:
+        set_seed(args.seed)""", "")
+    raw_output = raw_output.replace("set_seed(args.seed)", "")
+
+
+
     with open(args.main_path, "w") as file:
         file.write(raw_output)

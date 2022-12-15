@@ -28,56 +28,6 @@ def get_python_type(dtype_str: str):
     raise RuntimeError(f"Unknown feature type:{dtype_str}")
 
 
-def set_seed(seed: int):
-    """
-    Set the random seed in ``random``, ``numpy`` and ``torch`` modules.
-
-    Args:
-        seed: The seed to set.
-    """
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-
-
-def to_cuda(context):
-    """
-    Move all tensor data in context to cuda.
-
-    Args:
-        context: nested tensor/numpy array dictionary.
-    """
-    if isinstance(context, dict):
-        for key in context:
-            data = context[key]
-            if (
-                isinstance(data, dict)
-                or isinstance(data, tuple)
-                or isinstance(data, list)
-            ):
-                to_cuda(data)
-            elif isinstance(data, torch.Tensor):
-                context[key] = data.cuda()
-            else:
-                raise RuntimeError(
-                    f"Failed to move {data} to cuda as the type is not unsupported."
-                )
-    elif isinstance(context, tuple) or isinstance(context, list):
-        for i in range(len(context)):
-            data = context[i]
-            if (
-                isinstance(data, dict)
-                or isinstance(data, tuple)
-                or isinstance(data, list)
-            ):
-                to_cuda(data)
-            # for types which can be converted to cuda, call data.cuda() to convert it,
-            # for others, keep it as original.
-            elif isinstance(data, torch.Tensor):
-                context[i] = data.cuda()
-
-
 def get_store_name_and_path(input_path: str) -> Tuple[str, str]:
     """
     Get store name and relative path if input path is adl path, or return input_path directly.
