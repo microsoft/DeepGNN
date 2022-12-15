@@ -8,9 +8,9 @@ import torch
 from deepgnn import str2list_int, setup_default_logging_config
 from deepgnn import get_logger
 from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
-from deepgnn.pytorch.common.utils import set_seed
+
 from deepgnn.pytorch.modeling import BaseModel
-from deepgnn.pytorch.training import run_dist
+from ray_util import run_ray
 
 from deepgnn.graph_engine import FileNodeSampler, GraphEngineBackend
 from model_geometric import GAT, GATQueryParameter  # type: ignore
@@ -37,8 +37,7 @@ def init_args(parser):
 def create_model(args: argparse.Namespace):
     get_logger().info(f"Creating GAT model with seed:{args.seed}.")
     # set seed before instantiating the model
-    if args.seed:
-        set_seed(args.seed)
+
 
     p = GATQueryParameter(
         neighbor_edge_types=np.array([args.neighbor_edge_types], np.int32),
@@ -115,7 +114,7 @@ def _main():
     # setup default logging component.
     setup_default_logging_config(enable_telemetry=True)
 
-    run_dist(
+    run_ray(
         init_model_fn=create_model,
         init_dataset_fn=create_dataset,
         init_optimizer_fn=create_optimizer,

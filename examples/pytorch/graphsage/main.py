@@ -8,10 +8,10 @@ from deepgnn import TrainMode, setup_default_logging_config
 from deepgnn import get_logger
 from deepgnn.pytorch.common import F1Score
 from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
-from deepgnn.pytorch.common.utils import get_python_type, set_seed
+from deepgnn.pytorch.common.utils import get_python_type
 from deepgnn.pytorch.encoding import get_feature_encoder
 from deepgnn.pytorch.modeling import BaseModel
-from deepgnn.pytorch.training import run_dist
+from ray_util import run_ray
 from deepgnn.graph_engine import (
     Graph,
     SamplingStrategy,
@@ -30,11 +30,6 @@ def init_args(parser: argparse.Namespace):
 
 
 def create_model(args: argparse.Namespace):
-
-    # set seed before instantiating the model
-    if args.seed:
-        set_seed(args.seed)
-
     feature_enc = get_feature_encoder(args)
 
     if args.algo == "supervised":
@@ -110,7 +105,7 @@ def _main():
     # run_dist is the unified entry for pytorch model distributed training/evaluation/inference.
     # User only needs to prepare initializing function for model, dataset, optimizer and args.
     # reference: `deepgnn/pytorch/training/factory.py`
-    run_dist(
+    run_ray(
         init_model_fn=create_model,
         init_dataset_fn=create_dataset,
         init_optimizer_fn=create_optimizer,
