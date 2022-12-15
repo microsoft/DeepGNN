@@ -6,7 +6,9 @@ import numpy as np
 import torch
 import ray
 import ray.train as train
-from ray.train.torch import TorchTrainer
+import horovod.torch as hvd
+import ray.train.torch
+from ray.train.horovod import HorovodTrainer
 from ray.air import session
 from ray.air.config import ScalingConfig
 from deepgnn import TrainMode
@@ -25,12 +27,13 @@ def train_func(config: Dict):
     except FileExistsError:
         pass
 
-    train.torch.accelerate(args.fp16)
+    hvd.init()
     if args.seed:
         train.torch.enable_reproducibility(seed=args.seed + session.get_world_rank())
 
     model = config["init_model_fn"](args)
-    model = train.torch.prepare_model(model, move_to_device=args.gpu)
+    device = train.torch.get_device()
+    model.to(device)
     if args.mode == TrainMode.TRAIN:
         model.train()
     else:
@@ -41,7 +44,7 @@ def train_func(config: Dict):
         model,
         session.get_world_size(),
     )
-    optimizer = train.torch.prepare_optimizer(optimizer)
+    optimizer = hvd.DistributedOptimizer(optimizer, named_parameters=model.named_parameters())
 
     backend = create_backend(
         BackendOptions(args), is_leader=(session.get_world_rank() == 0)
@@ -104,7 +107,7 @@ def run_ray(init_model_fn, init_dataset_fn, init_optimizer_fn, init_args_fn, **k
         init_args_fn, kwargs["run_args"] if "run_args" in kwargs else None
     )
 
-    trainer = TorchTrainer(
+    trainer = HorovodTrainer(
         train_func,
         train_loop_config={
             "args": args,
