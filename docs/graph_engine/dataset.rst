@@ -123,7 +123,7 @@ Here we replace the node id sampler with a file line sampler, `ray.data.read_tex
 .. code-block:: python
 
     >>> batch_size = 2
-    >>> dataset = ray.data.read_text("/tmp/cora/train.nodes")
+    >>> dataset = ray.data.read_text(f"{data_dir.name}/train.nodes")
     >>> dataset = dataset.repartition(dataset.count() // batch_size)
     >>> dataset
     Dataset(num_blocks=70, num_rows=140, schema=<class 'str'>)

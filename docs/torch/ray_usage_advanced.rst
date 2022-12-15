@@ -158,7 +158,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...
     ...     # Start server
     ...     address = "localhost:9999"
-    ...     g = Server(address, "/tmp/cora", 0, 1)
+    ...     g = Server(address, config["data_dir"], 0, 1)
     ...
     ...     # Initialize the model and wrap it with Ray
     ...     model = GAT(in_dim=1433, num_classes=7)
