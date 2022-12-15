@@ -20,6 +20,8 @@ from deepgnn.graph_engine import create_backend, BackendOptions
 from deepgnn.graph_engine.samplers import GENodeSampler, GEEdgeSampler
 from deepgnn.graph_engine.snark.local import Client
 
+
+# TODO put in util
 def get_args(init_arg_fn: Optional[Callable] = None, run_args: Optional[List] = None):
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(allow_abbrev=False)
@@ -56,38 +58,40 @@ def train_func(config: Dict):
     optimizer = config["init_optimizer_fn"](
         args,
         model,
-        1, # TODO ray.world_size
+        session.get_world_size(),
     )
     optimizer = train.torch.prepare_optimizer(optimizer)  # TODO any relevant args
 
-    loss_fn = nn.CrossEntropyLoss()  # TODO loss fn w/ model loss
-
-    backend = create_backend(BackendOptions(args), is_leader=True)# TODO (trainer.rank == 0))
+    backend = create_backend(BackendOptions(args), is_leader=(session.get_local_rank() == 0))  # TODO local or world
     dataset = config["init_dataset_fn"](
         args,
         model,
-        # TODO rank=ray.rank()
-        # TODO world_size=ray.world_size(),
-        backend=backend
+        rank=session.get_local_rank(),  # TODO local or world
+        world_size=session.get_world_size(),
+        backend=backend,
     )
-    # TODO args.parraelel fixer
+    num_workers = (
+        0
+        if issubclass(dataset.sampler_class, (GENodeSampler, GEEdgeSampler))
+        or platform.system() == "Windows"
+        else args.data_parallel_num
+    )
     dataset = torch.utils.data.DataLoader(
         dataset=dataset,
-        num_workers=args.data_parallel_num,
+        num_workers=num_workers,
     )
     for epoch in range(args.num_epochs):
-        metrics = []
+        scores = []
+        labels = []
         losses = []
         for i, batch in enumerate(dataset):
-            loss, scores, labels = model(batch)
-            #labels = batch["label"].squeeze().argmax(1).detach()
-
-            #loss = loss_fn(scores, labels)
+            loss, score, label = model(batch)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            #metrics.append((scores.squeeze().argmax(1) == labels).float().mean().item())
+            scores.append(score)
+            labels.append(label)
             losses.append(loss.item())
 
             #if i >= SAMPLE_NUM / BATCH_SIZE / session.get_world_size():
@@ -95,7 +99,7 @@ def train_func(config: Dict):
 
         session.report(
             {
-                "metric": np.mean(metrics),
+                "metric": model.compute_metric(scores, labels).item(),
                 "loss": np.mean(losses),
             }
         )
