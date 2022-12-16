@@ -13,28 +13,48 @@ from deepgnn import TrainMode
 from deepgnn.graph_engine import create_backend, BackendOptions
 from deepgnn.graph_engine.samplers import GENodeSampler, GEEdgeSampler
 from deepgnn.pytorch.common import get_args
-from deepgnn.pytorch.common.utils import rotate_checkpoints, get_sorted_checkpoints
 from deepgnn.pytorch.common.consts import PREFIX_CHECKPOINT
 
 
 def train_func(config: Dict):
     """Training loop for ray trainer."""
     args = config["args"]
-    try:
-        os.mkdir(args.model_dir)
-    except FileExistsError:
-        pass
 
     train.torch.accelerate(args.fp16)
     if args.seed:
         train.torch.enable_reproducibility(seed=args.seed + session.get_world_rank())
 
     model = config["init_model_fn"](args)
+    # https://docs.ray.io/en/latest/tune/api_docs/trainable.html#function-api-checkpointing
     model = train.torch.prepare_model(model, move_to_device=args.gpu)
     if args.mode == TrainMode.TRAIN:
         model.train()
     else:
         model.eval()
+
+    
+    
+    if not ckpt_path:
+        # Search and sort checkpoints from model path.
+        ckpts = get_sorted_checkpoints(self.args.model_dir)
+        ckpt_path = ckpts[-1] if len(ckpts) > 0 else None
+
+    if ckpt_path is not None:
+
+        init_ckpt = torch.load(ckpt_path, map_location="cpu")
+        self.epochs_trained = init_ckpt["epoch"]
+        self.steps_in_epoch_trained = init_ckpt["step"]
+
+        # Only worker with rank 0 loads state dict.
+        if self.rank == 0:
+            self.model.load_state_dict(init_ckpt["state_dict"])
+            self.logger.info(
+                f"Loaded initial checkpoint: {ckpt_path},"
+                f" trained epochs: {self.epochs_trained}, steps: {self.steps_in_epoch_trained}"
+            )
+
+        del init_ckpt
+
 
     optimizer = config["init_optimizer_fn"](
         args,
@@ -67,7 +87,7 @@ def train_func(config: Dict):
         scores = []
         labels = []
         losses = []
-        for i, batch in enumerate(dataset):
+        for step, batch in enumerate(dataset):
             loss, score, label = model(batch)
             optimizer.zero_grad()
             loss.backward()
@@ -77,22 +97,29 @@ def train_func(config: Dict):
             labels.append(label)
             losses.append(loss.item())
 
-        if session.get_world_rank() == 0 and epoch % args.save_ckpt_by_epochs == 0:
-            save_path = os.path.join(
-                f"{args.save_path}",
-                f"{PREFIX_CHECKPOINT}-{epoch:03}-{i:06}.pt",
-            )
-            torch.save(
-                {"state_dict": model.state_dict(), "epoch": epoch, "step": i},
-                save_path,
-            )
-            rotate_checkpoints(args.model_dir, args.max_saved_ckpts)
+        if self.max_steps > 0 and self.step == self.max_steps:
+            return
+
+        save_path = os.path.join(
+            f"{self.args.save_path}",
+            f"{PREFIX_CHECKPOINT}-{epoch:03}-{self.step:06}.pt",
+        )
+        output = {
+            "state_dict": self.model.state_dict(),
+            "epoch": epoch,
+            "step": step,
+        }
+        if hasattr(self.model, "init_parameters"):
+            output.update({"init_parameters": self.model.init_parameters})
+        torch.save(output, save_path)
+        logger.info(f"Saved checkpoint to {save_path}.")
+        rotate_checkpoints(self.args.save_path, self.args.max_saved_ckpts)
 
         session.report(
             {
                 "metric": model.compute_metric(scores, labels).item(),
                 "loss": np.mean(losses),
-            }
+            },
         )
 
 

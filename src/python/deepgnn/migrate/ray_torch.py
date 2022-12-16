@@ -66,7 +66,5 @@ if __name__ == "__main__":
         set_seed(args.seed)""", "")
     raw_output = raw_output.replace("set_seed(args.seed)", "")
 
-
-
     with open(args.main_path, "w") as file:
         file.write(raw_output)
