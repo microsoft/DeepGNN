@@ -220,7 +220,7 @@ Finally we call trainer.fit() to execute the training loop.
     ...         "model_dir": f"{model_dir.name}/model.pt",
     ...     },
     ...     run_config=RunConfig(verbose=0),
-    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
+    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False, _max_cpu_fraction_per_node = 0.8),
     ... )
     >>> result = trainer.fit()
 
@@ -239,7 +239,7 @@ Evaluate
     ...         "model_dir": f"{model_dir.name}/model.pt",
     ...     },
     ...     run_config=RunConfig(verbose=0),
-    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
+    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False, _max_cpu_fraction_per_node = 0.8),
     ... )
     >>> result = trainer.fit()
 
