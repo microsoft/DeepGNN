@@ -3,6 +3,7 @@ Node Classification with Ray Train and Ray Data
 ***********************************************
 
 In this guide we build on top of the Ray Usage example this time including Ray Data usage.
+The following code block is from `node_class example <https://github.com/microsoft/DeepGNN/blob/main/docs/torch/node_class.rst>`_, see this example for more details.
 
 Cora Dataset
 ============
@@ -198,8 +199,8 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     torch.save(model.state_dict(), config["model_dir"])
 
 In this step we start the training job.
-First we start a local ray cluster with `ray.init() <https://docs.ray.io/en/latest/ray-core/package-ref.html#ray-init>`.
-Next we initialize a `TorchTrainer <https://docs.ray.io/en/latest/ray-air/package-ref.html#pytorch>`
+First we start a local ray cluster with `ray.init() <https://docs.ray.io/en/latest/ray-core/package-ref.html#ray-init>`_.
+Next we initialize a `TorchTrainer <https://docs.ray.io/en/latest/ray-air/package-ref.html#pytorch>`_
 object to wrap our training loop. This takes parameters that go to the training loop and parameters
 to define number workers and cpus/gpus used.
 Finally we call trainer.fit() to execute the training loop.
