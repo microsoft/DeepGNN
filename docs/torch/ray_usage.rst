@@ -4,7 +4,7 @@ Ray Usage Example
 
 In this guide we use a pre-built `Graph Attention Network(GAT) <https://arxiv.org/abs/1710.10903>`_ model
 to classify nodes in the `Cora dataset <https://graphsandnetworks.com/the-cora-dataset/>`_. This is the same
-as our `node classification example <https://github.com/microsoft/DeepGNN/blob/main/docs/torch/node_class.rst>` except here we use Ray as the trainer.
+as our `node classification example <https://github.com/microsoft/DeepGNN/blob/main/docs/torch/node_class.rst>`_ except here we use Ray as the trainer.
 
 Cora Dataset
 ============
@@ -147,9 +147,9 @@ Ray Train
 Here we define our training function.
 In the setup part we do two notable things things,
 
-* Wrap the model and optimizer with train.torch.prepare_model/optimizer for Ray multi worker usage.
+* Wrap the model and optimizer with `train.torch.prepare_model/optimizer <https://docs.ray.io/en/latest/train/api.html#ray.train.torch.TorchTrainer>`_ for Ray multi worker usage.
 
-* Initialize the ray dataset, see more details in `docs/graph_engine/dataset.rst`.
+* Initialize the dataset.
 
 Then we define a standard torch training loop using the ray dataset, with no changes to model or optimizer usage.
 
@@ -209,8 +209,8 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     torch.save(model.state_dict(), config["model_dir"])
 
 In this step we start the training job.
-First we start a local ray cluster with `ray.init() <https://docs.ray.io/en/latest/ray-core/package-ref.html#ray-init>`.
-Next we initialize a `TorchTrainer <https://docs.ray.io/en/latest/ray-air/package-ref.html#pytorch>`
+First we start a local ray cluster with `ray.init() <https://docs.ray.io/en/latest/ray-core/package-ref.html#ray-init>`_.
+Next we initialize a `TorchTrainer <https://docs.ray.io/en/latest/ray-air/package-ref.html#pytorch>`_
 object to wrap our training loop. This takes parameters that go to the training loop and parameters
 to define number workers and cpus/gpus used.
 Finally we call trainer.fit() to execute the training loop.
