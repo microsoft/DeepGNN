@@ -7,18 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-
 - Add migrate script to help migrate to the new Ray Trainer, run "python -m deepgnn.migrate.ray_torch --main_path <your main.py with run_dist>" to convert it to use the Ray Trainer. Add --hvd to convert to horovod trainer.
 
-### Changed
 - Add usage example for Ray Train, see [docs/torch/ray_usage.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/torch/ray_usage.rst).
 
 - Add documentation for Ray Data usage, see [tutorial](https://github.com/microsoft/DeepGNN/tree/main/docs/graph_engine/dataset.rst) and [example](https://github.com/microsoft/DeepGNN/tree/main/docs/graph_engine/ray_usage_advanced.rst)
 
-- Breaking. Rename get_feature_type -> get_python_type.
-
 ### Fixed
-- ~1Mb leak when reset is not called before deleting python graph engine object.
+- Implement del method to release C++ client and server. Important for ray actors, because they create numerous clients during training.
+
+## [0.1.57] - 2022-12-15
+
+### Changed
+- Breaking. Rename get_feature_type -> get_python_type.
 
 ## [0.1.56] - 2022-11-02
 

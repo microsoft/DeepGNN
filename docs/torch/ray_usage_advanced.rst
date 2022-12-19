@@ -3,6 +3,7 @@ Node Classification with Ray Train and Ray Data
 ***********************************************
 
 In this guide we build on top of the Ray Usage example this time including Ray Data usage.
+The following code block is from `node_class example <https://github.com/microsoft/DeepGNN/blob/main/docs/torch/node_class.rst>`_, see this example for more details.
 
 Cora Dataset
 ============
@@ -42,7 +43,7 @@ Setup
     >>> from deepgnn.graph_engine import Graph, graph_ops
     >>> from deepgnn.pytorch.modeling import BaseModel
 
-    >>> from deepgnn.graph_engine.snark.distributed import Server
+    >>> from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
     >>> from deepgnn.graph_engine.data.citation import Cora
 
 Query
@@ -158,7 +159,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...
     ...     # Start server
     ...     address = "localhost:9999"
-    ...     s = Server("/tmp/cora", [0], address)
+    ...     g = Server(address, config["data_dir"], 0, 1)
     ...
     ...     # Initialize the model and wrap it with Ray
     ...     model = GAT(in_dim=1433, num_classes=7)
@@ -178,7 +179,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     pipe = dataset.window(blocks_per_window=10).repeat(config["n_epochs"])  # -> DatasetPipeline(num_windows=1, num_stages=1)
     ...     q = GATQuery()
     ...     def transform_batch(batch: list) -> dict:
-    ...         return q.query(g, batch)
+    ...         return q.query(g, batch)  # When we reference the server g in transform, it uses Client instead
     ...     pipe = pipe.map_batches(transform_batch)
     ...
     ...     # Execute the training loop
@@ -198,8 +199,8 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     torch.save(model.state_dict(), config["model_dir"])
 
 In this step we start the training job.
-First we start a local ray cluster with `ray.init() <https://docs.ray.io/en/latest/ray-core/package-ref.html#ray-init>`.
-Next we initialize a `TorchTrainer <https://docs.ray.io/en/latest/ray-air/package-ref.html#pytorch>`
+First we start a local ray cluster with `ray.init() <https://docs.ray.io/en/latest/ray-core/package-ref.html#ray-init>`_.
+Next we initialize a `TorchTrainer <https://docs.ray.io/en/latest/ray-air/package-ref.html#pytorch>`_
 object to wrap our training loop. This takes parameters that go to the training loop and parameters
 to define number workers and cpus/gpus used.
 Finally we call trainer.fit() to execute the training loop.
@@ -220,7 +221,7 @@ Finally we call trainer.fit() to execute the training loop.
     ...         "model_dir": f"{model_dir.name}/model.pt",
     ...     },
     ...     run_config=RunConfig(verbose=0),
-    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
+    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False, _max_cpu_fraction_per_node = 0.8),
     ... )
     >>> result = trainer.fit()
 
@@ -239,7 +240,7 @@ Evaluate
     ...         "model_dir": f"{model_dir.name}/model.pt",
     ...     },
     ...     run_config=RunConfig(verbose=0),
-    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
+    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False, _max_cpu_fraction_per_node = 0.8),
     ... )
     >>> result = trainer.fit()
 
