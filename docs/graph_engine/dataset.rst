@@ -85,7 +85,7 @@ For each query output vector, all first dimensions need to be equal to the batch
 .. code-block:: python
 
     >>> def transform_batch(idx: list) -> dict:
-    ...     return {"features": g.node_features(idx, np.array([[1, 50]]), feature_type=np.float32), "labels": np.ones((len(idx)))}
+    ...     return {"features": g.node_features(idx, np.array([[0, 50]]), feature_type=np.float32), "labels": g.node_features(idx, np.array([[1, 1]]), feature_type=np.float32)}
     >>> pipe = pipe.map_batches(transform_batch)
     >>> pipe
     DatasetPipeline(num_windows=6, num_stages=3)
@@ -98,22 +98,24 @@ Finally we iterate over the dataset `n_epochs` times.
     >>> epoch_pipe = next(epoch_iter)
     >>> batch = next(epoch_pipe.iter_torch_batches(batch_size=2))
     >>> batch
-    {'features': tensor([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-            [5., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
+    {'features': tensor([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0.],
+            [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0.]]), 'labels': tensor([[0.],
+            [5.]])}
 
     >>> epoch_pipe = next(epoch_iter)
     >>> batch = next(epoch_pipe.iter_torch_batches(batch_size=2))
     >>> batch
-    {'features': tensor([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-            [5., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
+    {'features': tensor([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0.],
+            [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0.]]), 'labels': tensor([[0.],
+            [5.]])}
 
 File Node Sampler
 =================
@@ -138,12 +140,8 @@ Here we replace the node id sampler with a file line sampler, `ray.data.read_tex
 
     >>> batch = next(pipe.iter_torch_batches(batch_size=batch_size))
     >>> batch
-    {'features': tensor([[3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-            [4., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
+    {'features': tensor([[...]]), 'labels': tensor([[3.],
+            [4.]])}
 
 Graph Engine Node Sampler
 =========================
@@ -169,7 +167,8 @@ with a generator as input, it streams the windows instead of loading them.
 
     >>> batch = next(pipe.iter_torch_batches(batch_size=2))
     >>> batch
-    {'features': tensor([[...]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
+    {'features': tensor([[...]]), 'labels': tensor([[...],
+            [...]])}
 
 Graph Engine Edge Sampler
 =========================
@@ -190,7 +189,7 @@ with a generator as input, it streams the windows instead of loading them.
     DatasetPipeline(num_windows=None, num_stages=1)
 
     >>> def transform_batch(idx: list) -> dict:
-    ...     return {"features": g.edge_features(idx, np.array([[0, 2]]), feature_type=np.float32), "labels": np.ones((len(idx)))}
+    ...     return {"features": g.edge_features(idx, np.array([[0, 2]]), feature_type=np.float32), "labels": g.edge_features(idx, np.array([[1, 1]]), feature_type=np.float32)}
     >>> pipe = pipe.map_batches(transform_batch)
     >>> pipe
     DatasetPipeline(num_windows=None, num_stages=2)
@@ -198,4 +197,5 @@ with a generator as input, it streams the windows instead of loading them.
     >>> batch = next(pipe.iter_torch_batches(batch_size=2))
     >>> batch
     {'features': tensor([[0., 0.],
-            [0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
+            [0., 0.]]), 'labels': tensor([[0.],
+            [0.]])}
