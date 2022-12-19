@@ -46,6 +46,7 @@ class Reddit(PPI):
         output_dir: str = None,
         edge_downsample_pct: float = 0.1,
         num_partitions: int = 2,
+        seed: int = 0,
     ):
         """
         Initialize Reddit dataset.
@@ -54,28 +55,22 @@ class Reddit(PPI):
           output_dir (string): file directory for graph data.
           edge_downsample_pct (float, default=.1): Percent of edges to use, default reddit graph has 100M edges.
           num_partitions (int, default=2): Number of partitions
+          seed (int, default=0): Seed for random number generation.
         """
         self._edge_downsample_pct = edge_downsample_pct
         self._num_partitions = num_partitions
+        np.random.seed(seed)
         self.url = "https://snap.stanford.edu/graphsage/reddit.zip"
         self.GRAPH_NAME = "reddit"
         self.output_dir = output_dir
         if self.output_dir is None:
             self.output_dir = os.path.join("/tmp/", self.GRAPH_NAME)
-        load_graph_output = self._load_raw_graph(self.output_dir)
-        self._build_graph(self.output_dir, load_graph_output)
+        self._build_graph(self.output_dir)
         super(PPI, self).__init__(
             path=self.output_dir, partitions=list(range(self._num_partitions))
         )
 
-    def _load_raw_graph(self, output_dir: str):
-        raw_data_dir = os.path.join(output_dir, "raw")
-        data_dir = os.path.join(raw_data_dir, self.GRAPH_NAME)
-        fname = f"{data_dir}.zip"
-        download_file(self.url, raw_data_dir, f"{self.GRAPH_NAME}.zip")
-        with zipfile.ZipFile(fname) as z:
-            z.extractall(raw_data_dir)
-
+    def _load_raw_graph(self, data_dir: str):
         id_map = json.load(open(os.path.join(data_dir, "reddit-id_map.json")))
         id_map = {k: v for i, (k, v) in enumerate(id_map.items())}
 
@@ -100,7 +95,6 @@ class Reddit(PPI):
         other_neighbors: Dict = {nid: [] for nid in id_map.values()}
 
         # edges
-        np.random.seed(0)
         edge_downsample_mask = (
             np.random.uniform(size=len(g["links"])) < self._edge_downsample_pct
         )
