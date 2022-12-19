@@ -5,13 +5,11 @@
 import argparse
 import json
 import os
-import zipfile
 from typing import Dict
 
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 
-from deepgnn.graph_engine.data.data_util import download_file
 from deepgnn.graph_engine.data.ppi import PPI
 
 
