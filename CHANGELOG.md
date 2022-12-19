@@ -6,9 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+### Added
 - Add usage example for Ray Train, see [docs/torch/ray_usage.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/torch/ray_usage.rst).
 
+## [0.1.57] - 2022-12-15
+
+### Changed
 - Breaking. Rename get_feature_type -> get_python_type.
 
 ## [0.1.56] - 2022-11-02
