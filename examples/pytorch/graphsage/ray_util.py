@@ -82,6 +82,7 @@ def train_func(config: Dict):
         dataset=dataset,
         num_workers=num_workers,
     )
+    losses_full = []
     for epoch in range(epochs_trained, args.num_epochs):
         scores = []
         labels = []
@@ -98,6 +99,7 @@ def train_func(config: Dict):
             labels.append(label)
             losses.append(loss.item())
 
+        losses_full.extend(losses)
         steps_in_epoch_trained = 0
         if epoch % args.save_ckpt_by_epochs == 0:
             save_path = os.path.join(
@@ -116,6 +118,7 @@ def train_func(config: Dict):
             {
                 "metric": model.compute_metric(scores, labels).item(),
                 "loss": np.mean(losses),
+                "losses": losses_full,
             },
         )
 
@@ -141,4 +144,4 @@ def run_ray(init_model_fn, init_dataset_fn, init_optimizer_fn, init_args_fn, **k
             num_workers=1, use_gpu=args.gpu, resources_per_worker={"CPU": 2}
         ),
     )
-    trainer.fit()
+    return trainer.fit()
