@@ -2,8 +2,8 @@
 Ray Dataset and Data Pipeline Usage
 ***********************************
 
-In this guide we show how to create and use `Ray Datasets <https://docs.ray.io/en/latest/data/dataset.html>`
-and `Data Pipelines <https://docs.ray.io/en/latest/data/pipelining-compute.html#pipelining-datasets>`
+In this guide we show how to create and use `Ray Datasets <https://docs.ray.io/en/latest/data/dataset.html>`_
+and `Data Pipelines <https://docs.ray.io/en/latest/data/pipelining-compute.html#pipelining-datasets>`_
 with the DeepGNN graph engine.
 We show several different sampling strategies and advanced usage.
 
@@ -35,7 +35,7 @@ Simple Cora Dataset
 In this example we create a simple dataset using Ray Data.
 
 First we initialize a Ray Dataset of node ids ranging from 0 to 2708.
-`ray.data.range <https://docs.ray.io/en/latest/data/api/input_output.html#synthetic-data>`
+`ray.data.range <https://docs.ray.io/en/latest/data/api/input_output.html#synthetic-data>`_
 Then we repartition it to be one block per batch.
 
 .. code-block:: python
@@ -47,8 +47,8 @@ Then we repartition it to be one block per batch.
 We convert this dataset to a data pipeline by splitting it into windows. Each window is effectively a separate
 dataset object and the dataset pipeline consists of multiple windows which each include mulitple blocks / batches.
 When we run a function on a dataset pipeline it is not executed immediately, instead it is staged and only run
-per window when required by iter_batches.
-More about dataset pipelines, `here <https://docs.ray.io/en/latest/data/pipelining-compute.html#pipelining-datasets>`.
+per window when required by `iter_torch_batches`.
+More about dataset pipelines, `here <https://docs.ray.io/en/latest/data/pipelining-compute.html#pipelining-datasets>`_.
 
 * Higher parallelism is generally better for performance. Lower blocks per window means lower latency but gives less room for concurrent tasks.
 * Cluster memory should be 2-5x the window size to avoid spilling, you can see window size by using `dataset.stats()`.
@@ -61,7 +61,7 @@ More about dataset pipelines, `here <https://docs.ray.io/en/latest/data/pipelini
 
 In order to rerun this dataset multiple times, one per epoch, we use the repeat command.
 In this example we call repeat before running any transforms on the dataset, therefore the transform outputs will not be cached between epochs.
-If repeat is run after a transform, the result of the transform will be cached, `more here <https://docs.ray.io/en/latest/data/advanced-pipelines.html#dataset-pipeline-per-epoch-shuffle>`.
+If repeat is run after a transform, the result of the transform will be cached, `more here <https://docs.ray.io/en/latest/data/advanced-pipelines.html#dataset-pipeline-per-epoch-shuffle>`_.
 
 .. code-block:: python
 
@@ -76,21 +76,21 @@ We add shuffling at this part of the dataset so that we only shuffle node ids, n
     >>> pipe
     DatasetPipeline(num_windows=6, num_stages=2)
 
-Use `map_batches <https://docs.ray.io/en/latest/data/api/dataset.html#ray.data.Dataset.map_batches>`
+Use `map_batches <https://docs.ray.io/en/latest/data/api/dataset.html#ray.data.Dataset.map_batches>`_
 to map node ids from the sampler to a dictionary of node features and labels for the model forward function.
 Since this is run on the dataset pipeline, the node ids will not be mapped all at once, only when needed during iteration.
 
-For each query output vector, each first dimension needs to be equal to the batch size == len(idx).
+For each query output vector, all first dimensions need to be equal to the batch size.
 
 .. code-block:: python
 
     >>> def transform_batch(idx: list) -> dict:
-    ...     return {"features": g.node_features(idx, np.array([[1, 50]]), feature_type=np.float32), "labels": np.ones((len(idx)))}
+    ...     return {"features": g.node_features(idx, np.array([[0, 50]]), feature_type=np.float32), "labels": g.node_features(idx, np.array([[1, 1]]), feature_type=np.float32)}
     >>> pipe = pipe.map_batches(transform_batch)
     >>> pipe
     DatasetPipeline(num_windows=6, num_stages=3)
 
-Finally we iterate over the dataset n_epochs times.
+Finally we iterate over the dataset `n_epochs` times.
 
 .. code-block:: python
 
@@ -98,32 +98,34 @@ Finally we iterate over the dataset n_epochs times.
     >>> epoch_pipe = next(epoch_iter)
     >>> batch = next(epoch_pipe.iter_torch_batches(batch_size=2))
     >>> batch
-    {'features': tensor([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-            [5., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
+    {'features': tensor([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0.],
+            [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0.]]), 'labels': tensor([[0.],
+            [5.]])}
 
     >>> epoch_pipe = next(epoch_iter)
     >>> batch = next(epoch_pipe.iter_torch_batches(batch_size=2))
     >>> batch
-    {'features': tensor([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-            [5., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
+    {'features': tensor([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0.],
+            [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+             0., 0.]]), 'labels': tensor([[0.],
+            [5.]])}
 
 File Node Sampler
 =================
 
-Here we replace the node id sampler with a file line sampler, `ray.data.read_text() <https://docs.ray.io/en/latest/data/api/input_output.html#ray.data.read_text>`.
+Here we replace the node id sampler with a file line sampler, `ray.data.read_text() <https://docs.ray.io/en/latest/data/api/input_output.html#ray.data.read_text>`_.
 
 .. code-block:: python
 
     >>> batch_size = 2
-    >>> dataset = ray.data.read_text("/tmp/cora/train.nodes")
+    >>> dataset = ray.data.read_text(f"{data_dir.name}/train.nodes")
     >>> dataset = dataset.repartition(dataset.count() // batch_size)
     >>> dataset
     Dataset(num_blocks=70, num_rows=140, schema=<class 'str'>)
@@ -138,18 +140,14 @@ Here we replace the node id sampler with a file line sampler, `ray.data.read_tex
 
     >>> batch = next(pipe.iter_torch_batches(batch_size=batch_size))
     >>> batch
-    {'features': tensor([[3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-            [4., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
+    {'features': tensor([[...]]), 'labels': tensor([[3.],
+            [4.]])}
 
 Graph Engine Node Sampler
 =========================
 
 In this example we use the graph engine `sample_nodes` function to generate inputs to the query function.
-Since this method uses `DatasetPipeline.from_iterable <https://docs.ray.io/en/latest/data/api/dataset_pipeline.html#creating-datasetpipelines>`
+Since this method uses `DatasetPipeline.from_iterable <https://docs.ray.io/en/latest/data/api/dataset_pipeline.html#creating-datasetpipelines>`_
 with a generator as input, it streams the windows instead of loading them.
 
 .. code-block:: python
@@ -169,13 +167,14 @@ with a generator as input, it streams the windows instead of loading them.
 
     >>> batch = next(pipe.iter_torch_batches(batch_size=2))
     >>> batch
-    {'features': tensor([[...]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
+    {'features': tensor([[...]]), 'labels': tensor([[...],
+            [...]])}
 
 Graph Engine Edge Sampler
 =========================
 
 In this example we use the graph engine `sample_edge` function to generate edge ids as inputs to the query function.
-Since this method uses `DatasetPipeline.from_iterable <https://docs.ray.io/en/latest/data/api/dataset_pipeline.html#creating-datasetpipelines>`
+Since this method uses `DatasetPipeline.from_iterable <https://docs.ray.io/en/latest/data/api/dataset_pipeline.html#creating-datasetpipelines>`_
 with a generator as input, it streams the windows instead of loading them.
 
 .. code-block:: python
@@ -190,7 +189,7 @@ with a generator as input, it streams the windows instead of loading them.
     DatasetPipeline(num_windows=None, num_stages=1)
 
     >>> def transform_batch(idx: list) -> dict:
-    ...     return {"features": g.edge_features(idx, np.array([[0, 2]]), feature_type=np.float32), "labels": np.ones((len(idx)))}
+    ...     return {"features": g.edge_features(idx, np.array([[0, 2]]), feature_type=np.float32), "labels": g.edge_features(idx, np.array([[1, 1]]), feature_type=np.float32)}
     >>> pipe = pipe.map_batches(transform_batch)
     >>> pipe
     DatasetPipeline(num_windows=None, num_stages=2)
@@ -198,4 +197,5 @@ with a generator as input, it streams the windows instead of loading them.
     >>> batch = next(pipe.iter_torch_batches(batch_size=2))
     >>> batch
     {'features': tensor([[0., 0.],
-            [0., 0.]]), 'labels': tensor([1., 1.], dtype=torch.float64)}
+            [0., 0.]]), 'labels': tensor([[0.],
+            [0.]])}

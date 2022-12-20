@@ -28,7 +28,6 @@ py_library(
         "//src/python/deepgnn/pytorch/modeling:deepgnn_pytorch_modeling",
         "//src/python/deepgnn/pytorch/encoding/twinbert/deepspeed:deepgnn_pytorch_encoding_twinbert_ds",
         "//src/python/deepgnn/pytorch/nn:deepgnn_pytorch_nn",
-        "//src/python/deepgnn/pytorch/training:deepgnn_pytorch_training",
         "//examples/pytorch:example_torch_tests",
     ],
 )

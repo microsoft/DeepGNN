@@ -19,7 +19,6 @@ py_library(
         "//src/python/deepgnn/pytorch/encoding:deepgnn_pytorch_encoding",
         "//src/python/deepgnn/pytorch/modeling:deepgnn_pytorch_modeling",
         "//src/python/deepgnn/pytorch/nn:deepgnn_pytorch_nn",
-        "//src/python/deepgnn/pytorch/training:deepgnn_pytorch_training",
         "//examples/pytorch:example_torch_tests",
     ],
 )
