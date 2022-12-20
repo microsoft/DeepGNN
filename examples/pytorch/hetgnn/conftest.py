@@ -16,7 +16,7 @@ num_p = 21044
 num_v = 18
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def prepare_local_test_files():
     name = "academic.zip"
     working_dir = tempfile.TemporaryDirectory()
@@ -31,7 +31,7 @@ def prepare_local_test_files():
     working_dir.cleanup()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def load_data(prepare_local_test_files):
     a_net_embed = {}
     p_net_embed = {}
@@ -111,7 +111,7 @@ def load_data(prepare_local_test_files):
     return features, adj_list, prepare_local_test_files
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def init_het_input_data(prepare_local_test_files):
     a_p_list_train = [[] for k in range(num_a)]
     a_p_list_test = [[] for k in range(num_a)]
