@@ -8,7 +8,6 @@ py_library(
     name = "example_torch_hetgnn",
     srcs = [
         "args.py",
-        "conftest.py",
         "evaluation.py",
         "model.py",
         "main.py",

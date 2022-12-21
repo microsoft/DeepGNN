@@ -35,15 +35,7 @@ from model import HetGnnModel  # type: ignore
 from main import init_args, create_model, create_dataset, create_optimizer
 from ray_util import run_ray
 from sampler import HetGnnDataSampler  # type: ignore
-from conftest import (  # noqa: F401
-    init_het_input_data,
-)  # type: ignore
 import evaluation  # type: ignore
-import conftest  # type: ignore
-from examples.pytorch.conftest import (  # noqa: F401
-    MockSimpleDataLoader,
-    MockFixedSimpleDataLoader,
-)
 
 node_base_index = 1000000
 
@@ -87,12 +79,12 @@ def train_academic_data():
         init_args_fn=init_args,
         run_args=[
             "--data_dir", working_dir.name,
-            "--neighbor_count", "10",
+            "--neighbor_count", "5",
             "--model_dir", model_dir.name,
             "--save_path", model_dir.name,
-            "--num_epochs", "2",
+            "--num_epochs", "2",                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
             "--batch_size", "128",
-            "--walk_length", "5",
+            "--walk_length", "2",
             "--dim", "128",
             "--max_id", "1024",
             "--node_type_count", "3",
@@ -102,28 +94,17 @@ def train_academic_data():
         ],
     )
     
-    yield os.path.join(model_dir.name, 'gnnmodel-002-000000.pt'), working_dir.name
+    yield os.path.join(model_dir.name, 'gnnmodel-002-000000.pt'), result
     working_dir.cleanup()
     model_dir.cleanup()
 
 
 def test_link_prediction_on_het_gnn(
-    train_academic_data,   # noqa: F811
+    train_academic_data,  # noqa: F811
 ):
-    random.seed(0)
+    model_dir, result = train_academic_data
 
-    model_path, test_rootdir = train_academic_data
-    """
-    input_data_map = init_het_input_data
-
-    # do evaluation
-    args = parse_testing_args([])
-    train_num, test_num = conftest.a_a_collaborate_train_test(
-        args, model_path, input_data_map, tmpdir
-    )
-    auc, f1 = evaluation.evaluate_link_prediction(args, train_num, test_num, tmpdir)
-    """
-    assert auc > 0.6 and auc < 0.9
+    f1 = result.metrics["metric"]
     assert f1 > 0.6 and f1 < 0.9
 
 
