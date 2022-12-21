@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 import pytest
+import platform
 import numpy as np
 import numpy.testing as npt
 import torch
