@@ -232,7 +232,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...             loss.backward()
     ...             optimizer.step()
     ...
-    ...             session.report({"metric": (scores.argmax(1) == labels).sum(), "loss": loss.item()})
+    ...             session.report({"metric": (scores.argmax(1) == labels).float().mean(), "loss": loss.item()})
     ...
     ...     torch.save(model.state_dict(), config["model_dir"])
 
@@ -281,6 +281,10 @@ Evaluate
     ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False, _max_cpu_fraction_per_node = 0.8),
     ... )
     >>> result = trainer.fit()
+    >>> result.metrics["metric"]
+    tensor(0.3039)
+    >>> result.metrics["loss"]
+    1.9346442222595215
 
     >>> data_dir.cleanup()
     >>> model_dir.cleanup()

@@ -292,7 +292,7 @@ Training Loop
     ...             loss.backward()
     ...             optimizer.step()
     ...
-    ...             session.report({"metric": (scores.argmax(1) == labels).sum(), "loss": loss.item()})
+    ...             session.report({"metric": (scores.argmax(1) == labels).float().mean(), "loss": loss.item()})
     ...
     ...     torch.save(model.state_dict(), config["model_dir"])
 
@@ -319,3 +319,7 @@ Finally we train the model to predict whether an edge exists between any two nod
     ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False, _max_cpu_fraction_per_node = 0.8),
     ... )
     >>> result = trainer.fit()
+    >>> result.metrics["metric"]
+    tensor(0.3021)
+    >>> result.metrics["loss"]
+    1.8100202083587646
