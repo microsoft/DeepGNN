@@ -60,5 +60,5 @@ cc_test(
         "@hadoop//:hadoop_include",
     ],
     data = ["core-site.xml",],
-    target_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = ["@bazel_tools//platforms:linux"],
 )

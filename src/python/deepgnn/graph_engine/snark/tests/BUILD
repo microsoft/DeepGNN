@@ -261,5 +261,5 @@ py_test(
         requirement("scipy"),
         requirement("scikit-learn"),
     ],
-    target_compatible_with = ["@platforms//os:linux"],
+    target_compatible_with = ["@bazel_tools//platforms:linux"],
 )
