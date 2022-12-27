@@ -20,14 +20,14 @@ runs:
     - run: echo ${{ inputs.disk_cache }}
       shell: bash
 
-    - uses: actions/cache@v3
-      id: cache
-      with:
-        path: ~/bazel-cache
-        key: ${{ inputs.disk_cache }}
-        restore-keys: |
-          test-${{ runner.os }}-${{ github.ref }}
-          test-${{ runner.os }}
+    #- uses: actions/cache@v3
+    #  id: cache
+    #  with:
+    #    path: ~/bazel-cache
+    #    key: ${{ inputs.disk_cache }}
+    #    restore-keys: |
+    #      test-${{ runner.os }}-${{ github.ref }}
+    #      test-${{ runner.os }}
 
     - run: bazel test -c dbg //src/cc/tests:* --test_output=all --test_timeout 30 --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
       shell: bash
