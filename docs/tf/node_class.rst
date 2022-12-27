@@ -11,26 +11,30 @@ Node Classification with GAT
 .. code-block:: python
 
     >>> import argparse
+    >>> import tempfile
+    >>> import os
     >>> import numpy as np
     >>> import tensorflow as tf
     >>> from dataclasses import dataclass
     >>> from typing import Dict, List, Union, Callable, Any, Tuple
     >>> from contextlib import closing
+    >>> import ray
+    >>> import ray.train as train
+    >>> from ray.train.tensorflow import TensorflowTrainer
+    >>> from ray.air import session
+    >>> from ray.air.config import ScalingConfig, RunConfig
     >>> from deepgnn import str2list_int, setup_default_logging_config
     >>> from deepgnn.graph_engine import Graph, graph_ops
     >>> from deepgnn.graph_engine import (
     ...    SamplingStrategy,
     ...    GENodeSampler,
-    ...    RangeNodeSampler,
-    ...    FileNodeSampler,
     ...    BackendOptions,
-    ...    create_backend,
     ... )
+    >>> from deepgnn.graph_engine.snark.local import Client
     >>> from deepgnn.tf import common
     >>> from deepgnn.tf.nn.gat_conv import GATConv
     >>> from deepgnn.tf.nn.metrics import masked_accuracy, masked_softmax_cross_entropy
     >>> from deepgnn.tf.common.dataset import create_tf_dataset, get_distributed_dataset
-    >>> from deepgnn.tf.common.trainer_factory import get_trainer
 
 .. code-block:: python
 
@@ -201,207 +205,76 @@ Node Classification with GAT
 
 .. code-block:: python
 
-    >>> def build_model(param):
+    >>> def build_model():
     ...    p = GATQueryParameter(
-    ...        neighbor_edge_types=np.array(param.neighbor_edge_types, np.int32),
-    ...        feature_idx=param.feature_idx,
-    ...        feature_dim=param.feature_dim,
-    ...        label_idx=param.label_idx,
-    ...        label_dim=param.label_dim,
-    ...        num_hops=len(param.head_num),
+    ...        neighbor_edge_types=np.array([0], np.int32),
+    ...        feature_idx=0,
+    ...        feature_dim=1433,
+    ...        label_idx=1,
+    ...        label_dim=1,
+    ...        num_hops=len([8, 1]),
     ...    )
     ...    query_obj = GATQuery(p)
     ...
     ...    model = GAT(
-    ...        head_num=param.head_num,
-    ...        hidden_dim=param.hidden_dim,
-    ...        num_classes=param.num_classes,
-    ...        ffd_drop=param.ffd_drop,
-    ...        attn_drop=param.attn_drop,
-    ...        l2_coef=param.l2_coef,
+    ...        head_num=[8, 1],
+    ...        hidden_dim=8,
+    ...        num_classes=7,
+    ...        ffd_drop=.6,
+    ...        attn_drop=.6,
+    ...        l2_coef=0.0005,
     ...    )
     ...
     ...    return model, query_obj
 
 .. code-block:: python
 
-    >>> def define_param_gat(parser):
-    ...    parser.add_argument("--batch_size", type=int, default=16, help="mini-batch size")
-    ...    parser.add_argument("--epochs", type=int, default=200, help="num of epochs for training")
-    ...    parser.add_argument("--learning_rate", type=float, default=0.005, help="learning rate")
-    ...
-    ...    # GAT Model Parameters.
-    ...    parser.add_argument("--head_num", type=str2list_int, default="8,1", help="the number of attention headers.")
-    ...    parser.add_argument("--hidden_dim", type=int, default=8, help="hidden layer dimension.")
-    ...    parser.add_argument("--num_classes", type=int, default=-1, help="number of classes for category")
-    ...    parser.add_argument("--ffd_drop", type=float, default=0.0, help="feature dropout rate.")
-    ...    parser.add_argument("--attn_drop", type=float, default=0.0, help="attention layer dropout rate.")
-    ...    parser.add_argument("--l2_coef", type=float, default=0.0005, help="l2 loss")
-    ...
-    ...    ## training node types.
-    ...    parser.add_argument("--node_types", type=str2list_int, default="0", help="Graph Node for training.")
-    ...    ## evaluate node files.
-    ...    parser.add_argument("--evaluate_node_files", type=str, help="evaluate node file list.")
-    ...    ## inference node id
-    ...    parser.add_argument("--inf_min_id", type=int, default=0, help="inferece min node id.")
-    ...    parser.add_argument("--inf_max_id", type=int, default=-1, help="inference max node id.")
-    ...
-    ...    parser.add_argument(
-    ...        "--distributed_strategy",
-    ...        type=str,
-    ...        default=None,
-    ...        choices=[None, "Mirrored", "MultiWorkerMirrored"],
-    ...        help="Distributed strategies to use.",
-    ...    )
-    ...    def register_gat_query_param(parser):
-    ...            group = parser.add_argument_group("GAT Query Parameters")
-    ...            group.add_argument("--neighbor_edge_types", type=str2list_int, default="0", help="Graph Edge for attention encoder.",)
-    ...            group.add_argument("--feature_idx", type=int, default=0, help="feature index.")
-    ...            group.add_argument("--feature_dim", type=int, default=16, help="feature dim.")
-    ...            group.add_argument("--label_idx", type=int, default=1, help="label index.")
-    ...            group.add_argument("--label_dim", type=int, default=1, help="label dim.")
-    ...    register_gat_query_param(parser)
-
-.. code-block:: python
-
-    >>> def run_train(param, trainer, query, model, tf1_mode, backend):
-    ...    tf_dataset, steps_per_epoch = create_tf_dataset(
-    ...        sampler_class=GENodeSampler,
-    ...        query_fn=query.query_training,
-    ...        backend=backend,
-    ...        node_types=np.array(param.node_types, dtype=np.int32),
-    ...        batch_size=param.batch_size,
-    ...        num_workers=trainer.worker_size,
-    ...        worker_index=trainer.task_index,
-    ...        strategy=SamplingStrategy.RandomWithoutReplacement,
-    ...    )
-    ...
-    ...    distributed_dataset = get_distributed_dataset(
-    ...        # NOTE: here we flatten all the epochs into 1 to increase performance.
-    ...        lambda ctx: tf_dataset.repeat(param.epochs)
-    ...    )
-    ...
-    ...    # we need to make sure the steps_per_epoch are provided in distributed dataset.
-    ...    assert steps_per_epoch is not None or param.steps_per_epoch is not None
-    ...    # Since we flatten the dataset to len(dataset) * param.epochs,
-    ...    # we alos need to update steps_per_epoch.
-    ...    steps_per_epoch = param.epochs * (steps_per_epoch or param.steps_per_epoch)
-    ...
-    ...    if tf1_mode:
-    ...        opt = tf.compat.v1.train.AdamOptimizer(param.learning_rate * trainer.lr_scaler)
-    ...    else:
-    ...        opt = tf.keras.optimizers.Adam(
-    ...            learning_rate=param.learning_rate * trainer.lr_scaler
-    ...        )
-    ...
-    ...    trainer.train(
-    ...        dataset=distributed_dataset,
-    ...        model=model,
-    ...        optimizer=opt,
-    ...        epochs=1,
-    ...        steps_per_epoch=steps_per_epoch,
-    ...    )
-
-
-.. code-block:: python
-
-    >>> try:
-    ...    define_param_base
-    ... except NameError:
-    ...    define_param_base = define_param_gat
-
-.. code-block:: python
-
-    >>> MODEL_DIR = f"tmp/gat_{np.random.randint(9999999)}"
-    >>> arg_list = [
-    ...    "--data_dir", "/tmp/cora",
-    ...    "--mode", "train",
-    ...    # "--trainer", "hvd",
-    ...    "--seed", "123",
-    ...    "--eager",
-    ...    "--log_save_steps", "1",
-    ...    "--backend", "snark",
-    ...    "--graph_type", "local",
-    ...    "--converter", "skip",
-    ... #   "--sample_file", "/tmp/cora/train.nodes",
-    ... #   "--node_type", "0",
-    ...    "--neighbor_edge_types", "0",
-    ...    "--feature_idx", "0",
-    ...    "--feature_dim", "1433",
-    ...    "--label_idx", "1",
-    ...    "--label_dim", "1",
-    ...    "--num_classes", "7",
-    ...    "--batch_size", "140",
-    ...    "--epochs", "20",
-    ...    "--learning_rate", "0.005",
-    ...    "--l2_coef", "0.0005",
-    ...    "--attn_drop", "0.6",
-    ...    "--ffd_drop", "0.6",
-    ...    "--head_num", "8,1",
-    ...    "--hidden_dim", "8",
-    ...    "--model_dir", MODEL_DIR,
-    ... #  "--metric_dir", MODEL_DIR,
-    ... #  "--save_path", MODEL_DIR,
-    ... ]
-
-    >>> def define_param_wrap(define_param):
-    ...    def define_param_new(parser):
-    ...        define_param(parser)
-    ...        parse_args = parser.parse_args
-    ...        parser.parse_args = lambda: parse_args(arg_list)
-    ...    return define_param_new
-    >>> define_param_gat = define_param_wrap(define_param_base)
-
-.. code-block:: python
-
-    >>> def _main():
-    ...    # setup default logging component.
-    ...    setup_default_logging_config(enable_telemetry=True)
-    ...
+    >>> def train_func(config: Dict):
+    ...    model_dir = tempfile.TemporaryDirectory()
+    ...    # TODO set seed, pull other similar stuff from torch trainer, prepare_model to gpu,....
     ...    parser = argparse.ArgumentParser(
     ...        formatter_class=argparse.ArgumentDefaultsHelpFormatter, allow_abbrev=False
     ...    )
-    ...    common.args.import_default_parameters(parser)
-    ...    define_param_gat(parser)
+    ...    g = Client("/tmp/cora", [0])
     ...
-    ...    param = parser.parse_args()
-    ...    common.args.log_all_parameters(param)
+    ...    model, query = build_model()
     ...
-    ...    trainer = get_trainer(param)
+    ...    with tf.distribute.get_strategy().scope():
+    ...        tf_dataset, steps_per_epoch = create_tf_dataset(
+    ...            sampler_class=GENodeSampler,
+    ...            query_fn=query.query_training,
+    ...            backend=type("Backend", (object,), {"graph": g})(),
+    ...            node_types=np.array([0], dtype=np.int32),
+    ...            batch_size=140,
+    ...            num_workers=2,
+    ...            worker_index=0,
+    ...            strategy=SamplingStrategy.RandomWithoutReplacement,
+    ...        )
+    ...        epochs = 20
+    ...        distributed_dataset = get_distributed_dataset(
+    ...            lambda ctx: tf_dataset.repeat(epochs)
+    ...        )
     ...
-    ...    backend = create_backend(BackendOptions(param), is_leader=(trainer.task_index == 0))
+    ...        model.optimizer = tf.keras.optimizers.Adam(
+    ...            learning_rate=.005
+    ...        )
+    ... 
+    ...        model.compile(optimizer=model.optimizer, loss=None, metrics=None)
     ...
-    ...    def run(tf1_mode=False):
-    ...        model, query = build_model(param)
-    ...        if param.mode == common.args.TrainMode.TRAIN:
-    ...            run_train(param, trainer, query, model, tf1_mode, backend)
-    ...        elif param.mode == common.args.TrainMode.EVALUATE:
-    ...            run_eval(param, trainer, query, model, backend)
-    ...        elif param.mode == common.args.TrainMode.INFERENCE:
-    ...            run_inference(param, trainer, query, model, backend)
-    ...
-    ...    with closing(backend):
-    ...        if param.eager:
-    ...            strategy = None
-    ...            if param.distributed_strategy == "Default":
-    ...                strategy = tf.distribute.get_strategy()
-    ...            elif param.distributed_strategy == "Mirrored":
-    ...                strategy = tf.distribute.MirroredStrategy()
-    ...            elif param.distributed_strategy == "MultiWorkerMirrored":
-    ...                strategy = tf.distribute.MultiWorkerMirroredStrategy()
-    ...
-    ...            if strategy:
-    ...                with strategy.scope():
-    ...                    run()
-    ...            else:
-    ...                run()
-    ...        else:
-    ...            with tf.Graph().as_default():
-    ...                trainer.set_random_seed(param.seed)
-    ...                with trainer.tf_device():
-    ...                    run(tf1_mode=True)
+    ...        model.fit(
+    ...            distributed_dataset,
+    ...            epochs=epochs,
+    ...            callbacks=[],
+    ...            verbose=0,
+    ...            steps_per_epoch=steps_per_epoch * epochs,
+    ...        )
 
 
 .. code-block:: python
 
-    >>> _main()
+    >>> trainer = TensorflowTrainer(
+    ...     train_loop_per_worker=train_func,
+    ...     train_loop_config={},
+    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
+    ... )
+    >>> result = trainer.fit()
