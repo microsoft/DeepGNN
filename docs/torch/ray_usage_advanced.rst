@@ -217,7 +217,7 @@ Finally we call trainer.fit() to execute the training loop.
     ...         "batch_size": 2708,
     ...         "data_dir": data_dir.name,
     ...         "sample_filename": "train.nodes",
-    ...         "n_epochs": 10,
+    ...         "n_epochs": 100,
     ...         "model_dir": f"{model_dir.name}/model.pt",
     ...     },
     ...     run_config=RunConfig(verbose=0),
@@ -244,9 +244,9 @@ Evaluate
     ... )
     >>> result = trainer.fit()
     >>> result.metrics["metric"]
-    tensor(0.3021)
+    tensor(0.8637)
     >>> result.metrics["loss"]
-    1.8100202083587646
+    0.6571142673492432
 
     >>> data_dir.cleanup()
     >>> model_dir.cleanup()
