@@ -3,6 +3,7 @@
 """Citation graph datasets."""
 import argparse
 import sys
+import tempfile
 import os
 from typing import List, Tuple, Union
 
@@ -183,7 +184,7 @@ class CitationGraph(Client):
         self.GRAPH_NAME = name
         self.output_dir = output_dir
         if self.output_dir is None:
-            self.output_dir = os.path.join("/tmp", "citation", self.GRAPH_NAME)
+            self.output_dir = os.path.join(tempfile.gettempdir(), "citation", self.GRAPH_NAME)
         self._build_graph(self.output_dir, split)
         super().__init__(path=self.output_dir, partitions=[0])
 
@@ -361,7 +362,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset", default="cora", type=str, choices=["cora", "citeseer"]
     )
-    parser.add_argument("--data_dir", default="/tmp/citation", type=str)
+    parser.add_argument("--data_dir", default=f"{tempfile.gettempdir()}/citation", type=str)
     parser.add_argument(
         "--split", default="public", type=str, choices=["public", "random"]
     )
