@@ -32,6 +32,8 @@ py_test(
     srcs_version = "PY3",
     deps = [
         ":example_torch_kg",
+        requirement("ray"),
+        requirement("pyarrow"),
         requirement("numpy"),
         requirement("pytest"),
         requirement("fsspec"),

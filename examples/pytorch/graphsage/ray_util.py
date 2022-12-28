@@ -105,12 +105,15 @@ def train_func(config: Dict):
             save_path = os.path.join(
                 f"{args.save_path}",
                 f"{PREFIX_CHECKPOINT}-{epoch:03}-{step:06}.pt",
-            )        
-            torch.save({
-                "state_dict": model.state_dict(),
-                "epoch": epoch,
-                "step": step,
-            }, save_path)
+            )
+            torch.save(
+                {
+                    "state_dict": model.state_dict(),
+                    "epoch": epoch,
+                    "step": step,
+                },
+                save_path,
+            )
             rotate_checkpoints(args.save_path, args.max_saved_ckpts)
             logger.info(f"Saved checkpoint to {save_path}.")
 
@@ -127,9 +130,7 @@ def run_ray(init_model_fn, init_dataset_fn, init_optimizer_fn, init_args_fn, **k
     """Run ray trainer."""
     ray.init()
 
-    args = get_args(
-        init_args_fn, kwargs["run_args"] if "run_args" in kwargs else None
-    )
+    args = get_args(init_args_fn, kwargs["run_args"] if "run_args" in kwargs else None)
 
     trainer = TorchTrainer(
         train_func,

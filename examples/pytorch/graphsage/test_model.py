@@ -15,8 +15,8 @@ from deepgnn import get_logger
 from deepgnn.pytorch.common import F1Score
 from deepgnn.graph_engine.data import Cora
 
-from main import create_model, create_dataset, create_optimizer, init_args
-from ray_util import run_ray
+from main import create_model, create_dataset, create_optimizer, init_args  # type: ignore
+from ray_util import run_ray  # type: ignore
 from model import PTGSupervisedGraphSage  # type: ignore
 
 from examples.pytorch.conftest import (  # noqa: F401
@@ -51,28 +51,49 @@ def train_graphsage_cora_ddp_trainer():
         init_optimizer_fn=create_optimizer,
         init_args_fn=init_args,
         run_args=[
-            "--data_dir", working_dir.name,
-            "--mode", "train",
-            "--seed", "123",
-            "--backend", "snark",
-            "--graph_type", "local",
+            "--data_dir",
+            working_dir.name,
+            "--mode",
+            "train",
+            "--seed",
+            "123",
+            "--backend",
+            "snark",
+            "--graph_type",
+            "local",
             "--converter skip",
-            "--batch_size", "140",
-            "--learning_rate", "0.005",
-            "--num_epochs", "100",
-            "--node_type", "0",
-            "--max_id", "-1",
-            "--model_dir", model_dir.name,
-            "--metric_dir", model_dir.name,
-            "--save_path", model_dir.name,
-            "--feature_idx", "0",
-            "--feature_dim", "1433",
-            "--label_idx", "1",
-            "--label_dim", "7",
-            "--algo", "supervised",
+            "--batch_size",
+            "140",
+            "--learning_rate",
+            "0.005",
+            "--num_epochs",
+            "100",
+            "--node_type",
+            "0",
+            "--max_id",
+            "-1",
+            "--model_dir",
+            model_dir.name,
+            "--metric_dir",
+            model_dir.name,
+            "--save_path",
+            model_dir.name,
+            "--feature_idx",
+            "0",
+            "--feature_dim",
+            "1433",
+            "--label_idx",
+            "1",
+            "--label_dim",
+            "7",
+            "--algo",
+            "supervised",
         ],
     )
-    yield {"losses": result.metrics["losses"], "model_path": os.path.join(model_dir.name, 'gnnmodel-096-000000.pt')}
+    yield {
+        "losses": result.metrics["losses"],
+        "model_path": os.path.join(model_dir.name, "gnnmodel-096-000000.pt"),
+    }
     working_dir.cleanup()
     model_dir.cleanup()
 

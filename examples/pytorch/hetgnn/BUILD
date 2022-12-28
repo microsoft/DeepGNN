@@ -35,6 +35,8 @@ py_test(
     srcs_version = "PY3",
     deps = [
         ":example_torch_hetgnn",
+        requirement("ray"),
+        requirement("pyarrow"),
         requirement("numpy"),
         requirement("pytest"),
         requirement("scikit-learn"),

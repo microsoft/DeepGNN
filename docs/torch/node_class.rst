@@ -105,7 +105,7 @@ All node and edge features in this sub-graph are pulled and added to the context
     ...             undirected=True,
     ...             return_edges=True,
     ...         )
-    ...         input_mask = np.zeros(nodes.size, np.bool)
+    ...         input_mask = np.zeros(nodes.size, np.bool_)
     ...         input_mask[src_idx] = True
     ...
     ...         feat = g.node_features(nodes, self.feature_meta, self.feature_type)
@@ -232,7 +232,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...             loss.backward()
     ...             optimizer.step()
     ...
-    ...             session.report({"metric": (scores.argmax(1) == labels).sum(), "loss": loss.item()})
+    ...             session.report({"metric": (scores.argmax(1) == labels).float().mean(), "loss": loss.item()})
     ...
     ...     torch.save(model.state_dict(), config["model_dir"])
 
@@ -255,7 +255,7 @@ Finally we call trainer.fit() to execute the training loop.
     ...         "batch_size": 2708,
     ...         "data_dir": data_dir.name,
     ...         "sample_filename": "train.nodes",
-    ...         "n_epochs": 1,
+    ...         "n_epochs": 100,
     ...         "model_dir": f"{model_dir.name}/model.pt",
     ...     },
     ...     run_config=RunConfig(verbose=0),
@@ -281,6 +281,10 @@ Evaluate
     ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False, _max_cpu_fraction_per_node = 0.8),
     ... )
     >>> result = trainer.fit()
+    >>> result.metrics["metric"]
+    tensor(0.86...)
+    >>> result.metrics["loss"]
+    0.65...
 
     >>> data_dir.cleanup()
     >>> model_dir.cleanup()

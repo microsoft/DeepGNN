@@ -11,11 +11,10 @@ from deepgnn.pytorch.common.utils import (
     get_logger,
     get_python_type,
     get_store_name_and_path,
-    
 )
 from deepgnn.pytorch.encoding import get_feature_encoder
 from deepgnn.pytorch.modeling import BaseModel
-from ray_util import run_ray
+from ray_util import run_ray  # type: ignore
 from deepgnn.graph_engine import TextFileSampler, GraphEngineBackend
 from args import init_args  # type: ignore
 from consts import DEFAULT_VOCAB_CHAR_INDEX  # type: ignore
@@ -25,7 +24,6 @@ from model import LinkPredictionModel  # type: ignore
 def create_model(args: argparse.Namespace):
     get_logger().info(f"Creating LinkPredictionModel with seed:{args.seed}.")
     # set seed before instantiating the model
-
 
     feature_enc = get_feature_encoder(args)
 

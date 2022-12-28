@@ -22,8 +22,8 @@ from deepgnn.graph_engine.snark.converter.options import DataConverterType
 from deepgnn.graph_engine.data.citation import Cora
 
 from model_geometric import GAT, GATQueryParameter  # type: ignore
-from main import init_args, create_model, create_dataset, create_optimizer
-from ray_util import run_ray
+from main import init_args, create_model, create_dataset, create_optimizer  # type: ignore
+from ray_util import run_ray  # type: ignore
 from deepgnn import get_logger
 
 
@@ -51,36 +51,65 @@ def train_graphsage_cora_ddp_trainer():
         init_optimizer_fn=create_optimizer,
         init_args_fn=init_args,
         run_args=[
-            "--data_dir", working_dir.name,
-            "--mode", "train",
-            "--seed", "123",
-            "--backend", "snark",
-            "--graph_type", "local",
+            "--data_dir",
+            working_dir.name,
+            "--mode",
+            "train",
+            "--seed",
+            "123",
+            "--backend",
+            "snark",
+            "--graph_type",
+            "local",
             "--converter skip",
-            "--batch_size", "140",
-            "--learning_rate", "0.005",
-            "--num_epochs", "200",
-            "--node_type", "0",
-            "--max_id", "-1",
-            "--model_dir", model_dir.name,
-            "--metric_dir", model_dir.name,
-            "--save_path", model_dir.name,
-            "--feature_idx", "0",
-            "--feature_dim", "1433",
-            "--label_idx", "1",
-            "--label_dim", "1",
-            "--algo", "supervised",
-            "--neighbor_edge_types", "0",
-            "--in_dim", "1433",
-            "--head_num", "8,1",
-            "--hidden_dim", "8",
-            "--num_classes", "7",
-            "--ffd_drop", "0.6",
-            "--attn_drop", "0.6",
-            "--sample_file", f"{working_dir.name}/train.nodes",
+            "--batch_size",
+            "140",
+            "--learning_rate",
+            "0.005",
+            "--num_epochs",
+            "200",
+            "--node_type",
+            "0",
+            "--max_id",
+            "-1",
+            "--model_dir",
+            model_dir.name,
+            "--metric_dir",
+            model_dir.name,
+            "--save_path",
+            model_dir.name,
+            "--feature_idx",
+            "0",
+            "--feature_dim",
+            "1433",
+            "--label_idx",
+            "1",
+            "--label_dim",
+            "1",
+            "--algo",
+            "supervised",
+            "--neighbor_edge_types",
+            "0",
+            "--in_dim",
+            "1433",
+            "--head_num",
+            "8,1",
+            "--hidden_dim",
+            "8",
+            "--num_classes",
+            "7",
+            "--ffd_drop",
+            "0.6",
+            "--attn_drop",
+            "0.6",
+            "--sample_file",
+            f"{working_dir.name}/train.nodes",
         ],
     )
-    yield {"model_path": os.path.join(model_dir.name, 'gnnmodel-196-000000.pt'), "data_dir": working_dir.name}
+    yield {
+        "model_path": os.path.join(model_dir.name, "gnnmodel-196-000000.pt"),
+        "data_dir": working_dir.name,
+    }
     working_dir.cleanup()
     model_dir.cleanup()
 
@@ -103,7 +132,9 @@ def test_pytorch_gat_cora(train_graphsage_cora_ddp_trainer):
         q_param=qparam,
     )
 
-    model.load_state_dict(torch.load(train_graphsage_cora_ddp_trainer["model_path"])["state_dict"])
+    model.load_state_dict(
+        torch.load(train_graphsage_cora_ddp_trainer["model_path"])["state_dict"]
+    )
 
     args = argparse.Namespace(
         data_dir=train_graphsage_cora_ddp_trainer["data_dir"],
@@ -124,7 +155,9 @@ def test_pytorch_gat_cora(train_graphsage_cora_ddp_trainer):
             prefetch_queue_size=1,
             prefetch_worker_size=1,
             batch_size=1000,
-            sample_files=os.path.join(train_graphsage_cora_ddp_trainer["data_dir"], "test.nodes"),
+            sample_files=os.path.join(
+                train_graphsage_cora_ddp_trainer["data_dir"], "test.nodes"
+            ),
             shuffle=False,
             drop_last=True,
             worker_index=0,

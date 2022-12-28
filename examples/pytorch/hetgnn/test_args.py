@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 import sys
+import platform
 import pytest
 import os
 import shutil
@@ -9,23 +10,32 @@ import argparse
 import torch
 from deepgnn import TrainMode, setup_default_logging_config
 from deepgnn import get_logger
-from deepgnn.pytorch.common.utils import get_python_type, set_seed
+from deepgnn.pytorch.common.utils import get_python_type
 from deepgnn.pytorch.modeling import BaseModel
-from deepgnn.pytorch.training import run_dist
 from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.graph_engine import CSVNodeSampler, GraphEngineBackend
 from args import init_args  # type: ignore
 from model import HetGnnModel  # type: ignore
 from sampler import HetGnnDataSampler  # type: ignore
+from ray_util import run_ray  # type: ignore
 from deepgnn.graph_engine.data.ppi import PPI
+
+
+def setup_module(module):
+    import deepgnn.graph_engine.snark._lib as lib
+
+    lib_name = "libwrapper.so"
+    if platform.system() == "Windows":
+        lib_name = "wrapper.dll"
+
+    os.environ[lib._SNARK_LIB_PATH_ENV_KEY] = os.path.join(
+        os.path.dirname(__file__), "..", "..", "..", "src", "cc", "lib", lib_name
+    )
 
 
 def create_model(args: argparse.Namespace):
     get_logger().info(f"Creating HetGnnModel with seed:{args.seed}.")
     # set seed before instantiating the model
-    if args.seed:
-        set_seed(args.seed)
-
     return HetGnnModel(
         node_type_count=args.node_type_count,
         neighbor_count=args.neighbor_count,
@@ -98,7 +108,7 @@ def test_run_args():
     # run_dist is the unified entry for pytorch model distributed training/evaluation/inference.
     # User only needs to prepare initializing function for model, dataset, optimizer and args.
     # reference: `deepgnn/pytorch/training/factory.py`
-    run_dist(
+    run_ray(
         init_model_fn=create_model,
         init_dataset_fn=create_dataset,
         init_optimizer_fn=create_optimizer,

@@ -19,7 +19,6 @@ def create_model(args: argparse.Namespace):
     get_logger().info(f"Creating HetGnnModel with seed:{args.seed}.")
     # set seed before instantiating the model
 
-
     return HetGnnModel(
         node_type_count=args.node_type_count,
         neighbor_count=args.neighbor_count,
