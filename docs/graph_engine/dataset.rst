@@ -34,7 +34,7 @@ Simple Cora Dataset
 
 In this example we create a simple dataset using Ray Data.
 
-First we initialize a Ray Dataset of node ids ranging from 0 to 2708.
+First we initialize a Ray Dataset of node ids ranging from 0 to 2708 via 
 `ray.data.range <https://docs.ray.io/en/latest/data/api/input_output.html#synthetic-data>`_
 Then we repartition it to be one block per batch.
 
