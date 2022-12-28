@@ -168,7 +168,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     if os.path.isfile(config["model_dir"]):
     ...         model.load_state_dict(torch.load(config["model_dir"]))
     ...     model = train.torch.prepare_model(model)
-    ...
+    ...     return
     ...     print("Starting Optimizer")
     ...     # Initialize the optimizer and wrap it with Ray
     ...     optimizer = torch.optim.Adam(model.parameters(), lr=.005, weight_decay=0.0005)
