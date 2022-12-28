@@ -90,7 +90,7 @@ In the GAT model, query samples neighbors repeatedly `num_hops` times in order t
 	...             undirected=True,
 	...             return_edges=True,
 	...         )
-	...         input_mask = np.zeros(nodes.size, np.bool)
+	...         input_mask = np.zeros(nodes.size, np.bool_)
 	...         input_mask[src_idx] = True
 	...
 	...         feat = graph.node_features(nodes, self.feat_meta, self.p.feature_type)
