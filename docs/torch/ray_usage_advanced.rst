@@ -176,7 +176,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...
     ...     # Ray Dataset
     ...     dataset = ray.data.range(2708).repartition(2708 // config["batch_size"])  # -> Dataset(num_blocks=6, num_rows=2708, schema=<class 'int'>)
-    ...     pipe = dataset.window(blocks_per_window=10).repeat(config["n_epochs"])  # -> DatasetPipeline(num_windows=1, num_stages=1)
+    ...     pipe = dataset#.window(blocks_per_window=10).repeat(config["n_epochs"])  # -> DatasetPipeline(num_windows=1, num_stages=1)
     ...     q = GATQuery()
     ...     def transform_batch(batch: list) -> dict:
     ...         return q.query(g, batch)  # When we reference the server g in transform, it uses Client instead
@@ -196,7 +196,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...             loss.backward()
     ...             optimizer.step()
     ...
-    ...             session.report({"metric": (scores.argmax(1) == labels).float().mean(), "loss": loss.item()})
+    ...             session.report({"metric": (scores.argmax(1) == labels).float().mean().item(), "loss": loss.item()})
     ...
     ...     torch.save(model.state_dict(), config["model_dir"])
 
@@ -245,7 +245,7 @@ Evaluate
     ... )
     >>> result = trainer.fit()
     >>> result.metrics["metric"]
-    tensor(0.86...)
+    0.86...
     >>> result.metrics["loss"]
     0.65...
 
