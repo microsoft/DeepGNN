@@ -10,4 +10,7 @@ py_library(
         "base_model.py",
     ],
     visibility = ["//visibility:public"],
+    deps = [
+        "//src/python/deepgnn/pytorch/encoding:deepgnn_pytorch_encoding",
+    ],
 )
