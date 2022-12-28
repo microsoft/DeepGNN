@@ -185,7 +185,7 @@ scipy==1.9.2
 SecretStorage==3.3.3
 Send2Trash==1.8.0
 sentencepiece==0.1.97
-setuptools==65.4.1
+setuptools==65.5.1
 shrike==1.31.10
 six==1.16.0
 snowballstemmer==2.2.0
