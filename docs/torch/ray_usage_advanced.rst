@@ -180,7 +180,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     q = GATQuery()
     ...     def transform_batch(batch: list) -> dict:
     ...         return q.query(g, batch)  # When we reference the server g in transform, it uses Client instead
-    ...     pipe = pipe.map_batches(transform_batch)
+    ...     #pipe = pipe.map_batches(transform_batch)
     ...
     ...     print("Starting Training")
     ...     return
