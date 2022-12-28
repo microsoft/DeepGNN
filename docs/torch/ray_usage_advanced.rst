@@ -139,13 +139,13 @@ Model Forward and Init
     ...         return scores
 
 
-Train
-=====
+Ray Train
+=========
 
 Here we define our training function.
 In the setup part we do two notable things things,
 
-* Wrap the model and optimizer with train.torch.prepare_model/optimizer for Ray multi worker usage.
+* Wrap the model and optimizer with `train.torch.prepare_model/optimizer <https://docs.ray.io/en/latest/train/api.html#ray.train.torch.TorchTrainer>`_ for Ray multi worker usage.
 
 * Initialize the ray dataset, see more details in `docs/graph_engine/dataset.rst`.
 
@@ -157,23 +157,28 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     # Set random seed
     ...     train.torch.enable_reproducibility(seed=session.get_world_rank())
     ...
+    ...     print("Starting Server")
     ...     # Start server
     ...     address = "localhost:9999"
     ...     g = Server(address, config["data_dir"], 0, 1)
     ...
+    ...     print("Starting Model")
     ...     # Initialize the model and wrap it with Ray
     ...     model = GAT(in_dim=1433, num_classes=7)
     ...     if os.path.isfile(config["model_dir"]):
     ...         model.load_state_dict(torch.load(config["model_dir"]))
     ...     model = train.torch.prepare_model(model)
     ...
+    ...     print("Starting Optimizer")
     ...     # Initialize the optimizer and wrap it with Ray
     ...     optimizer = torch.optim.Adam(model.parameters(), lr=.005, weight_decay=0.0005)
     ...     optimizer = train.torch.prepare_optimizer(optimizer)
     ...
+    ...     print("Starting Loss")
     ...     # Define the loss function
     ...     loss_fn = nn.CrossEntropyLoss()
     ...
+    ...     print("Starting Dataset")
     ...     # Ray Dataset
     ...     dataset = ray.data.range(2708).repartition(2708 // config["batch_size"])  # -> Dataset(num_blocks=6, num_rows=2708, schema=<class 'int'>)
     ...     pipe = dataset.window(blocks_per_window=10).repeat(config["n_epochs"])  # -> DatasetPipeline(num_windows=1, num_stages=1)
@@ -182,6 +187,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...         return q.query(g, batch)  # When we reference the server g in transform, it uses Client instead
     ...     pipe = pipe.map_batches(transform_batch)
     ...
+    ...     print("Starting Training")
     ...     # Execute the training loop
     ...     model.train()
     ...     for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
@@ -220,8 +226,8 @@ Finally we call trainer.fit() to execute the training loop.
     ...         "n_epochs": 100,
     ...         "model_dir": f"{model_dir.name}/model.pt",
     ...     },
-    ...     run_config=RunConfig(verbose=3),
-    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False, _max_cpu_fraction_per_node = 0.8),
+    ...     run_config=RunConfig(verbose=0),
+    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     ... )
     >>> result = trainer.fit()
 
@@ -233,7 +239,6 @@ Evaluate
     >>> trainer = TorchTrainer(
     ...     train_func,
     ...     train_loop_config={
-    ...         "batch_size": 2708,
     ...         "data_dir": data_dir.name,
     ...         "sample_filename": "test.nodes",
     ...         "n_epochs": 1,
