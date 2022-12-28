@@ -232,7 +232,6 @@ Node Classification with GAT
 
     >>> def train_func(config: Dict):
     ...    model_dir = tempfile.TemporaryDirectory()
-    ...    # TODO set seed, pull other similar stuff from torch trainer, prepare_model to gpu,....
     ...    parser = argparse.ArgumentParser(
     ...        formatter_class=argparse.ArgumentDefaultsHelpFormatter, allow_abbrev=False
     ...    )
@@ -262,15 +261,13 @@ Node Classification with GAT
     ... 
     ...        model.compile(optimizer=model.optimizer, loss="categorical_crossentropy", metrics=["mae"])
     ...
-    ...        results = model.fit(
+    ...        history = model.fit(
     ...            distributed_dataset,
     ...            epochs=epochs,
-    ...            #callbacks=[],
     ...            verbose=0,
     ...            steps_per_epoch=steps_per_epoch * epochs,
     ...        )
-    ...        assert False, results
-    ...        return results
+    ...        session.report(history.history)
 
 
 .. code-block:: python
@@ -281,4 +278,5 @@ Node Classification with GAT
     ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     ... )
     >>> result = trainer.fit()
-    >>> result
+    >>> result.metrics
+    {'loss': [1.4273918867111206, 1.4273918867111206], 'accuracy': [0.5928571224212646, 0.5928571224212646], ...}
