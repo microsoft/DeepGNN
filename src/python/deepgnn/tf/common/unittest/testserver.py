@@ -32,7 +32,9 @@ def define_param_ps_dist_training(parser):
     parser.add_argument(
         "--worker_hosts", type=str2list, default="", help="training/inference workers."
     )
-    parser.add_argument("--model_dir", type=str, default=f"{tempfile.gettempdir()}/test123")
+    parser.add_argument(
+        "--model_dir", type=str, default=f"{tempfile.gettempdir()}/test123"
+    )
 
 
 def get_dist_training_server(param):

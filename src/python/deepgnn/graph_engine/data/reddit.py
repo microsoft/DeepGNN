@@ -128,7 +128,9 @@ class Reddit(PPI):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", default=f"{tempfile.gettempdir()}/reddit", type=str)
+    parser.add_argument(
+        "--data_dir", default=f"{tempfile.gettempdir()}/reddit", type=str
+    )
     parser.add_argument("--edge_downsample_pct", default=0.1, type=float)
     parser.add_argument("--num_partitions", default=2, type=int)
 

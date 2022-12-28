@@ -102,7 +102,9 @@ class Dataset(Client):
         self.NUM_CLASSES = num_classes
         self.output_dir = output_dir
         if self.output_dir is None:
-            self.output_dir = os.path.join(f"{tempfile.gettempdir()}/citation", self.GRAPH_NAME)
+            self.output_dir = os.path.join(
+                f"{tempfile.gettempdir()}/citation", self.GRAPH_NAME
+            )
         self._build_graph_impl(self.output_dir, train_node_ratio, random_selection)
         super().__init__(self.output_dir, partitions=[0])
 

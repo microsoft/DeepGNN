@@ -103,7 +103,9 @@ class CiteseerFull(Dataset):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", default=f"{tempfile.gettempdir()}/citeseer", type=str)
+    parser.add_argument(
+        "--data_dir", default=f"{tempfile.gettempdir()}/citeseer", type=str
+    )
     parser.add_argument("--train_node_ratio", default=1.0, type=float)
     parser.add_argument("--random_selection", action="store_true")
     args = parser.parse_args()
