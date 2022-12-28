@@ -8,6 +8,24 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
+    name = "bazel_skylib",
+    sha256 = "07b4117379dde7ab382345c3b0f5edfc6b7cff6c93756eac63da121e0bbcc5de",
+    strip_prefix = "bazel-skylib-1.1.1",
+    urls = [
+        "http://mirror.tensorflow.org/github.com/bazelbuild/bazel-skylib/archive/1.1.1.tar.gz",
+        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.1.1/bazel-skylib-1.1.1.tar.gz",  # 2021-09-27
+    ],
+)
+load("@bazel_skylib//lib:versions.bzl", "versions")
+versions.check(
+    # Keep this version in sync with:
+    #  * The BAZEL environment variable defined in .github/workflows/ci.yml, which is used for CI and nightly builds.
+    minimum_bazel_version = "4.2.2",
+    # TODO(https://github.com/tensorflow/tensorboard/issues/6115): Support building TensorBoard with Bazel version >= 6.0.0
+    maximum_bazel_version = "5.4.0",
+)
+
+http_archive(
     name = "build_bazel_rules_apple",
     sha256 = "a5f00fd89eff67291f6cd3efdc8fad30f4727e6ebb90718f3f05bbf3c3dd5ed7",
     urls = [

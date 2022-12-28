@@ -50,6 +50,8 @@ runs:
       shell: bash
       name: Configure env variables for macos
 
+    - run: echo "USE_BAZEL_VERSION=5.3.1" >> $GITHUB_ENV
+      shell: bash
     - uses: actions/cache@v3
       id: build-cache
       with:

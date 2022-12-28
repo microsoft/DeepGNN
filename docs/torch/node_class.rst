@@ -105,7 +105,7 @@ All node and edge features in this sub-graph are pulled and added to the context
     ...             undirected=True,
     ...             return_edges=True,
     ...         )
-    ...         input_mask = np.zeros(nodes.size, np.bool)
+    ...         input_mask = np.zeros(nodes.size, np.bool_)
     ...         input_mask[src_idx] = True
     ...
     ...         feat = g.node_features(nodes, self.feature_meta, self.feature_type)
@@ -255,7 +255,7 @@ Finally we call trainer.fit() to execute the training loop.
     ...         "batch_size": 2708,
     ...         "data_dir": data_dir.name,
     ...         "sample_filename": "train.nodes",
-    ...         "n_epochs": 1,
+    ...         "n_epochs": 100,
     ...         "model_dir": f"{model_dir.name}/model.pt",
     ...     },
     ...     run_config=RunConfig(verbose=0),
@@ -282,9 +282,9 @@ Evaluate
     ... )
     >>> result = trainer.fit()
     >>> result.metrics["metric"]
-    tensor(0.3039)
+    tensor(0.86...)
     >>> result.metrics["loss"]
-    1.9346442222595215
+    0.65...
 
     >>> data_dir.cleanup()
     >>> model_dir.cleanup()
