@@ -168,7 +168,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     if os.path.isfile(config["model_dir"]):
     ...         model.load_state_dict(torch.load(config["model_dir"]))
     ...     model = train.torch.prepare_model(model)
-    ...     return
+    ...
     ...     print("Starting Optimizer")
     ...     # Initialize the optimizer and wrap it with Ray
     ...     optimizer = torch.optim.Adam(model.parameters(), lr=.005, weight_decay=0.0005)
@@ -178,6 +178,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     # Define the loss function
     ...     loss_fn = nn.CrossEntropyLoss()
     ...
+    ...     return
     ...     print("Starting Dataset")
     ...     # Ray Dataset
     ...     dataset = ray.data.range(2708).repartition(2708 // config["batch_size"])  # -> Dataset(num_blocks=6, num_rows=2708, schema=<class 'int'>)
