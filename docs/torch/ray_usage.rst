@@ -252,9 +252,9 @@ Evaluate
     ... )
     >>> result = trainer.fit()
     >>> result.metrics["metric"]
-    tensor(0.7214)
+    tensor(0.72...)
     >>> result.metrics["loss"]
-    0.8630748987197876
+    0.86...
 
     >>> data_dir.cleanup()
     >>> model_dir.cleanup()
