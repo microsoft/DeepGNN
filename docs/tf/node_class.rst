@@ -4,38 +4,33 @@ Node Classification with GAT
 
 .. code-block:: python
 
-    >>> from deepgnn.graph_engine.data.cora import CoraFull
-    >>> CoraFull("/tmp/cora/")
-    <deepgnn.graph_engine.data.cora.CoraFull object at ...>
+    >>> import tempfile
+	>>> from deepgnn.graph_engine.data.citation import Cora
+    >>> data_dir = tempfile.TemporaryDirectory()
+	>>> Cora(data_dir.name)
+	<deepgnn.graph_engine.data.citation.Cora object at 0x...>
 
 .. code-block:: python
 
-    >>> import argparse
     >>> import tempfile
     >>> import os
     >>> import numpy as np
     >>> import tensorflow as tf
     >>> from dataclasses import dataclass
-    >>> from typing import Dict, List, Union, Callable, Any, Tuple
-    >>> from contextlib import closing
+    >>> from typing import Dict, List
     >>> import ray
-    >>> import ray.train as train
     >>> from ray.train.tensorflow import TensorflowTrainer
     >>> from ray.air import session
-    >>> #from ray.air.integrations.keras import Callback
     >>> from ray.air.config import ScalingConfig, RunConfig
-    >>> from deepgnn import str2list_int, setup_default_logging_config
     >>> from deepgnn.graph_engine import Graph, graph_ops
     >>> from deepgnn.graph_engine import (
     ...    SamplingStrategy,
     ...    GENodeSampler,
-    ...    BackendOptions,
     ... )
     >>> from deepgnn.graph_engine.snark.local import Client
-    >>> from deepgnn.tf import common
     >>> from deepgnn.tf.nn.gat_conv import GATConv
     >>> from deepgnn.tf.nn.metrics import masked_accuracy, masked_softmax_cross_entropy
-    >>> from deepgnn.tf.common.dataset import create_tf_dataset, get_distributed_dataset
+    >>> from deepgnn.tf.common.dataset import create_tf_dataset
 
 .. code-block:: python
 
@@ -144,7 +139,6 @@ Node Classification with GAT
     ...    def forward(self, feat, bias_mat, training):
     ...        h_1 = self.input_layer([feat, bias_mat], training=training)
     ...        out = self.out_layer([h_1, bias_mat], training=training)
-    ...        #tf.compat.v1.logging.info("h_1 {}, out shape {}".format(h_1.shape, out.shape))
     ...        return out
     ...
     ...    def call(self, inputs, training=True):
@@ -187,21 +181,9 @@ Node Classification with GAT
     ...
     ...        grads = tape.gradient(loss, self.trainable_variables)
     ...        self.optimizer.apply_gradients(zip(grads, self.trainable_variables))
-    ...        result = {"loss": loss}
+    ...        result = {"loss": loss, **metrics}
     ...        result.update(metrics)
     ...        return result
-    ...
-    ...    def test_step(self, data: dict):
-    ...        """override base test_step."""
-    ...        _, loss, metrics = self(data, training=False)
-    ...        result = {"loss": loss}
-    ...        result.update(metrics)
-    ...        return result
-    ...
-    ...    def predict_step(self, data: dict):
-    ...        """override base predict_step."""
-    ...        self(data, training=False)
-    ...        return [self.src_nodes, self.src_emb]
 
 
 .. code-block:: python
@@ -231,52 +213,45 @@ Node Classification with GAT
 .. code-block:: python
 
     >>> def train_func(config: Dict):
-    ...    model_dir = tempfile.TemporaryDirectory()
-    ...    parser = argparse.ArgumentParser(
-    ...        formatter_class=argparse.ArgumentDefaultsHelpFormatter, allow_abbrev=False
-    ...    )
-    ...    g = Client("/tmp/cora", [0])
+    ...     tf.keras.utils.set_random_seed(0)
     ...
-    ...    model, query = build_model()
+    ...     model, query = build_model()
     ...
-    ...    with tf.distribute.get_strategy().scope():
-    ...        tf_dataset, steps_per_epoch = create_tf_dataset(
-    ...            sampler_class=GENodeSampler,
-    ...            query_fn=query.query_training,
-    ...            backend=type("Backend", (object,), {"graph": g})(),
-    ...            node_types=np.array([0], dtype=np.int32),
-    ...            batch_size=140,
-    ...            num_workers=2,
-    ...            worker_index=0,
-    ...            strategy=SamplingStrategy.RandomWithoutReplacement,
-    ...        )
-    ...        epochs = 20
-    ...        distributed_dataset = get_distributed_dataset(
-    ...            lambda ctx: tf_dataset.repeat(epochs)
-    ...        )
+    ...     tf_dataset, steps_per_epoch = create_tf_dataset(
+    ...         sampler_class=GENodeSampler,
+    ...         query_fn=query.query_training,
+    ...         backend=type("Backend", (object,), {"graph": Client(config["data_dir"], [0])})(),
+    ...         node_types=np.array([0], dtype=np.int32),
+    ...         batch_size=config["batch_size"],
+    ...         num_workers=2,
+    ...         worker_index=0,
+    ...         strategy=SamplingStrategy.RandomWithoutReplacement,
+    ...     )
     ...
-    ...        model.optimizer = tf.keras.optimizers.Adam(
-    ...            learning_rate=.005
-    ...        )
+    ...     model.optimizer = tf.keras.optimizers.Adam(
+    ...         learning_rate=.005
+    ...     )
     ... 
-    ...        model.compile(optimizer=model.optimizer, loss="categorical_crossentropy", metrics=["mae"])
+    ...     with tf.distribute.get_strategy().scope():
+    ...         model.compile(optimizer=model.optimizer)
     ...
-    ...        history = model.fit(
-    ...            distributed_dataset,
-    ...            epochs=epochs,
-    ...            verbose=0,
-    ...            steps_per_epoch=steps_per_epoch * epochs,
-    ...        )
-    ...        session.report(history.history)
+    ...     for epoch in range(config["n_epochs"]):
+    ...         history = model.fit(tf_dataset, verbose=0)
+    ...         session.report(history.history)
 
 
 .. code-block:: python
 
     >>> trainer = TensorflowTrainer(
     ...     train_loop_per_worker=train_func,
-    ...     train_loop_config={},
+    ...     train_loop_config={
+    ...         "batch_size": 2708,
+    ...         "data_dir": data_dir.name,
+    ...         "n_epochs": 100,
+    ...     },
+    ...     run_config=RunConfig(verbose=0),
     ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     ... )
     >>> result = trainer.fit()
-    >>> result.metrics
-    {'loss': [1.4273918867111206, 1.4273918867111206], 'accuracy': [0.5928571224212646, 0.5928571224212646], ...}
+    >>> result.metrics["accuracy"]
+    [0.8...]
