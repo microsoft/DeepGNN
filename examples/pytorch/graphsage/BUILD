@@ -26,7 +26,7 @@ py_library(
 py_test(
     name = "test_model",
     srcs = ["test_model.py"],
-    imports = ["../../../../src/python/"],
+    imports = ["../../../src/python/"],
     main = "test_model.py",
     python_version = "PY3",
     srcs_version = "PY3",
