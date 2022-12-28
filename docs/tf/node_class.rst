@@ -22,6 +22,7 @@ Node Classification with GAT
     >>> import ray.train as train
     >>> from ray.train.tensorflow import TensorflowTrainer
     >>> from ray.air import session
+    >>> #from ray.air.integrations.keras import Callback
     >>> from ray.air.config import ScalingConfig, RunConfig
     >>> from deepgnn import str2list_int, setup_default_logging_config
     >>> from deepgnn.graph_engine import Graph, graph_ops
@@ -259,15 +260,17 @@ Node Classification with GAT
     ...            learning_rate=.005
     ...        )
     ... 
-    ...        model.compile(optimizer=model.optimizer, loss=None, metrics=None)
+    ...        model.compile(optimizer=model.optimizer, loss="categorical_crossentropy", metrics=["mae"])
     ...
-    ...        model.fit(
+    ...        results = model.fit(
     ...            distributed_dataset,
     ...            epochs=epochs,
-    ...            callbacks=[],
+    ...            #callbacks=[],
     ...            verbose=0,
     ...            steps_per_epoch=steps_per_epoch * epochs,
     ...        )
+    ...        assert False, results
+    ...        return results
 
 
 .. code-block:: python
@@ -278,3 +281,4 @@ Node Classification with GAT
     ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     ... )
     >>> result = trainer.fit()
+    >>> result
