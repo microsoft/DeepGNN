@@ -176,11 +176,11 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...
     ...     # Ray Dataset
     ...     dataset = ray.data.range(2708).repartition(2708 // config["batch_size"])  # -> Dataset(num_blocks=6, num_rows=2708, schema=<class 'int'>)
-    ...     pipe = dataset#.window(blocks_per_window=10).repeat(config["n_epochs"])  # -> DatasetPipeline(num_windows=1, num_stages=1)
+    ...     pipe = dataset.window(blocks_per_window=10).repeat(config["n_epochs"])  # -> DatasetPipeline(num_windows=1, num_stages=1)
     ...     q = GATQuery()
     ...     def transform_batch(batch: list) -> dict:
     ...         return q.query(g, batch)  # When we reference the server g in transform, it uses Client instead
-    ...     #pipe = pipe.map_batches(transform_batch)
+    ...     pipe = pipe.map_batches(transform_batch)
     ...
     ...     print("Starting Training")
     ...     return
@@ -211,7 +211,7 @@ Finally we call trainer.fit() to execute the training loop.
 
     >>> model_dir = tempfile.TemporaryDirectory()
 
-    >>> ray.init()
+    >>> ray.init(num_cpus=2)
     RayContext(...)
     >>> trainer = TorchTrainer(
     ...     train_func,
