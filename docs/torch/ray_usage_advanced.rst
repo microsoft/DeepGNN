@@ -175,7 +175,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     loss_fn = nn.CrossEntropyLoss()
     ...
     ...     # Ray Dataset
-    ...     dataset = ray.data.range(2708).repartition(2708 // config["batch_size"])  # -> Dataset(num_blocks=6, num_rows=2708, schema=<class 'int'>)
+    ...     dataset = ray.data.range(2708, parallelism=1).repartition(2708 // config["batch_size"])  # -> Dataset(num_blocks=6, num_rows=2708, schema=<class 'int'>)
     ...     pipe = dataset.window(blocks_per_window=10).repeat(config["n_epochs"])  # -> DatasetPipeline(num_windows=1, num_stages=1)
     ...     q = GATQuery()
     ...     def transform_batch(batch: list) -> dict:
