@@ -157,29 +157,23 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     # Set random seed
     ...     train.torch.enable_reproducibility(seed=session.get_world_rank())
     ...
-    ...     print("Starting Server")
     ...     # Start server
     ...     address = "localhost:9999"
     ...     g = Server(address, config["data_dir"], 0, 1)
     ...
-    ...     print("Starting Model")
     ...     # Initialize the model and wrap it with Ray
     ...     model = GAT(in_dim=1433, num_classes=7)
     ...     if os.path.isfile(config["model_dir"]):
     ...         model.load_state_dict(torch.load(config["model_dir"]))
     ...     model = train.torch.prepare_model(model)
     ...
-    ...     print("Starting Optimizer")
     ...     # Initialize the optimizer and wrap it with Ray
     ...     optimizer = torch.optim.Adam(model.parameters(), lr=.005, weight_decay=0.0005)
     ...     optimizer = train.torch.prepare_optimizer(optimizer)
     ...
-    ...     print("Starting Loss")
     ...     # Define the loss function
     ...     loss_fn = nn.CrossEntropyLoss()
     ...
-    ...     return
-    ...     print("Starting Dataset")
     ...     # Ray Dataset
     ...     dataset = ray.data.range(2708).repartition(2708 // config["batch_size"])  # -> Dataset(num_blocks=6, num_rows=2708, schema=<class 'int'>)
     ...     pipe = dataset.window(blocks_per_window=10).repeat(config["n_epochs"])  # -> DatasetPipeline(num_windows=1, num_stages=1)
@@ -189,6 +183,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     pipe = pipe.map_batches(transform_batch)
     ...
     ...     print("Starting Training")
+    ...     return
     ...     # Execute the training loop
     ...     model.train()
     ...     for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
