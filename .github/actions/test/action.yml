@@ -32,7 +32,7 @@ runs:
           test-${{ runner.os }}
 
     - run: |
-        bazel test -c dbg //docs:* --test_output=all --config=linux --disk_cache=~/bazel-cache
+        bazel test -c dbg //docs:torch_ray_usage_advanced --test_output=all --config=linux --disk_cache=~/bazel-cache
         bazel run -c dbg //docs:make_docs --config=linux
       shell: bash
       name: run doctest and build documentation
