@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Add Reddit dataset download tool at deepgnn.graph_engine.data.reddit.
+
 ## [0.1.57] - 2022-12-15
 
 ### Changed
