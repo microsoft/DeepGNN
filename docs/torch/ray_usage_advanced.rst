@@ -222,7 +222,7 @@ Finally we call trainer.fit() to execute the training loop.
     ...         "model_dir": f"{model_dir.name}/model.pt",
     ...     },
     ...     run_config=RunConfig(verbose=0),
-    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False, trainer_resources={"CPU": 3}),
+    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     ... )
     >>> result = trainer.fit()
 
@@ -231,6 +231,19 @@ Evaluate
 
 .. code-block:: python
 
+    >>> trainer = TorchTrainer(
+    ...     train_func,
+    ...     train_loop_config={
+    ...         "batch_size": 2708,
+    ...         "data_dir": data_dir.name,
+    ...         "sample_filename": "test.nodes",
+    ...         "n_epochs": 1,
+    ...         "model_dir": f"{model_dir.name}/model.pt",
+    ...     },
+    ...     run_config=RunConfig(verbose=0),
+    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
+    ... )
+    >>> result = trainer.fit()
     >>> result.metrics["metric"]
     0.86...
     >>> result.metrics["loss"]
