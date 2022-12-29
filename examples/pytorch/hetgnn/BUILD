@@ -8,7 +8,6 @@ py_library(
     name = "example_torch_hetgnn",
     srcs = [
         "args.py",
-        "conftest.py",
         "evaluation.py",
         "model.py",
         "main.py",
@@ -36,6 +35,8 @@ py_test(
     srcs_version = "PY3",
     deps = [
         ":example_torch_hetgnn",
+        requirement("ray"),
+        requirement("pyarrow"),
         requirement("numpy"),
         requirement("pytest"),
         requirement("scikit-learn"),
@@ -59,6 +60,8 @@ py_test(
     srcs_version = "PY3",
     deps = [
         ":example_torch_hetgnn",
+        requirement("ray"),
+        requirement("pyarrow"),
         requirement("fsspec"),
         requirement("numpy"),
         requirement("pytest"),

@@ -26,12 +26,14 @@ py_library(
 py_test(
     name = "test_model",
     srcs = ["test_model.py"],
-    imports = ["../../../../src/python/"],
+    imports = ["../../../src/python/"],
     main = "test_model.py",
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
         ":example_torch_geo_graphsage",
+        requirement("ray"),
+        requirement("pyarrow"),
         requirement("numpy"),
         requirement("pytest"),
         requirement("scikit-learn"),

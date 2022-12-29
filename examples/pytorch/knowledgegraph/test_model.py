@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 import pytest
+import platform
 import numpy as np
 import numpy.testing as npt
 import torch
@@ -17,6 +18,18 @@ from torch.utils.data import IterableDataset
 
 from deepgnn.graph_engine import Graph, SamplingStrategy
 from model import KGEModel  # type: ignore
+
+
+def setup_module(module):
+    import deepgnn.graph_engine.snark._lib as lib
+
+    lib_name = "libwrapper.so"
+    if platform.system() == "Windows":
+        lib_name = "wrapper.dll"
+
+    os.environ[lib._SNARK_LIB_PATH_ENV_KEY] = os.path.join(
+        os.path.dirname(__file__), "..", "..", "..", "src", "cc", "lib", lib_name
+    )
 
 
 class MockEdgeDataLoader(IterableDataset):

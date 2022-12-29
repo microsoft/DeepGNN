@@ -25,12 +25,14 @@ py_library(
 py_test(
     name = "test_gat",
     srcs = ["test_gat.py"],
-    imports = ["../../../../src/python/"],
+    imports = ["../../../src/python/"],
     main = "test_gat.py",
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
         ":example_torch_gat",
+        requirement("ray"),
+        requirement("pyarrow"),
         requirement("numpy"),
         requirement("pytest"),
         requirement("scikit-learn"),

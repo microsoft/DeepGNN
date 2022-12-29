@@ -2,16 +2,22 @@
 # Licensed under the MIT License.
 
 import pytest
-import tempfile
-import time
-import numpy.testing as npt
-import os
 import sys
-import torch
+import os
+import platform
+import tempfile
+from typing import Dict
 import numpy as np
+import numpy.testing as npt
+import torch
 
 from deepgnn import get_logger
 from deepgnn.pytorch.common import F1Score
+from deepgnn.graph_engine.data import Cora
+
+from main import create_model, create_dataset, create_optimizer, init_args  # type: ignore
+from ray_util import run_ray  # type: ignore
+from model import PTGSupervisedGraphSage  # type: ignore
 
 from examples.pytorch.conftest import (  # noqa: F401
     MockSimpleDataLoader,
@@ -20,71 +26,79 @@ from examples.pytorch.conftest import (  # noqa: F401
     prepare_local_test_files,
 )
 
-from model import PTGSupervisedGraphSage  # type: ignore
+
+def setup_module(module):
+    import deepgnn.graph_engine.snark._lib as lib
+
+    lib_name = "libwrapper.so"
+    if platform.system() == "Windows":
+        lib_name = "wrapper.dll"
+
+    os.environ[lib._SNARK_LIB_PATH_ENV_KEY] = os.path.join(
+        os.path.dirname(__file__), "..", "..", "..", "src", "cc", "lib", lib_name
+    )
 
 
 @pytest.fixture(scope="module")
-def train_supervised_graphsage(mock_graph):  # noqa: F811
-    torch.manual_seed(0)
-    np.random.seed(0)
-    num_classes = 7
-    label_dim = 7
-    label_idx = 1
-    feature_dim = 1433
-    feature_idx = 0
-    edge_type = 0
+def train_graphsage_cora_ddp_trainer():
+    model_dir = tempfile.TemporaryDirectory()
+    working_dir = tempfile.TemporaryDirectory()
+    Cora(working_dir.name)
 
-    model_path = tempfile.TemporaryDirectory()
-    model_path_name = model_path.name + "/gnnmodel.pt"
-
-    graphsage = PTGSupervisedGraphSage(
-        num_classes=num_classes,
-        metric=F1Score(),
-        label_idx=label_idx,
-        label_dim=label_dim,
-        feature_type=np.float32,
-        feature_idx=feature_idx,
-        feature_dim=feature_dim,
-        edge_type=edge_type,
-        fanouts=[5, 5],
+    result = run_ray(
+        init_model_fn=create_model,
+        init_dataset_fn=create_dataset,
+        init_optimizer_fn=create_optimizer,
+        init_args_fn=init_args,
+        run_args=[
+            "--data_dir",
+            working_dir.name,
+            "--mode",
+            "train",
+            "--seed",
+            "123",
+            "--backend",
+            "snark",
+            "--graph_type",
+            "local",
+            "--converter skip",
+            "--batch_size",
+            "140",
+            "--learning_rate",
+            "0.005",
+            "--num_epochs",
+            "100",
+            "--node_type",
+            "0",
+            "--max_id",
+            "-1",
+            "--model_dir",
+            model_dir.name,
+            "--metric_dir",
+            model_dir.name,
+            "--save_path",
+            model_dir.name,
+            "--feature_idx",
+            "0",
+            "--feature_dim",
+            "1433",
+            "--label_idx",
+            "1",
+            "--label_dim",
+            "7",
+            "--algo",
+            "supervised",
+        ],
     )
-    optimizer = torch.optim.SGD(
-        filter(lambda p: p.requires_grad, graphsage.parameters()), lr=0.7
-    )
-    times = []
-    loss_list = []
-    while True:
-        trainloader = torch.utils.data.DataLoader(
-            MockSimpleDataLoader(
-                batch_size=256, query_fn=graphsage.query, graph=mock_graph
-            )
-        )
-
-        for i, context in enumerate(trainloader):
-            start_time = time.time()
-            optimizer.zero_grad()
-            loss, _, _ = graphsage(context)
-            loss.backward()
-            optimizer.step()
-            end_time = time.time()
-            times.append(end_time - start_time)
-            get_logger().info("step: {}; loss: {} ".format(i, loss.data.item()))
-            loss_list.append(loss)
-
-            if len(times) == 100:
-                break
-
-        if len(times) == 100:
-            break
-
-    torch.save(graphsage.state_dict(), model_path_name)
-
-    yield {"losses": loss_list, "model_path": model_path_name, "graph": mock_graph}
-
-    model_path.cleanup()
+    yield {
+        "losses": result.metrics["losses"],
+        "model_path": os.path.join(model_dir.name, "gnnmodel-096-000000.pt"),
+    }
+    working_dir.cleanup()
+    model_dir.cleanup()
 
 
-def test_deep_graph_on_cora(train_supervised_graphsage):  # noqa: F811
+def test_deep_graph_on_cora(train_graphsage_cora_ddp_trainer, mock_graph):  # noqa: F811
     torch.manual_seed(0)
     np.random.seed(0)
     num_nodes = 2708
@@ -94,10 +108,9 @@ def test_deep_graph_on_cora(train_supervised_graphsage):  # noqa: F811
     feature_dim = 1433
     feature_idx = 0
     edge_type = 0
-    train_ctx = train_supervised_graphsage
+    train_ctx = train_graphsage_cora_ddp_trainer
 
     metric = F1Score()
-    g = train_ctx["graph"]
     graphsage = PTGSupervisedGraphSage(
         num_classes=num_classes,
         metric=F1Score(),
@@ -110,10 +123,11 @@ def test_deep_graph_on_cora(train_supervised_graphsage):  # noqa: F811
         fanouts=[5, 5],
     )
 
-    graphsage.load_state_dict(torch.load(train_ctx["model_path"]))
+    graphsage.load_state_dict(torch.load(train_ctx["model_path"])["state_dict"])
     graphsage.train()
 
     # Generate validation dataset from random indices
+    g = mock_graph
     rand_indices = np.random.RandomState(seed=1).permutation(num_nodes)
     val_ref = rand_indices[1000:1500]
     simpler = MockFixedSimpleDataLoader(val_ref, query_fn=graphsage.query, graph=g)
@@ -129,8 +143,8 @@ def test_deep_graph_on_cora(train_supervised_graphsage):  # noqa: F811
 
 
 # test to make sure loss decrease.
-def test_supervised_graphsage_loss(train_supervised_graphsage):
-    train_ctx = train_supervised_graphsage
+def test_supervised_graphsage_loss(train_graphsage_cora_ddp_trainer):
+    train_ctx = train_graphsage_cora_ddp_trainer
 
     # make sure the loss decreased in training.
     assert len(train_ctx["losses"]) > 0

@@ -44,6 +44,18 @@ from deepgnn.graph_engine.test_adl_reader import IS_ADL_CONFIG_VALID
 pytestmark = pytest.mark.skipif(not IS_ADL_CONFIG_VALID, reason="Invalid adl config.")
 
 
+def setup_module(module):
+    import deepgnn.graph_engine.snark._lib as lib
+
+    lib_name = "libwrapper.so"
+    if platform.system() == "Windows":
+        lib_name = "wrapper.dll"
+
+    os.environ[lib._SNARK_LIB_PATH_ENV_KEY] = os.path.join(
+        os.path.dirname(__file__), "..", "..", "..", "src", "cc", "lib", lib_name
+    )
+
+
 class MockBackend(GraphEngineBackend):
     _backend = None
 
