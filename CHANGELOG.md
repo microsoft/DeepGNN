@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add documentation for Ray Data usage, see [tutorial](https://github.com/microsoft/DeepGNN/tree/main/docs/graph_engine/dataset.rst) and [example](https://github.com/microsoft/DeepGNN/tree/main/docs/graph_engine/ray_usage_advanced.rst)
 
+- Add Reddit dataset download tool at deepgnn.graph_engine.data.reddit.
+
 ### Removed
 - Removed `deepgnn.pytorch.common.utils.set_seed`, use ray `train.torch.enable_reproducibility(seed=0)` instead.
 

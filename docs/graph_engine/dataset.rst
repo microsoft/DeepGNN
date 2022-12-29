@@ -34,7 +34,7 @@ Simple Cora Dataset
 
 In this example we create a simple dataset using Ray Data.
 
-First we initialize a Ray Dataset of node ids ranging from 0 to 2708.
+First we initialize a Ray Dataset of node ids ranging from 0 to 2708 via
 `ray.data.range <https://docs.ray.io/en/latest/data/api/input_output.html#synthetic-data>`_
 Then we repartition it to be one block per batch.
 
@@ -47,7 +47,7 @@ Then we repartition it to be one block per batch.
 We convert this dataset to a data pipeline by splitting it into windows. Each window is effectively a separate
 dataset object and the dataset pipeline consists of multiple windows which each include mulitple blocks / batches.
 When we run a function on a dataset pipeline it is not executed immediately, instead it is staged and only run
-per window when required by `iter_torch_batches`.
+per window when required when iterating over the dataset.
 More about dataset pipelines, `here <https://docs.ray.io/en/latest/data/pipelining-compute.html#pipelining-datasets>`_.
 
 * Higher parallelism is generally better for performance. Lower blocks per window means lower latency but gives less room for concurrent tasks.
