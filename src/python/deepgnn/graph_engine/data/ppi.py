@@ -36,14 +36,16 @@ class PPI(Client):
     - Node Feature Dim: 50 (id:1)
     """
 
-    def __init__(self, output_dir: str = None):
+    def __init__(self, output_dir: str = None, num_partitions: int = 1):
         """
         Initialize PPI dataset.
 
         Args:
           output_dir (string): file directory for graph data.
+          num_partitions (int, default=1): Number of partitions
         """
         self.url = "https://deepgraphpub.blob.core.windows.net/public/testdata/ppi.zip"
+        self._num_partitions = num_partitions
         self.GRAPH_NAME = "ppi"
         self.output_dir = output_dir
         if self.output_dir is None:
@@ -111,13 +113,12 @@ class PPI(Client):
     def _build_graph(self, output_dir: str) -> str:
         data_dir = output_dir
         raw_data_dir = os.path.join(output_dir, "raw")
-        download_file(self.url, raw_data_dir, "ppi.zip")
-        fname = os.path.join(raw_data_dir, "ppi.zip")
+        download_file(self.url, raw_data_dir, f"{self.GRAPH_NAME}.zip")
+        fname = os.path.join(raw_data_dir, f"{self.GRAPH_NAME}.zip")
         with zipfile.ZipFile(fname) as z:
             z.extractall(raw_data_dir)
-        d = self._load_raw_graph(os.path.join(raw_data_dir, "ppi"))
+        d = self._load_raw_graph(os.path.join(raw_data_dir, self.GRAPH_NAME))
         nodes, nodes_type, train_neighbors, other_neighbors, feats, class_map = d
-        assert feats.shape[0] == len(nodes)
         self.NUM_NODES = len(nodes)
         self.FEATURE_DIM = feats.shape[1]
         self.NUM_CLASSES = len(class_map[0])
@@ -146,7 +147,7 @@ class PPI(Client):
         # convert graph: edge_list -> Binary
         convert.MultiWorkersConverter(
             graph_path=graph_file,
-            partition_count=1,
+            partition_count=self._num_partitions,
             output_dir=data_dir,
             decoder=decoders.EdgeListDecoder(),
         ).convert()

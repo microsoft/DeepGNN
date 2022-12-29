@@ -4,7 +4,7 @@ Ray Usage Example
 
 In this guide we use a pre-built `Graph Attention Network(GAT) <https://arxiv.org/abs/1710.10903>`_ model
 to classify nodes in the `Cora dataset <https://graphsandnetworks.com/the-cora-dataset/>`_. This is the same
-as our `node classification example <https://github.com/microsoft/DeepGNN/blob/main/docs/torch/node_class.rst>`_ except here we use Ray as the trainer.
+as our `node classification example </torch/node_class.rst>`_ except here we use Ray as the trainer.
 
 Cora Dataset
 ============
@@ -204,7 +204,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...             loss.backward()
     ...             optimizer.step()
     ...
-    ...             session.report({"metric": (scores.argmax(1) == labels).float().mean(), "loss": loss.item()})
+    ...             session.report({"metric": (scores.argmax(1) == labels).float().mean().item(), "loss": loss.item()})
     ...
     ...     torch.save(model.state_dict(), config["model_dir"])
 
@@ -252,7 +252,7 @@ Evaluate
     ... )
     >>> result = trainer.fit()
     >>> result.metrics["metric"]
-    tensor(0.72...)
+    0.72...
     >>> result.metrics["loss"]
     0.86...
 
