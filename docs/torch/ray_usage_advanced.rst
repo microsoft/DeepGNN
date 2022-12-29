@@ -211,6 +211,7 @@ Finally we call trainer.fit() to execute the training loop.
 
     >>> ray.init(num_cpus=3)
     RayContext(...)
+
     >>> trainer = TorchTrainer(
     ...     train_func,
     ...     train_loop_config={
@@ -233,6 +234,7 @@ Evaluate
     >>> trainer = TorchTrainer(
     ...     train_func,
     ...     train_loop_config={
+    ...         "batch_size": 2708,
     ...         "data_dir": data_dir.name,
     ...         "sample_filename": "test.nodes",
     ...         "n_epochs": 1,
