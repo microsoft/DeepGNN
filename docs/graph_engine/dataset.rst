@@ -47,7 +47,7 @@ Then we repartition it to be one block per batch.
 We convert this dataset to a data pipeline by splitting it into windows. Each window is effectively a separate
 dataset object and the dataset pipeline consists of multiple windows which each include mulitple blocks / batches.
 When we run a function on a dataset pipeline it is not executed immediately, instead it is staged and only run
-per window when required by `iter_torch_batches`.
+per window when required when iterating over the dataset.
 More about dataset pipelines, `here <https://docs.ray.io/en/latest/data/pipelining-compute.html#pipelining-datasets>`_.
 
 * Higher parallelism is generally better for performance. Lower blocks per window means lower latency but gives less room for concurrent tasks.
