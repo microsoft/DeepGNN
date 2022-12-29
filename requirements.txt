@@ -202,7 +202,7 @@ scipy==1.9.2
 SecretStorage==3.3.3
 Send2Trash==1.8.0
 sentencepiece==0.1.97
-setuptools==65.4.1
+setuptools==65.5.1
 shrike==1.31.10
 six==1.16.0
 snowballstemmer==2.2.0
@@ -254,7 +254,7 @@ wcwidth==0.2.5
 webencodings==0.5.1
 websocket-client==1.4.1
 Werkzeug==2.2.2
-wheel==0.37.1
+wheel==0.38.1
 wrapt==1.14.1
 yacs==0.1.8
 yarl==1.8.1
