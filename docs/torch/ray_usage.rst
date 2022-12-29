@@ -4,7 +4,7 @@ Ray Usage Example
 
 In this guide we use a pre-built `Graph Attention Network(GAT) <https://arxiv.org/abs/1710.10903>`_ model
 to classify nodes in the `Cora dataset <https://graphsandnetworks.com/the-cora-dataset/>`_. This is the same
-as our `node classification example <https://github.com/microsoft/DeepGNN/blob/main/docs/torch/node_class.rst>`_ except here we use Ray as the trainer.
+as our `node classification example </torch/node_class.rst>`_ except here we use Ray as the trainer.
 
 Cora Dataset
 ============
