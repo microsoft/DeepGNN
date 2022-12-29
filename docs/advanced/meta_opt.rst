@@ -3,7 +3,7 @@ Hyperparameter Optimization with Ray Tune
 *****************************************
 
 In this guide we build on top of the Ray usage example with a Ray Tune example at the bottom.
-The following code block is from `node_class example <https://github.com/microsoft/DeepGNN/blob/main/docs/torch/node_class.rst>`_, see this example for more details.
+The following code block is from `node_class example </torch/node_class.rst>`_, see this example for more details.
 
 Cora Dataset
 ============
@@ -212,15 +212,13 @@ take a set of parameters from the tuner and return a fitness value.
     ...     result = trainer.fit()
     ...     return result
 
-This training function just wraps this objective function for use in the tuner.
+This training function wraps this objective function for use in the tuner.
 
 .. code-block:: python
 
     >>> def training_function(config):
-    ...    learning_rate, n_epochs = config["learning_rate"], config["n_epochs"]
-    ...    for step in range(1):
-    ...        results = objective(learning_rate, n_epochs)
-    ...        tune.report(accuracy=results.metrics["metric"])
+    ...    results = objective(config["learning_rate"], config["n_epochs"])
+    ...    tune.report(accuracy=results.metrics["metric"])
 
 Finally we define and make use of the tuner. We use the hyperparameters learning_rate and
 n_epochs, with one training iteration per configuration.
@@ -248,4 +246,6 @@ See the `Ray Tune guides, here<https://docs.ray.io/en/latest/tune/tutorials/over
 
     >>> analysis.get_dataframe()
        accuracy  ...
+    0  0.3...
+    1  0.3...
     [3 rows x 21 columns]
