@@ -175,7 +175,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     loss_fn = nn.CrossEntropyLoss()
     ...
     ...     # Ray Dataset
-    ...     dataset = ray.data.range(2708, parallelism=1)#.repartition(2708 // config["batch_size"])  # -> Dataset(num_blocks=6, num_rows=2708, schema=<class 'int'>)
+    ...     dataset = ray.data.range(140, parallelism=1)#.repartition(2708 // config["batch_size"])  # -> Dataset(num_blocks=6, num_rows=2708, schema=<class 'int'>)
     ...     #pipe = dataset.window(blocks_per_window=10).repeat(config["n_epochs"])  # -> DatasetPipeline(num_windows=1, num_stages=1)
     ...     #q = GATQuery()
     ...     #def transform_batch(batch: list) -> dict:
@@ -211,7 +211,7 @@ Finally we call trainer.fit() to execute the training loop.
 
     >>> model_dir = tempfile.TemporaryDirectory()
 
-    >>> ray.init(num_cpus=2)
+    >>> ray.init()
     RayContext(...)
     >>> trainer = TorchTrainer(
     ...     train_func,
@@ -223,7 +223,7 @@ Finally we call trainer.fit() to execute the training loop.
     ...         "model_dir": f"{model_dir.name}/model.pt",
     ...     },
     ...     run_config=RunConfig(verbose=0),
-    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False, _max_cpu_fraction_per_node=0.25),
+    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False, _max_cpu_fraction_per_node=0.8),
     ... )
     >>> result = trainer.fit()
 
