@@ -128,7 +128,7 @@ def train_func(config: Dict):
 
 def run_ray(init_model_fn, init_dataset_fn, init_optimizer_fn, init_args_fn, **kwargs):
     """Run ray trainer."""
-    ray.init()
+    ray.init(num_cpus=2)
 
     args = get_args(init_args_fn, kwargs["run_args"] if "run_args" in kwargs else None)
 
