@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 """Command line arguments for training TF models."""
 import uuid
+import tempfile
 from deepgnn.arg_types import str2list_str, str2list_int
 from deepgnn.graph_engine import define_param_graph_engine
 from deepgnn import TrainMode, TrainerType, get_current_user
@@ -23,7 +24,7 @@ def define_param_common(parser):
     group = parser.add_argument_group("Common Parameters")
     group.add_argument("--mode", type=TrainMode, default=TrainMode.TRAIN, choices=list(TrainMode))
     group.add_argument("--user_name", type=str, default=get_current_user(), help="User name when running jobs.")
-    group.add_argument("--model_dir", type=str, default="/tmp/model_dir", help="model checkpoint folder.",)
+    group.add_argument("--model_dir", type=str, default=f"{tempfile.gettempdir()}/model_dir", help="model checkpoint folder.",)
     group.add_argument("--trainer", type=TrainerType, default=TrainerType.PS, choices=[TrainerType.PS, TrainerType.HVD, TrainerType.MULTINODE], help="use PSTrainer, HorovodTrainer or MultiNodeTrainer.",)
     group.add_argument("--eager", action="store_true", default=False, help="Enable eager execution.")
     group.add_argument("--job_id", type=str, default=str(uuid.uuid4())[:8], help="job id (uuid).")
