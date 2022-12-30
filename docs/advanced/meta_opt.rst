@@ -3,7 +3,7 @@ Hyperparameter Optimization with Ray Tune
 *****************************************
 
 In this guide we build on top of the Ray usage example with a Ray Tune example at the bottom.
-The following code block is from `node_class example </torch/node_class.rst>`_, see this example for more details.
+The following code block is from `node_class example </torch/node_class.html>`_, see this example for more details.
 
 Cora Dataset
 ============
@@ -193,7 +193,7 @@ take a set of parameters from the tuner and return a fitness value.
 
 .. code-block:: python
 
-    >>> ray.init(num_cpus=3)
+    >>> ray.init(num_cpus=8)
     RayContext(...)
 
     >>> def objective(learning_rate, n_epochs):
@@ -220,8 +220,8 @@ This training function wraps this objective function for use in the tuner.
     ...    results = objective(config["learning_rate"], config["n_epochs"])
     ...    tune.report(accuracy=results.metrics["metric"])
 
-Finally we define and make use of the tuner. We use the hyperparameters learning_rate and
-n_epochs, with one training iteration per configuration.
+Finally we define and make use of the tuner. We use the hyperparameters `learning_rate` and
+`n_epochs`, with one training iteration per configuration.
 
 See the `Ray Tune guides, here<https://docs.ray.io/en/latest/tune/tutorials/overview.html>`_.
 
