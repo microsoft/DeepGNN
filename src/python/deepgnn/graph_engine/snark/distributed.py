@@ -44,7 +44,6 @@ class Client(ge_snark.Client):
         return deserialize, (self._servers, self._ssl_cert)
 
 
-
 class Server:
     """Distributed server."""
 
