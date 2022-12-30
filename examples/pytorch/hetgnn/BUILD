@@ -60,6 +60,8 @@ py_test(
     srcs_version = "PY3",
     deps = [
         ":example_torch_hetgnn",
+        requirement("ray"),
+        requirement("pyarrow"),
         requirement("fsspec"),
         requirement("numpy"),
         requirement("pytest"),
