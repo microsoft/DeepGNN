@@ -193,7 +193,7 @@ take a set of parameters from the tuner and return a fitness value.
 
 .. code-block:: python
 
-    >>> ray.init()
+    >>> ray.init(num_cpus=3)
     RayContext(...)
 
     >>> def objective(learning_rate, n_epochs):
