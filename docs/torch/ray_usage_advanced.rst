@@ -3,7 +3,7 @@ Node Classification with Ray Train and Ray Data
 ***********************************************
 
 In this guide we build on top of the Ray Usage example this time including Ray Data usage.
-The following code block is from `node_class example <https://github.com/microsoft/DeepGNN/blob/main/docs/torch/node_class.rst>`_, see this example for more details.
+The following code block is from `node_class example </torch/node_class.html>`_, see this example for more details.
 
 Cora Dataset
 ============
@@ -147,7 +147,7 @@ In the setup part we do two notable things things,
 
 * Wrap the model and optimizer with `train.torch.prepare_model/optimizer <https://docs.ray.io/en/latest/train/api.html#ray.train.torch.TorchTrainer>`_ for Ray multi worker usage.
 
-* Initialize the ray dataset, see more details in `docs/graph_engine/dataset.rst`.
+* Initialize the ray dataset, see more details in `our dataset docs </graph_engine/dataset.rst>`_.
 
 Then we define a standard torch training loop using the ray dataset, with no changes to model or optimizer usage.
 
