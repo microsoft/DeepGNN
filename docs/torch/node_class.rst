@@ -2,9 +2,8 @@
 Node Classification with Ray Train and Ray Data
 ***********************************************
 
-In this guide we use a pre-built `Graph Attention Network(GAT) <https://arxiv.org/abs/1710.10903>`_ model
-to classify nodes in the `Cora dataset <https://graphsandnetworks.com/the-cora-dataset/>`_.
-Readers can expect an understanding of the DeepGNN + Ray experiment flow and details on model design.
+In this guide we build on top of the Ray Usage example this time including Ray Data usage.
+The following code block is from `node_class example </torch/node_class.html>`_, see this example for more details.
 
 Cora Dataset
 ============
@@ -185,7 +184,7 @@ In the setup part we do two notable things things,
 
 * Wrap the model and optimizer with `train.torch.prepare_model/optimizer <https://docs.ray.io/en/latest/train/api.html#ray.train.torch.TorchTrainer>`_ for Ray multi worker usage.
 
-* Initialize the ray dataset, see more details in `docs/graph_engine/dataset.rst`.
+* Initialize the ray dataset, see more details in `our dataset docs </graph_engine/dataset.rst>`_.
 
 Then we define a standard torch training loop using the ray dataset, with no changes to model or optimizer usage.
 
