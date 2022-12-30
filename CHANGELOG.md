@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - Removed `deepgnn.pytorch.common.utils.set_seed`, use ray `train.torch.enable_reproducibility(seed=0)` instead.
 
+- Removed tf get_trainer, use `python -m deepgnn.migrate.migrate_tf` to update to Ray.
+
 ### Fixed
 - Implement del method to release C++ client and server. Important for ray actors, because they create numerous clients during training.
 
