@@ -1,3 +1,18 @@
+"""Baseline Ray TF Trainer."""
+from typing import Dict
+import os
+import platform
+import numpy as np
+import torch
+import ray
+import ray.train as train
+from ray.train.tensorflow import TensorflowTrainer
+from ray.air import session
+from ray.air.config import ScalingConfig
+from deepgnn.graph_engine import create_backend, BackendOptions
+from deepgnn.graph_engine.samplers import GENodeSampler, GEEdgeSampler
+
+
 def train_func(config: Dict):
     tf.keras.utils.set_random_seed(0)
 
@@ -18,7 +33,6 @@ def run_ray(**kwargs):
     trainer = TensorflowTrainer(
         train_loop_per_worker=train_func,
         train_loop_config={**kwargs},
-        run_config=RunConfig(verbose=0),
         scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     )
     result = trainer.fit()

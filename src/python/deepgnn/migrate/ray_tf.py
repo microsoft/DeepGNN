@@ -35,8 +35,8 @@ if __name__ == "__main__":
         # https://docs.ray.io/en/latest/_modules/ray/train/horovod/horovod_trainer.html
 
         ray_util = ray_util.replace(
-            "from ray.train.torch import TorchTrainer",
-            "import horovod.torch as hvd\nimport ray.train.torch\nfrom ray.train.horovod import HorovodTrainer",
+            "from ray.train.tensorflow import TensorflowTrainer",
+            "import horovod.tensorflow as hvd\nimport ray.train.tensorflow\nfrom ray.train.horovod import HorovodTrainer",
         )
         ray_util = ray_util.replace("train.torch.accelerate(args.fp16)", "hvd.init()")
         ray_util = ray_util.replace(
@@ -65,12 +65,15 @@ if __name__ == "__main__":
 
     raw_output = raw_output.replace(
         "from deepgnn.tf.common.trainer_factory import get_trainer",
-        "from ray_util import run_rays",
+        "from ray_util import run_ray",
     )
     raw_output = raw_output.replace("trainer = get_trainer(param)", "trainer = param")
     raw_output = raw_output.replace("trainer.train", "run_ray")
     raw_output = raw_output.replace("trainer.evaluate", "run_ray")
     raw_output = raw_output.replace("trainer.inference", "run_ray")
+
+    raw_output = raw_output.replace("trainer.worker_size", "trainer.prefetch_worker_size")
+    raw_output = raw_output.replace(" * trainer.lr_scaler", "")
 
     with open(args.main_path, "w") as file:
         file.write(raw_output)
