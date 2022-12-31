@@ -153,7 +153,8 @@ First we define a standard torch training loop using the ray dataset.
     ...
     ...     # Start server
     ...     address = "localhost:9999"
-    ...     g = Server(address, config["data_dir"], 0, 1)
+    ...     s = Server(address, config["data_dir"], 0, 1)
+    ...     g = DistributedClient(address)
     ...
     ...     # Initialize the model and wrap it with Ray
     ...     model = GAT(in_dim=1433, num_classes=7)
