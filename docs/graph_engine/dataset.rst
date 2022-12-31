@@ -27,7 +27,8 @@ client instead of the whole server.
     <deepgnn.graph_engine.data.citation.Cora object at 0x...>
 
     >>> address = "localhost:9999"
-    >>> g = Server(address, data_dir.name, 0, 1)
+    >>> s = Server(address, data_dir.name, 0, 1)
+    >>> g = DistributedClient(address)
 
 Simple Cora Dataset
 ===================
