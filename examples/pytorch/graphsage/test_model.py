@@ -13,7 +13,7 @@ import torch
 
 from deepgnn import get_logger
 from deepgnn.pytorch.common import F1Score
-from deepgnn.graph_engine.data import Cora
+from deepgnn.graph_engine.data.citation import Cora
 
 from main import create_model, create_dataset, create_optimizer, init_args  # type: ignore
 from ray_util import run_ray  # type: ignore
