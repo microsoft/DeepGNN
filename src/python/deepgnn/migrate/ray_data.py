@@ -7,6 +7,36 @@ import pasta
 from pasta.augment import rename
 
 
+def ray_dataset(
+    sampler_class=FileNodeSampler,
+    backend=backend,
+    query_fn=model.q.query_training,
+    prefetch_queue_size=2,
+    prefetch_worker_size=2,
+    sample_files=args.sample_file,
+    batch_size=args.batch_size,
+    shuffle=True,
+    drop_last=True,
+    worker_index=rank,
+    num_workers=world_size,
+    **kwargs
+):
+
+    from ray.data import DatasetPipeline
+    address = "localhost:9999"
+    # TODO needs to be peristents
+    s = Server(address, args.data_dir, 0, args.partitions)
+    g = DistributedClient([address])
+
+    if sampler_class == "":
+        dataset = ray.data.range(TODO).repartition(TODO // TODO)
+
+    pipe = dataset.window(TODO)    
+    def transform_batch(idx: list) -> dict:
+        return model.query(g, idx)
+    pipe = pipe.map_batches(transform_batch)
+    return pipe
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Migrate to new versions of DeepgNN.")
     parser.add_argument(
