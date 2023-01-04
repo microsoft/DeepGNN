@@ -7,10 +7,10 @@ import os
 import re
 from typing import Tuple, List
 import torch
-
 from pathlib import Path
 from urllib.parse import urlparse
-
+from ray.air import session
+from deepgnn import TrainMode
 from deepgnn import get_logger
 from deepgnn.pytorch.common.consts import PREFIX_CHECKPOINT
 
@@ -123,6 +123,7 @@ def rotate_checkpoints(
 
 
 def load_checkpoint(model, logger, args):
+    """Load a checkpoint."""
     epochs_trained = 0
     steps_in_epoch_trained = 0
     # Search and sort checkpoints from model path.
@@ -145,18 +146,14 @@ def load_checkpoint(model, logger, args):
 
 
 def save_checkpoint(model, logger, epoch, step, args, **kwargs):
+    """Save a checkpoint."""
     os.makedirs(args.save_path, exist_ok=True)
     save_path = os.path.join(
         f"{args.save_path}",
         f"{PREFIX_CHECKPOINT}-{epoch:03}-{step:06}.pt",
     )
     torch.save(
-        {
-            "state_dict": model.state_dict(),
-            "epoch": epoch,
-            "step": step,
-            **kwargs
-        },
+        {"state_dict": model.state_dict(), "epoch": epoch, "step": step, **kwargs},
         save_path,
     )
     rotate_checkpoints(args.save_path, args.max_saved_ckpts)

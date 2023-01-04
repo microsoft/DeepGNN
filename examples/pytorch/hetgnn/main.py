@@ -30,7 +30,6 @@ from deepgnn.pytorch.common import get_args
 from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
 
 
-
 def train_func(config: Dict):
     """Training loop for ray trainer."""
     args = config["args"]
