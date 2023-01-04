@@ -333,7 +333,7 @@ def get_feature_encoder(
         config = TwinBERTEncoder.init_config_from_file(
             os.path.join(args.meta_dir, args.featenc_config)
         )
-        config["enable_fp16"] = True
+        config["enable_fp16"] = args.fp16
         if hasattr(args, "src_encoders") and hasattr(args, "dst_encoders"):
             encoders = list(
                 set([t for i in args.src_encoders for t in i]).union(

@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+set -ex
+
 DIR_NAME=$(dirname "$0")
 
 DEVICE=${1:-cpu}
