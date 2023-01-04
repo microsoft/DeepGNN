@@ -31,9 +31,7 @@ def train_func(config: Dict):
         train.torch.enable_reproducibility(seed=args.seed + session.get_world_rank())
 
     model = config["init_model_fn"](args)
-    # https://docs.ray.io/en/latest/tune/api_docs/trainable.html#function-api-checkpointing
-    device = train.torch.get_device()
-    model.to(device)
+    model = train.torch.prepare_model(model, move_to_device=args.gpu)
     if args.mode == TrainMode.TRAIN:
         model.train()
     else:
