@@ -87,7 +87,7 @@ def train_academic_data():
             "--save_path",
             model_dir.name,
             "--num_epochs",
-            "2",
+            "1",
             "--batch_size",
             "128",
             "--walk_length",
