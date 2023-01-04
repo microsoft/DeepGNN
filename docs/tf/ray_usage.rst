@@ -242,6 +242,9 @@ Ray Usage Example for Node Classification with GAT
 
 .. code-block:: python
 
+    >>> ray.init(num_cpus=3)
+    RayContext(...)
+
     >>> trainer = TensorflowTrainer(
     ...     train_loop_per_worker=train_func,
     ...     train_loop_config={
