@@ -10,3 +10,4 @@ Graph Engine
    from_networkx
    custom_decoder
    spark_converter
+   dataset

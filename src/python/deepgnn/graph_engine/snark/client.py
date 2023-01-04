@@ -224,6 +224,10 @@ class MemoryGraph:
         )
         self._describe_clib_functions()
 
+    def __del__(self):
+        """Delete graph engine client."""
+        self.reset()
+
     # Extract CDLL library functions descriptions in a separate method:
     # * describing C functions is not thread safe even if values are the same.
     # * assign argtypes and error callbacks once instead of inside relevant methods.
@@ -1039,6 +1043,10 @@ class NodeSampler:
             "reset node sampler"
         )
 
+    def __del__(self):
+        """Delete node sampler."""
+        self.reset()
+
     def sample(
         self, size: int, seed: Optional[int] = None
     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -1147,6 +1155,10 @@ class EdgeSampler:
         self.lib.ResetSampler.errcheck = _ErrCallback(
             "reset edge sampler"
         )  # type: ignore
+
+    def __del__(self):
+        """Delete edge sampler."""
+        self.reset()
 
     def sample(
         self, size: int, seed: Optional[int] = None

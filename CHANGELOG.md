@@ -9,7 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Add usage example for Ray Train, see [docs/torch/ray_usage.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/torch/ray_usage.rst).
 
+- Add documentation for Ray Data usage, see [tutorial](https://github.com/microsoft/DeepGNN/tree/main/docs/graph_engine/dataset.rst) and [example](https://github.com/microsoft/DeepGNN/tree/main/docs/graph_engine/ray_usage_advanced.rst)
+
 - Add Reddit dataset download tool at deepgnn.graph_engine.data.reddit.
+
+### Fixed
+- Implement del method to release C++ client and server. Important for ray actors, because they create numerous clients during training.
 
 ## [0.1.57] - 2022-12-15
 

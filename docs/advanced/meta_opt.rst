@@ -1,10 +1,9 @@
-*****************
-Ray Usage Example
-*****************
+*****************************************
+Hyperparameter Optimization with Ray Tune
+*****************************************
 
-In this guide we use a pre-built `Graph Attention Network(GAT) <https://arxiv.org/abs/1710.10903>`_ model
-to classify nodes in the `Cora dataset <https://graphsandnetworks.com/the-cora-dataset/>`_. This is the same
-as our `node classification example </torch/node_class.html>`_ except here we use Ray as the trainer.
+In this guide we build on top of the Ray usage example with a Ray Tune example at the bottom.
+The following code block is from `node_class example </torch/node_class.html>`_, see this example for more details.
 
 Cora Dataset
 ============
@@ -38,15 +37,15 @@ Setup
     >>> from ray.train.torch import TorchTrainer
     >>> from ray.air import session
     >>> from ray.air.config import ScalingConfig, RunConfig
+    >>> from ray import tune
 
     >>> import deepgnn.pytorch
     >>> from deepgnn.pytorch.nn.gat_conv import GATConv
     >>> from deepgnn.graph_engine import Graph, graph_ops
-    >>> from deepgnn.graph_engine.snark.local import Client
     >>> from deepgnn.pytorch.modeling import BaseModel
 
-    >>> from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
-    >>> from deepgnn.graph_engine import FileNodeSampler
+    >>> from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
+    >>> from deepgnn.graph_engine.data.citation import Cora
 
 Query
 =====
@@ -62,7 +61,7 @@ Query
     ...     neighbor_edge_types: list = field(default_factory=lambda: [0])
     ...     num_hops: int = 2
     ...
-    ...     def query(self, g: Client, idx: int) -> Dict[Any, np.ndarray]:
+    ...     def query(self, g: DistributedClient, idx: int) -> Dict[Any, np.ndarray]:
     ...         """Query used to generate data for training."""
     ...         if isinstance(idx, (int, float)):
     ...             idx = [idx]
@@ -141,17 +140,10 @@ Model Forward and Init
     ...         return scores
 
 
-Ray Train
-=========
+Ray Tune
+========
 
-Here we define our training function.
-In the setup part we do two notable things things,
-
-* Wrap the model and optimizer with `train.torch.prepare_model/optimizer <https://docs.ray.io/en/latest/train/api.html#ray.train.torch.TorchTrainer>`_ for Ray multi worker usage.
-
-* Initialize the dataset.
-
-Then we define a standard torch training loop using the ray dataset, with no changes to model or optimizer usage.
+First we define a standard torch training loop using the ray dataset.
 
 .. code-block:: python
 
@@ -159,44 +151,35 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     # Set random seed
     ...     train.torch.enable_reproducibility(seed=session.get_world_rank())
     ...
+    ...     # Start server
+    ...     address = "localhost:9999"
+    ...     s = Server(address, config["data_dir"], 0, 1)
+    ...     g = DistributedClient(address)
+    ...
     ...     # Initialize the model and wrap it with Ray
     ...     model = GAT(in_dim=1433, num_classes=7)
-    ...     if os.path.isfile(config["model_dir"]):
-    ...         model.load_state_dict(torch.load(config["model_dir"]))
     ...     model = train.torch.prepare_model(model)
     ...
     ...     # Initialize the optimizer and wrap it with Ray
-    ...     optimizer = torch.optim.Adam(model.parameters(), lr=.005, weight_decay=0.0005)
+    ...     optimizer = torch.optim.Adam(model.parameters(), lr=config["learning_rate"], weight_decay=0.0005)
     ...     optimizer = train.torch.prepare_optimizer(optimizer)
     ...
     ...     # Define the loss function
     ...     loss_fn = nn.CrossEntropyLoss()
     ...
-    ...     # Dataset
-    ...     g = Client(config["data_dir"], [0])
+    ...     # Ray Dataset
+    ...     dataset = ray.data.range(2708).repartition(2708 // config["batch_size"])  # -> Dataset(num_blocks=6, num_rows=2708, schema=<class 'int'>)
+    ...     pipe = dataset.window(blocks_per_window=10).repeat(config["n_epochs"])  # -> DatasetPipeline(num_windows=1, num_stages=1)
     ...     q = GATQuery()
-    ...     dataset = TorchDeepGNNDataset(
-    ...         sampler_class=FileNodeSampler,
-    ...         backend=g,
-    ...         query_fn=q.query,
-    ...         prefetch_queue_size=2,
-    ...         prefetch_worker_size=2,
-    ...         sample_files=f"{config['data_dir']}/{config['sample_filename']}",
-    ...         batch_size=140,
-    ...         shuffle=True,
-    ...         drop_last=True,
-    ...         worker_index=0,
-    ...         num_workers=1,
-    ...     )
-    ...     dataset = torch.utils.data.DataLoader(
-    ...         dataset=dataset,
-    ...         num_workers=0,
-    ...     )
+    ...     def transform_batch(batch: list) -> dict:
+    ...         return q.query(g, batch)  # When we reference the server g in transform, it uses Client instead
+    ...     pipe = pipe.map_batches(transform_batch)
     ...
     ...     # Execute the training loop
     ...     model.train()
-    ...     for epoch in range(config["n_epochs"]):
-    ...         for i, batch in enumerate(dataset):
+    ...     for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
+    ...         epoch_pipe = epoch_pipe.random_shuffle_each_window()
+    ...         for i, batch in enumerate(epoch_pipe.iter_torch_batches(batch_size=config["batch_size"])):
     ...             scores = model(batch)
     ...             labels = batch["labels"][batch["input_mask"]].flatten()
     ...             loss = loss_fn(scores.type(torch.float32), labels)
@@ -204,57 +187,66 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...             loss.backward()
     ...             optimizer.step()
     ...
-    ...             session.report({"metric": (scores.argmax(1) == labels).float().mean().item(), "loss": loss.item()})
-    ...
-    ...     torch.save(model.state_dict(), config["model_dir"])
+    ...     session.report({"metric": (scores.argmax(1) == labels).float().mean().item()})
 
-In this step we start the training job.
-First we start a local ray cluster with `ray.init() <https://docs.ray.io/en/latest/ray-core/package-ref.html#ray-init>`_.
-Next we initialize a `TorchTrainer <https://docs.ray.io/en/latest/ray-air/package-ref.html#pytorch>`_
-object to wrap our training loop. This takes parameters that go to the training loop and parameters
-to define number workers and cpus/gpus used.
-Finally we call trainer.fit() to execute the training loop.
+Now we define the objective function using this trainer. The objective function will
+take a set of parameters from the tuner and return a fitness value.
 
 .. code-block:: python
 
-    >>> model_dir = tempfile.TemporaryDirectory()
-
-    >>> ray.init()
+    >>> ray.init(num_cpus=8)
     RayContext(...)
-    >>> trainer = TorchTrainer(
-    ...     train_func,
-    ...     train_loop_config={
-    ...         "data_dir": data_dir.name,
-    ...         "sample_filename": "train.nodes",
-    ...         "n_epochs": 100,
-    ...         "model_dir": f"{model_dir.name}/model.pt",
-    ...     },
-    ...     run_config=RunConfig(verbose=0),
-    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
-    ... )
-    >>> result = trainer.fit()
 
-Evaluate
-========
+    >>> def objective(learning_rate, n_epochs):
+    ...     trainer = TorchTrainer(
+    ...         train_func,
+    ...         train_loop_config={
+    ...             "batch_size": 2708,
+    ...             "data_dir": data_dir.name,
+    ...             "sample_filename": "train.nodes",
+    ...             "n_epochs": n_epochs,
+    ...             "learning_rate": learning_rate,
+    ...         },
+    ...         run_config=RunConfig(verbose=0),
+    ...         scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
+    ...     )
+    ...     result = trainer.fit()
+    ...     return result
+
+This training function wraps this objective function for use in the tuner.
 
 .. code-block:: python
 
-    >>> trainer = TorchTrainer(
-    ...     train_func,
-    ...     train_loop_config={
-    ...         "data_dir": data_dir.name,
-    ...         "sample_filename": "test.nodes",
-    ...         "n_epochs": 1,
-    ...         "model_dir": f"{model_dir.name}/model.pt",
-    ...     },
-    ...     run_config=RunConfig(verbose=0),
-    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
-    ... )
-    >>> result = trainer.fit()
-    >>> result.metrics["metric"]
-    0.72...
-    >>> result.metrics["loss"]
-    0.86...
+    >>> def training_function(config):
+    ...    results = objective(config["learning_rate"], config["n_epochs"])
+    ...    tune.report(accuracy=results.metrics["metric"])
 
-    >>> data_dir.cleanup()
-    >>> model_dir.cleanup()
+Finally we define and make use of the tuner. We use the hyperparameters `learning_rate` and
+`n_epochs`, with one training iteration per configuration.
+
+See the `Ray Tune guides, here<https://docs.ray.io/en/latest/tune/tutorials/overview.html>`_.
+
+.. code-block:: python
+
+    >>> tuner = tune.Tuner(
+    ...     training_function,
+    ...     param_space={
+    ...         "learning_rate": tune.grid_search([.05, .005, .0005]),
+    ...         "n_epochs": tune.choice([2, 4])
+    ...     },
+    ...     tune_config=tune.TuneConfig(num_samples=1),
+    ...     run_config=RunConfig(
+    ...         stop={"training_iteration": 1},
+    ...         verbose=0,
+    ...     ),
+    ... )
+    >>> analysis = tuner.fit()
+
+    >>> analysis.get_best_result(metric="accuracy", mode="max")
+    Result(metrics={'accuracy': ..., 'experiment_tag': '..._learning_rate=...,n_epochs=...'}, ...)
+
+    >>> analysis.get_dataframe()
+       accuracy  ...
+    0  0.3...
+    1  0.3...
+    [3 rows x 21 columns]
