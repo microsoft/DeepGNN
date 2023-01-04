@@ -74,7 +74,7 @@ def train_func(config: Dict):
     )
     num_workers = (
         0
-        if issubclass(dataset.sampler_class, (GENodeSampler, GEEdgeSampler))
+        if hasattr(dataset, "sampler_class") and issubclass(dataset.sampler_class, (GENodeSampler, GEEdgeSampler))
         or platform.system() == "Windows"
         else args.data_parallel_num
     )
