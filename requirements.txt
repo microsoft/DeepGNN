@@ -91,7 +91,7 @@ grpcio-health-checking==1.49.1
 grpcio-tools==1.49.1
 h5py==3.7.0
 heapdict==3.9.0
-horovod==0.25.0;sys_platform != 'win32'
+horovod==0.26.1;sys_platform != 'win32'
 huggingface-hub==0.10.1
 idna==3.4
 idna-ssl==1.1.0
