@@ -10,10 +10,28 @@ from deepgnn import get_logger
 from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 
 from deepgnn.pytorch.modeling import BaseModel
-from ray_util import run_ray
 
 from deepgnn.graph_engine import FileNodeSampler, GraphEngineBackend
 from model_geometric import GAT, GATQueryParameter  # type: ignore
+
+from typing import Dict
+import os
+import platform
+import numpy as np
+import torch
+import ray
+import ray.train as train
+import horovod.torch as hvd
+import ray.train.torch
+from ray.train.horovod import HorovodTrainer
+from ray.air import session
+from ray.air.config import ScalingConfig
+from deepgnn import TrainMode, get_logger
+from deepgnn.graph_engine import create_backend, BackendOptions
+from deepgnn.graph_engine.samplers import GENodeSampler, GEEdgeSampler
+from deepgnn.pytorch.common import get_args
+from deepgnn.pytorch.common.consts import PREFIX_CHECKPOINT
+from deepgnn.pytorch.common.utils import rotate_checkpoints, get_sorted_checkpoints
 
 
 # fmt: off
@@ -33,10 +51,16 @@ def init_args(parser):
     parser.add_argument("--eval_file", default="", type=str, help="")
 # fmt: on
 
+def train_func(config: Dict):
+    """Training loop for ray trainer."""
+    args = config["args"]
 
-def create_model(args: argparse.Namespace):
-    get_logger().info(f"Creating GAT model with seed:{args.seed}.")
-    # set seed before instantiating the model
+    logger = get_logger()
+    os.makedirs(args.save_path, exist_ok=True)
+
+    hvd.init()
+    if args.seed:
+        train.torch.enable_reproducibility(seed=args.seed + session.get_world_rank())
 
     p = GATQueryParameter(
         neighbor_edge_types=np.array([args.neighbor_edge_types], np.int32),
@@ -45,8 +69,7 @@ def create_model(args: argparse.Namespace):
         label_idx=args.label_idx,
         label_dim=args.label_dim,
     )
-
-    return GAT(
+    model = GAT(
         in_dim=args.feature_dim,
         head_num=args.head_num,
         hidden_dim=args.hidden_dim,
@@ -55,16 +78,44 @@ def create_model(args: argparse.Namespace):
         attn_drop=args.attn_drop,
         q_param=p,
     )
+    model = train.torch.prepare_model(model, move_to_device=args.gpu)
+    if args.mode == TrainMode.TRAIN:
+        model.train()
+    else:
+        model.eval()
 
+    epochs_trained = 0
+    steps_in_epoch_trained = 0
+    # Search and sort checkpoints from model path.
+    ckpts = get_sorted_checkpoints(args.model_dir)
+    ckpt_path = ckpts[-1] if len(ckpts) > 0 else None
+    if ckpt_path is not None:
+        init_ckpt = torch.load(ckpt_path, map_location="cpu")
+        if args.mode == TrainMode.TRAIN:
+            epochs_trained = init_ckpt["epoch"]
+            steps_in_epoch_trained = init_ckpt["step"]
 
-def create_dataset(
-    args: argparse.Namespace,
-    model: BaseModel,
-    rank: int = 0,
-    world_size: int = 1,
-    backend: GraphEngineBackend = None,
-):
-    return TorchDeepGNNDataset(
+        if session.get_world_rank() == 0:
+            model.load_state_dict(init_ckpt["state_dict"])
+            logger.info(
+                f"Loaded initial checkpoint: {ckpt_path},"
+                f" trained epochs: {epochs_trained}, steps: {steps_in_epoch_trained}"
+            )
+        del init_ckpt
+
+    optimizer = torch.optim.Adam(
+        filter(lambda p: p.requires_grad, model.parameters()),
+        lr=args.learning_rate * session.get_world_size(),
+        weight_decay=0.0005,
+    )
+    optimizer = hvd.DistributedOptimizer(
+        optimizer, named_parameters=model.named_parameters()
+    )
+
+    backend = create_backend(
+        BackendOptions(args), is_leader=(session.get_world_rank() == 0)
+    )
+    dataset = TorchDeepGNNDataset(
         sampler_class=FileNodeSampler,
         backend=backend,
         query_fn=model.q.query_training,
@@ -74,51 +125,81 @@ def create_dataset(
         batch_size=args.batch_size,
         shuffle=True,
         drop_last=True,
-        worker_index=rank,
-        num_workers=world_size,
+        worker_index=session.get_world_rank(),
+        num_workers=session.get_world_size(),
     )
-
-
-def create_eval_dataset(
-    args: argparse.Namespace,
-    model: BaseModel,
-    rank: int = 0,
-    world_size: int = 1,
-    backend: GraphEngineBackend = None,
-):
-    return TorchDeepGNNDataset(
-        sampler_class=FileNodeSampler,
-        backend=backend,
-        query_fn=model.q.query_training,
-        prefetch_queue_size=2,
-        prefetch_worker_size=2,
-        sample_files=args.eval_file,
-        batch_size=1000,
-        shuffle=False,
-        drop_last=True,
-        worker_index=rank,
-        num_workers=world_size,
+    num_workers = (
+        0
+        if issubclass(dataset.sampler_class, (GENodeSampler, GEEdgeSampler))
+        or platform.system() == "Windows"
+        else args.data_parallel_num
     )
-
-
-def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):
-    return torch.optim.Adam(
-        filter(lambda p: p.requires_grad, model.parameters()),
-        lr=args.learning_rate * world_size,
-        weight_decay=0.0005,
+    dataset = torch.utils.data.DataLoader(
+        dataset=dataset,
+        num_workers=num_workers,
     )
+    for epoch in range(epochs_trained, args.num_epochs):
+        scores = []
+        labels = []
+        losses = []
+        for step, batch in enumerate(dataset):
+            if step < steps_in_epoch_trained:
+                continue
+            loss, score, label = model(batch)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            scores.append(score)
+            labels.append(label)
+            losses.append(loss.item())
+
+        steps_in_epoch_trained = 0
+        if epoch % args.save_ckpt_by_epochs == 0:
+            save_path = os.path.join(
+                f"{args.save_path}",
+                f"{PREFIX_CHECKPOINT}-{epoch:03}-{step:06}.pt",
+            )
+            torch.save(
+                {
+                    "state_dict": model.state_dict(),
+                    "epoch": epoch,
+                    "step": step,
+                },
+                save_path,
+            )
+            rotate_checkpoints(args.save_path, args.max_saved_ckpts)
+            logger.info(f"Saved checkpoint to {save_path}.")
+
+        session.report(
+            {
+                "metric": model.compute_metric(scores, labels).item(),
+                "loss": np.mean(losses),
+            },
+        )
+
+
+def run_ray(**kwargs):
+    """Run ray trainer."""
+    ray.init(num_cpus=3)
+
+    args = get_args(init_args, kwargs["run_args"] if "run_args" in kwargs else None)
+
+    trainer = HorovodTrainer(
+        train_func,
+        train_loop_config={"args": args},
+        scaling_config=ScalingConfig(
+            num_workers=1, use_gpu=args.gpu, resources_per_worker={"CPU": 2}
+        ),
+    )
+    trainer.fit()
 
 
 def _main():
     # setup default logging component.
     setup_default_logging_config(enable_telemetry=True)
 
-    run_ray(
-        init_model_fn=create_model,
-        init_dataset_fn=create_dataset,
-        init_optimizer_fn=create_optimizer,
-        init_args_fn=init_args,
-    )
+    run_ray()
 
 
 if __name__ == "__main__":

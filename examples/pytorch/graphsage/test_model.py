@@ -15,8 +15,7 @@ from deepgnn import get_logger
 from deepgnn.pytorch.common import F1Score
 from deepgnn.graph_engine.data.citation import Cora
 
-from main import create_model, create_dataset, create_optimizer, init_args  # type: ignore
-from ray_util import run_ray  # type: ignore
+from main import run_ray, create_dataset  # type: ignore
 from model import PTGSupervisedGraphSage  # type: ignore
 
 from examples.pytorch.conftest import (  # noqa: F401
@@ -57,10 +56,7 @@ def train_graphsage_cora_ddp_trainer(mock_graph):
         )
 
     result = run_ray(
-        init_model_fn=create_model,
         init_dataset_fn=create_mock_dataset,
-        init_optimizer_fn=create_optimizer,
-        init_args_fn=init_args,
         run_args=[
             "--data_dir",
             working_dir.name,
