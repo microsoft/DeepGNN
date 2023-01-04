@@ -95,12 +95,7 @@ def train_func(config: Dict):
         sample_num=args.max_id // session.get_world_size(),
         num_workers=session.get_world_size(),
     )
-    num_workers = (
-        0
-        if issubclass(dataset.sampler_class, (GENodeSampler, GEEdgeSampler))
-        or platform.system() == "Windows"
-        else args.data_parallel_num
-    )
+    num_workers = 0
     dataset = torch.utils.data.DataLoader(
         dataset=dataset,
         num_workers=num_workers,

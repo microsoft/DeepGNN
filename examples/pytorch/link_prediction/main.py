@@ -110,12 +110,7 @@ def train_func(config: Dict):
         epochs=-1 if (args.max_samples > 0 and args.mode == TrainMode.TRAIN) else 1,
         buffer_size=1024,
     )
-    num_workers = (
-        0
-        if issubclass(dataset.sampler_class, (GENodeSampler, GEEdgeSampler))
-        or platform.system() == "Windows"
-        else args.data_parallel_num
-    )
+    num_workers = args.data_parallel_num
     dataset = torch.utils.data.DataLoader(
         dataset=dataset,
         num_workers=num_workers,
@@ -161,7 +156,7 @@ def train_func(config: Dict):
         )
 
 
-def run_ray(init_model_fn, init_dataset_fn, init_optimizer_fn, init_args_fn, **kwargs):
+def run_ray(**kwargs):
     """Run ray trainer."""
     ray.init()
 
@@ -171,9 +166,6 @@ def run_ray(init_model_fn, init_dataset_fn, init_optimizer_fn, init_args_fn, **k
         train_func,
         train_loop_config={
             "args": args,
-            "init_model_fn": init_model_fn,
-            "init_dataset_fn": init_dataset_fn,
-            "init_optimizer_fn": init_optimizer_fn,
             **kwargs,
         },
         scaling_config=ScalingConfig(

@@ -108,15 +108,9 @@ def train_func(config: Dict):
             node_type_count=args.node_type_count,
             walk_length=args.walk_length,
         )
-    num_workers = (
-        0
-        if issubclass(dataset.sampler_class, (GENodeSampler, GEEdgeSampler))
-        or platform.system() == "Windows"
-        else args.data_parallel_num
-    )
     dataset = torch.utils.data.DataLoader(
         dataset=dataset,
-        num_workers=num_workers,
+        num_workers=0,
     )
     for epoch in range(epochs_trained, args.num_epochs):
         scores = []
