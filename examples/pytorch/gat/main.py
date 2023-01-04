@@ -51,6 +51,7 @@ def init_args(parser):
     parser.add_argument("--eval_file", default="", type=str, help="")
 # fmt: on
 
+
 def train_func(config: Dict):
     """Training loop for ray trainer."""
     args = config["args"]

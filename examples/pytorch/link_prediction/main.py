@@ -190,8 +190,7 @@ def _main():
     # run_dist is the unified entry for pytorch model distributed training/evaluation/inference.
     # User only needs to prepare initializing function for model, dataset, optimizer and args.
     # reference: `deepgnn/pytorch/training/factory.py`
-    run_ray(
-    )
+    run_ray()
 
 
 if __name__ == "__main__":
