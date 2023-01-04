@@ -365,6 +365,7 @@ py_test(
         requirement("opencensus-ext-azure"),
         requirement("scikit-learn"),
         requirement("tensorflow"),
+        requirement("torch"),
     ],
 )
 
