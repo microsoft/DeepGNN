@@ -27,16 +27,14 @@ from deepgnn import TrainMode, get_logger
 from deepgnn.graph_engine import create_backend, BackendOptions
 from deepgnn.graph_engine.samplers import GENodeSampler, GEEdgeSampler
 from deepgnn.pytorch.common import get_args
-from deepgnn.pytorch.common.consts import PREFIX_CHECKPOINT
-from deepgnn.pytorch.common.utils import rotate_checkpoints, get_sorted_checkpoints
+from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
+
 
 
 def train_func(config: Dict):
     """Training loop for ray trainer."""
     args = config["args"]
-
     logger = get_logger()
-    os.makedirs(args.save_path, exist_ok=True)
 
     train.torch.accelerate(args.fp16)
     if args.seed:
@@ -50,31 +48,13 @@ def train_func(config: Dict):
         feature_idx=args.feature_idx,
         feature_dim=args.feature_dim,
     )
-    # https://docs.ray.io/en/latest/tune/api_docs/trainable.html#function-api-checkpointing
     model = train.torch.prepare_model(model, move_to_device=args.gpu)
     if args.mode == TrainMode.TRAIN:
         model.train()
     else:
         model.eval()
 
-    epochs_trained = 0
-    steps_in_epoch_trained = 0
-    # Search and sort checkpoints from model path.
-    ckpts = get_sorted_checkpoints(args.model_dir)
-    ckpt_path = ckpts[-1] if len(ckpts) > 0 else None
-    if ckpt_path is not None:
-        init_ckpt = torch.load(ckpt_path, map_location="cpu")
-        if args.mode == TrainMode.TRAIN:
-            epochs_trained = init_ckpt["epoch"]
-            steps_in_epoch_trained = init_ckpt["step"]
-
-        if session.get_world_rank() == 0:
-            model.load_state_dict(init_ckpt["state_dict"])
-            logger.info(
-                f"Loaded initial checkpoint: {ckpt_path},"
-                f" trained epochs: {epochs_trained}, steps: {steps_in_epoch_trained}"
-            )
-        del init_ckpt
+    epochs_trained, steps_in_epoch_trained = load_checkpoint(model, logger, args)
 
     optimizer = torch.optim.Adam(
         filter(lambda p: p.requires_grad, model.parameters()),
@@ -130,20 +110,7 @@ def train_func(config: Dict):
 
         steps_in_epoch_trained = 0
         if epoch % args.save_ckpt_by_epochs == 0:
-            save_path = os.path.join(
-                f"{args.save_path}",
-                f"{PREFIX_CHECKPOINT}-{epoch:03}-{step:06}.pt",
-            )
-            torch.save(
-                {
-                    "state_dict": model.state_dict(),
-                    "epoch": epoch,
-                    "step": step,
-                },
-                save_path,
-            )
-            rotate_checkpoints(args.save_path, args.max_saved_ckpts)
-            logger.info(f"Saved checkpoint to {save_path}.")
+            save_checkpoint(model, logger, epoch, step, args)
 
         session.report(
             {
