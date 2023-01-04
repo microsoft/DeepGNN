@@ -10,15 +10,22 @@ First we'll import all modules used in the tutorial and set up some global setti
     >>> import random, json
     >>> from pathlib import Path
     >>> import argparse
+    >>> from typing import Dict, List
     >>> import os
     >>> import tempfile
     >>> import networkx as nx
     >>> import numpy as np
     >>> import tensorflow as tf
     >>> from dataclasses import dataclass
+    >>> import ray
+    >>> from ray.train.tensorflow import TensorflowTrainer
+    >>> from ray.air import session
+    >>> from ray.air.config import ScalingConfig, RunConfig
 
     >>> from deepgnn.tf.common import utils
     >>> from deepgnn.graph_engine.snark.converter.options import DataConverterType
+    >>> from deepgnn.graph_engine.snark.local import Client
+    >>> from deepgnn.graph_engine import SamplingStrategy
 
     >>> from deepgnn import setup_default_logging_config
     >>> setup_default_logging_config()
@@ -85,7 +92,8 @@ Labels will be stored in the logit(one hot encoded) format as float feature with
     >>> print(nodes[49])
     {'node_weight': 1, 'node_id': 49, 'node_type': 0, 'uint64_feature': None, 'float_feature': {'0': [1.0023727889837524, 0.34556286809360803], '1': [0, 0, 0, 0, 1]}, 'binary_feature': None, 'edge': [], 'neighbor': {'0': {'40': 1.0, '41': 1.0, '42': 1.0, '43': 1.0, '44': 1.0, '45': 1.0, '46': 1.0, '47': 1.0, '48': 1.0, '0': 1.0}}}
 
-    >>> working_dir = "./graphdata"
+    >>> working_dir_temp = tempfile.TemporaryDirectory()
+    >>> working_dir = working_dir_temp.name
     >>> os.makedirs(working_dir, exist_ok=True)
     >>>
     >>> data_filename = os.path.join(working_dir, "data.json")
@@ -240,26 +248,6 @@ Graph itself stores both labels and model inputs. Labels are node features with 
     ...    def get_prediction_label(self):
     ...        return self.predictions, self.labels
 
-Create `Trainer` object
-
-.. code-block:: python
-
-    >>> import logging
-    >>> from deepgnn.tf.common.tf2_trainer import EagerTrainer
-    >>> from deepgnn.tf.common.args import TrainerType
-    >>> from deepgnn import get_logger
-
-    >>> tmp_dir = tempfile.TemporaryDirectory()
-    >>> trainer = EagerTrainer(
-    ...    model_dir=tmp_dir.name,
-    ...    seed = None,
-    ...    log_save_steps = 50,
-    ...    summary_save_steps = 20,
-    ...    checkpoint_save_secs = 100,
-    ...    logger = get_logger(),
-    ... )
-
-
 
 Start Training
 1. create `sampler`
@@ -272,78 +260,87 @@ Start Training
     >>> from deepgnn.graph_engine import GraphType, BackendType
     >>> from deepgnn.graph_engine import BackendOptions, GraphType, BackendType, GENodeSampler,RangeNodeSampler
 
-    >>> batch_size = 16
-    >>> num_epochs = 100 # One epoch represents processing all nodes in the graph.
-    >>> learning_rate = 0.1
+    >>> def train_func(config: Dict):
+    ...     tf.keras.utils.set_random_seed(0)
+    ...
+    ...     model = CustomModel(num_clusters)
+    ...     query = GraphQuery(
+    ...         label_idx=1,
+    ...         label_dim=num_clusters,
+    ...         feature_dim=2,
+    ...         feature_idx=0,
+    ...         fanouts=[10, 10, 5],
+    ...     )
+    ...
+    ...     if config["train"]:
+    ...         tf_dataset, steps_per_epoch = create_tf_dataset(
+    ...             sampler_class=GENodeSampler,
+    ...             query_fn=query.query,
+    ...             backend=type("Backend", (object,), {"graph": Client(config["data_dir"], [0])})(),
+    ...             node_types=np.array([0], dtype=np.int32),
+    ...             batch_size=config["batch_size"],
+    ...             num_workers=2,
+    ...             worker_index=0,
+    ...             strategy=SamplingStrategy.RandomWithoutReplacement,
+    ...         )
+    ...     else:
+    ...         tf_dataset, steps_per_epoch = create_tf_dataset(
+    ...             sampler_class=RangeNodeSampler,
+    ...             query_fn=query.query,
+    ...             backend=type("Backend", (object,), {"graph": Client(config["data_dir"], [0])})(),
+    ...             backend_options=BackendOptions(args),
+    ...             first=0,
+    ...             last=max_node_cnt,
+    ...             batch_size=10,
+    ...             worker_index=0,
+    ...             num_workers=1,
+    ...             backfill_id=max_node_cnt+1,
+    ...         )
+    ...     model.optimizer = tf.compat.v1.train.AdamOptimizer(
+    ...         learning_rate=config["learning_rate"]
+    ...     )
+    ...
+    ...     with tf.distribute.get_strategy().scope():
+    ...         model.compile(optimizer=model.optimizer)
+    ...
+    ...     for epoch in range(config["n_epochs"]):
+    ...         history = model.fit(tf_dataset, verbose=0)
+    ...         session.report(history.history)
 
-    >>> args = argparse.Namespace(
-    ...    data_dir=working_dir,
-    ...    backend=BackendType.SNARK,
-    ...    graph_type=GraphType.LOCAL,
-    ...    converter=DataConverterType.SKIP,
-    ...    graph_name="data.json",
+    >>> ray.init(num_cpus=3)
+    RayContext(...)
+
+    >>> trainer = TensorflowTrainer(
+    ...     train_loop_per_worker=train_func,
+    ...     train_loop_config={
+    ...         "batch_size": 16,
+    ...         "data_dir": working_dir,
+    ...         "n_epochs": 200,
+    ...         "learning_rate": 0.1,
+    ...         "train": True,
+    ...     },
+    ...     run_config=RunConfig(verbose=0),
+    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     ... )
-
-    >>> model = CustomModel(num_clusters)
-    >>> q = GraphQuery(
-    ...        label_idx=1,
-    ...        label_dim=num_clusters,
-    ...        feature_dim=2,
-    ...        feature_idx=0,
-    ...        fanouts=[10, 10, 5],
-    ... )
-
-    >>> ds = create_tf_dataset(
-    ...    sampler_class=GENodeSampler,
-    ...    query_fn=q.query,
-    ...    backend=ge,
-    ...    backend_options=BackendOptions(args),
-    ...    node_types=np.array([0], dtype=np.int32),
-    ...    batch_size=batch_size,
-    ... )[0]
-
-    >>> trainer.train(
-    ...    dataset=ds,
-    ...    model=model,
-    ...    optimizer=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate),
-    ...    epochs=num_epochs,
-    ... )
+    >>> result = trainer.fit()
 
 Verify model predictions
 ========================
 
 .. code-block:: python
 
-    >>> args = argparse.Namespace(
-    ...    data_dir=working_dir,
-    ...    backend=BackendType.SNARK,
-    ...    graph_type=GraphType.LOCAL,
-    ...    converter=DataConverterType.LOCAL,
-    ...    graph_name="data.json",
+    >>> trainer = TensorflowTrainer(
+    ...     train_loop_per_worker=train_func,
+    ...     train_loop_config={
+    ...         "batch_size": 16,
+    ...         "data_dir": working_dir,
+    ...         "n_epochs": 100,
+    ...         "learning_rate": 0.1,
+    ...         "train": False,
+    ...     },
+    ...     run_config=RunConfig(verbose=0),
+    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     ... )
-    >>> ds = create_tf_dataset(
-    ...    sampler_class=RangeNodeSampler,
-    ...    query_fn=q.query,
-    ...    backend=ge,
-    ...    backend_options=BackendOptions(args),
-    ...    first=0,
-    ...    last=max_node_cnt,
-    ...    batch_size=10,
-    ...    worker_index=0,
-    ...    num_workers=1,
-    ...    backfill_id=max_node_cnt+1,
-    ... )[0]
-
-    >>> trainer.inference(
-    ...    ds,
-    ...    model,
-    ...    embedding_to_str_fn=utils.node_embedding_to_string,
-    ... )
-    >>> np.set_printoptions(formatter={"float_kind": "{: .2f}".format})
-    >>> pred = utils.load_embeddings(tmp_dir.name, max_node_cnt, num_clusters)
-    >>> print(np.argmax(pred, 1).reshape(num_clusters, -1))
-    [[0 0 0 0 0 0 0 0 0 0]
-     [0 1 0 1 0 0 0 0 0 0]
-     [2 2 2 2 2 2 2 2 2 2]
-     [3 4 3 4 3 3 4 4 3 4]
-     [4 4 3 4 4 4 4 4 4 4]]
+    >>> result = trainer.fit()
+    >>> result.metrics["acc"]
+    [0.80...]
