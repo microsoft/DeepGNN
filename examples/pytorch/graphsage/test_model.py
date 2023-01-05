@@ -13,10 +13,9 @@ import torch
 
 from deepgnn import get_logger
 from deepgnn.pytorch.common import F1Score
-from deepgnn.graph_engine.data import Cora
+from deepgnn.graph_engine.data.citation import Cora
 
-from main import create_model, create_dataset, create_optimizer, init_args  # type: ignore
-from ray_util import run_ray  # type: ignore
+from main import run_ray, create_dataset  # type: ignore
 from model import PTGSupervisedGraphSage  # type: ignore
 
 from examples.pytorch.conftest import (  # noqa: F401
@@ -40,16 +39,24 @@ def setup_module(module):
 
 
 @pytest.fixture(scope="module")
-def train_graphsage_cora_ddp_trainer():
+def train_graphsage_cora_ddp_trainer(mock_graph):
     model_dir = tempfile.TemporaryDirectory()
     working_dir = tempfile.TemporaryDirectory()
     Cora(working_dir.name)
 
+    def create_mock_dataset(
+        args,
+        model,
+        rank: int = 0,
+        world_size: int = 1,
+        backend=None,
+    ):
+        return MockSimpleDataLoader(
+            batch_size=256, query_fn=model.query, graph=mock_graph
+        )
+
     result = run_ray(
-        init_model_fn=create_model,
-        init_dataset_fn=create_dataset,
-        init_optimizer_fn=create_optimizer,
-        init_args_fn=init_args,
+        init_dataset_fn=create_mock_dataset,
         run_args=[
             "--data_dir",
             working_dir.name,
@@ -63,11 +70,11 @@ def train_graphsage_cora_ddp_trainer():
             "local",
             "--converter skip",
             "--batch_size",
-            "140",
+            "256",
             "--learning_rate",
-            "0.005",
+            "0.7",
             "--num_epochs",
-            "100",
+            "10",
             "--node_type",
             "0",
             "--max_id",
@@ -92,7 +99,7 @@ def train_graphsage_cora_ddp_trainer():
     )
     yield {
         "losses": result.metrics["losses"],
-        "model_path": os.path.join(model_dir.name, "gnnmodel-096-000000.pt"),
+        "model_path": os.path.join(model_dir.name, "gnnmodel-008-000007.pt"),
     }
     working_dir.cleanup()
     model_dir.cleanup()
@@ -137,6 +144,7 @@ def test_deep_graph_on_cora(train_graphsage_cora_ddp_trainer, mock_graph):  # no
     val_labels = g.node_features(
         val_ref, np.array([[label_idx, label_dim]]), np.float32
     ).argmax(1)
+    # assert False, (val_labels, val_output_ref.argmax(axis=1))
     f1_ref = metric.compute(val_output_ref.argmax(axis=1), val_labels)
 
     assert 0.80 < f1_ref and f1_ref < 0.95

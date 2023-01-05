@@ -27,14 +27,15 @@ client instead of the whole server.
     <deepgnn.graph_engine.data.citation.Cora object at 0x...>
 
     >>> address = "localhost:9999"
-    >>> g = Server(address, data_dir.name, 0, 1)
+    >>> s = Server(address, data_dir.name, 0, 1)
+    >>> g = DistributedClient(address)
 
 Simple Cora Dataset
 ===================
 
 In this example we create a simple dataset using Ray Data.
 
-First we initialize a Ray Dataset of node ids ranging from 0 to 2708.
+First we initialize a Ray Dataset of node ids ranging from 0 to 2708 via
 `ray.data.range <https://docs.ray.io/en/latest/data/api/input_output.html#synthetic-data>`_
 Then we repartition it to be one block per batch.
 
@@ -47,7 +48,7 @@ Then we repartition it to be one block per batch.
 We convert this dataset to a data pipeline by splitting it into windows. Each window is effectively a separate
 dataset object and the dataset pipeline consists of multiple windows which each include mulitple blocks / batches.
 When we run a function on a dataset pipeline it is not executed immediately, instead it is staged and only run
-per window when required by `iter_torch_batches`.
+per window when required when iterating over the dataset.
 More about dataset pipelines, `here <https://docs.ray.io/en/latest/data/pipelining-compute.html#pipelining-datasets>`_.
 
 * Higher parallelism is generally better for performance. Lower blocks per window means lower latency but gives less room for concurrent tasks.
@@ -98,23 +99,13 @@ Finally we iterate over the dataset `n_epochs` times.
     >>> epoch_pipe = next(epoch_iter)
     >>> batch = next(epoch_pipe.iter_torch_batches(batch_size=2))
     >>> batch
-    {'features': tensor([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0.],
-            [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0.]]), 'labels': tensor([[0.],
+    {'features': tensor([[0., 0., 0., ...]]), 'labels': tensor([[0.],
             [5.]])}
 
     >>> epoch_pipe = next(epoch_iter)
     >>> batch = next(epoch_pipe.iter_torch_batches(batch_size=2))
     >>> batch
-    {'features': tensor([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0.],
-            [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-             0., 0.]]), 'labels': tensor([[0.],
+    {'features': tensor([[0., 0., 0., ...]]), 'labels': tensor([[0.],
             [5.]])}
 
 File Node Sampler
@@ -199,3 +190,38 @@ with a generator as input, it streams the windows instead of loading them.
     {'features': tensor([[0., 0.],
             [0., 0.]]), 'labels': tensor([[0.],
             [0.]])}
+
+Multiple Servers
+================
+
+In order to add multiple servers, you need to create a DistributedClient manually with all server IPs.
+
+.. code-block:: python
+
+    >>> address = ["localhost:9990", "localhost:9991"]
+    >>> s1 = Server(address[0], data_dir.name, 0, 1)
+    >>> s2 = Server(address[1], data_dir.name, 1, 1)
+    >>> g = DistributedClient(address)
+
+    >>> dataset = ray.data.range(2708).repartition(2708 // 512)
+    >>> pipe = dataset.window(blocks_per_window=2)
+    >>> pipe = pipe.repeat(2)
+    >>> pipe = pipe.random_shuffle_each_window(seed=0)
+    >>> def transform_batch(idx: list) -> dict:
+    ...     return {"features": g.node_features(idx, np.array([[0, 50]]), feature_type=np.float32), "labels": g.node_features(idx, np.array([[1, 1]]), feature_type=np.float32)}
+    >>> pipe = pipe.map_batches(transform_batch)
+    >>> pipe
+    DatasetPipeline(num_windows=6, num_stages=3)
+
+    >>> epoch_iter = pipe.iter_epochs()
+    >>> epoch_pipe = next(epoch_iter)
+    >>> batch = next(epoch_pipe.iter_torch_batches(batch_size=2))
+    >>> batch
+    {'features': tensor([[0., 0., 0., ...]]), 'labels': tensor([[0.],
+            [5.]])}
+
+    >>> epoch_pipe = next(epoch_iter)
+    >>> batch = next(epoch_pipe.iter_torch_batches(batch_size=2))
+    >>> batch
+    {'features': tensor([[0., 0., 0., ...]]), 'labels': tensor([[0.],
+            [5.]])}

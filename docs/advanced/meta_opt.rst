@@ -1,17 +1,12 @@
-***********************************************
-Node Classification with Ray Train and Ray Data
-***********************************************
+*****************************************
+Hyperparameter Optimization with Ray Tune
+*****************************************
 
-In this guide we build on top of the Ray Usage example this time including Ray Data usage.
+In this guide we build on top of the Ray usage example with a Ray Tune example at the bottom.
 The following code block is from `node_class example </torch/node_class.html>`_, see this example for more details.
 
 Cora Dataset
 ============
-The Cora dataset consists of 2708 scientific publications represented as nodes interconnected by
-5429 reference links represented as edges. Each paper is described by a binary mask for 1433 pertinent
-dictionary words and an integer in {0..6} representing its type.
-First we download the Cora dataset and convert it to a valid binary representation via our built-in Cora
-downloader.
 
 .. code-block:: python
 
@@ -24,27 +19,8 @@ downloader.
 GAT Model
 =========
 
-Using this Graph Attention Network, we can accurately predict which category a specific paper belongs to
-based on its dictionary and the dictionaries of papers it references.
-This model leverages masked self-attentional layers to address the shortcomings of graph convolution
-based models. By stacking layers in which nodes are able to attend over their neighborhoods features,
-we enable the model to specify different weights to different nodes in a neighborhood, without requiring
-any kind of costly matrix operation (such as inversion) or the knowledge of the graph structure up front.
-
-`Paper <https://arxiv.org/abs/1710.10903>`_, `author's code <https://github.com/PetarV-/GAT>`_.
-
-Next we copy the GAT model from `DeepGNN's examples directory <https://github.com/microsoft/DeepGNN/blob/main/examples/pytorch/gat>`_. Pre-built models are kept out of the pip installation because it is rarely possible to inheret and selectively edit a single function of a graph model, instead it is best to copy the entire model and edit as needed.
-DeepGNN models typically contain multiple parts:
-
-	1. Query struct and implementation
-	2. Model init and forward
-	3. Training setup: Dataset, Optimizer, Model creation
-	4. Execution
-
 Setup
 ======
-
-Combined imports from `model.py <https://github.com/microsoft/DeepGNN/blob/main/examples/pytorch/gat/model.py>`_ and `main.py <https://github.com/microsoft/DeepGNN/blob/main/examples/pytorch/gat/main.py>`_.
 
 .. code-block:: python
 
@@ -61,6 +37,7 @@ Combined imports from `model.py <https://github.com/microsoft/DeepGNN/blob/main/
     >>> from ray.train.torch import TorchTrainer
     >>> from ray.air import session
     >>> from ray.air.config import ScalingConfig, RunConfig
+    >>> from ray import tune
 
     >>> import deepgnn.pytorch
     >>> from deepgnn.pytorch.nn.gat_conv import GATConv
@@ -72,12 +49,6 @@ Combined imports from `model.py <https://github.com/microsoft/DeepGNN/blob/main/
 
 Query
 =====
-
-Query is the interface between the model and graph engine. It is used by the trainer to fetch contexts which
-will be passed as input to the model forward function. Since query is a separate function, the trainer may
-pre-fetch contexts allowing graph engine operations and model training to occur in parallel.
-In the GAT model, query samples neighbors repeatedly `num_hops` times in order to generate a sub-graph.
-All node and edge features in this sub-graph are pulled and added to the context.
 
 .. code-block:: python
 
@@ -104,7 +75,7 @@ All node and edge features in this sub-graph are pulled and added to the context
     ...             undirected=True,
     ...             return_edges=True,
     ...         )
-    ...         input_mask = np.zeros(nodes.size, np.bool_)
+    ...         input_mask = np.zeros(nodes.size, np.bool)
     ...         input_mask[src_idx] = True
     ...
     ...         feat = g.node_features(nodes, self.feature_meta, self.feature_type)
@@ -114,13 +85,6 @@ All node and edge features in this sub-graph are pulled and added to the context
 
 Model Forward and Init
 ======================
-
-The model init and forward functions look the same as any other pytorch model, except we base off of
-`deepgnn.pytorch.modeling.base_model.BaseModel` instead of `torch.nn.Module`. The forward function is
-expected to return three values: the batch loss, the model predictions for given nodes and corresponding labels.
-In the GAT model, forward pass uses two of our built-in
-`GATConv layers <https://github.com/microsoft/DeepGNN/blob/main/src/python/deepgnn/pytorch/nn/gat_conv.py>`_
-and computes the loss via cross entropy.
 
 .. code-block:: python
 
@@ -176,17 +140,10 @@ and computes the loss via cross entropy.
     ...         return scores
 
 
-Ray Train
-=========
+Ray Tune
+========
 
-Here we define our training function.
-In the setup part we do two notable things things,
-
-* Wrap the model and optimizer with `train.torch.prepare_model/optimizer <https://docs.ray.io/en/latest/train/api.html#ray.train.torch.TorchTrainer>`_ for Ray multi worker usage.
-
-* Initialize the ray dataset, see more details in `our dataset docs </graph_engine/dataset.rst>`_.
-
-Then we define a standard torch training loop using the ray dataset, with no changes to model or optimizer usage.
+First we define a standard torch training loop using the ray dataset.
 
 .. code-block:: python
 
@@ -201,12 +158,10 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...
     ...     # Initialize the model and wrap it with Ray
     ...     model = GAT(in_dim=1433, num_classes=7)
-    ...     if os.path.isfile(config["model_dir"]):
-    ...         model.load_state_dict(torch.load(config["model_dir"]))
     ...     model = train.torch.prepare_model(model)
     ...
     ...     # Initialize the optimizer and wrap it with Ray
-    ...     optimizer = torch.optim.Adam(model.parameters(), lr=.005, weight_decay=0.0005)
+    ...     optimizer = torch.optim.Adam(model.parameters(), lr=config["learning_rate"], weight_decay=0.0005)
     ...     optimizer = train.torch.prepare_optimizer(optimizer)
     ...
     ...     # Define the loss function
@@ -232,60 +187,66 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...             loss.backward()
     ...             optimizer.step()
     ...
-    ...             session.report({"metric": (scores.argmax(1) == labels).float().mean().item(), "loss": loss.item()})
-    ...
-    ...     torch.save(model.state_dict(), config["model_dir"])
+    ...     session.report({"metric": (scores.argmax(1) == labels).float().mean().item()})
 
-In this step we start the training job.
-First we start a local ray cluster with `ray.init() <https://docs.ray.io/en/latest/ray-core/package-ref.html#ray-init>`_.
-Next we initialize a `TorchTrainer <https://docs.ray.io/en/latest/ray-air/package-ref.html#pytorch>`_
-object to wrap our training loop. This takes parameters that go to the training loop and parameters
-to define number workers and cpus/gpus used.
-Finally we call trainer.fit() to execute the training loop.
+Now we define the objective function using this trainer. The objective function will
+take a set of parameters from the tuner and return a fitness value.
 
 .. code-block:: python
 
-    >>> model_dir = tempfile.TemporaryDirectory()
-
-    >>> ray.init(num_cpus=3)
+    >>> ray.init(num_cpus=8)
     RayContext(...)
 
-    >>> trainer = TorchTrainer(
-    ...     train_func,
-    ...     train_loop_config={
-    ...         "batch_size": 2708,
-    ...         "data_dir": data_dir.name,
-    ...         "sample_filename": "train.nodes",
-    ...         "n_epochs": 100,
-    ...         "model_dir": f"{model_dir.name}/model.pt",
-    ...     },
-    ...     run_config=RunConfig(verbose=0),
-    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
-    ... )
-    >>> result = trainer.fit()
+    >>> def objective(learning_rate, n_epochs):
+    ...     trainer = TorchTrainer(
+    ...         train_func,
+    ...         train_loop_config={
+    ...             "batch_size": 2708,
+    ...             "data_dir": data_dir.name,
+    ...             "sample_filename": "train.nodes",
+    ...             "n_epochs": n_epochs,
+    ...             "learning_rate": learning_rate,
+    ...         },
+    ...         run_config=RunConfig(verbose=0),
+    ...         scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
+    ...     )
+    ...     result = trainer.fit()
+    ...     return result
 
-Evaluate
-========
+This training function wraps this objective function for use in the tuner.
 
 .. code-block:: python
 
-    >>> trainer = TorchTrainer(
-    ...     train_func,
-    ...     train_loop_config={
-    ...         "batch_size": 2708,
-    ...         "data_dir": data_dir.name,
-    ...         "sample_filename": "test.nodes",
-    ...         "n_epochs": 1,
-    ...         "model_dir": f"{model_dir.name}/model.pt",
-    ...     },
-    ...     run_config=RunConfig(verbose=0),
-    ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
-    ... )
-    >>> result = trainer.fit()
-    >>> result.metrics["metric"]
-    0.86...
-    >>> result.metrics["loss"]
-    0.65...
+    >>> def training_function(config):
+    ...    results = objective(config["learning_rate"], config["n_epochs"])
+    ...    tune.report(accuracy=results.metrics["metric"])
 
-    >>> data_dir.cleanup()
-    >>> model_dir.cleanup()
+Finally we define and make use of the tuner. We use the hyperparameters `learning_rate` and
+`n_epochs`, with one training iteration per configuration.
+
+See the `Ray Tune guides, here<https://docs.ray.io/en/latest/tune/tutorials/overview.html>`_.
+
+.. code-block:: python
+
+    >>> tuner = tune.Tuner(
+    ...     training_function,
+    ...     param_space={
+    ...         "learning_rate": tune.grid_search([.05, .005, .0005]),
+    ...         "n_epochs": tune.choice([2, 4])
+    ...     },
+    ...     tune_config=tune.TuneConfig(num_samples=1),
+    ...     run_config=RunConfig(
+    ...         stop={"training_iteration": 1},
+    ...         verbose=0,
+    ...     ),
+    ... )
+    >>> analysis = tuner.fit()
+
+    >>> analysis.get_best_result(metric="accuracy", mode="max")
+    Result(metrics={'accuracy': ..., 'experiment_tag': '..._learning_rate=...,n_epochs=...'}, ...)
+
+    >>> analysis.get_dataframe()
+       accuracy  ...
+    0  0.3...
+    1  0.3...
+    [3 rows x 21 columns]

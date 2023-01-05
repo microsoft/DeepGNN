@@ -4,6 +4,7 @@
 import sys
 import platform
 import pytest
+import tempfile
 import os
 import shutil
 import argparse
@@ -17,7 +18,7 @@ from deepgnn.graph_engine import CSVNodeSampler, GraphEngineBackend
 from args import init_args  # type: ignore
 from model import HetGnnModel  # type: ignore
 from sampler import HetGnnDataSampler  # type: ignore
-from ray_util import run_ray  # type: ignore
+from main import run_ray  # type: ignore
 from deepgnn.graph_engine.data.ppi import PPI
 
 
@@ -33,67 +34,15 @@ def setup_module(module):
     )
 
 
-def create_model(args: argparse.Namespace):
-    get_logger().info(f"Creating HetGnnModel with seed:{args.seed}.")
-    # set seed before instantiating the model
-    return HetGnnModel(
-        node_type_count=args.node_type_count,
-        neighbor_count=args.neighbor_count,
-        embed_d=args.feature_dim,  # currently feature dimention is equal to embedding dimention.
-        feature_type=get_python_type(args.feature_type),
-        feature_idx=args.feature_idx,
-        feature_dim=args.feature_dim,
-    )
-
-
-def create_dataset(
-    args: argparse.Namespace,
-    model: BaseModel,
-    rank: int = 0,
-    world_size: int = 1,
-    backend: GraphEngineBackend = None,
-):
-    if args.mode == TrainMode.INFERENCE:
-        return TorchDeepGNNDataset(
-            sampler_class=CSVNodeSampler,
-            backend=backend,
-            query_fn=model.query_inference,
-            prefetch_queue_size=10,
-            prefetch_worker_size=2,
-            batch_size=args.batch_size,
-            sample_file=args.sample_file,
-        )
-    else:
-        return TorchDeepGNNDataset(
-            sampler_class=HetGnnDataSampler,
-            backend=backend,
-            query_fn=model.query,
-            prefetch_queue_size=10,
-            prefetch_worker_size=2,
-            num_nodes=args.max_id // world_size,
-            batch_size=args.batch_size,
-            node_type_count=args.node_type_count,
-            walk_length=args.walk_length,
-        )
-
-
-def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):
-    return torch.optim.Adam(
-        filter(lambda p: p.requires_grad, model.parameters()),
-        lr=args.learning_rate * world_size,
-        weight_decay=0,
-    )
-
-
 def test_run_args():
     # setup default logging component.
     setup_default_logging_config(enable_telemetry=True)
 
-    data_dir = "/tmp/cora"
+    data_dir = f"{tempfile.gettempdir()}/cora"
     PPI(data_dir)
 
     try:
-        model_dir = "/tmp/hetgnn_test_args"
+        model_dir = f"{tempfile.gettempdir()}/hetgnn_test_args"
         shutil.rmtree(model_dir)
     except FileNotFoundError:
         pass
@@ -109,10 +58,6 @@ def test_run_args():
     # User only needs to prepare initializing function for model, dataset, optimizer and args.
     # reference: `deepgnn/pytorch/training/factory.py`
     run_ray(
-        init_model_fn=create_model,
-        init_dataset_fn=create_dataset,
-        init_optimizer_fn=create_optimizer,
-        init_args_fn=init_args,
         run_args=run_args,
     )
 

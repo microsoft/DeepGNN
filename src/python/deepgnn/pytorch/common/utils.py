@@ -7,10 +7,10 @@ import os
 import re
 from typing import Tuple, List
 import torch
-
 from pathlib import Path
 from urllib.parse import urlparse
-
+from ray.air import session
+from deepgnn import TrainMode
 from deepgnn import get_logger
 from deepgnn.pytorch.common.consts import PREFIX_CHECKPOINT
 
@@ -120,3 +120,41 @@ def rotate_checkpoints(
                 get_logger().info(
                     f"Deleted checkpoint [{checkpoint}] due to max_saved_ckpts:{max_saved_ckpts}"
                 )
+
+
+def load_checkpoint(model, logger, args):
+    """Load a checkpoint."""
+    epochs_trained = 0
+    steps_in_epoch_trained = 0
+    # Search and sort checkpoints from model path.
+    ckpts = get_sorted_checkpoints(args.model_dir)
+    ckpt_path = ckpts[-1] if len(ckpts) > 0 else None
+    if ckpt_path is not None:
+        init_ckpt = torch.load(ckpt_path, map_location="cpu")
+        if args.mode == TrainMode.TRAIN:
+            epochs_trained = init_ckpt["epoch"]
+            steps_in_epoch_trained = init_ckpt["step"]
+
+        if session.get_world_rank() == 0:
+            model.load_state_dict(init_ckpt["state_dict"])
+            logger.info(
+                f"Loaded initial checkpoint: {ckpt_path},"
+                f" trained epochs: {epochs_trained}, steps: {steps_in_epoch_trained}"
+            )
+        del init_ckpt
+    return epochs_trained, steps_in_epoch_trained
+
+
+def save_checkpoint(model, logger, epoch, step, args, **kwargs):
+    """Save a checkpoint."""
+    os.makedirs(args.save_path, exist_ok=True)
+    save_path = os.path.join(
+        f"{args.save_path}",
+        f"{PREFIX_CHECKPOINT}-{epoch:03}-{step:06}.pt",
+    )
+    torch.save(
+        {"state_dict": model.state_dict(), "epoch": epoch, "step": step, **kwargs},
+        save_path,
+    )
+    rotate_checkpoints(args.save_path, args.max_saved_ckpts)
+    logger.info(f"Saved checkpoint to {save_path}.")

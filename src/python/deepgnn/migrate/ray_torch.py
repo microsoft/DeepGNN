@@ -39,10 +39,6 @@ if __name__ == "__main__":
         )
         ray_util = ray_util.replace("train.torch.accelerate(args.fp16)", "hvd.init()")
         ray_util = ray_util.replace(
-            "model = train.torch.prepare_model(model, move_to_device=args.gpu)",
-            "device = train.torch.get_device()\n    model.to(device)",
-        )
-        ray_util = ray_util.replace(
             "train.torch.prepare_optimizer(optimizer)",
             "hvd.DistributedOptimizer(optimizer, named_parameters=model.named_parameters())",
         )
