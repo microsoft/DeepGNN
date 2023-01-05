@@ -7,3 +7,4 @@ Advanced
 
    hdfs
    sql_shard
+   meta_opt
