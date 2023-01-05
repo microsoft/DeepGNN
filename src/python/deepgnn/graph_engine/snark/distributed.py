@@ -3,7 +3,8 @@
 
 """Snark districuted client implementation."""
 from itertools import repeat
-from typing import List, Dict
+from typing import List, Dict, Union
+import logging
 import tempfile
 
 import deepgnn.graph_engine.snark.client as client
@@ -17,17 +18,32 @@ class Client(ge_snark.Client):
     """Distributed client."""
 
     def __init__(
-        self, servers: List[str], ssl_cert: str = None, delayed_start: bool = False
+        self,
+        servers: Union[str, List[str]],
+        ssl_cert: str = None,
     ):
         """Init snark client to wrapper around ctypes API of distributed graph."""
         self.logger = get_logger()
-        # self.logger.info(f"servers: {servers}. SSL: {ssl_cert}")
-        self.graph = client.DistributedGraph(servers, ssl_cert, delayed_start)
+        self.logger.info(f"servers: {servers}. SSL: {ssl_cert}")
+        if isinstance(servers, str):
+            servers = [servers]
+        self._servers = servers
+        self._ssl_cert = ssl_cert
+        self.graph = client.DistributedGraph(servers, ssl_cert)
         self.node_samplers: Dict[str, client.NodeSampler] = {}
         self.edge_samplers: Dict[str, client.EdgeSampler] = {}
         # self.logger.info(
         #    f"Loaded distributed snark client. Node counts: {self.graph.meta.node_count_per_type}. Edge counts: {self.graph.meta.edge_count_per_type}"
         # )
+
+    def __reduce__(self):
+        """On serialize reload as new client."""
+
+        def deserialize(*args):
+            get_logger().setLevel(logging.ERROR)
+            return Client(*args)
+
+        return deserialize, (self._servers, self._ssl_cert)
 
 
 class Server:

@@ -232,20 +232,7 @@ class MemoryGraph:
 
     def __del__(self):
         """Delete graph engine client."""
-        if hasattr(self, "lib"):
-            self.lib.DeleteClient.errcheck = _ErrCallback(  # type: ignore
-                "delete client"
-            )
-            self.lib.DeleteClient(byref(self.g_))
-
-    def __reduce__(self):
-        """Serialize object."""
-        class_fn = type(self)
-
-        def deserializer(*args):
-            return class_fn(*args)
-
-        return deserializer, self._init_args
+        self.reset()
 
     # Extract CDLL library functions descriptions in a separate method:
     # * describing C functions is not thread safe even if values are the same.
@@ -1072,17 +1059,7 @@ class NodeSampler:
 
     def __del__(self):
         """Delete node sampler."""
-        self.lib.DeleteSampler.errcheck = _ErrCallback("delete samper")  # type: ignore
-        self.lib.DeleteSampler(byref(self.ns_))
-
-    def __reduce__(self):
-        """Serialize object."""
-        class_fn = type(self)
-
-        def deserializer(*args):
-            return class_fn(*args)
-
-        return deserializer, self._init_args
+        self.reset()
 
     def sample(
         self, size: int, seed: Optional[int] = None
@@ -1197,17 +1174,7 @@ class EdgeSampler:
 
     def __del__(self):
         """Delete edge sampler."""
-        self.lib.DeleteSampler.errcheck = _ErrCallback("delete samper")  # type: ignore
-        self.lib.DeleteSampler(byref(self.es_))
-
-    def __reduce__(self):
-        """Serialize object."""
-        class_fn = type(self)
-
-        def deserializer(*args):
-            return class_fn(*args)
-
-        return deserializer, self._init_args
+        self.reset()
 
     def sample(
         self, size: int, seed: Optional[int] = None

@@ -43,7 +43,11 @@ def graph_engine(version: str):
             fo.write("include python/deepgnn/graph_engine/snark/%s\n" % libname)
 
     here = pathlib.Path(__file__).parent.parent.resolve()
-    long_description = (here / "../../README.md").read_text(encoding="utf-8")
+    if sys.version_info.major > 3 or sys.version_info.minor >= 10:
+        readme_path = here / "../README.md"
+    else:
+        readme_path = here / "../../README.md"
+    long_description = readme_path.read_text(encoding="utf-8")
 
     setuptools.setup(
         name="deepgnn-ge",
