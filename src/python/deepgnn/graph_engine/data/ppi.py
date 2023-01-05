@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import zipfile
+import tempfile
 from typing import List, Dict
 
 import numpy as np
@@ -49,7 +50,7 @@ class PPI(Client):
         self.GRAPH_NAME = "ppi"
         self.output_dir = output_dir
         if self.output_dir is None:
-            self.output_dir = os.path.join("/tmp/", self.GRAPH_NAME)
+            self.output_dir = os.path.join(tempfile.gettempdir(), self.GRAPH_NAME)
         self._build_graph(self.output_dir)
         super().__init__(path=self.output_dir, partitions=[0])
 
@@ -189,7 +190,7 @@ class PPI(Client):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", default="/tmp/ppi", type=str)
+    parser.add_argument("--data_dir", default=f"{tempfile.gettempdir()}/ppi", type=str)
     args = parser.parse_args()
 
     g = PPI(args.data_dir)

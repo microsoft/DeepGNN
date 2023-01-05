@@ -3,6 +3,7 @@
 """Cora dataset."""
 import argparse
 import os
+import tempfile
 from collections import defaultdict
 from typing import List, Tuple, Dict, Set, DefaultDict
 from deepgnn.graph_engine.data.data_util import Dataset, select_training_test_nodes
@@ -98,7 +99,7 @@ class CoraFull(Dataset):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", default="/tmp/cora", type=str)
+    parser.add_argument("--data_dir", default=f"{tempfile.gettempdir()}/cora", type=str)
     parser.add_argument("--train_node_ratio", default=1.0, type=float)
     parser.add_argument("--random_selection", action="store_true")
     args = parser.parse_args()

@@ -4,6 +4,7 @@
 import sys
 import platform
 import pytest
+import tempfile
 import os
 import shutil
 import argparse
@@ -37,11 +38,11 @@ def test_run_args():
     # setup default logging component.
     setup_default_logging_config(enable_telemetry=True)
 
-    data_dir = "/tmp/cora"
+    data_dir = f"{tempfile.gettempdir()}/cora"
     PPI(data_dir)
 
     try:
-        model_dir = "/tmp/hetgnn_test_args"
+        model_dir = f"{tempfile.gettempdir()}/hetgnn_test_args"
         shutil.rmtree(model_dir)
     except FileNotFoundError:
         pass

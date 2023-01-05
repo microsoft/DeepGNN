@@ -3,6 +3,7 @@
 """Reddit dataset."""
 
 import argparse
+import tempfile
 import json
 import os
 from typing import Dict
@@ -62,7 +63,7 @@ class Reddit(PPI):
         self.GRAPH_NAME = "reddit"
         self.output_dir = output_dir
         if self.output_dir is None:
-            self.output_dir = os.path.join("/tmp/", self.GRAPH_NAME)
+            self.output_dir = os.path.join(tempfile.gettempdir(), self.GRAPH_NAME)
         self._build_graph(self.output_dir)
         super(PPI, self).__init__(
             path=self.output_dir, partitions=list(range(self._num_partitions))
@@ -127,7 +128,9 @@ class Reddit(PPI):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", default="/tmp/reddit", type=str)
+    parser.add_argument(
+        "--data_dir", default=f"{tempfile.gettempdir()}/reddit", type=str
+    )
     parser.add_argument("--edge_downsample_pct", default=0.1, type=float)
     parser.add_argument("--num_partitions", default=2, type=int)
 
