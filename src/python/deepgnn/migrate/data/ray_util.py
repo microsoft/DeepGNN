@@ -52,6 +52,8 @@ def train_func(config: Dict):
     dataset = ray.data.range(max_id).repartition(max_id // args.batch_size)
     pipe = dataset.window(blocks_per_window=4).repeat(args.num_epochs)
     def transform_batch(idx: list) -> dict:
+        # If get Ray error with return shape, use deepgnn.graph_engine.util.serialize/deserialize
+        # in your query and forward function
         return model.query(g, np.array(idx))  # TODO Update to your query function
     pipe = pipe.map_batches(transform_batch)
 
