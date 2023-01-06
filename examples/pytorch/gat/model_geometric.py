@@ -56,7 +56,7 @@ class GATQuery:
         label = label.astype(np.int32)
         edges = np.transpose(edges)
 
-        graph_tensor = (nodes, feat, edges, input_mask, label)
+        graph_tensor = {"nodes": np.expand_dims(nodes, 0), "feat": np.expand_dims(feat, 0), "edge_index": np.expand_dims(edges, 0), "mask": np.expand_dims(input_mask, 0), "label": np.expand_dims(label, 0)}
         return graph_tensor
 
 
@@ -101,12 +101,11 @@ class GAT(BaseModel):
     def forward(self, inputs):
         """Calculate loss, make predictions and fetch labels."""
         # fmt: off
-        nodes, feat, edge_index, mask, labels = inputs
-        nodes = torch.squeeze(nodes)                # [N]
-        feat = torch.squeeze(feat)                  # [N, F]
-        edge_index = torch.squeeze(edge_index)      # [2, X]
-        mask = torch.squeeze(mask)                  # [N]
-        labels = torch.squeeze(labels)              # [N]
+        nodes = torch.squeeze(inputs["nodes"])                # [N]
+        feat = torch.squeeze(inputs["feat"])                  # [N, F]
+        edge_index = torch.squeeze(inputs["edge_index"])      # [2, X]
+        mask = torch.squeeze(inputs["mask"])                  # [N]
+        labels = torch.squeeze(inputs["label"])               # [N]
         # fmt: on
 
         x = feat
