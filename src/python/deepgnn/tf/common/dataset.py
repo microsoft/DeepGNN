@@ -5,13 +5,11 @@ from typing import Tuple, Optional
 from deepgnn import get_logger
 import tensorflow as tf
 from deepgnn.graph_engine.backends.common import GraphEngineBackend
-from deepgnn.graph_engine.graph_dataset import DeepGNNDataset
-from deepgnn.graph_engine.samplers import BaseSampler
 from typing import Callable
 
 
 def create_tf_dataset(
-    sampler_class: BaseSampler,
+    sampler_class,
     query_fn: Callable,
     backend: GraphEngineBackend = None,
     num_workers: int = 1,

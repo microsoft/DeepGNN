@@ -17,7 +17,6 @@ py_library(
     ],
     deps = [
         "//src/python/deepgnn/pytorch/encoding/twinbert:deepgnn_pytorch_encoding_twinbert",
-        "//src/python/deepgnn/graph_engine/backends/snark:graph_engine_backends_snark",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
     ],
     visibility = ["//visibility:public"],

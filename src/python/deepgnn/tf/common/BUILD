@@ -25,7 +25,6 @@ py_library(
     deps = [
         "//src/python/deepgnn/tf:deepgnn_tf",
         "//src/python/deepgnn/tf/layers:deepgnn_tf_layers",
-        "//src/python/deepgnn/graph_engine/backends/snark:graph_engine_backends_snark",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
     ],
     visibility = ["//visibility:public"],

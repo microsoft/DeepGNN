@@ -24,7 +24,6 @@ from ray.train.torch import TorchTrainer
 from ray.air import session
 from ray.air.config import ScalingConfig
 from deepgnn import TrainMode, get_logger
-from deepgnn.graph_engine import create_backend, BackendOptions
 from deepgnn.graph_engine.samplers import GENodeSampler, GEEdgeSampler
 from deepgnn.pytorch.common import get_args
 from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
