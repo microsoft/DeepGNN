@@ -56,6 +56,8 @@ def train_func(config: Dict):
     pipe = pipe.map_batches(transform_batch)
 
     for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
+        if epoch < epochs_trained:
+            continue
         scores = []
         labels = []
         losses = []
