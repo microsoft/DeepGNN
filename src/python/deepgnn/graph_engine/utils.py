@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 """Graph engine configuration."""
 import argparse
+import numpy as np
 from deepgnn.arg_types import str2bool
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
 
@@ -80,3 +81,37 @@ def define_param_graph_engine(parser: argparse.ArgumentParser):
         default="",
         help="Directory to synchronize start of graph engine and workers.",
     )
+
+
+def serialize(inputs, batch_size):
+	vector_sizes = [i.size for i in inputs]
+	vector_shape_lens = [len(i.shape) for i in inputs]
+	output_size_unbuffered = 1 + len(vector_shape_lens) + sum(vector_shape_lens) + sum(vector_sizes)
+	mult = int(np.ceil(output_size_unbuffered / batch_size))
+	output = np.zeros(batch_size * mult, dtype=np.float64)
+	output[0] = len(vector_sizes)
+	i = 1
+	for inpt in inputs:
+		size = inpt.size
+		shape = inpt.shape
+		output[i] = len(shape)
+		output[i+1:i+1+len(shape)] = shape
+		i += 1 + len(shape)
+		output[i:i+size] = inpt.flatten()
+		i += size
+	return output.reshape(batch_size, -1)
+
+
+def deserialize(value):
+	value = value.flatten()
+	output = []
+	n_items = int(value[0])
+	i = 1
+	for item in range(n_items):
+		shape_len = int(value[i])
+		shape = [int(v) for v in value[i+1:i+1+shape_len]]
+		size = int(np.product(shape))
+		i += 1 + shape_len
+		output.append(value[i:i+size].reshape(shape))
+		i += size
+	return output

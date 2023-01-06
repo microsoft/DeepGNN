@@ -7,12 +7,10 @@ import torch
 
 from deepgnn import str2list_int, setup_default_logging_config
 from deepgnn import get_logger
-from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 
 from deepgnn.pytorch.modeling import BaseModel
 from ray_util import run_ray
 
-from deepgnn.graph_engine import FileNodeSampler, GraphEngineBackend
 from model_geometric import GAT, GATQueryParameter  # type: ignore
 
 
