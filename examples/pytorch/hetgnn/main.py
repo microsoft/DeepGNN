@@ -53,7 +53,9 @@ def train_func(config: Dict):
     else:
         model.eval()
 
-    epochs_trained, steps_in_epoch_trained = load_checkpoint(model, logger, args)
+    epochs_trained, steps_in_epoch_trained = load_checkpoint(
+        model, logger, args, session.get_world_rank()
+    )
 
     optimizer = torch.optim.Adam(
         filter(lambda p: p.requires_grad, model.parameters()),

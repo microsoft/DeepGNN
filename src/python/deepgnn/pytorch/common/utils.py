@@ -9,7 +9,6 @@ from typing import Tuple, List
 import torch
 from pathlib import Path
 from urllib.parse import urlparse
-from ray.air import session
 from deepgnn import TrainMode
 from deepgnn import get_logger
 from deepgnn.pytorch.common.consts import PREFIX_CHECKPOINT
@@ -122,7 +121,7 @@ def rotate_checkpoints(
                 )
 
 
-def load_checkpoint(model, logger, args):
+def load_checkpoint(model, logger, args, world_rank=0):
     """Load a checkpoint."""
     epochs_trained = 0
     steps_in_epoch_trained = 0
@@ -135,7 +134,7 @@ def load_checkpoint(model, logger, args):
             epochs_trained = init_ckpt["epoch"]
             steps_in_epoch_trained = init_ckpt["step"]
 
-        if session.get_world_rank() == 0:
+        if world_rank == 0:
             model.load_state_dict(init_ckpt["state_dict"])
             logger.info(
                 f"Loaded initial checkpoint: {ckpt_path},"
