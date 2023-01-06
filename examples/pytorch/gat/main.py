@@ -62,7 +62,7 @@ def create_dataset(
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
-    backend: GraphEngineBackend = None,
+    backend = None,
 ):
     return TorchDeepGNNDataset(
         sampler_class=FileNodeSampler,
@@ -84,7 +84,7 @@ def create_eval_dataset(
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
-    backend: GraphEngineBackend = None,
+    backend = None,
 ):
     return TorchDeepGNNDataset(
         sampler_class=FileNodeSampler,

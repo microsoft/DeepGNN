@@ -94,7 +94,6 @@ def run_ray(init_model_fn, init_dataset_fn, init_optimizer_fn, init_args_fn, **k
         train_loop_config={
             "args": args,
             "init_model_fn": init_model_fn,
-            "init_dataset_fn": init_dataset_fn,
             "init_optimizer_fn": init_optimizer_fn,
             **kwargs,
         },

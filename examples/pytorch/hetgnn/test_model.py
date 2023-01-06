@@ -19,7 +19,6 @@ import torch
 from torch.utils.data import IterableDataset
 
 from deepgnn import get_logger
-from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.graph_engine import (
     Graph,
     SamplingStrategy,
