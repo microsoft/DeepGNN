@@ -35,7 +35,9 @@ def train_func(config: Dict):
     else:
         model.eval()
 
-    epochs_trained, steps_in_epoch_trained = load_checkpoint(model, logger, args, session.get_world_rank())
+    epochs_trained, steps_in_epoch_trained = load_checkpoint(
+        model, logger, args, session.get_world_rank()
+    )
 
     optimizer = config["init_optimizer_fn"](
         args,
