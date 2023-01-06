@@ -32,8 +32,6 @@ py_test(
     srcs_version = "PY3",
     deps = [
         ":deepgnn_pytorch_encoding",
-        requirement("ray"),
-        requirement("pyarrow"),
         requirement("numpy"),
         requirement("pytest"),
         requirement("scikit-learn"),
@@ -57,8 +55,6 @@ py_test(
     srcs_version = "PY3",
     deps = [
         ":deepgnn_pytorch_encoding",
-        requirement("ray"),
-        requirement("pyarrow"),
         requirement("numpy"),
         requirement("pytest"),
         requirement("fsspec"),
