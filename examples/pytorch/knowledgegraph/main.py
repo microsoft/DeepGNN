@@ -8,8 +8,6 @@ import numpy as np
 from deepgnn import TrainMode, setup_default_logging_config
 
 from deepgnn.pytorch.modeling import BaseModel
-from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
-from deepgnn.graph_engine import GEEdgeSampler, GraphEngineBackend
 from model import KGEModel  # type: ignore
 from deepgnn import get_logger
 
@@ -25,7 +23,6 @@ from ray.train.torch import TorchTrainer
 from ray.air import session
 from ray.air.config import ScalingConfig
 from deepgnn import TrainMode, get_logger
-from deepgnn.graph_engine.samplers import GENodeSampler, GEEdgeSampler
 from deepgnn.pytorch.common import get_args
 from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
 
@@ -61,31 +58,27 @@ def train_func(config: Dict):
     )
     optimizer = train.torch.prepare_optimizer(optimizer)
 
-    backend = create_backend(
-        BackendOptions(args), is_leader=(session.get_world_rank() == 0)
-    )
-    dataset = TorchDeepGNNDataset(
-        sampler_class=GEEdgeSampler,
-        backend=backend,
-        query_fn=model.query if args.mode == TrainMode.TRAIN else model.query_eval,
-        prefetch_queue_size=10,
-        prefetch_worker_size=2,
-        batch_size=args.batch_size,
-        edge_types=np.array([args.edge_type], dtype=np.int32),
-        epochs=1,
-        sample_num=args.max_id // session.get_world_size(),
-        num_workers=session.get_world_size(),
-    )
-    num_workers = 0
-    dataset = torch.utils.data.DataLoader(
-        dataset=dataset,
-        num_workers=num_workers,
-    )
-    for epoch in range(epochs_trained, args.num_epochs):
+    address = "localhost:9999"
+    s = Server(address, args.data_dir, 0, len(args.partitions))
+    g = DistributedClient([address])
+    # NOTE: See https://deepgnn.readthedocs.io/en/latest/graph_engine/dataset.html
+    #       for how to use a different sampler
+    max_id = g.node_count(args.node_type) if args.max_id in [-1, None] else args.max_id
+    dataset = ray.data.range(max_id).repartition(max_id // args.batch_size)
+    pipe = dataset.window(blocks_per_window=4).repeat(args.num_epochs)
+    def transform_batch(idx: list) -> dict:
+        # If get Ray error with return shape, use deepgnn.graph_engine.util.serialize/deserialize
+        # in your query and forward function
+        return model.query(g, np.array(idx))  # TODO Update to your query function
+    pipe = pipe.map_batches(transform_batch)
+
+    for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
+        if epoch < epochs_trained:
+            continue
         scores = []
         labels = []
         losses = []
-        for step, batch in enumerate(dataset):
+        for step, batch in enumerate(epoch_pipe.iter_torch_batches(batch_size=args.batch_size)):
             if step < steps_in_epoch_trained:
                 continue
             loss, score, label = model(batch)
