@@ -18,12 +18,8 @@ instructions provided by the bot. You will only need to do this once across all 
 You'll need [bazel](https://docs.bazel.build/versions/master/install-ubuntu.html) and g++-11 to use project from source:
 
 ```bash
-sudo apt install curl gnupg
-curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel.gpg
-sudo mv bazel.gpg /etc/apt/trusted.gpg.d/
-echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
-
-sudo apt update && sudo apt install bazel clang-format g++-11
+sudo apt update && sudo apt install bazel-5.4.0 clang-format g++-11
+sudo cp /usr/bin/bazel-5.4.0 /usr/bin/bazel
 ```
 
 ## MacOS
