@@ -8,7 +8,7 @@ import torch.nn as nn
 
 from typing import Optional, Tuple
 from deepgnn import TrainMode, vec2str
-from deepgnn.graph_engine import Graph, multihop
+from deepgnn.graph_engine import Graph, multihop, INVALID_NODE_ID
 
 from deepgnn.pytorch.common.consts import (
     NODE_SRC,

@@ -11,7 +11,7 @@ from fsspec.utils import infer_storage_options
 
 
 QueryOutput = Union[dict, tuple, np.ndarray, list]
-
+INVALID_NODE_ID = -1
 
 class SamplingStrategy(IntEnum):
     """Strategies to sample node/edge from the graph engine."""
