@@ -158,6 +158,7 @@ class HetGnnModel(BaseUnsupervisedModel):
         Aggregating all the neighbors of node grouped by node types
         using BiLSTM and mean pooling.
         """
+        neigh_feats = torch.Tensor(neigh_feats)
         batch_s = int(neigh_feats.squeeze(0).shape[0] / self.neighbor_count)
 
         neigh_agg = self.content_agg(node_type, neigh_feats).view(
@@ -177,6 +178,7 @@ class HetGnnModel(BaseUnsupervisedModel):
 
         Aggregating all the heterogeneous content of node using BiLSTM and mean pooling.
         """
+        feats = torch.Tensor(feats)
         feature_list = feats.squeeze(0)  # self.features(torch.as_tensor(id_batch[0]))
         concate_embed = feature_list.view(feature_list.shape[0], 1, self.embed_d)
         concate_embed = torch.transpose(concate_embed, 0, 1)

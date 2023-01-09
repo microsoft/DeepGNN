@@ -7,8 +7,6 @@ from deepgnn import TrainMode, setup_default_logging_config
 from deepgnn import get_logger
 from deepgnn.pytorch.common.utils import get_python_type
 from deepgnn.pytorch.modeling import BaseModel
-from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
-from deepgnn.graph_engine import CSVNodeSampler, GraphEngineBackend
 from args import init_args  # type: ignore
 from model import HetGnnModel  # type: ignore
 from sampler import HetGnnDataSampler  # type: ignore
@@ -23,10 +21,12 @@ import ray.train as train
 from ray.train.torch import TorchTrainer
 from ray.air import session
 from ray.air.config import ScalingConfig
+from ray.data import DatasetPipeline
+import pyarrow as pa
 from deepgnn import TrainMode, get_logger
-from deepgnn.graph_engine.samplers import GENodeSampler, GEEdgeSampler
 from deepgnn.pytorch.common import get_args
 from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
+from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
 
 
 def train_func(config: Dict):
@@ -61,43 +61,25 @@ def train_func(config: Dict):
     )
     optimizer = train.torch.prepare_optimizer(optimizer)
 
-    backend = create_backend(
-        BackendOptions(args), is_leader=(session.get_world_rank() == 0)
-    )
-    if args.mode == TrainMode.INFERENCE:
-        dataset = TorchDeepGNNDataset(
-            sampler_class=CSVNodeSampler,
-            backend=backend,
-            query_fn=model.query_inference,
-            prefetch_queue_size=10,
-            prefetch_worker_size=2,
-            batch_size=args.batch_size,
-            sample_file=args.sample_file,
-        )
-    else:
-        dataset = TorchDeepGNNDataset(
-            sampler_class=HetGnnDataSampler,
-            backend=backend,
-            query_fn=model.query,
-            prefetch_queue_size=10,
-            prefetch_worker_size=2,
-            num_nodes=args.max_id // session.get_world_size(),
-            batch_size=args.batch_size,
-            node_type_count=args.node_type_count,
-            walk_length=args.walk_length,
-        )
-    dataset = torch.utils.data.DataLoader(
-        dataset=dataset,
-        num_workers=0,
-    )
-    for epoch in range(epochs_trained, args.num_epochs):
+    address = "localhost:9999"
+    s = Server(address, args.data_dir, 0, len(args.partitions))
+    g = DistributedClient([address])
+
+    max_id = g.node_count(args.node_type) if args.max_id in [-1, None] else args.max_id
+    sampler = HetGnnDataSampler(g, max_id, args.batch_size, 3)
+    dataset = ray.data.range(max_id).repartition(max_id // args.batch_size)
+    pipe = dataset.window(blocks_per_window=4).repeat(args.num_epochs)
+
+    for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
+        if epoch < epochs_trained:
+            continue
         scores = []
         labels = []
         losses = []
-        for step, batch in enumerate(dataset):
+        for step, batch in enumerate(epoch_pipe.iter_torch_batches(batch_size=args.batch_size)):
             if step < steps_in_epoch_trained:
                 continue
-            loss, score, label = model(batch)
+            loss, score, label = model(model.query(g, next(sampler)))
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -120,7 +102,7 @@ def train_func(config: Dict):
 
 def run_ray(**kwargs):
     """Run ray trainer."""
-    ray.init(num_cpus=3)
+    ray.init(num_cpus=4)
 
     args = get_args(init_args, kwargs["run_args"] if "run_args" in kwargs else None)
 

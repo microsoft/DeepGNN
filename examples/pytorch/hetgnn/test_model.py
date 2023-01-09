@@ -22,11 +22,6 @@ from deepgnn import get_logger
 from deepgnn.graph_engine import (
     Graph,
     SamplingStrategy,
-    GraphType,
-    BackendType,
-    BackendOptions,
-    GraphEngineBackend,
-    create_backend,
 )
 from deepgnn.graph_engine.data.citation import Cora
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
