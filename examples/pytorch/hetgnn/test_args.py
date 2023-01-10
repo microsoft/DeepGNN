@@ -13,7 +13,6 @@ from deepgnn import TrainMode, setup_default_logging_config
 from deepgnn import get_logger
 from deepgnn.pytorch.common.utils import get_python_type
 from deepgnn.pytorch.modeling import BaseModel
-from deepgnn.graph_engine import CSVNodeSampler, GraphEngineBackend
 from args import init_args  # type: ignore
 from model import HetGnnModel  # type: ignore
 from sampler import HetGnnDataSampler  # type: ignore

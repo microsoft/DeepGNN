@@ -76,7 +76,9 @@ def train_func(config: Dict):
         scores = []
         labels = []
         losses = []
-        for step, batch in enumerate(epoch_pipe.iter_torch_batches(batch_size=args.batch_size)):
+        for step, batch in enumerate(
+            epoch_pipe.iter_torch_batches(batch_size=args.batch_size)
+        ):
             if step < steps_in_epoch_trained:
                 continue
             loss, score, label = model(model.query(g, next(sampler)))

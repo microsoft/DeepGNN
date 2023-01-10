@@ -1,8 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 """Commmon functions to create datasets in TF."""
-from typing import Tuple, Optional
-from deepgnn import get_logger
 import tensorflow as tf
 from typing import Callable
 

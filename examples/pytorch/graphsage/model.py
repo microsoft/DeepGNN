@@ -94,8 +94,12 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         )
 
         context["x0"] = x0.reshape((context["inputs"].shape[0], -1, self.feature_dim))
-        context["out_1"] =  np.array([n1_out.shape[0]] * context["inputs"].shape[0])  # Number of output nodes of layer 1
-        context["out_2"] =  np.array([n2_out.shape[0]] * context["inputs"].shape[0])  # Number of output nodes of layer 2
+        context["out_1"] = np.array(
+            [n1_out.shape[0]] * context["inputs"].shape[0]
+        )  # Number of output nodes of layer 1
+        context["out_2"] = np.array(
+            [n2_out.shape[0]] * context["inputs"].shape[0]
+        )  # Number of output nodes of layer 2
         return context
 
     def get_score(self, context: dict) -> torch.Tensor:  # type: ignore[override]
@@ -114,7 +118,9 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
         out_1 = context["out_1"][0]
         out_2 = context["out_2"][0]
         edges_1 = self.build_edges_tensor(out_1, self.fanouts[0])  # Edges for 1st layer
-        x1 = self.convs[0](context["x0"].reshape((-1, context["x0"].shape[-1])), edges_1)[
+        x1 = self.convs[0](
+            context["x0"].reshape((-1, context["x0"].shape[-1])), edges_1
+        )[
             :out_1, :
         ]  # Output of 1st layer (cut out 2 hop nodes)
         x1 = F.relu(x1)

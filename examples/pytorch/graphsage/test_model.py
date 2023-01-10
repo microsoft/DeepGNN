@@ -56,9 +56,7 @@ def train_graphsage_cora_ddp_trainer(mock_graph):
         )
         num_workers = (
             0
-            if hasattr(dataset, "sampler_class")
-            and issubclass(dataset.sampler_class, (GENodeSampler, GEEdgeSampler))
-            or platform.system() == "Windows"
+            if platform.system() == "Windows"
             else args.data_parallel_num
         )
         dataset = torch.utils.data.DataLoader(

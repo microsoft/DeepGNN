@@ -7,7 +7,6 @@ import numpy as np
 
 from deepgnn.graph_engine import (
     SamplingStrategy,
-    GENodeSampler,
     RangeNodeSampler,
     BackendOptions,
     create_backend,

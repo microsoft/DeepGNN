@@ -80,7 +80,9 @@ if __name__ == "__main__":
     )
     raw_output = raw_output.replace("set_seed(args.seed)", "")
 
-    raw_output = raw_output.replace("from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset", "")
+    raw_output = raw_output.replace(
+        "from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset", ""
+    )
 
     raw_output = raw_output.replace("GENodeSampler", "__file__")
     raw_output = raw_output.replace("GENodeSampler", "__file__")

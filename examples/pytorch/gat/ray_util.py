@@ -1,9 +1,7 @@
 """Baseline Ray Trainer."""
 from typing import Dict
 import os
-import platform
 import numpy as np
-import torch
 import ray
 import ray.train as train
 from ray.train.torch import TorchTrainer
@@ -44,22 +42,28 @@ def train_func(config: Dict):
     optimizer = train.torch.prepare_optimizer(optimizer)
 
     address = "localhost:9999"
-    s = Server(address, args.data_dir, 0, len(args.partitions))
+    _ = Server(address, args.data_dir, 0, len(args.partitions))
     g = DistributedClient([address])
     # NOTE: See https://deepgnn.readthedocs.io/en/latest/graph_engine/dataset.html
     #       for how to use a different sampler
     max_id = g.node_count(args.node_type) if args.max_id in [-1, None] else args.max_id
     dataset = ray.data.range(max_id).repartition(max_id // args.batch_size)
     pipe = dataset.window(blocks_per_window=4).repeat(args.num_epochs)
+
     def transform_batch(idx: list) -> dict:
-        return model.q.query_training(g, np.array(idx))  # TODO Update to your query function
+        return model.q.query_training(
+            g, np.array(idx)
+        )  # TODO Update to your query function
+
     pipe = pipe.map_batches(transform_batch)
 
     for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
         scores = []
         labels = []
         losses = []
-        for step, batch in enumerate(epoch_pipe.iter_torch_batches(batch_size=args.batch_size)):
+        for step, batch in enumerate(
+            epoch_pipe.iter_torch_batches(batch_size=args.batch_size)
+        ):
             if step < steps_in_epoch_trained:
                 continue
             loss, score, label = model(batch)

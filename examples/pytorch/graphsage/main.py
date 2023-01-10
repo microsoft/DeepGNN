@@ -43,7 +43,7 @@ def create_dataset(
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
-    backend = None,
+    backend=None,
 ):
     address = "localhost:9999"
     g = DistributedClient([address])
@@ -52,10 +52,12 @@ def create_dataset(
     max_id = g.node_count(args.node_type) if args.max_id in [-1, None] else args.max_id
     dataset = ray.data.range(max_id).repartition(max_id // args.batch_size)
     pipe = dataset.window(blocks_per_window=4).repeat(args.num_epochs)
+
     def transform_batch(idx: list) -> dict:
         # If get Ray error with return shape, use deepgnn.graph_engine.util.serialize/deserialize
         # in your query and forward function
         return model.query(g, np.array(idx))  # TODO Update to your query function
+
     pipe = pipe.map_batches(transform_batch)
     return pipe
 
@@ -107,12 +109,20 @@ def train_func(config: Dict):
         world_size=session.get_world_size(),
     )
     losses_full = []
-    epoch_iter = range(args.num_epochs) if not hasattr(dataset, "iter_epochs") else dataset.iter_epochs()
+    epoch_iter = (
+        range(args.num_epochs)
+        if not hasattr(dataset, "iter_epochs")
+        else dataset.iter_epochs()
+    )
     for epoch, epoch_pipe in enumerate(epoch_iter):
         scores = []
         labels = []
         losses = []
-        batch_iter = dataset if isinstance(epoch_pipe, int) else epoch_pipe.iter_torch_batches(batch_size=args.batch_size)
+        batch_iter = (
+            dataset
+            if isinstance(epoch_pipe, int)
+            else epoch_pipe.iter_torch_batches(batch_size=args.batch_size)
+        )
         for step, batch in enumerate(batch_iter):
             if step < steps_in_epoch_trained:
                 continue

@@ -25,6 +25,7 @@ from ray.air.config import ScalingConfig
 from deepgnn import TrainMode, get_logger
 from deepgnn.pytorch.common import get_args
 from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
+from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
 
 
 def train_func(config: Dict):
@@ -66,10 +67,12 @@ def train_func(config: Dict):
     max_id = g.node_count(args.node_type) if args.max_id in [-1, None] else args.max_id
     dataset = ray.data.range(max_id).repartition(max_id // args.batch_size)
     pipe = dataset.window(blocks_per_window=4).repeat(args.num_epochs)
+
     def transform_batch(idx: list) -> dict:
         # If get Ray error with return shape, use deepgnn.graph_engine.util.serialize/deserialize
         # in your query and forward function
         return model.query(g, np.array(idx))  # TODO Update to your query function
+
     pipe = pipe.map_batches(transform_batch)
 
     for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
@@ -78,7 +81,9 @@ def train_func(config: Dict):
         scores = []
         labels = []
         losses = []
-        for step, batch in enumerate(epoch_pipe.iter_torch_batches(batch_size=args.batch_size)):
+        for step, batch in enumerate(
+            epoch_pipe.iter_torch_batches(batch_size=args.batch_size)
+        ):
             if step < steps_in_epoch_trained:
                 continue
             loss, score, label = model(batch)

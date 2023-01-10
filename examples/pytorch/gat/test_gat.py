@@ -21,6 +21,7 @@ from ray_util import run_ray
 from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
 import ray
 
+
 def setup_module(module):
     import deepgnn.graph_engine.snark._lib as lib
 
@@ -136,9 +137,11 @@ def test_pytorch_gat_cora(train_graphsage_cora_ddp_trainer):
     max_id = g.node_count(1)
     dataset = ray.data.range(max_id).repartition(1)
     pipe = dataset.window(blocks_per_window=4)
+
     def transform_batch(idx: list) -> dict:
         output = model.q.query_training(g, np.array(idx))
         return output
+
     pipe = pipe.map_batches(transform_batch)
 
     model.eval()
