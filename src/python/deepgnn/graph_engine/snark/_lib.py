@@ -10,11 +10,11 @@ if platform.system() == "Windows":
 else:
     from ctypes import CDLL  # type: ignore
 
-# TODO: Use .dylib extension instead of .so on MacOS.
-#       Related issue: https://github.com/bazelbuild/bazel/issues/11082
 _LIB_FILE_NAME = "libwrapper.so"
 if platform.system() == "Windows":
     _LIB_FILE_NAME = "wrapper.dll"
+elif platform.system() == "Darwin":
+    _LIB_FILE_NAME = "libwrapper.dylib"
 
 _LIB_PATH = os.path.join(os.path.dirname(__file__), _LIB_FILE_NAME)
 

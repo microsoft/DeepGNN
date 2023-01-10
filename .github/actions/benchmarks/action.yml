@@ -8,8 +8,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - run: echo "USE_BAZEL_VERSION=5.3.1" >> $GITHUB_ENV
-      shell: bash
     - uses: actions/cache@v3
       id: cache
       with:

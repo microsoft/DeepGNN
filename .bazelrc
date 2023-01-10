@@ -3,7 +3,9 @@
 
 # We want to have a dynamic library without any dependencies,
 # that's why we statically link standard libs.
-build:linux --repo_env=CC=gcc-11
+build:linux --repo_env=CC=gcc-12
+# Needed to build grpc.
+build:linux --cxxopt="-std=c++20"
 build:linux --action_env=BAZEL_LINKLIBS=-l%:libstdc++.a
 build:linux --action_env=BAZEL_LINKOPTS=-static-libgcc:-lm:-pthread
 build:linux --action_env=SETUPTOOLS_USE_DISTUTILS="false"
@@ -15,12 +17,10 @@ build:manylinux --crosstool_top=//tools/toolchain:manylinux
 build:manylinux --cpu=k8
 build:manylinux --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
 
-build:darwin --repo_env=CC=gcc-11
-build:darwin --action_env=BAZEL_LINKLIBS=-l%:libstdc++.a
-build:darwin --action_env=BAZEL_LINKOPTS=-static-libgcc:-lm:-pthread
-build:darwin --action_env=SETUPTOOLS_USE_DISTUTILS="false"
-build:darwin --action_env=HADOOP_HOME="/tmp/snark/"
-build:darwin --action_env=SNARK_LIB_PATH="./src/cc/lib/libwrapper.so"
+build:macos --cxxopt="-std=c++20"
+build:macos --action_env=SETUPTOOLS_USE_DISTUTILS="false"
+build:macos --action_env=HADOOP_HOME="/tmp/snark/"
+build:macos --action_env=SNARK_LIB_PATH="./src/cc/lib/libwrapper.dylib"
 
 build:windows --action_env=BAZEL_LINKOPTS=/MT
 build:windows --action_env=SETUPTOOLS_USE_DISTUTILS="false"

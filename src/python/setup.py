@@ -24,6 +24,8 @@ def graph_engine(version: str):
     def _shared_lib():
         if platform.system() == "Windows":
             return "wrapper.dll"
+        elif platform.system() == "Darwin":
+            return "libwrapper.dylib"
         return "libwrapper.so"
 
     # Generate manifest to include binary files.
