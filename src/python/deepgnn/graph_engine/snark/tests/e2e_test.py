@@ -1645,6 +1645,42 @@ def test_partitions_from_separate_folders():
     npt.assert_almost_equal(v, np.array([[0], [2], [3], [0]], dtype=np.float32))
 
 
+def test_pass_service_config_to_a_client(no_features_graph):
+    address = [f"localhost:{find_free_port()}"]
+    service_config_json = json.dumps(
+        {
+            "methodConfig": [
+                {
+                    "name": [{}],
+                    "retryPolicy": {
+                        "maxAttempts": 5,
+                        "initialBackoff": "0.1s",
+                        "maxBackoff": "1s",
+                        "backoffMultiplier": 2,
+                        "retryableStatusCodes": ["UNAVAILABLE"],
+                    },
+                }
+            ]
+        }
+    )
+    options = []
+    options.append(("grpc.enable_retries", 1))
+    options.append(("grpc.service_config", service_config_json))
+    srv = server.Server(no_features_graph, [0, 1], hostname=address[0])
+    cl = client.DistributedGraph([address[0]], grpc_options=options)
+    srv.reset()
+
+    srv2 = server.Server(no_features_graph, [0, 1], hostname=address[0])
+
+    v = cl.node_features(
+        np.array([9], dtype=np.int64),
+        features=np.array([[0, 2]], dtype=np.int32),
+        dtype=np.float32,
+    )
+    npt.assert_equal(v, np.zeros((1, 2), dtype=np.float32))
+    srv2.reset()
+
+
 if __name__ == "__main__":
     sys.exit(
         pytest.main(
