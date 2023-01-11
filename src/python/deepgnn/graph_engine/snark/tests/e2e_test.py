@@ -157,6 +157,8 @@ def get_lib_name():
     lib_name = "libwrapper.so"
     if platform.system() == "Windows":
         lib_name = "wrapper.dll"
+    if platform.system() == "Darwin":
+        lib_name = "libwrapper.dylib"
 
     _SNARK_LIB_PATH_ENV_KEY = "SNARK_LIB_PATH"
     if _SNARK_LIB_PATH_ENV_KEY in os.environ:
