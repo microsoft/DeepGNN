@@ -6,6 +6,13 @@
 build:linux --repo_env=CC=gcc-12
 # Needed to build grpc.
 build:linux --cxxopt="-std=c++20"
+
+# TODO(mortid0): Remove opts below when https://bugs.chromium.org/p/boringssl/issues/detail?id=492 fixed"
+build:linux --copt="-D_XOPEN_SOURCE=700"
+build:linux --copt="-Wno-array-bounds"
+build:linux --copt="-Wno-stringop-overflow"
+build:linux --copt="-Wno-unknown-warning-option"
+
 build:linux --action_env=BAZEL_LINKLIBS=-l%:libstdc++.a
 build:linux --action_env=BAZEL_LINKOPTS=-static-libgcc:-lm:-pthread
 build:linux --action_env=SETUPTOOLS_USE_DISTUTILS="false"
