@@ -271,7 +271,8 @@ int32_t CreateLocalGraph(PyGraph *py_graph, const char *meta_location, size_t co
 }
 
 int32_t CreateRemoteClient(PyGraph *py_graph, const char *output_folder, const char **connection,
-                           size_t connection_count, const char *ssl_cert, size_t num_threads, size_t num_threads_per_cq)
+                           size_t connection_count, const char *ssl_cert, size_t num_threads, size_t num_threads_per_cq,
+                           size_t num_custom_args, const char **custom_args_keys, const char **custom_args_values)
 {
     py_graph->graph = std::make_unique<GraphInternal>();
     std::vector<std::shared_ptr<grpc::Channel>> channels;
@@ -283,7 +284,21 @@ int32_t CreateRemoteClient(PyGraph *py_graph, const char *output_folder, const c
         creds = grpc::SslCredentials(ssl_opts);
     }
     grpc::ChannelArguments args;
+
     args.SetMaxReceiveMessageSize(-1);
+    for (size_t custom_arg_index = 0; custom_arg_index < num_custom_args; ++custom_arg_index)
+    {
+        try
+        {
+            auto val = std::stoi(std::string(custom_args_values[custom_arg_index]));
+            args.SetInt(custom_args_keys[custom_arg_index], val);
+        }
+        catch (std::invalid_argument const &ex)
+        {
+            args.SetString(custom_args_keys[custom_arg_index], custom_args_values[custom_arg_index]);
+        }
+    }
+
     for (size_t i = 0; i < connection_count; ++i)
     {
         channels.emplace_back(grpc::CreateCustomChannel(connection[i], creds, args));
