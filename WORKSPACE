@@ -89,9 +89,9 @@ rules_proto_toolchains()
 
 http_archive(
     name = "com_google_protobuf",
-    sha256 = "4eab9b524aa5913c6fffb20b2a8abf5ef7f95a80bc0701f3a6dbb4c607f73460",
-    strip_prefix = "protobuf-3.21.12",
-    urls = ["https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protobuf-cpp-3.21.12.tar.gz"],
+    sha256 = "89ac31a93832e204db6d73b1e80f39f142d5747b290f17340adce5be5b122f94",
+    strip_prefix = "protobuf-3.19.4",
+    urls = ["https://github.com/protocolbuffers/protobuf/releases/download/v3.19.4/protobuf-cpp-3.19.4.tar.gz"],
 )
 
 http_archive(
