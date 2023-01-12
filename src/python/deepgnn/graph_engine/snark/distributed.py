@@ -3,7 +3,7 @@
 
 """Snark districuted client implementation."""
 from itertools import repeat
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Tuple
 import logging
 import tempfile
 
@@ -21,6 +21,7 @@ class Client(ge_snark.Client):
         self,
         servers: Union[str, List[str]],
         ssl_cert: str = None,
+        grpc_options: List[Tuple[str, str]] = None,
     ):
         """Init snark client to wrapper around ctypes API of distributed graph."""
         self.logger = get_logger()
@@ -29,7 +30,9 @@ class Client(ge_snark.Client):
             servers = [servers]
         self._servers = servers
         self._ssl_cert = ssl_cert
-        self.graph = client.DistributedGraph(servers, ssl_cert)
+        self.graph = client.DistributedGraph(
+            servers, ssl_cert, grpc_options=grpc_options
+        )
         self.node_samplers: Dict[str, client.NodeSampler] = {}
         self.edge_samplers: Dict[str, client.EdgeSampler] = {}
         self.logger.info(

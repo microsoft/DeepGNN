@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add Reddit dataset download tool at deepgnn.graph_engine.data.reddit.
 
+- Added `grpc_options` to distributed client to control service config.
+
 ### Fixed
 - Implement del method to release C++ client and server. Important for ray actors, because they create numerous clients during training.
 
