@@ -1,4 +1,3 @@
---no-binary horovod
 -f https://data.pyg.org/whl/torch-1.12.1+cpu.html  # For torch geometric skip torch-scatter/sparse setup.py
 absl-py==1.2.0
 adal==1.2.7

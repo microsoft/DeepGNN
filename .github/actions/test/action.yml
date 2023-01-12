@@ -38,6 +38,7 @@ runs:
       shell: bash
       name: run python tests
     - run: |
+        HOROVOD_WITH_PYTORCH=1 python -m pip install torch==1.12.1 horovod[pytorch] --no-binary horovod
         bazel test -c dbg //examples/pytorch/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
         bazel test -c dbg //examples/tensorflow/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
       shell: bash
