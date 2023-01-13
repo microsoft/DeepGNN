@@ -108,7 +108,9 @@ Our goal is to create a model capable of predicting whether an edge exists betwe
     >>> import argparse
     >>> import numpy as np
     >>> import torch
+    >>> import torch.nn as nn
     >>> import ray
+    >>> from ray.data import DatasetPipeline
     >>> import ray.train as train
     >>> from ray.train.torch import TorchTrainer
     >>> from ray.air import session
@@ -170,7 +172,7 @@ In this example, the query function will generate a set of positive and negative
     ...         edges = torch.Tensor(edges[:, :2]).long()
     ...         src, src_nbs = self._query(ge, edges[:, 0], edge_types)
     ...         dst, dst_nbs = self._query(ge, edges[:, 1], edge_types)
-    ...         context = [edges, src, src_nbs, dst, dst_nbs]
+    ...         context = {"edges": edges, "src": src, "src_nbs": src_nbs, "dst": dst, "dst_nbs": dst_nbs}
     ...
     ...         # Prepare negative examples: edges between source nodes and random nodes
     ...         dim = len(edges)
@@ -179,9 +181,9 @@ In this example, the query function will generate a set of positive and negative
     ...         neg_inputs = torch.cat((source_nodes, torch.tensor(random_nodes)), axis=1)
     ...         src, src_nbs = self._query(ge, neg_inputs[:, 0], edge_types)
     ...         dst, dst_nbs = self._query(ge, neg_inputs[:, 1], edge_types)
-    ...         context += [edges, src, src_nbs, dst, dst_nbs]
+    ...         context.update({"edges_neg": edges, "src_neg": src, "src_nbs_neg": src_nbs, "dst_neg": dst, "dst_nbs_neg": dst_nbs})
     ...
-    ...         return context
+    ...         return {k: np.expand_dims(v, 0) for k, v in context.items()}
 
 
 The model init and forward look the same as any other pytorch model, though instead of inhereting `torch.nn.Module`, we base off of `deepgnn.pytorch.modeling.base_model.BaseModel` which itself is a torch module with DeepGNN's specific interface. The forward function is expected to return three values: the batch loss, the model predictions for the given nodes and the expected labels for the given nodes.
@@ -223,7 +225,8 @@ In this example,
     ...         return torch.sigmoid(score)
     ...
     ...     def forward(self, context: torch.Tensor, edge_types: np.array = np.array([0], dtype=np.int32)):
-    ...         context = [v.squeeze(0) for v in context]
+    ...         context = {k: v.squeeze(0) for k, v in context.items()}
+    ...         context = [context[i] for i in ["edges", "src", "src_nbs", "dst", "dst_nbs", "edges_neg", "src_neg", "src_nbs_neg", "dst_neg", "dst_nbs_neg"]]
     ...         pos_label = self.get_score(context[:5], edge_types)
     ...         true_xent = torch.nn.functional.binary_cross_entropy(
     ...                 target=torch.ones_like(pos_label), input=pos_label, reduction="mean"
@@ -251,7 +254,8 @@ Training Loop
     ...
     ...     # Start server
     ...     address = "localhost:9999"
-    ...     g = Server(address, config["data_dir"], 0, 1)
+    ...     s = Server(address, config["data_dir"], 0, 1)
+    ...     g = DistributedClient([address])
     ...
     ...     # Initialize the model and wrap it with Ray
     ...     p = LinkPredictionQueryParameter(
@@ -273,7 +277,8 @@ Training Loop
     ...
     ...     # Ray Dataset
     ...     cl = DistributedClient([address])
-    ...     edge_batch_generator = (lambda: ray.data.from_numpy(cl.sample_edges(config["batch_size"], np.array([0], dtype=np.int32), SamplingStrategy.Weighted)) for _ in range(config[""] // config["batch_size"]))
+    ...     max_id = g.node_count(np.array([0]))
+    ...     edge_batch_generator = (lambda: ray.data.from_numpy(cl.sample_edges(config["batch_size"], np.array([0], dtype=np.int32), SamplingStrategy.Weighted)) for _ in range(max_id // config["batch_size"]))
     ...     pipe = DatasetPipeline.from_iterable(edge_batch_generator).repeat(config["n_epochs"])
     ...     q = LinkPredictionQuery(p)
     ...     def transform_batch(batch: list) -> dict:
@@ -284,15 +289,13 @@ Training Loop
     ...     model.train()
     ...     for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
     ...         epoch_pipe = epoch_pipe.random_shuffle_each_window()
-    ...         for i, batch in enumerate(epoch_pipe.iter_torch_batches(batch_size=config["batch_size"])):
-    ...             scores = model(batch)
-    ...             labels = batch["labels"][batch["input_mask"]].flatten()
-    ...             loss = loss_fn(scores.type(torch.float32), labels)
+    ...         for i, batch in enumerate(epoch_pipe.iter_torch_batches(batch_size=1)):#config["batch_size"])):
+    ...             loss, pred, label = model(batch)
     ...             optimizer.zero_grad()
     ...             loss.backward()
     ...             optimizer.step()
     ...
-    ...             session.report({"metric": (scores.argmax(1) == labels).float().mean(), "loss": loss.item()})
+    ...             session.report({"metric": (pred == label).float().mean().item(), "loss": loss.item()})
     ...
     ...     torch.save(model.state_dict(), config["model_dir"])
 
@@ -320,6 +323,6 @@ Finally we train the model to predict whether an edge exists between any two nod
     ... )
     >>> result = trainer.fit()
     >>> result.metrics["metric"]
-    tensor(0.3021)
+    0.98...
     >>> result.metrics["loss"]
-    1.8100202083587646
+    1.3...
