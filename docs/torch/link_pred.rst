@@ -308,7 +308,7 @@ Finally we train the model to predict whether an edge exists between any two nod
 
     >>> model_dir = tempfile.TemporaryDirectory()
 
-    >>> ray.init()
+    >>> ray.init(num_cpus=3)
     RayContext(...)
     >>> trainer = TorchTrainer(
     ...     train_func,
