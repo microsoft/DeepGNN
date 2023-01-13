@@ -26,6 +26,8 @@ def get_lib_name():
     lib_name = "libwrapper.so"
     if platform.system() == "Windows":
         lib_name = "wrapper.dll"
+    elif platform.system() == "Darwin":
+        lib_name = "libwrapper.dylib"
     return os.path.join(os.path.dirname(__file__), "..", lib_name)
 
 

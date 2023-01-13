@@ -88,7 +88,8 @@ extern "C"
 
     DEEPGNN_DLL extern int32_t CreateRemoteClient(PyGraph *graph, const char *output_folder, const char **connection,
                                                   size_t connection_count, const char *ssl_cert, size_t num_threads,
-                                                  size_t num_threads_per_cq);
+                                                  size_t num_threads_per_cq, size_t num_custom_args,
+                                                  const char **custom_args_keys, const char **custom_args_values);
 
     DEEPGNN_DLL extern int32_t GetNodeType(PyGraph *graph, NodeID *node_ids, size_t node_ids_size, Type *output,
                                            Type default_type);
