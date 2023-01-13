@@ -6,7 +6,9 @@ import numpy as np
 import torch
 import ray
 import ray.train as train
-from ray.train.torch import TorchTrainer
+import horovod.torch as hvd
+import ray.train.torch
+from ray.train.horovod import HorovodTrainer
 from ray.air import session
 from ray.air.config import ScalingConfig
 from deepgnn import TrainMode, get_logger
@@ -23,7 +25,7 @@ def train_func(config: Dict):
     logger = get_logger()
     os.makedirs(args.save_path, exist_ok=True)
 
-    train.torch.accelerate(args.fp16)
+    hvd.init()
     if args.seed:
         train.torch.enable_reproducibility(seed=args.seed + session.get_world_rank())
 
@@ -44,7 +46,7 @@ def train_func(config: Dict):
         model,
         session.get_world_size(),
     )
-    optimizer = train.torch.prepare_optimizer(optimizer)
+    optimizer = hvd.DistributedOptimizer(optimizer, named_parameters=model.named_parameters())
 
     backend = create_backend(
         BackendOptions(args), is_leader=(session.get_world_rank() == 0)
@@ -100,7 +102,7 @@ def run_ray(init_model_fn, init_dataset_fn, init_optimizer_fn, init_args_fn, **k
 
     args = get_args(init_args_fn, kwargs["run_args"] if "run_args" in kwargs else None)
 
-    trainer = TorchTrainer(
+    trainer = HorovodTrainer(
         train_func,
         train_loop_config={
             "args": args,
@@ -113,4 +115,4 @@ def run_ray(init_model_fn, init_dataset_fn, init_optimizer_fn, init_args_fn, **k
             num_workers=1, use_gpu=args.gpu, resources_per_worker={"CPU": 2}
         ),
     )
-    trainer.fit()
+    return trainer.fit()

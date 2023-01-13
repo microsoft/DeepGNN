@@ -14,6 +14,8 @@ py_library(
         "dataset.py",
         "metrics.py",
         "optimization.py",
+        "horovod_train.py",
+        "ray_train.py",
         "utils.py",
     ],
     deps = [

@@ -18,8 +18,9 @@ from deepgnn.graph_engine import CSVNodeSampler, GraphEngineBackend
 from args import init_args  # type: ignore
 from model import HetGnnModel  # type: ignore
 from sampler import HetGnnDataSampler  # type: ignore
-from main import run_ray  # type: ignore
+from main import create_model, create_dataset, create_optimizer, init_args  # type: ignore
 from deepgnn.graph_engine.data.ppi import PPI
+from deepgnn.pytorch.common.ray_train import run_ray
 
 
 def setup_module(module):
@@ -57,8 +58,13 @@ def test_run_args():
     # run_dist is the unified entry for pytorch model distributed training/evaluation/inference.
     # User only needs to prepare initializing function for model, dataset, optimizer and args.
     # reference: `deepgnn/pytorch/training/factory.py`
-    run_ray(
-        run_args=run_args,
+    result = run_ray(
+        init_model_fn=create_model,
+        init_dataset_fn=create_dataset,
+        init_optimizer_fn=create_optimizer,
+        init_args_fn=init_args,
+        num_cpus=4,
+        run_args=run_args
     )
 
 

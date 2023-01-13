@@ -22,8 +22,9 @@ from deepgnn.graph_engine.snark.converter.options import DataConverterType
 from deepgnn.graph_engine.data.citation import Cora
 
 from model_geometric import GAT, GATQueryParameter  # type: ignore
-from main import run_ray  # type: ignore
+from main import create_model, create_dataset, create_optimizer, init_args  # type: ignore
 from deepgnn import get_logger
+from deepgnn.pytorch.common.horovod_train import run_ray
 
 
 def setup_module(module):
@@ -45,6 +46,11 @@ def train_graphsage_cora_ddp_trainer():
     Cora(working_dir.name)
 
     result = run_ray(
+        init_model_fn=create_model,
+        init_dataset_fn=create_dataset,
+        init_optimizer_fn=create_optimizer,
+        init_args_fn=init_args,
+        num_cpus=4,
         run_args=[
             "--data_dir",
             working_dir.name,

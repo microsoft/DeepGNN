@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Add migrate script to help migrate to the new Ray Trainer, run "python -m deepgnn.migrate.ray_torch --main_path <your main.py with run_dist>" to convert it to use the Ray Trainer. Add --hvd to convert to horovod trainer.
+- Add migrate script to help migrate to the new Ray Trainer, run "python -m deepgnn.migrate.0_1_58 --main_path <your main.py with run_dist>" to convert it to use the Ray Trainer. Add --hvd to convert to horovod trainer.
 
 - Added `grpc_options` to distributed client to control service config.
 
