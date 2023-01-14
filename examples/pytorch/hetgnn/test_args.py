@@ -64,7 +64,7 @@ def test_run_args():
         init_optimizer_fn=create_optimizer,
         init_args_fn=init_args,
         num_cpus=4,
-        run_args=run_args
+        run_args=run_args,
     )
 
 

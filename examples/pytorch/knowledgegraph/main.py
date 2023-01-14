@@ -19,7 +19,6 @@ def create_model(args: argparse.Namespace):
     get_logger().info(f"Creating KGEModel with seed:{args.seed}.")
     # set seed before instantiating the model
 
-
     model_args = json.loads(args.model_args)
     return KGEModel(
         num_negs=args.num_negs, gpu=args.cuda, embed_dim=args.dim, model_args=model_args
