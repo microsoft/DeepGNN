@@ -2,16 +2,12 @@
 Node Classification with Ray Train and Ray Data
 ***********************************************
 
-In this guide we build on top of the Ray Usage example this time including Ray Data usage.
-The following code block is from `node_class example </torch/node_class.html>`_, see this example for more details.
+In this guide we build on top of the Ray Usage example this time including Ray Data usage. The following code block is from `node_class example </torch/node_class.html>`_, see this example for more details.
 
 Cora Dataset
 ============
-The Cora dataset consists of 2708 scientific publications represented as nodes interconnected by
-5429 reference links represented as edges. Each paper is described by a binary mask for 1433 pertinent
-dictionary words and an integer in {0..6} representing its type.
-First we download the Cora dataset and convert it to a valid binary representation via our built-in Cora
-downloader.
+The Cora dataset consists of 2708 scientific publications represented as nodes interconnected by 5429 reference links represented as edges. Each paper is described by a binary mask for 1433 pertinent dictionary words and an integer in {0..6} representing its type.
+First we download the Cora dataset and convert it to a valid binary representation via our built-in Cora downloader.
 
 .. code-block:: python
 
@@ -24,12 +20,8 @@ downloader.
 GAT Model
 =========
 
-Using this Graph Attention Network, we can accurately predict which category a specific paper belongs to
-based on its dictionary and the dictionaries of papers it references.
-This model leverages masked self-attentional layers to address the shortcomings of graph convolution
-based models. By stacking layers in which nodes are able to attend over their neighborhoods features,
-we enable the model to specify different weights to different nodes in a neighborhood, without requiring
-any kind of costly matrix operation (such as inversion) or the knowledge of the graph structure up front.
+Using this Graph Attention Network, we can accurately predict which category a specific paper belongs to based on its dictionary and the dictionaries of papers it references.
+This model leverages masked self-attentional layers to address the shortcomings of graph convolution based models. By stacking layers in which nodes are able to attend over their neighborhoods features, we enable the model to specify different weights to different nodes in a neighborhood, without requiring any kind of costly matrix operation (such as inversion) or the knowledge of the graph structure up front.
 
 `Paper <https://arxiv.org/abs/1710.10903>`_, `author's code <https://github.com/PetarV-/GAT>`_.
 
