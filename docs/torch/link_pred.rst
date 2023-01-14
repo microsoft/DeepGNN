@@ -119,6 +119,7 @@ Our goal is to create a model capable of predicting whether an edge exists betwe
     >>> from deepgnn.graph_engine import SamplingStrategy, GEEdgeSampler, GraphEngineBackend
     >>> from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
     >>> from deepgnn.pytorch.common.metrics import F1Score
+    >>> from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
 
 Query is the interface between the model and graph database. It uses the graph engine API to perform graph functions like `node_features` and `sample_neighbors`, for a full reference on this interface see, `this guide <../graph_engine/overview>`_. Typically Query is initialized by the model as `self.q` so its functions may also be used ad-hoc by the model.
 
@@ -266,6 +267,7 @@ Training Loop
     ...             label_dim=1,
     ...     )
     ...     model = LinkPrediction(p)
+    ...     load_checkpoint(model, model_dir=config["model_dir"])
     ...     model = train.torch.prepare_model(model)
     ...
     ...     # Initialize the optimizer and wrap it with Ray
@@ -289,7 +291,7 @@ Training Loop
     ...     model.train()
     ...     for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
     ...         epoch_pipe = epoch_pipe.random_shuffle_each_window()
-    ...         for i, batch in enumerate(epoch_pipe.iter_torch_batches(batch_size=1)):#config["batch_size"])):
+    ...         for step, batch in enumerate(epoch_pipe.iter_torch_batches(batch_size=1)):#config["batch_size"])):
     ...             loss, pred, label = model(batch)
     ...             optimizer.zero_grad()
     ...             loss.backward()
@@ -297,7 +299,7 @@ Training Loop
     ...
     ...             session.report({"metric": (pred == label).float().mean().item(), "loss": loss.item()})
     ...
-    ...     torch.save(model.state_dict(), config["model_dir"])
+    ...     save_checkpoint(model, epoch=epoch, step=step, model_dir=config["model_dir"])
 
 Train
 =====

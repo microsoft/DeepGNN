@@ -47,6 +47,7 @@ Setup
 
     >>> from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
     >>> from deepgnn.graph_engine import FileNodeSampler
+    >>> from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
 
 Query
 =====
@@ -161,8 +162,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...
     ...     # Initialize the model and wrap it with Ray
     ...     model = GAT(in_dim=1433, num_classes=7)
-    ...     if os.path.isfile(config["model_dir"]):
-    ...         model.load_state_dict(torch.load(config["model_dir"]))
+    ...     load_checkpoint(model, model_dir=config["model_dir"])
     ...     model = train.torch.prepare_model(model)
     ...
     ...     # Initialize the optimizer and wrap it with Ray
@@ -196,7 +196,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     # Execute the training loop
     ...     model.train()
     ...     for epoch in range(config["n_epochs"]):
-    ...         for i, batch in enumerate(dataset):
+    ...         for step, batch in enumerate(dataset):
     ...             scores = model(batch)
     ...             labels = batch["labels"][batch["input_mask"]].flatten()
     ...             loss = loss_fn(scores.type(torch.float32), labels)
@@ -206,7 +206,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...
     ...             session.report({"metric": (scores.argmax(1) == labels).float().mean().item(), "loss": loss.item()})
     ...
-    ...     torch.save(model.state_dict(), config["model_dir"])
+    ...     save_checkpoint(model, epoch=epoch, step=step, model_dir=config["model_dir"])
 
 In this step we start the training job.
 First we start a local ray cluster with `ray.init() <https://docs.ray.io/en/latest/ray-core/package-ref.html#ray-init>`_.
@@ -227,7 +227,7 @@ Finally we call trainer.fit() to execute the training loop.
     ...         "data_dir": data_dir.name,
     ...         "sample_filename": "train.nodes",
     ...         "n_epochs": 100,
-    ...         "model_dir": f"{model_dir.name}/model.pt",
+    ...         "model_dir": f"{model_dir.name}",
     ...     },
     ...     run_config=RunConfig(verbose=0),
     ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
@@ -245,7 +245,7 @@ Evaluate
     ...         "data_dir": data_dir.name,
     ...         "sample_filename": "test.nodes",
     ...         "n_epochs": 1,
-    ...         "model_dir": f"{model_dir.name}/model.pt",
+    ...         "model_dir": f"{model_dir.name}",
     ...     },
     ...     run_config=RunConfig(verbose=0),
     ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),

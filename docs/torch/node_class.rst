@@ -69,6 +69,7 @@ Combined imports from `model.py <https://github.com/microsoft/DeepGNN/blob/main/
 
     >>> from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
     >>> from deepgnn.graph_engine.data.citation import Cora
+    >>> from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
 
 Query
 =====
@@ -201,8 +202,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...
     ...     # Initialize the model and wrap it with Ray
     ...     model = GAT(in_dim=1433, num_classes=7)
-    ...     if os.path.isfile(config["model_dir"]):
-    ...         model.load_state_dict(torch.load(config["model_dir"]))
+    ...     load_checkpoint(model, model_dir=config["model_dir"])
     ...     model = train.torch.prepare_model(model)
     ...
     ...     # Initialize the optimizer and wrap it with Ray
@@ -224,7 +224,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     model.train()
     ...     for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
     ...         epoch_pipe = epoch_pipe.random_shuffle_each_window()
-    ...         for i, batch in enumerate(epoch_pipe.iter_torch_batches(batch_size=config["batch_size"])):
+    ...         for step, batch in enumerate(epoch_pipe.iter_torch_batches(batch_size=config["batch_size"])):
     ...             scores = model(batch)
     ...             labels = batch["labels"][batch["input_mask"]].flatten()
     ...             loss = loss_fn(scores.type(torch.float32), labels)
@@ -234,7 +234,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...
     ...             session.report({"metric": (scores.argmax(1) == labels).float().mean().item(), "loss": loss.item()})
     ...
-    ...     torch.save(model.state_dict(), config["model_dir"])
+    ...     save_checkpoint(model, epoch=epoch, step=step, model_dir=config["model_dir"])
 
 In this step we start the training job.
 First we start a local ray cluster with `ray.init() <https://docs.ray.io/en/latest/ray-core/package-ref.html#ray-init>`_.

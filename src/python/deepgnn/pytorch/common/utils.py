@@ -121,39 +121,44 @@ def rotate_checkpoints(
                 )
 
 
-def load_checkpoint(model, logger, args, world_rank=0):
+def load_checkpoint(model, logger=None, args=None, model_dir=".", world_rank=0):
     """Load a checkpoint."""
     epochs_trained = 0
     steps_in_epoch_trained = 0
     # Search and sort checkpoints from model path.
-    ckpts = get_sorted_checkpoints(args.model_dir)
+    ckpts = get_sorted_checkpoints(args.model_dir if args is not None else model_dir)
     ckpt_path = ckpts[-1] if len(ckpts) > 0 else None
     if ckpt_path is not None:
         init_ckpt = torch.load(ckpt_path, map_location="cpu")
-        if args.mode == TrainMode.TRAIN:
+        if args is not None and args.mode == TrainMode.TRAIN:
             epochs_trained = init_ckpt["epoch"]
             steps_in_epoch_trained = init_ckpt["step"]
 
         if world_rank == 0:
             model.load_state_dict(init_ckpt["state_dict"])
-            logger.info(
-                f"Loaded initial checkpoint: {ckpt_path},"
-                f" trained epochs: {epochs_trained}, steps: {steps_in_epoch_trained}"
-            )
+            if logger is not None:
+                logger.info(
+                    f"Loaded initial checkpoint: {ckpt_path},"
+                    f" trained epochs: {epochs_trained}, steps: {steps_in_epoch_trained}"
+                )
         del init_ckpt
     return epochs_trained, steps_in_epoch_trained
 
 
-def save_checkpoint(model, logger, epoch, step, args, **kwargs):
+def save_checkpoint(model, logger=None, epoch=0, step=0, args=None, model_dir=".", **kwargs):
     """Save a checkpoint."""
-    os.makedirs(args.save_path, exist_ok=True)
+    save_path = args.save_path if args is not None else model_dir
+
+    os.makedirs(save_path, exist_ok=True)
     save_path = os.path.join(
-        f"{args.save_path}",
+        f"{save_path}",
         f"{PREFIX_CHECKPOINT}-{epoch:03}-{step:06}.pt",
     )
     torch.save(
         {"state_dict": model.state_dict(), "epoch": epoch, "step": step, **kwargs},
         save_path,
     )
-    rotate_checkpoints(args.save_path, args.max_saved_ckpts)
-    logger.info(f"Saved checkpoint to {save_path}.")
+    if args is not None:
+        rotate_checkpoints(save_path, args.max_saved_ckpts)
+    if logger is not None:
+        logger.info(f"Saved checkpoint to {save_path}.")
