@@ -9,7 +9,7 @@ from deepgnn import str2list_int, setup_default_logging_config
 from deepgnn import get_logger
 
 from deepgnn.pytorch.modeling import BaseModel
-from ray_util import run_ray
+from deepgnn.pytorch.common.horovod_train import run_ray
 
 from model_geometric import GAT, GATQueryParameter  # type: ignore
 
@@ -116,6 +116,7 @@ def _main():
         init_dataset_fn=create_dataset,
         init_optimizer_fn=create_optimizer,
         init_args_fn=init_args,
+        num_cpus=4,
     )
 
 

@@ -908,12 +908,16 @@ class DistributedGraph(MemoryGraph):
         ssl_cert: str = None,
         num_threads: int = None,
         num_cq_per_thread: int = None,
+        grpc_options: List[Tuple[str, str]] = None,
     ):
         """Create a client to work with a graph in a distributed mode.
 
         Args:
             servers (List[str]): List of server hostnames to connect to.
             ssl_cert (str, optional): Certificates to use for connection if needed. Defaults to None.
+            num_threads(int, optional): Number of threads to used for processing replies.
+            num_cq_per_thread(int, optional): Number of completion queues to use per thread.
+            grpc_options(List[Tuple(str, str)], optional): additional arguments to configure grpc client.
         """
         assert len(servers) > 0
         self.g_ = _DEEP_GRAPH()
@@ -927,6 +931,9 @@ class DistributedGraph(MemoryGraph):
             c_char_p,
             c_size_t,
             c_size_t,
+            c_size_t,
+            POINTER(c_char_p),
+            POINTER(c_char_p),
         ]
 
         ServersArray = c_char_p * len(servers)
@@ -945,6 +952,15 @@ class DistributedGraph(MemoryGraph):
         if num_cq_per_thread is None:
             num_cq_per_thread = 1
 
+        if grpc_options is None:
+            grpc_options = []
+        GRPCOptions = c_char_p * len(grpc_options)
+        grpc_options_keys_pointers = GRPCOptions()
+        grpc_options_values_pointers = GRPCOptions()
+        for i, kv in enumerate(grpc_options):
+            grpc_options_keys_pointers[i] = c_char_p(bytes(str(kv[0]), "utf-8"))
+            grpc_options_values_pointers[i] = c_char_p(bytes(str(kv[1]), "utf-8"))
+
         with tempfile.TemporaryDirectory() as meta_dir:
             self.lib.CreateRemoteClient(
                 byref(self.g_),
@@ -954,6 +970,9 @@ class DistributedGraph(MemoryGraph):
                 c_char_p(bytes(ssl_cert, "utf-8")) if ssl_cert is not None else None,
                 c_size_t(num_threads),
                 c_size_t(num_cq_per_thread),
+                c_size_t(len(grpc_options)),
+                grpc_options_keys_pointers,
+                grpc_options_values_pointers,
             )
             self.meta = Meta(meta_dir)
             # Keep an empty object to avoid ifs

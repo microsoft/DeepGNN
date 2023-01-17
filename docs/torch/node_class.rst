@@ -2,16 +2,12 @@
 Node Classification with Ray Train and Ray Data
 ***********************************************
 
-In this guide we build on top of the Ray Usage example this time including Ray Data usage.
-The following code block is from `node_class example </torch/node_class.html>`_, see this example for more details.
+In this guide we build on top of the Ray Usage example this time including Ray Data usage. The following code block is from `node_class example </torch/node_class.html>`_, see this example for more details.
 
 Cora Dataset
 ============
-The Cora dataset consists of 2708 scientific publications represented as nodes interconnected by
-5429 reference links represented as edges. Each paper is described by a binary mask for 1433 pertinent
-dictionary words and an integer in {0..6} representing its type.
-First we download the Cora dataset and convert it to a valid binary representation via our built-in Cora
-downloader.
+The Cora dataset consists of 2708 scientific publications represented as nodes interconnected by 5429 reference links represented as edges. Each paper is described by a binary mask for 1433 pertinent dictionary words and an integer in {0..6} representing its type.
+First we download the Cora dataset and convert it to a valid binary representation via our built-in Cora downloader.
 
 .. code-block:: python
 
@@ -24,12 +20,8 @@ downloader.
 GAT Model
 =========
 
-Using this Graph Attention Network, we can accurately predict which category a specific paper belongs to
-based on its dictionary and the dictionaries of papers it references.
-This model leverages masked self-attentional layers to address the shortcomings of graph convolution
-based models. By stacking layers in which nodes are able to attend over their neighborhoods features,
-we enable the model to specify different weights to different nodes in a neighborhood, without requiring
-any kind of costly matrix operation (such as inversion) or the knowledge of the graph structure up front.
+Using this Graph Attention Network, we can accurately predict which category a specific paper belongs to based on its dictionary and the dictionaries of papers it references.
+This model leverages masked self-attentional layers to address the shortcomings of graph convolution based models. By stacking layers in which nodes are able to attend over their neighborhoods features, we enable the model to specify different weights to different nodes in a neighborhood, without requiring any kind of costly matrix operation (such as inversion) or the knowledge of the graph structure up front.
 
 `Paper <https://arxiv.org/abs/1710.10903>`_, `author's code <https://github.com/PetarV-/GAT>`_.
 
@@ -69,6 +61,7 @@ Combined imports from `model.py <https://github.com/microsoft/DeepGNN/blob/main/
 
     >>> from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
     >>> from deepgnn.graph_engine.data.citation import Cora
+    >>> from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
 
 Query
 =====
@@ -201,8 +194,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...
     ...     # Initialize the model and wrap it with Ray
     ...     model = GAT(in_dim=1433, num_classes=7)
-    ...     if os.path.isfile(config["model_dir"]):
-    ...         model.load_state_dict(torch.load(config["model_dir"]))
+    ...     load_checkpoint(model, model_dir=config["model_dir"])
     ...     model = train.torch.prepare_model(model)
     ...
     ...     # Initialize the optimizer and wrap it with Ray
@@ -224,7 +216,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     model.train()
     ...     for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
     ...         epoch_pipe = epoch_pipe.random_shuffle_each_window()
-    ...         for i, batch in enumerate(epoch_pipe.iter_torch_batches(batch_size=config["batch_size"])):
+    ...         for step, batch in enumerate(epoch_pipe.iter_torch_batches(batch_size=config["batch_size"])):
     ...             scores = model(batch)
     ...             labels = batch["labels"][batch["input_mask"]].flatten()
     ...             loss = loss_fn(scores.type(torch.float32), labels)
@@ -234,7 +226,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...
     ...             session.report({"metric": (scores.argmax(1) == labels).float().mean().item(), "loss": loss.item()})
     ...
-    ...     torch.save(model.state_dict(), config["model_dir"])
+    ...     save_checkpoint(model, epoch=epoch, step=step, model_dir=config["model_dir"])
 
 In this step we start the training job.
 First we start a local ray cluster with `ray.init() <https://docs.ray.io/en/latest/ray-core/package-ref.html#ray-init>`_.

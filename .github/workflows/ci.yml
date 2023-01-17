@@ -146,7 +146,7 @@ jobs:
       - name: Install torch
         run: pip install --timeout 300 torch
       - name: Install dependencies
-        run: pip install --timeout 300 -r pytorch/requirements.txt
+        run: HOROVOD_WITH_PYTORCH=1 pip install --timeout 300 -r pytorch/requirements.txt
       - name: Uninstall cached deepgnn packages
         run: pip uninstall deepgnn-ge deepgnn-torch
       - name: Install wheels

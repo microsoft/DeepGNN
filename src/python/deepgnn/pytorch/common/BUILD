@@ -13,6 +13,8 @@ py_library(
         "consts.py",
         "metrics.py",
         "optimization.py",
+        "horovod_train.py",
+        "ray_train.py",
         "utils.py",
     ],
     deps = [
@@ -54,8 +56,6 @@ py_test(
     deps = [
         ":deepgnn_pytorch_common",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        requirement("ray"),
-        requirement("pyarrow"),
         requirement("numpy"),
         requirement("fsspec"),
         requirement("pytest"),

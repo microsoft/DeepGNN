@@ -32,7 +32,6 @@ py_test(
         ":example_torch_gat",
         requirement("ray"),
         requirement("pyarrow"),
-        requirement("horovod"),
         requirement("numpy"),
         requirement("pytest"),
         requirement("scikit-learn"),
@@ -48,5 +47,6 @@ py_test(
         requirement("torch-scatter"),
         requirement("torch-sparse"),
         requirement("torch_geometric"),
+        requirement("horovod"),
     ],
 )

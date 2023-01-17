@@ -209,10 +209,10 @@ grpc::Status GraphEngineServiceImpl::GetNodeSparseFeatures(::grpc::ServerContext
                                                            snark::SparseFeaturesReply *response)
 {
     std::span<const snark::FeatureId> features =
-        std::span(std::begin(request->feature_ids()), std::end(request->feature_ids()));
+        std::span(request->feature_ids().data(), request->feature_ids().size());
     auto *reply_dimensions = response->mutable_dimensions();
     reply_dimensions->Resize(int(features.size()), 0);
-    auto dimensions = std::span(reply_dimensions->begin(), reply_dimensions->end());
+    auto dimensions = std::span(reply_dimensions->mutable_data(), reply_dimensions->size());
     std::vector<std::vector<int64_t>> indices(features.size());
     std::vector<std::vector<uint8_t>> values(features.size());
 
@@ -254,10 +254,10 @@ grpc::Status GraphEngineServiceImpl::GetEdgeSparseFeatures(::grpc::ServerContext
     // First part is source, second is destination
     assert(2 * len == size_t(request->node_ids().size()));
     std::span<const snark::FeatureId> features =
-        std::span(std::begin(request->feature_ids()), std::end(request->feature_ids()));
+        std::span(request->feature_ids().data(), request->feature_ids().size());
     auto *reply_dimensions = response->mutable_dimensions();
     reply_dimensions->Resize(int(features.size()), 0);
-    auto dimensions = std::span(reply_dimensions->begin(), reply_dimensions->end());
+    auto dimensions = std::span(reply_dimensions->mutable_data(), reply_dimensions->size());
 
     std::vector<std::vector<int64_t>> indices(features.size());
     std::vector<std::vector<uint8_t>> values(features.size());
@@ -296,13 +296,13 @@ grpc::Status GraphEngineServiceImpl::GetNodeStringFeatures(::grpc::ServerContext
                                                            snark::StringFeaturesReply *response)
 {
     std::span<const snark::FeatureId> features =
-        std::span(std::begin(request->feature_ids()), std::end(request->feature_ids()));
+        std::span(request->feature_ids().data(), request->feature_ids().size());
     const auto features_size = features.size();
     const auto nodes_size = request->node_ids().size();
     auto *reply_dimensions = response->mutable_dimensions();
 
     reply_dimensions->Resize(int(features_size * nodes_size), 0);
-    auto dimensions = std::span(reply_dimensions->begin(), reply_dimensions->end());
+    auto dimensions = std::span(reply_dimensions->mutable_data(), reply_dimensions->size());
     std::vector<uint8_t> values;
 
     for (int node_offset = 0; node_offset < request->node_ids().size(); ++node_offset)
@@ -338,11 +338,11 @@ grpc::Status GraphEngineServiceImpl::GetEdgeStringFeatures(::grpc::ServerContext
     // First part is source, second is destination
     assert(2 * len == size_t(request->node_ids().size()));
     std::span<const snark::FeatureId> features =
-        std::span(std::begin(request->feature_ids()), std::end(request->feature_ids()));
+        std::span(request->feature_ids().data(), request->feature_ids().size());
     const auto features_size = features.size();
     auto *reply_dimensions = response->mutable_dimensions();
     reply_dimensions->Resize(int(features_size * len), 0);
-    auto dimensions = std::span(reply_dimensions->begin(), reply_dimensions->end());
+    auto dimensions = std::span(reply_dimensions->mutable_data(), reply_dimensions->size());
     std::vector<uint8_t> values;
 
     for (size_t edge_offset = 0; edge_offset < len; ++edge_offset)
@@ -374,7 +374,7 @@ grpc::Status GraphEngineServiceImpl::GetNeighborCounts(::grpc::ServerContext *co
 {
     const auto node_count = request->node_ids().size();
     response->mutable_neighbor_counts()->Resize(node_count, 0);
-    auto input_edge_types = std::span(std::begin(request->edge_types()), std::end(request->edge_types()));
+    auto input_edge_types = std::span(request->edge_types().data(), request->edge_types().size());
 
     for (int node_index = 0; node_index < node_count; ++node_index)
     {
@@ -405,7 +405,7 @@ grpc::Status GraphEngineServiceImpl::GetNeighbors(::grpc::ServerContext *context
 {
     const auto node_count = request->node_ids().size();
     response->mutable_neighbor_counts()->Resize(node_count, 0);
-    auto input_edge_types = std::span(std::begin(request->edge_types()), std::end(request->edge_types()));
+    auto input_edge_types = std::span(request->edge_types().data(), request->edge_types().size());
     std::vector<NodeId> output_neighbor_ids;
     std::vector<Type> output_neighbor_types;
     std::vector<float> output_neighbors_weights;
@@ -447,7 +447,7 @@ grpc::Status GraphEngineServiceImpl::WeightedSampleNeighbors(::grpc::ServerConte
 
     size_t count = request->count();
     size_t nodes_found = 0;
-    auto input_edge_types = std::span(std::begin(request->edge_types()), std::end(request->edge_types()));
+    auto input_edge_types = std::span(request->edge_types().data(), request->edge_types().size());
     auto seed = request->seed();
 
     for (int node_index = 0; node_index < request->node_ids().size(); ++node_index)
@@ -490,7 +490,7 @@ grpc::Status GraphEngineServiceImpl::UniformSampleNeighbors(::grpc::ServerContex
     size_t count = request->count();
     size_t nodes_found = 0;
     bool without_replacement = request->without_replacement();
-    auto input_edge_types = std::span(std::begin(request->edge_types()), std::end(request->edge_types()));
+    auto input_edge_types = std::span(request->edge_types().data(), request->edge_types().size());
     auto seed = request->seed();
 
     for (int node_index = 0; node_index < request->node_ids().size(); ++node_index)
