@@ -22,7 +22,6 @@ from ray.train.torch import TorchTrainer
 from ray.air import session
 from ray.air.config import ScalingConfig
 from ray.data import DatasetPipeline
-import pyarrow as pa
 from deepgnn import TrainMode, get_logger
 from deepgnn.pytorch.common import get_args
 from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint

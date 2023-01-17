@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 """Graph engine configuration."""
+from typing import List
 import argparse
 import numpy as np
 from deepgnn.arg_types import str2bool
@@ -83,7 +84,7 @@ def define_param_graph_engine(parser: argparse.ArgumentParser):
     )
 
 
-def serialize(inputs, batch_size):
+def serialize(inputs: List[np.ndarray], batch_size: int):
     """Serialize query output."""
     vector_sizes = [i.size for i in inputs]
     vector_shape_lens = [len(i.shape) for i in inputs]
@@ -105,7 +106,7 @@ def serialize(inputs, batch_size):
     return output.reshape(batch_size, -1)
 
 
-def deserialize(value):
+def deserialize(value: np.ndarray):
     """Deserialize query output."""
     value = value.flatten()
     output = []
