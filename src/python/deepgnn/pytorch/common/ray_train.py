@@ -45,19 +45,7 @@ def train_func(config: Dict):
 
     address = "localhost:9999"
     _ = Server(address, args.data_dir, 0, len(args.partitions))
-    g = DistributedClient([address])
-    # NOTE: See https://deepgnn.readthedocs.io/en/latest/graph_engine/dataset.html
-    #       for how to use a different sampler
-    max_id = g.node_count(args.node_type) if args.max_id in [-1, None] else args.max_id
-    dataset = ray.data.range(max_id).repartition(max_id // args.batch_size)
-    pipe = dataset.window(blocks_per_window=4).repeat(args.num_epochs)
-
-    def transform_batch(idx: list) -> dict:
-        # If get Ray error with return shape, use deepgnn.graph_engine.util.serialize/deserialize
-        # in your query and forward function
-        return model.query(g, np.array(idx))  # TODO Update to your query function
-
-    pipe = pipe.map_batches(transform_batch)
+    pipe = config["init_dataset_fn"](args, model, session.get_world_rank(), session.get_world_size(), address)
 
     for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
         if epoch < epochs_trained:
@@ -109,6 +97,7 @@ def run_ray(
         train_loop_config={
             "args": args,
             "init_model_fn": init_model_fn,
+            "init_dataset_fn": init_dataset_fn,
             "init_optimizer_fn": init_optimizer_fn,
             **kwargs,
         },

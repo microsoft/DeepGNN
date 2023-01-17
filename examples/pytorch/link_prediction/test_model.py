@@ -27,7 +27,6 @@ from deepgnn.pytorch.common.consts import (
 from examples.pytorch.link_prediction.consts import ENCODER_LABEL, FANOUTS_NAME
 from deepgnn.pytorch.encoding import TwinBERTEncoder, MultiTypeFeatureEncoder
 from examples.pytorch.conftest import MockGraph, load_data  # noqa: F401
-from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
 from args import init_args  # type: ignore
 from model import LinkPredictionModel  # type: ignore
@@ -48,7 +47,7 @@ def setup_module(module):
     )
 
 
-class MockBackend(GraphEngineBackend):
+class MockBackend:
     _backend = None
 
     def __new__(cls, options=None, is_leader: bool = False):

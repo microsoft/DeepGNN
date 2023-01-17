@@ -43,9 +43,8 @@ def create_dataset(
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
-    backend=None,
+    address: str=None,
 ):
-    address = "localhost:9999"
     g = DistributedClient([address])
     # NOTE: See https://deepgnn.readthedocs.io/en/latest/graph_engine/dataset.html
     #       for how to use a different sampler
@@ -109,6 +108,7 @@ def train_func(config: Dict):
         model,
         rank=session.get_world_rank(),
         world_size=session.get_world_size(),
+        address=address,
     )
     losses_full = []
     epoch_iter = (

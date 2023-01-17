@@ -9,6 +9,7 @@ import tempfile
 import numpy as np
 import torch
 import argparse
+import ray
 
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
 from deepgnn.graph_engine.data.citation import Cora
@@ -17,6 +18,7 @@ from model_geometric import GAT, GATQueryParameter  # type: ignore
 from main import create_model, create_dataset, create_optimizer, init_args  # type: ignore
 from deepgnn import get_logger
 from deepgnn.pytorch.common.horovod_train import run_ray
+from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
 
 
 def setup_module(module):

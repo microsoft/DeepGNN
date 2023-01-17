@@ -26,10 +26,9 @@ from deepgnn.graph_engine import (
 from deepgnn.graph_engine.data.citation import Cora
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
 from model import HetGnnModel  # type: ignore
-from main import create_model, create_dataset, create_optimizer, init_args  # type: ignore
+from main import run_ray  # type: ignore
 from sampler import HetGnnDataSampler  # type: ignore
 import evaluation  # type: ignore
-from deepgnn.pytorch.common.ray_train import run_ray
 
 node_base_index = 1000000
 
@@ -67,10 +66,6 @@ def train_academic_data():
     Cora(working_dir.name)
 
     result = run_ray(
-        init_model_fn=create_model,
-        init_dataset_fn=create_dataset,
-        init_optimizer_fn=create_optimizer,
-        init_args_fn=init_args,
         num_cpus=4,
         run_args=[
             "--data_dir",

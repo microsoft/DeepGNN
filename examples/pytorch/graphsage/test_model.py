@@ -49,7 +49,7 @@ def train_graphsage_cora_ddp_trainer(mock_graph):
         model,
         rank: int = 0,
         world_size: int = 1,
-        backend=None,
+        address: str=None,
     ):
         dataset = MockSimpleDataLoader(
             batch_size=256, query_fn=model.query, graph=mock_graph
