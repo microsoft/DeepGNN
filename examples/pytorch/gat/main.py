@@ -119,6 +119,7 @@ def _main():
         init_dataset_fn=create_dataset,
         init_optimizer_fn=create_optimizer,
         init_args_fn=init_args,
+        num_cpus=4,
     )
 
 
