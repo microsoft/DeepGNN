@@ -38,7 +38,6 @@ def create_model(args: argparse.Namespace):
     get_logger().info(f"Creating GAT model with seed:{args.seed}.")
     # set seed before instantiating the model
 
-
     p = GATQueryParameter(
         neighbor_edge_types=np.array([args.neighbor_edge_types], np.int32),
         feature_idx=args.feature_idx,

@@ -145,7 +145,9 @@ def load_checkpoint(model, logger=None, args=None, model_dir=".", world_rank=0):
     return epochs_trained, steps_in_epoch_trained
 
 
-def save_checkpoint(model, logger=None, epoch=0, step=0, args=None, model_dir=".", **kwargs):
+def save_checkpoint(
+    model, logger=None, epoch=0, step=0, args=None, model_dir=".", **kwargs
+):
     """Save a checkpoint."""
     save_path = args.save_path if args is not None else model_dir
 

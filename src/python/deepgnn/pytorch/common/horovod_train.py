@@ -46,7 +46,9 @@ def train_func(config: Dict):
         model,
         session.get_world_size(),
     )
-    optimizer = hvd.DistributedOptimizer(optimizer, named_parameters=model.named_parameters())
+    optimizer = hvd.DistributedOptimizer(
+        optimizer, named_parameters=model.named_parameters()
+    )
 
     backend = create_backend(
         BackendOptions(args), is_leader=(session.get_world_rank() == 0)

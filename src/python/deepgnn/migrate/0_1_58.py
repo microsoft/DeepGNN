@@ -1,7 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 """Script to migrate torch example to use Ray Train."""
-import os
 import argparse
 import pasta
 from pasta.augment import rename
@@ -36,11 +35,15 @@ if __name__ == "__main__":
     )
     if args.hvd:
         rename.rename_external(
-            tree, "deepgnn.pytorch.training.run_dist", "deepgnn.pytorch.common.horovod_train.run_ray"
+            tree,
+            "deepgnn.pytorch.training.run_dist",
+            "deepgnn.pytorch.common.horovod_train.run_ray",
         )
     else:
         rename.rename_external(
-            tree, "deepgnn.pytorch.training.run_dist", "deepgnn.pytorch.common.ray_train.run_ray"
+            tree,
+            "deepgnn.pytorch.training.run_dist",
+            "deepgnn.pytorch.common.ray_train.run_ray",
         )
 
     raw_output = pasta.dump(tree)
