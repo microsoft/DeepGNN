@@ -93,12 +93,11 @@ googleapis-common-protos==1.56.4
 googledrivedownloader==0.4
 gpustat==1.0.0
 grpcio==1.49.1
-grpcio==1.43.0
 grpcio-health-checking==1.49.1
 grpcio-tools==1.49.1
 h11==0.14.0
 h5py==3.7.0
-heapdict==3.9.0
+heapdict==1.0.1
 horovod==0.26.1;sys_platform != 'win32'
 huggingface-hub==0.10.1
 idna==3.4
@@ -231,7 +230,7 @@ sphinxcontrib-qthelp==1.0.3
 sphinxcontrib-serializinghtml==1.1.5
 sphinxcontrib-websupport==1.2.4
 stack_data==0.5.1
-starlette==0.23.1
+starlette==0.22.0
 tabulate==0.8.10
 tblib==1.7.0
 tensorboard==2.10.1
