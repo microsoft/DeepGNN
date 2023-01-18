@@ -1,13 +1,15 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+import os
+import sys
 from concurrent.futures.thread import ThreadPoolExecutor
 import multiprocessing as mp
 import tempfile
 
 import pytest
 
-import deepgnn.graph_engine.backends.snark.synchronized as synchronized
+import deepgnn.graph_engine.snark.synchronized as synchronized
 
 
 def test_simple_client_server_initialized_in_correct_order():
@@ -87,3 +89,11 @@ def test_server_waits_for_client_to_stop():
         executor.submit(server_done)
         client.reset()
     server_finished_event.wait()
+
+
+if __name__ == "__main__":
+    sys.exit(
+        pytest.main(
+            [__file__, "--junitxml", os.environ["XML_OUTPUT_FILE"], *sys.argv[1:]]
+        )
+    )

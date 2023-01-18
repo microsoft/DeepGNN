@@ -22,6 +22,7 @@ py_library(
         "local.py",
         "meta.py",
         "server.py",
+        "synchronized.py",
     ],
     data = ["//src/cc/lib:wrapper"],
     deps = [
