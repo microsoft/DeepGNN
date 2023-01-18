@@ -263,3 +263,23 @@ py_test(
     ],
     target_compatible_with = ["@platforms//os:linux"],
 )
+
+py_test(
+    name = "test_synchronized",
+    srcs = ["test_synchronized.py"],
+    imports = ["../../../../"],
+    main = "test_synchronized.py",
+    python_version = "PY3",
+    srcs_version = "PY3",
+    deps = [
+        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
+        "//src/python/deepgnn/graph_engine/data:graph_engine_data",
+        "//src/python/deepgnn/graph_engine:graph_engine",
+        requirement("numpy"),
+        requirement("pytest"),
+        requirement("opencensus"),
+        requirement("opencensus-context"),
+        requirement("azure-datalake-store"),
+        requirement("opencensus-ext-azure"),
+    ],
+)
