@@ -225,3 +225,12 @@ In order to add multiple servers, you need to create a DistributedClient manuall
     >>> batch
     {'features': tensor([[0., 0., 0., ...]]), 'labels': tensor([[0.],
             [5.]])}
+
+Compliant Query output
+======================
+
+In Ray it is important that the output of the query/map_batches function returns
+results in a compliant format. Complaint results includes a single output with dimesion 0
+equal to the batch_size or a dictionary with each value being a ndarray with dimension 0 equal to
+batch_size. Sometimes query results can be hard or impossible to get into this format, if so setting
+dimension 0 equal to 1 and using pipe.iter_torch_batches(batch_size=1) is an effective workaround.
