@@ -65,21 +65,23 @@ class SynchronizedClient(DistributedClient):
 if __name__ == "__main__":
     from ray import workflow
 
-    @ray.remote
+    #@ray.remote
     def start_server(path: str, partitions: List[int], hostname: str):
         return Server(hostname, path, 0, len(partitions))#path, partitions, hostname, delayed_start=True)
 
     @ray.remote
-    def start_client(server) -> List[float]:
-        return DistributedClient(server._hostname)
+    def start_client(hostname) -> List[float]:
+        return DistributedClient(hostname)
 
 
     path = "/tmp/cora"
     partitions = [0]
     hostname = "localhost:9999"
-    server = start_server.bind(path, partitions, hostname)
-    client = start_client.bind(server)
+    server = start_server(path, partitions, hostname)
+    client_obj = start_client.bind(hostname)
 
     # TODO locks to retrieve actual client.client
     
-    print(workflow.run(client))
+    client = workflow.run(client_obj)
+    print(server)
+    print(client)
