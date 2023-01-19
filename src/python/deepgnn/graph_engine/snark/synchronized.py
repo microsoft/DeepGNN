@@ -66,22 +66,26 @@ if __name__ == "__main__":
     from ray import workflow
 
     #@ray.remote
-    def start_server(path: str, partitions: List[int], hostname: str):
+    def start_server(sync_path: str, path: str, partitions: List[int], hostname: str):
+        # TODO create sync file
         return Server(hostname, path, 0, len(partitions))#path, partitions, hostname, delayed_start=True)
 
-    @ray.remote
-    def start_client(hostname) -> List[float]:
+    def start_client(sync_path, hostname) -> List[float]:
+        # TODO wait until sync files created in path
         return DistributedClient(hostname)
 
-
+    sync_path = "/tmp/sync"
     path = "/tmp/cora"
     partitions = [0]
     hostname = "localhost:9999"
-    server = start_server(path, partitions, hostname)
-    client_obj = start_client.bind(hostname)
+    server = start_server(sync_path, path, partitions, hostname)
+    client_obj = start_client(sync_path, hostname)
 
-    # TODO locks to retrieve actual client.client
+    # TODO locks to actually start client
     
     client = workflow.run(client_obj)
     print(server)
     print(client)
+
+
+    # TODO synchronize to wait for servers to be allowed to shutdown
