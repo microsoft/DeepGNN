@@ -6,7 +6,7 @@ from itertools import repeat
 from typing import List, Dict, Union, Tuple
 import logging
 import tempfile
-
+import ray
 import deepgnn.graph_engine.snark.client as client
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.local as ge_snark
@@ -49,6 +49,14 @@ class Client(ge_snark.Client):
         return deserialize, (self._servers, self._ssl_cert)
 
 
+@ray.remote
+class ServerState(object):
+    def __init__(self, hostname):
+        self.hostname = hostname
+    def get_hostname(self):
+        return self.hostname
+
+
 class Server:
     """Distributed server."""
 
@@ -64,6 +72,7 @@ class Server:
         storage_type: client.PartitionStorageType = client.PartitionStorageType.memory,
         config_path: str = "",
         stream: bool = False,
+        namespace: str = "deepgnn",
     ):
         """Init snark server."""
         self._hostname = hostname
@@ -106,6 +115,12 @@ class Server:
             stream,  # type: ignore
         )
 
+        try:
+            ray.init(address="auto", ignore_reinit_error=True)
+            self.actor = ServerState.options(name=f"server_{index}", namespace=namespace).remote(hostname)
+        except ConnectionError:
+            pass
+
     def reset(self):
         """Reset server."""
         if self.server is not None:
@@ -119,3 +134,14 @@ class Server:
             return Server(*args)
 
         return deserialize, self._init_args
+
+
+def get_server_state(num_servers: int = 1, namespace: str = "deepgnn"):
+    ray.init(address="auto", ignore_reinit_error=True)
+    server_states = []
+    for i in range(num_servers):
+        print(f"Connecting to Server {i}...")
+        server_state = ray.get_actor(f"server_{i}", namespace=namespace)
+        print(f"Connected to Server {i}.")
+        server_states.append(server_state)
+    return server_states
