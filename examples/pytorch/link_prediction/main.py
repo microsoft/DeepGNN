@@ -19,6 +19,7 @@ from deepgnn.graph_engine import TextFileSampler, GraphEngineBackend
 from args import init_args  # type: ignore
 from consts import DEFAULT_VOCAB_CHAR_INDEX  # type: ignore
 from model import LinkPredictionModel  # type: ignore
+from typing import Optional
 
 
 def create_model(args: argparse.Namespace):
@@ -42,7 +43,7 @@ def create_dataset(
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
-    backend: GraphEngineBackend = None,
+    backend: Optional[GraphEngineBackend] = None,
 ):
     store_name, relative_path = get_store_name_and_path(args.train_file_dir)
 

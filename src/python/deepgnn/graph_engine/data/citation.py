@@ -5,7 +5,7 @@ import argparse
 import sys
 import tempfile
 import os
-from typing import List, Tuple, Union
+from typing import Optional, List, Tuple, Union
 
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.decoders as decoders
@@ -178,7 +178,9 @@ def random_split(
 class CitationGraph(Client):
     """Citation graph dataset."""
 
-    def __init__(self, name: str, output_dir: str = None, split: str = "public"):
+    def __init__(
+        self, name: str, output_dir: Optional[str] = None, split: str = "public"
+    ):
         """Initialize dataset."""
         assert name in ["cora", "citeseer"]
         self.GRAPH_NAME = name
@@ -328,7 +330,7 @@ class Cora(CitationGraph):
     - Node Feature Dim: 1433
     """
 
-    def __init__(self, output_dir: str = None, split: str = "public"):
+    def __init__(self, output_dir: Optional[str] = None, split: str = "public"):
         """Initialize dataset."""
         super().__init__("cora", output_dir, split)
 
@@ -354,7 +356,7 @@ class Citeseer(CitationGraph):
     - Node Feature Dim: 3703
     """
 
-    def __init__(self, output_dir: str = None, split: str = "public"):
+    def __init__(self, output_dir: Optional[str] = None, split: str = "public"):
         """Initialize dataset."""
         super().__init__("citeseer", output_dir, split)
 

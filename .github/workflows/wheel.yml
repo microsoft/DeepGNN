@@ -15,9 +15,9 @@ jobs:
       matrix:
         os: ["ubuntu-22.04", "macos-11", "windows-2019"]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v3.3.0
       - name: Set up Python 3.10
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4.5.0
         with:
           python-version: "3.10"
       - name: build wheel
@@ -26,7 +26,7 @@ jobs:
           package_version: ${{ github.event.inputs.package_version }}
           disk_cache: wheel-${{ github.ref }}-${{ runner.os }}-${{ matrix.os }}-${{ matrix.python-version }}
       - name: Upload wheel file
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v3.1.2
         with:
           name: deepgnn
           path: src/python/dist/*.whl

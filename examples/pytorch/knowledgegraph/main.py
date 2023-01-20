@@ -13,6 +13,7 @@ from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.graph_engine import GEEdgeSampler, GraphEngineBackend
 from model import KGEModel  # type: ignore
 from deepgnn import get_logger
+from typing import Optional
 
 
 def create_model(args: argparse.Namespace):
@@ -30,7 +31,7 @@ def create_dataset(
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
-    backend: GraphEngineBackend = None,
+    backend: Optional[GraphEngineBackend] = None,
 ):
     return TorchDeepGNNDataset(
         sampler_class=GEEdgeSampler,

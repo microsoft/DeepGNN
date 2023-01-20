@@ -14,6 +14,7 @@ from deepgnn.pytorch.common.horovod_train import run_ray
 
 from deepgnn.graph_engine import FileNodeSampler, GraphEngineBackend
 from model_geometric import GAT, GATQueryParameter  # type: ignore
+from typing import Optional
 
 
 # fmt: off
@@ -62,7 +63,7 @@ def create_dataset(
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
-    backend: GraphEngineBackend = None,
+    backend: Optional[GraphEngineBackend] = None,
 ):
     return TorchDeepGNNDataset(
         sampler_class=FileNodeSampler,
@@ -84,7 +85,7 @@ def create_eval_dataset(
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
-    backend: GraphEngineBackend = None,
+    backend: Optional[GraphEngineBackend] = None,
 ):
     return TorchDeepGNNDataset(
         sampler_class=FileNodeSampler,

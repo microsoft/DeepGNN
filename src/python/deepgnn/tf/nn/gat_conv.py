@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 """Layers for GAT model."""
 import tensorflow as tf
-from typing import Callable
+from typing import Optional, Callable
 
 
 def _sparse_dropout(x, rate):
@@ -20,7 +20,7 @@ class AttnHead(tf.keras.layers.Layer):
     def __init__(
         self,
         out_dim: int,
-        act: Callable = None,
+        act: Optional[Callable] = None,
         in_drop: float = 0.0,
         coef_drop: float = 0.0,
     ):
@@ -121,7 +121,7 @@ class GATConv(tf.keras.layers.Layer):
         self,
         out_dim: int,
         attn_heads: int,
-        act: Callable = None,
+        act: Optional[Callable] = None,
         in_drop: float = 0.0,
         coef_drop: float = 0.0,
         attn_aggregate: str = "concat",

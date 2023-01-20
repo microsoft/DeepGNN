@@ -21,6 +21,7 @@ from sampler import HetGnnDataSampler  # type: ignore
 from main import create_model, create_dataset, create_optimizer, init_args  # type: ignore
 from deepgnn.graph_engine.data.ppi import PPI
 from deepgnn.pytorch.common.ray_train import run_ray
+from typing import Optional
 
 
 def setup_module(module):

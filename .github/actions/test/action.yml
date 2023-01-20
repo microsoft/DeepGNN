@@ -20,7 +20,7 @@ runs:
     - run: echo ${{ inputs.disk_cache }}
       shell: bash
 
-    - uses: actions/cache@v3
+    - uses: actions/cache@v3.2.3
       id: cache
       with:
         path: ~/bazel-cache
