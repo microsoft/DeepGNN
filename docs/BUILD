@@ -395,6 +395,39 @@ py_test(
     ],
 )
 
+py_test(
+    name = "tf_ray_usage",
+    srcs = ["doctest_template.py"],
+    args = ["tf/ray_usage.rst"],
+    data = [
+        "tf/ray_usage.rst",
+    ],
+    imports = ["../src/python/"],
+    main = "doctest_template.py",
+    python_version = "PY3",
+    srcs_version = "PY3",
+    deps = [
+        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
+        "//src/python/deepgnn/graph_engine/data:graph_engine_data",
+        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
+        "//src/python/deepgnn/tf:deepgnn_tf",
+        "//src/python/deepgnn/tf/common:deepgnn_tf_common",
+        "//src/python/deepgnn/tf/nn:deepgnn_tf_nn",
+        requirement("ray"),
+        requirement("pyarrow"),
+        requirement("azure-datalake-store"),
+        requirement("fsspec"),
+        requirement("numpy"),
+        requirement("networkx"),
+        requirement("opencensus"),
+        requirement("opencensus-context"),
+        requirement("opencensus-ext-azure"),
+        requirement("scikit-learn"),
+        requirement("tensorflow"),
+        requirement("torch"),
+    ],
+)
+
 py_binary(
     name = "make_docs",
     srcs = [

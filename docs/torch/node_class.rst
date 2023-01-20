@@ -12,10 +12,10 @@ First we download the Cora dataset and convert it to a valid binary representati
 .. code-block:: python
 
     >>> import tempfile
-	>>> from deepgnn.graph_engine.data.citation import Cora
+    >>> from deepgnn.graph_engine.data.citation import Cora
     >>> data_dir = tempfile.TemporaryDirectory()
-	>>> Cora(data_dir.name)
-	<deepgnn.graph_engine.data.citation.Cora object at 0x...>
+    >>> Cora(data_dir.name)
+    <deepgnn.graph_engine.data.citation.Cora object at 0x...>
 
 GAT Model
 =========
@@ -28,10 +28,10 @@ This model leverages masked self-attentional layers to address the shortcomings 
 Next we copy the GAT model from `DeepGNN's examples directory <https://github.com/microsoft/DeepGNN/blob/main/examples/pytorch/gat>`_. Pre-built models are kept out of the pip installation because it is rarely possible to inheret and selectively edit a single function of a graph model, instead it is best to copy the entire model and edit as needed.
 DeepGNN models typically contain multiple parts:
 
-	1. Query struct and implementation
-	2. Model init and forward
-	3. Training setup: Dataset, Optimizer, Model creation
-	4. Execution
+    1. Query struct and implementation
+    2. Model init and forward
+    3. Training setup: Dataset, Optimizer, Model creation
+    4. Execution
 
 Setup
 ======
@@ -59,6 +59,7 @@ Combined imports from `model.py <https://github.com/microsoft/DeepGNN/blob/main/
     >>> from deepgnn.graph_engine import Graph, graph_ops
     >>> from deepgnn.pytorch.modeling import BaseModel
 
+    >>> from deepgnn.graph_engine import Graph
     >>> from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
     >>> from deepgnn.graph_engine.data.citation import Cora
     >>> from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
@@ -66,11 +67,8 @@ Combined imports from `model.py <https://github.com/microsoft/DeepGNN/blob/main/
 Query
 =====
 
-Query is the interface between the model and graph engine. It is used by the trainer to fetch contexts which
-will be passed as input to the model forward function. Since query is a separate function, the trainer may
-pre-fetch contexts allowing graph engine operations and model training to occur in parallel.
-In the GAT model, query samples neighbors repeatedly `num_hops` times in order to generate a sub-graph.
-All node and edge features in this sub-graph are pulled and added to the context.
+Query is the interface between the model and graph engine. It is used by the trainer to fetch contexts which will be passed as input to the model forward function. Since query is a separate function, the trainer may pre-fetch contexts allowing graph engine operations and model training to occur in parallel.
+In the GAT model, query samples neighbors repeatedly `num_hops` times in order to generate a sub-graph. All node and edge features in this sub-graph are pulled and added to the context.
 
 .. code-block:: python
 
@@ -83,11 +81,11 @@ All node and edge features in this sub-graph are pulled and added to the context
     ...     neighbor_edge_types: list = field(default_factory=lambda: [0])
     ...     num_hops: int = 2
     ...
-    ...     def query(self, g: DistributedClient, idx: int) -> Dict[Any, np.ndarray]:
+    ...     def query(self, g: Graph, inputs: int) -> Dict[Any, np.ndarray]:
     ...         """Query used to generate data for training."""
-    ...         if isinstance(idx, (int, float)):
-    ...             idx = [idx]
-    ...         inputs = np.array(idx, np.int64)
+    ...         if isinstance(inputs, (int, float)):
+    ...             inputs = [inputs]
+    ...         inputs = np.array(inputs, np.int64)
     ...         nodes, edges, src_idx = graph_ops.sub_graph(
     ...             g,
     ...             inputs,

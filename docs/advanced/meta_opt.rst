@@ -44,6 +44,7 @@ Setup
     >>> from deepgnn.graph_engine import Graph, graph_ops
     >>> from deepgnn.pytorch.modeling import BaseModel
 
+    >>> from deepgnn.graph_engine import Graph
     >>> from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
     >>> from deepgnn.graph_engine.data.citation import Cora
 
@@ -61,11 +62,11 @@ Query
     ...     neighbor_edge_types: list = field(default_factory=lambda: [0])
     ...     num_hops: int = 2
     ...
-    ...     def query(self, g: DistributedClient, idx: int) -> Dict[Any, np.ndarray]:
+    ...     def query(self, g: Graph, inputs: int) -> Dict[Any, np.ndarray]:
     ...         """Query used to generate data for training."""
-    ...         if isinstance(idx, (int, float)):
-    ...             idx = [idx]
-    ...         inputs = np.array(idx, np.int64)
+    ...         if isinstance(inputs, (int, float)):
+    ...             inputs = [inputs]
+    ...         inputs = np.array(inputs, np.int64)
     ...         nodes, edges, src_idx = graph_ops.sub_graph(
     ...             g,
     ...             inputs,

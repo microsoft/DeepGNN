@@ -278,9 +278,8 @@ Training Loop
     ...     loss_fn = nn.CrossEntropyLoss()
     ...
     ...     # Ray Dataset
-    ...     cl = DistributedClient([address])
     ...     max_id = g.node_count(np.array([0]))
-    ...     edge_batch_generator = (lambda: ray.data.from_numpy(cl.sample_edges(config["batch_size"], np.array([0], dtype=np.int32), SamplingStrategy.Weighted)) for _ in range(max_id // config["batch_size"]))
+    ...     edge_batch_generator = (lambda: ray.data.from_numpy(g.sample_edges(config["batch_size"], np.array([0], dtype=np.int32), SamplingStrategy.Weighted)) for _ in range(max_id // config["batch_size"]))
     ...     pipe = DatasetPipeline.from_iterable(edge_batch_generator).repeat(config["n_epochs"])
     ...     q = LinkPredictionQuery(p)
     ...     def transform_batch(batch: list) -> dict:
@@ -317,7 +316,7 @@ Finally we train the model to predict whether an edge exists between any two nod
     ...     train_loop_config={
     ...         "batch_size": 64,
     ...         "data_dir": working_dir,
-    ...         "n_epochs": 1,
+    ...         "n_epochs": 100,
     ...         "model_dir": f"{model_dir.name}/model.pt",
     ...     },
     ...     run_config=RunConfig(verbose=0),
@@ -327,4 +326,4 @@ Finally we train the model to predict whether an edge exists between any two nod
     >>> result.metrics["metric"]
     0.98...
     >>> result.metrics["loss"]
-    1.3...
+    1.2...
