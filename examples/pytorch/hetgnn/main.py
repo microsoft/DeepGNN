@@ -12,11 +12,8 @@ from deepgnn.graph_engine import CSVNodeSampler, GraphEngineBackend
 from args import init_args  # type: ignore
 from model import HetGnnModel  # type: ignore
 from sampler import HetGnnDataSampler  # type: ignore
-<<<<<<< HEAD
 from deepgnn.pytorch.common.ray_train import run_ray
-=======
 from typing import Optional
->>>>>>> f1ffaf31e3a66e051ebcc3b98c187a1219152b60
 
 
 def create_model(args: argparse.Namespace):
