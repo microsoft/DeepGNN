@@ -28,7 +28,7 @@ class FetchDone(object):
 
 class AdlCredentialParser:
     @staticmethod
-    def read_credentials(config: str = None) -> dict:
+    def read_credentials(config: Optional[str] = None) -> dict:
         adl_config = {"TENANT_ID": "", "CLIENT_SECRET": "", "CLIENT_ID": ""}
 
         if config is not None and len(config) > 0:
@@ -415,8 +415,8 @@ class TextFileSplitIterator(TextFileIterator):
     def __init__(
         self,
         filename: str,
-        store_name: str = None,
-        adl_config: str = None,
+        store_name: Optional[str] = None,
+        adl_config: Optional[str] = None,
         batch_size: int = 512,
         read_block_in_M: int = 50,
         buffer_queue_size: int = 3,

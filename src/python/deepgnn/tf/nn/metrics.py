@@ -2,10 +2,11 @@
 # Licensed under the MIT License.
 """Various metrics implementations."""
 import tensorflow as tf
+from typing import Optional
 
 
 def masked_softmax_cross_entropy(
-    preds: tf.Tensor, labels: tf.Tensor, mask: tf.Tensor = None
+    preds: tf.Tensor, labels: tf.Tensor, mask: Optional[tf.Tensor] = None
 ) -> tf.Tensor:
     """Softmax cross-entropy loss with masking."""
     if mask is not None:
@@ -20,7 +21,7 @@ def masked_softmax_cross_entropy(
 def masked_accuracy(
     preds: tf.Tensor,
     labels: tf.Tensor,
-    mask: tf.Tensor = None,
+    mask: Optional[tf.Tensor] = None,
     dtype: tf.dtypes.DType = tf.float32,
 ) -> tf.Tensor:
     """Accuracy with masking."""

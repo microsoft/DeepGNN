@@ -3,7 +3,7 @@
 """Distributed training with horovod."""
 import logging
 import tensorflow as tf
-from typing import List, Union, Callable
+from typing import Optional, List, Union, Callable
 
 from deepgnn.tf.common.trainer import BaseTFTrainer
 from deepgnn.tf.common.args import TrainerType
@@ -27,7 +27,7 @@ class HorovodTFTrainer(BaseTFTrainer):
         summary_save_steps: int = 100,
         profiler_save_secs: int = 180,
         checkpoint_save_secs: int = 3600,
-        logger: logging.Logger = None,
+        logger: Optional[logging.Logger] = None,
     ):
         """Initialize horovod for training."""
         super().__init__(
@@ -74,11 +74,11 @@ class HorovodTFTrainer(BaseTFTrainer):
         dataset: tf.data.Dataset,
         model: tf.keras.Model,
         optimizer: tf.compat.v1.train.Optimizer,
-        loss: Union[str, Callable, tf.keras.losses.Loss] = None,
-        metrics: List[Union[str, Callable, tf.keras.metrics.Metric]] = None,
-        callbacks: List[tf.keras.callbacks.Callback] = None,
+        loss: Optional[Union[str, Callable, tf.keras.losses.Loss]] = None,
+        metrics: Optional[List[Union[str, Callable, tf.keras.metrics.Metric]]] = None,
+        callbacks: Optional[List[tf.keras.callbacks.Callback]] = None,
         epochs: int = 1,
-        steps_per_epoch: int = None,
+        steps_per_epoch: Optional[int] = None,
     ):
         """Wrap the optimizer in hvd.DistributedOptimizer."""
         hvd_optimizer = hvd.DistributedOptimizer(optimizer)
@@ -98,7 +98,7 @@ class HorovodTFTrainer(BaseTFTrainer):
         model: tf.keras.Model,
         embedding_to_str_fn: Callable,
         output_embedding_file_prefix: str = "embedding",
-        steps: int = None,
+        steps: Optional[int] = None,
     ):
         """Passthrough to the parent."""
         super().inference(
@@ -109,10 +109,10 @@ class HorovodTFTrainer(BaseTFTrainer):
         self,
         dataset: tf.data.Dataset,
         model: tf.keras.Model,
-        loss: Union[str, Callable, tf.keras.losses.Loss] = None,
-        metrics: List[Union[str, Callable, tf.keras.metrics.Metric]] = None,
-        _: List[tf.keras.callbacks.Callback] = None,
-        steps: int = None,
+        loss: Optional[Union[str, Callable, tf.keras.losses.Loss]] = None,
+        metrics: Optional[List[Union[str, Callable, tf.keras.metrics.Metric]]] = None,
+        _: Optional[List[tf.keras.callbacks.Callback]] = None,
+        steps: Optional[int] = None,
     ):
         """Passthrough to the parent."""
         super().evaluate(dataset, model, loss=loss, metrics=metrics, steps=steps)

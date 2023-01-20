@@ -24,6 +24,7 @@ from deepgnn.graph_engine.snark.decoders import DecoderType
 import deepgnn.graph_engine.snark.meta as meta
 from deepgnn.graph_engine._base import get_fs
 from deepgnn.graph_engine.snark.meta import _Element
+from typing import Optional
 
 
 class Dispatcher(ABC):
@@ -61,17 +62,19 @@ class PipeDispatcher(Dispatcher):
         folder: str,
         parallel: int,
         decoder: DecoderType,
-        process: typing.Callable[
-            [
-                typing.Union[mp.Queue, Connection],
-                mp.Queue,
-                str,
-                int,
-                DecoderType,
-                bool,
-                bool,
-            ],
-            None,
+        process: Optional[
+            typing.Callable[
+                [
+                    typing.Union[mp.Queue, Connection],
+                    mp.Queue,
+                    str,
+                    int,
+                    DecoderType,
+                    bool,
+                    bool,
+                ],
+                None,
+            ]
         ] = None,
         partition_offset: int = 0,
         use_threads: bool = False,
@@ -225,17 +228,19 @@ class QueueDispatcher(Dispatcher):
         num_partitions: int,
         partion_func: typing.Callable[[str], int],
         decoder: DecoderType,
-        process: typing.Callable[
-            [
-                typing.Union[mp.Queue, Connection],
-                mp.Queue,
-                str,
-                int,
-                DecoderType,
-                bool,
-                bool,
-            ],
-            None,
+        process: Optional[
+            typing.Callable[
+                [
+                    typing.Union[mp.Queue, Connection],
+                    mp.Queue,
+                    str,
+                    int,
+                    DecoderType,
+                    bool,
+                    bool,
+                ],
+                None,
+            ]
         ] = None,
         partition_offset: int = 0,
         use_threads: bool = False,

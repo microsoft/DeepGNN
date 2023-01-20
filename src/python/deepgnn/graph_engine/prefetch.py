@@ -82,8 +82,8 @@ def _produce_func(
     model_query_fn: Callable,
     outputs: Queue,
     max_workers: int,
-    stop_event: Event = None,
-    collate_fn: Callable = None,
+    stop_event: Optional[Event] = None,
+    collate_fn: Optional[Callable] = None,
 ):
     """Produce examples for prefetch."""
     with BoundedExecutor(max_workers=max_workers) as pool:
@@ -122,8 +122,8 @@ def _produce(
     model_query_fn: Callable,
     outputs: Queue,
     max_workers: int,
-    stop_event: Event = None,
-    collate_fn: Callable = None,
+    stop_event: Optional[Event] = None,
+    collate_fn: Optional[Callable] = None,
 ):
     _produce_func(
         graph=graph,
@@ -149,7 +149,7 @@ class Generator:
         prefetch_size: int = 30,
         max_parallel: int = 10,
         max_workers: int = 1,
-        collate_fn: Callable = None,
+        collate_fn: Optional[Callable] = None,
     ):
         """Initialize generator."""
         self.count = 0

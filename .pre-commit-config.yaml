@@ -1,6 +1,6 @@
 repos:
     -   repo: https://github.com/pre-commit/pre-commit-hooks
-        rev: v2.3.0
+        rev: v4.4.0
         hooks:
         -   id: check-merge-conflict
         -   id: check-yaml
@@ -16,17 +16,17 @@ repos:
         -   id: requirements-txt-fixer
         -   id: trailing-whitespace
     -   repo: https://github.com/psf/black
-        rev: 22.3.0
+        rev: 22.12.0
         hooks:
         -   id: black
     -   repo: https://github.com/pre-commit/mirrors-mypy
-        rev: v0.971
+        rev: v0.991
         hooks:
         -   id: mypy
             args: [--config-file, .mypy.ini]
             pass_filenames: false
     -   repo: https://github.com/pycqa/flake8
-        rev: '3.9.0'
+        rev: '6.0.0'
         hooks:
         -   id: flake8
             additional_dependencies: [flake8-docstrings]
@@ -34,12 +34,12 @@ repos:
             args: [--ignore,"E501", --extend-ignore,"E203,W503", --max-line-length, "88"]
             exclude: (test_|_test.py|deepspeed|twinbert|main|conftest|testserver|_adl_reader)
     -   repo: https://github.com/pocc/pre-commit-hooks
-        rev: v1.1.1
+        rev: v1.3.5
         hooks:
         - id: clang-format
           args: [--style=Microsoft, -i]
     -   repo: https://github.com/google/pre-commit-tool-hooks
-        rev: v1.2.2
+        rev: v1.2.4
         hooks:
             -   id: check-copyright
                 args:

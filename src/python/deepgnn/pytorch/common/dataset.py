@@ -8,7 +8,7 @@ from deepgnn.graph_engine import (
     GraphEngineBackend,
 )
 from torch.utils.data import IterableDataset
-from typing import Callable, Iterator
+from typing import Optional, Callable, Iterator
 
 
 class TorchDeepGNNDataset(IterableDataset, DeepGNNDataset):
@@ -26,7 +26,7 @@ class TorchDeepGNNDataset(IterableDataset, DeepGNNDataset):
         self,
         sampler_class,
         query_fn: Callable,
-        backend: GraphEngineBackend = None,
+        backend: Optional[GraphEngineBackend] = None,
         num_workers: int = 1,
         worker_index: int = 0,
         batch_size: int = 1,

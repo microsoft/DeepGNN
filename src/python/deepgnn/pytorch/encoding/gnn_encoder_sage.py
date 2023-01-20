@@ -77,7 +77,7 @@ class SageEncoder(nn.Module):
         feature_type: np.dtype,
         feature_idx: int,
         feature_dim: int,
-        neigh_nodes: np.ndarray = None,
+        neigh_nodes: Optional[np.ndarray] = None,
     ) -> dict:
         """Query graph for training data."""
         context = {}
@@ -123,7 +123,7 @@ class SageEncoder(nn.Module):
         feature_type: np.dtype,
         feature_idx: int,
         feature_dim: int,
-        neigh_nodes: np.ndarray = None,
+        neigh_nodes: Optional[np.ndarray] = None,
     ) -> np.ndarray:
         """Fetch features."""
         features = graph.node_features(

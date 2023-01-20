@@ -7,6 +7,7 @@ import logging
 from deepgnn.tf.common.args import TrainerType
 from deepgnn.tf.common.dist_sync import DistributedSync
 from deepgnn.tf.common.trainer import BaseTFTrainer
+from typing import Optional
 
 
 class PSTrainer(BaseTFTrainer):
@@ -28,7 +29,7 @@ class PSTrainer(BaseTFTrainer):
         summary_save_steps: int = 100,
         profiler_save_secs: int = 180,
         checkpoint_save_secs: int = 3600,
-        logger: logging.Logger = None,
+        logger: Optional[logging.Logger] = None,
     ):
         """Initialize trainer."""
         super().__init__(

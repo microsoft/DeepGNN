@@ -4,7 +4,7 @@
 """Stanalone graph engine server."""
 from datetime import datetime
 from ctypes import POINTER, Structure, byref, c_char_p, c_size_t, c_uint32, c_int32
-from typing import Any, Dict, List, Tuple, Union, Sequence
+from typing import Optional, Any, Dict, List, Tuple, Union, Sequence
 
 from deepgnn.graph_engine.snark._lib import _get_c_lib
 from deepgnn.graph_engine.snark._downloader import download_graph_data, GraphPath
@@ -35,7 +35,7 @@ class Server:
         meta_path: str,
         partitions: Sequence[Union[int, Tuple[str, int]]],
         hostname: str,
-        ssl_config: Dict[str, str] = None,
+        ssl_config: Optional[Dict[str, str]] = None,
         storage_type: PartitionStorageType = PartitionStorageType.memory,
         config_path: str = "",
         stream: bool = False,
