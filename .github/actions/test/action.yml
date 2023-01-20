@@ -42,7 +42,7 @@ runs:
       name: run python tests in examples folder
       if: runner.os == 'Linux'
     - run: |
-        bazel test -c dbg //docs:* --jobs 1 --test_output=all --config=linux --disk_cache=~/bazel-cache
+        bazel test -c dbg //docs:* --test_output=all --config=linux --disk_cache=~/bazel-cache
         bazel run -c dbg //docs:make_docs --config=linux
       shell: bash
       name: run doctest and build documentation
