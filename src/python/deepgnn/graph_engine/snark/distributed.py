@@ -71,8 +71,6 @@ class Server:
         self._hostname = hostname
         self._ssl_cert = ssl_cert
 
-        self._init_args = (hostname, data_path, index, total_shards)
-
         temp_dir = tempfile.TemporaryDirectory()
         temp_path = temp_dir.name
         meta_path = download_meta(data_path, temp_path, config_path)
@@ -116,12 +114,3 @@ class Server:
             if self.state is not None and not ray.get(self.state.safe_to_terminate.remote()):
                 return
             self.server.reset()
-
-    def __reduce__(self):
-        """On serialize reload as new client."""
-
-        def deserialize(*args):
-            get_logger().setLevel(logging.ERROR)
-            return Server(*args)
-
-        return deserialize, self._init_args
