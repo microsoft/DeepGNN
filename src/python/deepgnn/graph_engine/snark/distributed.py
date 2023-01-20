@@ -157,7 +157,7 @@ def get_server_state(num_servers: int = 1, timeout: int = 30, connect_delay: int
             except ValueError:
                 sleep(connect_delay)
         else:
-            raise ConnectionError(f"Failed to connect to server {i}!")
+            raise TimeoutError(f"Failed to connect to server {i}!")
         print(f"Connected to Server {i}.")
         server_states.append(ServerStateWrapped(server_state))
     return server_states
