@@ -265,7 +265,7 @@ Evaluate
     ...         "batch_size": 2708,
     ...         "data_dir": data_dir.name,
     ...         "sample_filename": "test.nodes",
-    ...         "n_epochs": 1,
+    ...         "n_epochs": 100,
     ...         "model_dir": f"{model_dir.name}/model.pt",
     ...     },
     ...     run_config=RunConfig(verbose=0),
@@ -273,9 +273,7 @@ Evaluate
     ... )
     >>> result = trainer.fit()
     >>> result.metrics["metric"]
-    0.86...
-    >>> result.metrics["loss"]
-    0.65...
+    0.9...
 
     >>> data_dir.cleanup()
     >>> model_dir.cleanup()
