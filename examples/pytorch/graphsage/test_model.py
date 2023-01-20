@@ -49,16 +49,12 @@ def train_graphsage_cora_ddp_trainer(mock_graph):
         model,
         rank: int = 0,
         world_size: int = 1,
-        address: str=None,
+        address: str = None,
     ):
         dataset = MockSimpleDataLoader(
             batch_size=256, query_fn=model.query, graph=mock_graph
         )
-        num_workers = (
-            0
-            if platform.system() == "Windows"
-            else args.data_parallel_num
-        )
+        num_workers = 0 if platform.system() == "Windows" else args.data_parallel_num
         dataset = torch.utils.data.DataLoader(
             dataset=dataset,
             num_workers=num_workers,

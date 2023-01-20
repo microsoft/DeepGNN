@@ -61,7 +61,7 @@ def create_dataset(
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
-    address: str = None,
+    address: str = "",
 ):
     g = DistributedClient([address])
     max_id = g.node_count(args.node_type) if args.max_id in [-1, None] else args.max_id
@@ -73,28 +73,6 @@ def create_dataset(
 
     pipe = pipe.map_batches(transform_batch)
     return pipe
-
-
-def create_eval_dataset(
-    args: argparse.Namespace,
-    model: BaseModel,
-    rank: int = 0,
-    world_size: int = 1,
-    backend=None,
-):
-    return TorchDeepGNNDataset(
-        sampler_class=FileNodeSampler,
-        backend=backend,
-        query_fn=model.q.query_training,
-        prefetch_queue_size=2,
-        prefetch_worker_size=2,
-        sample_files=args.eval_file,
-        batch_size=1000,
-        shuffle=False,
-        drop_last=True,
-        worker_index=rank,
-        num_workers=world_size,
-    )
 
 
 def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):

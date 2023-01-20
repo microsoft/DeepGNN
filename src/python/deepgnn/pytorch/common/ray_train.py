@@ -10,7 +10,7 @@ from ray.air.config import ScalingConfig
 from deepgnn import TrainMode, get_logger
 from deepgnn.pytorch.common import get_args
 from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
-from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
+from deepgnn.graph_engine.snark.distributed import Server
 
 
 def train_func(config: Dict):
@@ -45,7 +45,9 @@ def train_func(config: Dict):
 
     address = "localhost:9999"
     _ = Server(address, args.data_dir, 0, len(args.partitions))
-    pipe = config["init_dataset_fn"](args, model, session.get_world_rank(), session.get_world_size(), address)
+    pipe = config["init_dataset_fn"](
+        args, model, session.get_world_rank(), session.get_world_size(), address
+    )
 
     for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
         if epoch < epochs_trained:
