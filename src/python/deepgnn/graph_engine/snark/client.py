@@ -148,7 +148,7 @@ class MemoryGraph:
     def __init__(
         self,
         meta_path: str,
-        partitions: Sequence[Union[int, Tuple[str, int]]] = None,
+        partitions: Optional[Sequence[Union[int, Tuple[str, int]]]] = None,
         storage_type: PartitionStorageType = PartitionStorageType.memory,
         config_path: str = "",
         stream: bool = False,
@@ -905,10 +905,10 @@ class DistributedGraph(MemoryGraph):
     def __init__(
         self,
         servers: List[str],
-        ssl_cert: str = None,
-        num_threads: int = None,
-        num_cq_per_thread: int = None,
-        grpc_options: List[Tuple[str, str]] = None,
+        ssl_cert: Optional[str] = None,
+        num_threads: Optional[int] = None,
+        num_cq_per_thread: Optional[int] = None,
+        grpc_options: Optional[List[Tuple[str, str]]] = None,
     ):
         """Create a client to work with a graph in a distributed mode.
 

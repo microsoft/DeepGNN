@@ -20,6 +20,7 @@ from deepgnn.graph_engine import (
     GraphEngineBackend,
 )
 from model import SupervisedGraphSage, UnSupervisedGraphSage  # type: ignore
+from typing import Optional
 
 
 # fmt: off
@@ -77,7 +78,7 @@ def create_dataset(
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
-    backend: GraphEngineBackend = None,
+    backend: Optional[GraphEngineBackend] = None,
 ):
     if args.mode == TrainMode.INFERENCE:
         return TorchDeepGNNDataset(

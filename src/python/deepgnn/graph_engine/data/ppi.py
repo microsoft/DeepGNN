@@ -7,7 +7,7 @@ import json
 import os
 import zipfile
 import tempfile
-from typing import List, Dict
+from typing import Optional, List, Dict
 
 import numpy as np
 from sklearn.preprocessing import StandardScaler
@@ -37,7 +37,7 @@ class PPI(Client):
     - Node Feature Dim: 50 (id:1)
     """
 
-    def __init__(self, output_dir: str = None, num_partitions: int = 1):
+    def __init__(self, output_dir: Optional[str] = None, num_partitions: int = 1):
         """
         Initialize PPI dataset.
 

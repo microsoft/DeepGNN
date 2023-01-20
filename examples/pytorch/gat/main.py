@@ -13,6 +13,7 @@ from deepgnn.pytorch.modeling import BaseModel
 from deepgnn.pytorch.training import run_dist
 from deepgnn.graph_engine import FileNodeSampler, GraphEngineBackend
 from model import GAT, GATQueryParameter  # type: ignore
+from typing import Optional
 
 
 # fmt: off
@@ -63,7 +64,7 @@ def create_dataset(
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
-    backend: GraphEngineBackend = None,
+    backend: Optional[GraphEngineBackend] = None,
 ):
     return TorchDeepGNNDataset(
         sampler_class=FileNodeSampler,
@@ -85,7 +86,7 @@ def create_eval_dataset(
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
-    backend: GraphEngineBackend = None,
+    backend: Optional[GraphEngineBackend] = None,
 ):
     return TorchDeepGNNDataset(
         sampler_class=FileNodeSampler,

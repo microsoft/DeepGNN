@@ -8,7 +8,7 @@ import tensorflow as tf
 import numpy as np
 import random
 
-from typing import List, Union, Callable
+from typing import Optional, List, Union, Callable
 from deepgnn.tf.common.utils import (
     setup_worker_hooks,
     setup_chief_only_hooks,
@@ -42,7 +42,7 @@ class BaseTFTrainer(Trainer):
         summary_save_steps: int = 100,
         checkpoint_save_secs: int = 3600,
         profiler_save_secs: int = 180,
-        logger: logging.Logger = None,
+        logger: Optional[logging.Logger] = None,
     ):
         """Initialize trainer."""
         super().__init__(
@@ -70,7 +70,7 @@ class BaseTFTrainer(Trainer):
         self.set_random_seed(self.seed)
         self.profiler_save_secs = profiler_save_secs
 
-    def set_random_seed(self, seed: int = None):
+    def set_random_seed(self, seed: Optional[int] = None):
         """Set seed in all modules used by the trainer."""
         if seed:
             tf.compat.v1.set_random_seed(seed)
@@ -88,11 +88,11 @@ class BaseTFTrainer(Trainer):
         dataset: tf.data.Dataset,
         model: tf.keras.Model,
         optimizer: tf.compat.v1.train.Optimizer,
-        loss: Union[str, Callable, tf.keras.losses.Loss] = None,
-        metrics: List[Union[str, Callable, tf.keras.metrics.Metric]] = None,
-        callbacks: List[tf.keras.callbacks.Callback] = None,
+        loss: Optional[Union[str, Callable, tf.keras.losses.Loss]] = None,
+        metrics: Optional[List[Union[str, Callable, tf.keras.metrics.Metric]]] = None,
+        callbacks: Optional[List[tf.keras.callbacks.Callback]] = None,
         epochs: int = 1,
-        steps_per_epoch: int = None,
+        steps_per_epoch: Optional[int] = None,
     ):
         """
         Train model on a dataset.
@@ -201,7 +201,7 @@ class BaseTFTrainer(Trainer):
         model: tf.keras.Model,
         embedding_to_str_fn: Callable,
         output_embedding_file_prefix: str = "embedding",
-        steps: int = None,
+        steps: Optional[int] = None,
     ):
         """
         Run inference on a dataset.
@@ -296,10 +296,10 @@ class BaseTFTrainer(Trainer):
         self,
         dataset: tf.data.Dataset,
         model: tf.keras.Model,
-        loss: Union[str, Callable, tf.keras.losses.Loss] = None,
-        metrics: List[Union[str, Callable, tf.keras.metrics.Metric]] = None,
-        callbacks: List[tf.keras.callbacks.Callback] = None,
-        steps: int = None,
+        loss: Optional[Union[str, Callable, tf.keras.losses.Loss]] = None,
+        metrics: Optional[List[Union[str, Callable, tf.keras.metrics.Metric]]] = None,
+        callbacks: Optional[List[tf.keras.callbacks.Callback]] = None,
+        steps: Optional[int] = None,
     ):
         """
         Evaluate model on a dataset.

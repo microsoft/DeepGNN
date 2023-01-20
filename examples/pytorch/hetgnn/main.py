@@ -13,6 +13,7 @@ from deepgnn.graph_engine import CSVNodeSampler, GraphEngineBackend
 from args import init_args  # type: ignore
 from model import HetGnnModel  # type: ignore
 from sampler import HetGnnDataSampler  # type: ignore
+from typing import Optional
 
 
 def create_model(args: argparse.Namespace):
@@ -36,7 +37,7 @@ def create_dataset(
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
-    backend: GraphEngineBackend = None,
+    backend: Optional[GraphEngineBackend] = None,
 ):
     if args.mode == TrainMode.INFERENCE:
         return TorchDeepGNNDataset(

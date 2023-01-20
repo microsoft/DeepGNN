@@ -5,7 +5,7 @@ import os
 import logging
 import tempfile
 import random
-from typing import List, Tuple, Dict, Set, DefaultDict
+from typing import Optional, List, Tuple, Dict, Set, DefaultDict
 
 import urllib.request
 import tarfile
@@ -91,7 +91,7 @@ class Dataset(Client):
         url: str,
         train_node_ratio: float,
         random_selection: bool,
-        output_dir: str = None,
+        output_dir: Optional[str] = None,
     ):
         """Initialize Dataset."""
         assert name in ["cora_full", "citeseer_full"]

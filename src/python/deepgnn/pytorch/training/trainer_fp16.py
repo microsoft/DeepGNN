@@ -31,7 +31,7 @@ class FP16Trainer(Trainer):
         model: BaseModel,
         dataset: TorchDeepGNNDataset,
         optimizer: Optional[Optimizer] = None,
-        eval_dataset_for_training: TorchDeepGNNDataset = None,
+        eval_dataset_for_training: Optional[TorchDeepGNNDataset] = None,
     ) -> BaseModel:
         model = super()._initialize(
             model, dataset, optimizer, eval_dataset_for_training

@@ -6,7 +6,7 @@ import os
 import tensorflow as tf
 import logging
 
-from typing import Callable, Union, List
+from typing import Optional, Callable, Union, List
 
 
 class Trainer(abc.ABC):
@@ -24,7 +24,7 @@ class Trainer(abc.ABC):
         log_save_steps: int = 20,
         summary_save_steps: int = 100,
         checkpoint_save_secs: int = 3600,
-        logger: logging.Logger = None,
+        logger: Optional[logging.Logger] = None,
     ):
         """Initialize common fields.
 
@@ -46,7 +46,7 @@ class Trainer(abc.ABC):
         self.logger.info(f"tensorflow version: {tf.__version__}")
 
     @abc.abstractmethod
-    def set_random_seed(self, seed: int = None):
+    def set_random_seed(self, seed: Optional[int] = None):
         """Set random seed."""
 
     @abc.abstractmethod
@@ -55,11 +55,11 @@ class Trainer(abc.ABC):
         dataset: tf.data.Dataset,
         model: tf.keras.Model,
         optimizer: Union[tf.keras.optimizers.Optimizer, tf.compat.v1.train.Optimizer],
-        loss: Union[str, Callable, tf.keras.losses.Loss] = None,
-        metrics: List[Union[str, Callable, tf.keras.metrics.Metric]] = None,
-        callbacks: List[tf.keras.callbacks.Callback] = None,
+        loss: Optional[Union[str, Callable, tf.keras.losses.Loss]] = None,
+        metrics: Optional[List[Union[str, Callable, tf.keras.metrics.Metric]]] = None,
+        callbacks: Optional[List[tf.keras.callbacks.Callback]] = None,
         epochs: int = 1,
-        steps_per_epoch: int = None,
+        steps_per_epoch: Optional[int] = None,
     ):
         """Training interface.
 
@@ -85,7 +85,7 @@ class Trainer(abc.ABC):
         model: tf.keras.Model,
         embedding_to_str_fn: Callable,
         output_embedding_file_prefix: str = "embedding",
-        steps: int = None,
+        steps: Optional[int] = None,
     ):
         """Inference interface.
 
@@ -102,10 +102,10 @@ class Trainer(abc.ABC):
         self,
         dataset: tf.data.Dataset,
         model: tf.keras.Model,
-        loss: Union[str, Callable, tf.keras.losses.Loss] = None,
-        metrics: List[Union[str, Callable, tf.keras.metrics.Metric]] = None,
-        callbacks: List[tf.keras.callbacks.Callback] = None,
-        steps: int = None,
+        loss: Optional[Union[str, Callable, tf.keras.losses.Loss]] = None,
+        metrics: Optional[List[Union[str, Callable, tf.keras.metrics.Metric]]] = None,
+        callbacks: Optional[List[tf.keras.callbacks.Callback]] = None,
+        steps: Optional[int] = None,
     ):
         """Evaluate model.
 

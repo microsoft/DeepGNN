@@ -68,7 +68,7 @@ class Trainer:
         model: BaseModel,
         dataset: TorchDeepGNNDataset,
         optimizer: Optional[Optimizer] = None,
-        eval_dataset_for_training: TorchDeepGNNDataset = None,
+        eval_dataset_for_training: Optional[TorchDeepGNNDataset] = None,
     ) -> Optional[torch.Tensor]:
         """
         Perform training/evaluation/inference according to training mode set in constructor.
@@ -155,7 +155,7 @@ class Trainer:
         model: BaseModel,
         dataset: TorchDeepGNNDataset,
         optimizer: Optional[Optimizer] = None,
-        eval_dataset_for_training: TorchDeepGNNDataset = None,
+        eval_dataset_for_training: Optional[TorchDeepGNNDataset] = None,
     ) -> BaseModel:
         model = self._init_model(model)
         self.dataset = dataset
@@ -454,7 +454,7 @@ class Trainer:
         self.logger.info(self._wrap_log(f"Saved checkpoint to {save_path}."))
         rotate_checkpoints(self.args.save_path, self.args.max_saved_ckpts)
 
-    def _load_checkpoint(self, ckpt_path: str = None):
+    def _load_checkpoint(self, ckpt_path: Optional[str] = None):
         if not ckpt_path:
             # Search and sort checkpoints from model path.
             ckpts = get_sorted_checkpoints(self.args.model_dir)
