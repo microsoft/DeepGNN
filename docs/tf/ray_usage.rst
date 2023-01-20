@@ -250,11 +250,11 @@ Ray Usage Example for Node Classification with GAT
     ...     train_loop_config={
     ...         "batch_size": 2708,
     ...         "data_dir": data_dir.name,
-    ...         "n_epochs": 300,
+    ...         "n_epochs": 120,
     ...     },
     ...     run_config=RunConfig(verbose=0),
     ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     ... )
     >>> result = trainer.fit()
-    >>> result.metrics["accuracy"][0] > .4
+    >>> result.metrics["accuracy"][0] > .5
     True
