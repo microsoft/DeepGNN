@@ -61,44 +61,18 @@ def create_dataset(
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
-    address: str = None,
+    address: str = "",
 ):
     g = DistributedClient([address])
-    # NOTE: See https://deepgnn.readthedocs.io/en/latest/graph_engine/dataset.html
-    #       for how to use a different sampler
     max_id = g.node_count(args.node_type) if args.max_id in [-1, None] else args.max_id
     dataset = ray.data.range(max_id).repartition(max_id // args.batch_size)
     pipe = dataset.window(blocks_per_window=4).repeat(args.num_epochs)
 
     def transform_batch(idx: list) -> dict:
-        # If get Ray error with return shape, use deepgnn.graph_engine.util.serialize/deserialize
-        # in your query and forward function
-        return model.q.query_training(g, np.array(idx))  # TODO Update to your query function
+        return model.q.query_training(g, np.array(idx))
 
     pipe = pipe.map_batches(transform_batch)
     return pipe
-
-
-def create_eval_dataset(
-    args: argparse.Namespace,
-    model: BaseModel,
-    rank: int = 0,
-    world_size: int = 1,
-    backend=None,
-):
-    return TorchDeepGNNDataset(
-        sampler_class=FileNodeSampler,
-        backend=backend,
-        query_fn=model.q.query_training,
-        prefetch_queue_size=2,
-        prefetch_worker_size=2,
-        sample_files=args.eval_file,
-        batch_size=1000,
-        shuffle=False,
-        drop_last=True,
-        worker_index=rank,
-        num_workers=world_size,
-    )
 
 
 def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):

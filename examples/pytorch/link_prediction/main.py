@@ -4,7 +4,8 @@
 import argparse
 import os
 import torch.optim
-
+import ray
+import numpy as np
 from deepgnn import TrainMode, setup_default_logging_config
 from deepgnn.pytorch.common.utils import (
     get_logger,
@@ -18,6 +19,7 @@ from deepgnn.graph_engine import TextFileSampler, GraphEngineBackend
 from args import init_args  # type: ignore
 from consts import DEFAULT_VOCAB_CHAR_INDEX  # type: ignore
 from model import LinkPredictionModel  # type: ignore
+from deepgnn.graph_engine.snark.distributed import Client as DistributedClient
 
 
 def create_model(args: argparse.Namespace):
@@ -41,23 +43,18 @@ def create_dataset(
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
-    address: str = None,
+    address: str = "",
 ):
     g = DistributedClient([address])
-    # NOTE: See https://deepgnn.readthedocs.io/en/latest/graph_engine/dataset.html
-    #       for how to use a different sampler
     max_id = g.node_count(args.node_type) if args.max_id in [-1, None] else args.max_id
     dataset = ray.data.range(max_id).repartition(max_id // args.batch_size)
     pipe = dataset.window(blocks_per_window=4).repeat(args.num_epochs)
 
     def transform_batch(idx: list) -> dict:
-        # If get Ray error with return shape, use deepgnn.graph_engine.util.serialize/deserialize
-        # in your query and forward function
-        return model.q.query_training(g, np.array(idx))  # TODO Update to your query function
+        return model.q.query_training(g, np.array(idx))
 
     pipe = pipe.map_batches(transform_batch)
     return pipe
-
 
 
 def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):

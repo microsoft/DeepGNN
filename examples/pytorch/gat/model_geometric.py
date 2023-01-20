@@ -1,11 +1,11 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 """GAT model implementation with torch geometric."""
+from typing import List, Any
 from dataclasses import dataclass
 import numpy as np
 import torch
 import torch.nn.functional as F
-from typing import List
 
 from deepgnn.pytorch.common import Accuracy
 from deepgnn.pytorch.modeling.base_model import BaseModel
@@ -57,7 +57,7 @@ class GATQuery:
         label = label.astype(np.int32)
         edges = np.transpose(edges)
 
-        graph_tensor = (nodes, feat, edges, input_mask, label)
+        graph_tensor: List[Any] = [nodes, feat, edges, input_mask, label]
         return serialize(graph_tensor, inputs.size)
 
 

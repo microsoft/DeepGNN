@@ -25,8 +25,8 @@ class HetGnnModel(BaseUnsupervisedModel):
         feature_dim: int,
         feature_type: np.dtype,
         metric=MRR(),
-        g = None,
-        sampler = None,
+        g=None,
+        sampler=None,
     ):
         """Initialize HetGnn model."""
         super(HetGnnModel, self).__init__(
@@ -224,7 +224,7 @@ class HetGnnModel(BaseUnsupervisedModel):
     def forward(self, context: dict) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:  # type: ignore[override]
         """Calculate score based on inputs in the context and return loss."""
         if not isinstance(context, dict):
-            context = model.query(self.g, next(self.sampler))
+            context = model.query(self.g, next(self.sampler))  # type: ignore # noqa
         feature_list = context["encoder"]
         inputs = context["inputs"]
         size_array = max([len(inputs[k]) for k in range(len(inputs))])
