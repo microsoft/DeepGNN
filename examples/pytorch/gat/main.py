@@ -64,16 +64,12 @@ def create_dataset(
     address: str = None,
 ):
     g = DistributedClient([address])
-    # NOTE: See https://deepgnn.readthedocs.io/en/latest/graph_engine/dataset.html
-    #       for how to use a different sampler
     max_id = g.node_count(args.node_type) if args.max_id in [-1, None] else args.max_id
     dataset = ray.data.range(max_id).repartition(max_id // args.batch_size)
     pipe = dataset.window(blocks_per_window=4).repeat(args.num_epochs)
 
     def transform_batch(idx: list) -> dict:
-        # If get Ray error with return shape, use deepgnn.graph_engine.util.serialize/deserialize
-        # in your query and forward function
-        return model.q.query_training(g, np.array(idx))  # TODO Update to your query function
+        return model.q.query_training(g, np.array(idx))
 
     pipe = pipe.map_batches(transform_batch)
     return pipe
