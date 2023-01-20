@@ -6,13 +6,13 @@ from itertools import repeat
 from typing import List, Dict, Union, Tuple
 import logging
 import tempfile
-from time import sleep
 import ray
 import deepgnn.graph_engine.snark.client as client
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.local as ge_snark
 from deepgnn import get_logger
 from deepgnn.graph_engine.snark.meta import download_meta
+from deepgnn.graph_engine.snark.synchronized import set_server_state
 
 
 class Client(ge_snark.Client):
@@ -48,22 +48,6 @@ class Client(ge_snark.Client):
             return Client(*args)
 
         return deserialize, (self._servers, self._ssl_cert)
-
-
-@ray.remote
-class ServerState(object):
-    def __init__(self, hostname):
-        self.hostname = hostname
-
-    def get_hostname(self):
-        return self.hostname
-
-class ServerStateWrapped:
-    def __init__(self, server_state):
-        self.server_state = server_state
-
-    def get_hostname(self):
-        return ray.get(self.server_state.get_hostname.remote())
 
 
 class Server:
@@ -124,15 +108,13 @@ class Server:
             stream,  # type: ignore
         )
 
-        try:
-            ray.init(address="auto", ignore_reinit_error=True)
-            self.actor = ServerState.options(name=f"server_{index}", namespace=namespace).remote(hostname)
-        except ConnectionError:
-            pass
+        self.state = set_server_state(hostname, index, namespace)
 
     def reset(self):
         """Reset server."""
         if self.server is not None:
+            if self.state is not None and not ray.get(self.state.safe_to_terminate.remote()):
+                return
             self.server.reset()
 
     def __reduce__(self):
@@ -143,21 +125,3 @@ class Server:
             return Server(*args)
 
         return deserialize, self._init_args
-
-
-def get_server_state(num_servers: int = 1, timeout: int = 30, connect_delay: int = 5, namespace: str = "deepgnn"):
-    ray.init(address="auto", ignore_reinit_error=True)
-    server_states = []
-    for i in range(num_servers):
-        print(f"Connecting to Server {i}...")
-        for _ in range(timeout // connect_delay):
-            try:
-                server_state = ray.get_actor(f"server_{i}", namespace=namespace)
-                break
-            except ValueError:
-                sleep(connect_delay)
-        else:
-            raise TimeoutError(f"Failed to connect to server {i}!")
-        print(f"Connected to Server {i}.")
-        server_states.append(ServerStateWrapped(server_state))
-    return server_states

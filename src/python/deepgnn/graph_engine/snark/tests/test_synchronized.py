@@ -8,37 +8,27 @@ import multiprocessing as mp
 import tempfile
 
 import pytest
+import numpy as np
+import numpy.testing as npt
 import ray
-
-from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient, get_server_state
+from deepgnn.graph_engine.data.citation import Cora
+from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
+from deepgnn.graph_engine.snark.synchronized import get_server_state
 
 
 def test_simple_client_server_initialized_in_correct_order():
-    server_event = mp.Event()
-
-    class MockServer:
-        def __init__(self):
-            server_event.set()
-
-        def reset(self):
-            assert server_event.is_set()
-
-    client_event = mp.Event()
-
-    class MockClient:
-        def __init__(self):
-            client_event.set()
-
-        def reset(self):
-            assert client_event.is_set()
-
     working_dir = tempfile.TemporaryDirectory()
+    Cora(working_dir.name)
+    ray.shutdown()
     ray.init()
-    server = Server(working_dir.name, 0, None, MockServer)
+    server = Server("localhost:9999", working_dir.name, 0, 1)
+
     server_states = get_server_state()
     client = DistributedClient([state.get_hostname() for state in server_states])
-    server_event.wait(1)
-    client_event.wait(1)
+
+    result = client.node_features(np.array([0, 1]), np.array([[1, 1]]), np.float32)
+    npt.assert_almost_equal(result, np.array([[3.], [4.]], dtype=np.float32))
+
     client.reset()
     server.reset()
     ray.shutdown()
@@ -59,42 +49,30 @@ def test_client_initialization_timeout():
 
 
 def test_server_waits_for_client_to_stop():
-    server_event = mp.Event()
-
-    class MockServer:
-        def __init__(self):
-            server_event.set()
-
-        def reset(self):
-            assert server_event.is_set()
-
-    client_event = mp.Event()
-
-    class MockClient:
-        def __init__(self):
-            client_event.set()
-
-        def reset(self):
-            assert client_event.is_set()
-
+    ray.shutdown()
     ray.init()
     working_dir = tempfile.TemporaryDirectory()
-    server = Server(working_dir.name, 0, None, MockServer)
+    Cora(working_dir.name)
+
+    server = Server("localhost:9998", working_dir.name, 0, 1)
     server_states = get_server_state()
     client = DistributedClient([state.get_hostname() for state in server_states])
-    server_event.wait()
-    server_finished_event = mp.Event()
-    client.client
-    client_event.wait()
-    with ThreadPoolExecutor() as executor:
 
+    with ThreadPoolExecutor() as executor:
         def server_done():
             server.reset()
-            server_finished_event.set()
-
         executor.submit(server_done)
-        client.reset()
-    server_finished_event.wait()
+
+    result = client.node_features(np.array([0, 1]), np.array([[1, 1]]), np.float32)
+    npt.assert_almost_equal(result, np.array([[3.], [4.]], dtype=np.float32))
+
+    for state in server_states:
+        state.reset()
+    client.reset()
+    
+    with pytest.raises(Exception):
+        result = client.node_features(np.array([0, 1]), np.array([[1, 1]]), np.float32)
+    
     ray.shutdown()
 
 
