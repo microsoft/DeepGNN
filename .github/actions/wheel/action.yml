@@ -23,7 +23,7 @@ runs:
         sudo chown $USER /dt11
       shell: bash
       name: Configure env variables for linux
-    - uses: actions/cache@v3
+    - uses: actions/cache@v3.2.3
       id: compiler-cache
       with:
         path: /dt11
@@ -50,7 +50,7 @@ runs:
       shell: bash
       name: Configure env variables for macos
 
-    - uses: actions/cache@v3
+    - uses: actions/cache@v3.2.3
       id: build-cache
       with:
         path: ~/bazel-cache
