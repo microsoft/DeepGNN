@@ -186,9 +186,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     train.torch.enable_reproducibility(seed=session.get_world_rank())
     ...
     ...     # Start server
-    ...     address = "localhost:9999"
-    ...     s = Server(address, config["data_dir"], 0, 1)
-    ...     g = DistributedClient(address)
+    ...     g = graph_init_fn()
     ...
     ...     # Initialize the model and wrap it with Ray
     ...     model = GAT(in_dim=1433, num_classes=7)
@@ -226,6 +224,11 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...
     ...     save_checkpoint(model, epoch=epoch, step=step, model_dir=config["model_dir"])
 
+    >>> address = "localhost:9999"
+    >>> s = Server(address, data_dir.name, 0, 1)
+    >>> def graph_init_fn():
+    ...     return DistributedClient([address])
+
 In this step we start the training job.
 First we start a local ray cluster with `ray.init() <https://docs.ray.io/en/latest/ray-core/package-ref.html#ray-init>`_.
 Next we initialize a `TorchTrainer <https://docs.ray.io/en/latest/ray-air/package-ref.html#pytorch>`_
@@ -243,8 +246,8 @@ Finally we call trainer.fit() to execute the training loop.
     >>> trainer = TorchTrainer(
     ...     train_func,
     ...     train_loop_config={
+    ...         "graph_init_fn": graph_init_fn,
     ...         "batch_size": 2708,
-    ...         "data_dir": data_dir.name,
     ...         "sample_filename": "train.nodes",
     ...         "n_epochs": 100,
     ...         "model_dir": f"{model_dir.name}/model.pt",
