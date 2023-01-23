@@ -57,8 +57,10 @@ def get_source_dest_vec(params, config, graph):
     dataset = ray.data.read_text(params.filename_pattern)
     dataset = dataset.repartition(dataset.count() // batch_size)
     pipe = dataset.window(blocks_per_window=4)
+
     def transform_batch(idx: list) -> dict:
         return lp.query(idx)
+
     pipe = pipe.map_batches(transform_batch)
 
     for i, data in enumerate(pipe.iter_torch_batches(batch_size=batch_size)):

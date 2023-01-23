@@ -11,7 +11,6 @@ from fsspec.utils import infer_storage_options
 
 
 QueryOutput = Union[dict, tuple, np.ndarray, list]
-INVALID_NODE_ID = -1
 
 
 class SamplingStrategy(IntEnum):
