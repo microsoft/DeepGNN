@@ -6,7 +6,7 @@ import argparse
 import tempfile
 import json
 import os
-from typing import Dict
+from typing import Optional, Dict
 
 import numpy as np
 from sklearn.preprocessing import StandardScaler
@@ -42,7 +42,7 @@ class Reddit(PPI):
 
     def __init__(
         self,
-        output_dir: str = None,
+        output_dir: Optional[str] = None,
         edge_downsample_pct: float = 0.1,
         num_partitions: int = 2,
         seed: int = 0,

@@ -34,7 +34,7 @@ class MultiWorkersConverter:
         buffer_size: int = 50,
         queue_size: int = 30,
         thread_count: int = mp.cpu_count(),
-        dispatcher: Dispatcher = None,
+        dispatcher: Optional[Dispatcher] = None,
         skip_node_sampler: bool = False,
         skip_edge_sampler: bool = False,
         file_iterator: Optional[TextFileIterator] = None,
