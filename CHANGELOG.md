@@ -7,9 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Added `grpc_options` to distributed client to control service config.
-
-### Changed
 - Add usage example for Ray Train, see [docs/torch/ray_usage.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/torch/ray_usage.rst).
 
 - Add documentation for Ray Data usage, see [tutorial](https://github.com/microsoft/DeepGNN/tree/main/docs/graph_engine/dataset.rst) and [example](https://github.com/microsoft/DeepGNN/tree/main/docs/graph_engine/ray_usage_advanced.rst)
@@ -17,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add Reddit dataset download tool at deepgnn.graph_engine.data.reddit.
 
 - Remove FP16 constants, replace argument with boolean to enable or disable.
+
+- Added `grpc_options` to distributed client to control service config.
 
 ### Removed
 - Remove our custom PyTorch trainers, use Ray instead.

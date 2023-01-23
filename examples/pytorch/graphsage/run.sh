@@ -11,9 +11,9 @@ USE_HADOOP=${4:-no}
 DIR_NAME=$(dirname "$0")
 
 GRAPH=/tmp/cora
-#rm -fr $GRAPH
+rm -fr $GRAPH
 
-#python -m deepgnn.graph_engine.data.citation --data_dir $GRAPH
+python -m deepgnn.graph_engine.data.citation --data_dir $GRAPH
 
 MODEL_DIR=/tmp/model_fix
 rm -rf $MODEL_DIR

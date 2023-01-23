@@ -14,7 +14,6 @@ from deepgnn.pytorch.modeling import BaseModel
 from deepgnn.graph_engine import (
     Graph,
     SamplingStrategy,
-    CSVNodeSampler,
     GENodeSampler,
     GraphEngineBackend,
 )
@@ -129,16 +128,9 @@ def train_func(config: Dict):
         world_size=session.get_world_size(),
         backend=backend,
     )
-    num_workers = (
-        0
-        if hasattr(dataset, "sampler_class")
-        and issubclass(dataset.sampler_class, (GENodeSampler, GEEdgeSampler))
-        or platform.system() == "Windows"
-        else args.data_parallel_num
-    )
     dataset = torch.utils.data.DataLoader(
         dataset=dataset,
-        num_workers=num_workers,
+        num_workers=0,
     )
     losses_full = []
     for epoch in range(epochs_trained, args.num_epochs):
