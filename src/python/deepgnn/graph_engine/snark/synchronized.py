@@ -1,55 +1,81 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
+"""Synchronized server - client setup."""
+from typing import Optional, List
 from time import sleep
 import ray
 
 
 @ray.remote
-class ServerState(object):
-    def __init__(self, hostname):
+class ServerState:
+    """State of a single server."""
+
+    def __init__(self, hostname: str):
+        """Init server state."""
         self.hostname = hostname
         self._clients = 0
 
-    def get_hostname(self):
+    def get_hostname(self) -> str:
+        """Get hostname of server."""
         return self.hostname
 
     def add_client(self):
+        """Add client to server."""
         self._clients += 1
 
     def reset(self):
+        """Reset server state."""
         self._clients -= 1
 
-    def safe_to_terminate(self):
+    def safe_to_terminate(self) -> bool:
+        """Is server safe to terminate?."""
         return self._clients == 0
 
 
 class ServerStateWrapped:
-    def __init__(self, server_state):
+    """Wrapped client facing state of a single server."""
+
+    def __init__(self, server_state: ServerState):
+        """Init wrapped server state."""
         self.server_state = server_state
 
-    def get_hostname(self):
-        return ray.get(self.server_state.get_hostname.remote())
+    def get_hostname(self) -> str:
+        """Get hostname of server."""
+        return ray.get(self.server_state.get_hostname.remote())  # type: ignore
 
     def add_client(self):
-        return ray.get(self.server_state.add_client.remote())
+        """Add client to server."""
+        return ray.get(self.server_state.add_client.remote())  # type: ignore
 
     def reset(self):
-        return ray.get(self.server_state.reset.remote())
+        """Reset server state."""
+        return ray.get(self.server_state.reset.remote())  # type: ignore
 
-    def safe_to_terminate(self):
-        return ray.get(self.server_state.safe_to_terminate.remote())
+    def safe_to_terminate(self) -> bool:
+        """Is server safe to terminate?."""
+        return ray.get(self.server_state.safe_to_terminate.remote())  # type: ignore
 
 
-def set_server_state(hostname, index, namespace):
+def _set_server_state(
+    hostname: str, index: int, namespace: str = "deepgnn"
+) -> Optional[ServerState]:
+    """Add server state to ray namespace."""
     try:
         ray.init(address="auto", ignore_reinit_error=True)
-        return ServerState.options(name=f"server_{index}", namespace=namespace).remote(hostname)
+        return ServerState.options(name=f"server_{index}", namespace=namespace).remote(  # type: ignore
+            hostname
+        )
     except ConnectionError:
         return None
 
 
-def get_server_state(num_servers: int = 1, timeout: int = 30, connect_delay: int = 5, namespace: str = "deepgnn"):
+def get_server_state(
+    num_servers: int = 1,
+    timeout: int = 30,
+    connect_delay: int = 5,
+    namespace: str = "deepgnn",
+) -> List[ServerStateWrapped]:
+    """Pull server state from ray namespace."""
     ray.init(address="auto", ignore_reinit_error=True)
     server_states = []
     for i in range(num_servers):

@@ -27,7 +27,7 @@ def test_simple_client_server_initialized_in_correct_order():
     client = DistributedClient([state.get_hostname() for state in server_states])
 
     result = client.node_features(np.array([0, 1]), np.array([[1, 1]]), np.float32)
-    npt.assert_almost_equal(result, np.array([[3.], [4.]], dtype=np.float32))
+    npt.assert_almost_equal(result, np.array([[3.0], [4.0]], dtype=np.float32))
 
     client.reset()
     server.reset()
@@ -59,20 +59,22 @@ def test_server_waits_for_client_to_stop():
     client = DistributedClient([state.get_hostname() for state in server_states])
 
     with ThreadPoolExecutor() as executor:
+
         def server_done():
             server.reset()
+
         executor.submit(server_done)
 
     result = client.node_features(np.array([0, 1]), np.array([[1, 1]]), np.float32)
-    npt.assert_almost_equal(result, np.array([[3.], [4.]], dtype=np.float32))
+    npt.assert_almost_equal(result, np.array([[3.0], [4.0]], dtype=np.float32))
 
     for state in server_states:
         state.reset()
     client.reset()
-    
+
     with pytest.raises(Exception):
         result = client.node_features(np.array([0, 1]), np.array([[1, 1]]), np.float32)
-    
+
     ray.shutdown()
 
 

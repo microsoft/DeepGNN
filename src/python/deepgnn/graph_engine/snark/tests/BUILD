@@ -265,10 +265,10 @@ py_test(
 )
 
 py_test(
-    name = "test_synchronized",
-    srcs = ["test_synchronized.py"],
+    name = "synchronized_test",
+    srcs = ["synchronized_test.py"],
     imports = ["../../../../"],
-    main = "test_synchronized.py",
+    main = "synchronized_test.py",
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [

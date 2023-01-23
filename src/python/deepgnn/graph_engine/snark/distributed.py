@@ -12,7 +12,7 @@ import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.local as ge_snark
 from deepgnn import get_logger
 from deepgnn.graph_engine.snark.meta import download_meta
-from deepgnn.graph_engine.snark.synchronized import set_server_state
+from deepgnn.graph_engine.snark.synchronized import _set_server_state
 
 
 class Client(ge_snark.Client):
@@ -106,11 +106,13 @@ class Server:
             stream,  # type: ignore
         )
 
-        self.state = set_server_state(hostname, index, namespace)
+        self.state = _set_server_state(hostname, index, namespace)
 
     def reset(self):
         """Reset server."""
         if self.server is not None:
-            if self.state is not None and not ray.get(self.state.safe_to_terminate.remote()):
+            if self.state is not None and not ray.get(
+                self.state.safe_to_terminate.remote()
+            ):
                 return
             self.server.reset()
