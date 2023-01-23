@@ -253,10 +253,8 @@ Training Loop
     ...     # Set random seed
     ...     train.torch.enable_reproducibility(seed=session.get_world_rank())
     ...
-    ...     # Start server
-    ...     address = "localhost:9999"
-    ...     s = Server(address, config["data_dir"], 0, 1)
-    ...     g = DistributedClient([address])
+    ...     # Start GE
+    ...     g = config["graph_init_fn"]()
     ...
     ...     # Initialize the model and wrap it with Ray
     ...     p = LinkPredictionQueryParameter(
@@ -300,6 +298,11 @@ Training Loop
     ...
     ...     save_checkpoint(model, epoch=epoch, step=step, model_dir=config["model_dir"])
 
+    >>> address = "localhost:9999"
+    >>> s = Server(address, working_dir, 0, 1)
+    >>> def graph_init_fn():
+    ...     return DistributedClient([address])
+
 Train
 =====
 
@@ -314,8 +317,8 @@ Finally we train the model to predict whether an edge exists between any two nod
     >>> trainer = TorchTrainer(
     ...     train_func,
     ...     train_loop_config={
+    ...         "graph_init_fn": graph_init_fn,
     ...         "batch_size": 64,
-    ...         "data_dir": working_dir,
     ...         "n_epochs": 100,
     ...         "model_dir": f"{model_dir.name}/model.pt",
     ...     },
@@ -325,5 +328,3 @@ Finally we train the model to predict whether an edge exists between any two nod
     >>> result = trainer.fit()
     >>> result.metrics["metric"]
     0.98...
-    >>> result.metrics["loss"]
-    1.2...

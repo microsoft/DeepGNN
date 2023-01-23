@@ -6,7 +6,7 @@ import tensorflow as tf
 import logging
 import os
 
-from typing import List
+from typing import Optional, List
 from tensorflow import keras
 from deepgnn.tf.common.tf2_trainer import EagerTrainer
 from deepgnn.tf.common.args import TrainerType
@@ -29,7 +29,7 @@ class HorovodEagerTrainer(EagerTrainer):
         summary_save_steps: int = 100,
         checkpoint_save_secs: int = 3600,
         profile_batch: List[int] = [100, 100],
-        logger: logging.Logger = None,
+        logger: Optional[logging.Logger] = None,
     ):
         """Initialize trainer."""
         hvd.init()

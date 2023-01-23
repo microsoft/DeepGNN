@@ -85,7 +85,7 @@ class MaxPoolingAggregator(tf.keras.layers.Layer):
         output_dim: int,
         dropout: float = 0.0,
         bias: bool = False,
-        act: Callable = tf.nn.relu,
+        act: Optional[Callable] = tf.nn.relu,
         concat: bool = False,
         hidden_dim: int = 512,
     ):

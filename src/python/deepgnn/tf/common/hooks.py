@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 """Hooks for distributed training."""
-from typing import List
+from typing import Optional, List
 import tensorflow as tf
 import os
 import sys
@@ -19,12 +19,12 @@ class ChiefCheckpointSaverHook(tf.estimator.CheckpointSaverHook):
         self,
         dist_sync: DistributedSync,
         checkpoint_dir: str,
-        save_secs: int = None,
-        save_steps: int = None,
-        saver: object = None,
+        save_secs: Optional[int] = None,
+        save_steps: Optional[int] = None,
+        saver: Optional[object] = None,
         checkpoint_basename: str = "model.ckpt",
-        scaffold: object = None,
-        listeners: List[object] = None,
+        scaffold: Optional[object] = None,
+        listeners: Optional[List[object]] = None,
     ):
         """Initialize hook."""
         super().__init__(

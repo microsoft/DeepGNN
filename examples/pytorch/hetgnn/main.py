@@ -65,22 +65,20 @@ def train_func(config: Dict):
     g = DistributedClient([address])
 
     max_id = g.node_count(args.node_type) if args.max_id in [-1, None] else args.max_id
-    sampler = HetGnnDataSampler(g, max_id, args.batch_size, 3)
-    dataset = ray.data.range(max_id).repartition(max_id // args.batch_size)
-    pipe = dataset.window(blocks_per_window=4).repeat(args.num_epochs)
 
-    for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
+    for epoch in range(args.num_epochs):
         if epoch < epochs_trained:
             continue
         scores = []
         labels = []
         losses = []
-        for step, batch in enumerate(
-            epoch_pipe.iter_torch_batches(batch_size=args.batch_size)
-        ):
+
+        sampler = HetGnnDataSampler(g, max_id, args.batch_size, 3)
+
+        for step, batch in enumerate(sampler):
             if step < steps_in_epoch_trained:
                 continue
-            loss, score, label = model(model.query(g, next(sampler)))
+            loss, score, label = model(model.query(g, batch))
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()

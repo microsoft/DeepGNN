@@ -3,6 +3,7 @@
 
 """Unit test utils."""
 from deepgnn.graph_engine.snark.decoders import JsonDecoder
+from typing import Optional
 
 
 def json_to_edge_list_feature(features):
@@ -35,7 +36,7 @@ def edge_list_encode(
     node_weight: float,
     node_features: list,
     edges: list,
-    buffer: object = None,  # type: ignore
+    buffer: Optional[object] = None,  # type: ignore
 ):
     """
     Convert data to a line of the edge_list format.

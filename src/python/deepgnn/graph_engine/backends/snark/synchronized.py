@@ -187,7 +187,7 @@ class _ServerProcess(mp.Process):
         self._stop_event.wait()
         get_logger().info(f"Shutting down server #{self.id}")
 
-    def join(self, timeout: float = None):
+    def join(self, timeout: Optional[float] = None):
         """Stop the GE server."""
         self._wait_for_clients(timeout)
         self._stop_event.set()

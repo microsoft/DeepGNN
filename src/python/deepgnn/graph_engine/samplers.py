@@ -6,7 +6,7 @@ import glob
 import math
 import random
 
-from typing import Callable, List, Tuple, Union
+from typing import Optional, Callable, List, Tuple, Union
 import csv
 from deepgnn import get_logger
 import numpy as np
@@ -842,7 +842,7 @@ class TextFileSampler(BaseSampler):
         self,
         store_name: str,
         filename: str,
-        adl_config: str = None,
+        adl_config: Optional[str] = None,
         batch_size: int = 512,
         buffer_size: int = 1024,
         epochs: int = 1,

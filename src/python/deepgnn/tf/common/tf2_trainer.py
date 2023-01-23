@@ -35,7 +35,7 @@ class _LoggerCallback(tf.keras.callbacks.Callback):
     def __init__(
         self,
         name: str = "train",
-        logger: logging.Logger = None,
+        logger: Optional[logging.Logger] = None,
         log_save_steps: int = 20,
     ):
         super().__init__()
@@ -90,7 +90,7 @@ class EagerTrainer(Trainer):
         summary_save_steps: int = 100,
         checkpoint_save_secs: int = 3600,
         profile_batch: List[int] = [100, 100],
-        logger: logging.Logger = None,
+        logger: Optional[logging.Logger] = None,
     ):
         """Initialize trainer."""
         task_index = 0
@@ -125,7 +125,7 @@ class EagerTrainer(Trainer):
 
         self.profile_batch = ",".join([str(i) for i in profile_batch])
 
-    def set_random_seed(self, seed: int = None):
+    def set_random_seed(self, seed: Optional[int] = None):
         """Set random seed for every module used by trainer."""
         if seed:
             tf.random.set_seed(seed)
@@ -148,11 +148,11 @@ class EagerTrainer(Trainer):
         dataset: tf.data.Dataset,
         model: tf.keras.Model,
         optimizer: tf.keras.optimizers.Optimizer,
-        loss: Union[str, Callable, tf.keras.losses.Loss] = None,
-        metrics: List[Union[str, Callable, tf.keras.metrics.Metric]] = None,
-        callbacks: List[tf.keras.callbacks.Callback] = None,
+        loss: Optional[Union[str, Callable, tf.keras.losses.Loss]] = None,
+        metrics: Optional[List[Union[str, Callable, tf.keras.metrics.Metric]]] = None,
+        callbacks: Optional[List[tf.keras.callbacks.Callback]] = None,
         epochs: int = 1,
-        steps_per_epoch: int = None,
+        steps_per_epoch: Optional[int] = None,
     ):
         """
         Train model in eager mode.
@@ -233,9 +233,9 @@ class EagerTrainer(Trainer):
         graph_dataset,
         optimizer,
         steps,
-        loss: Union[str, Callable, tf.keras.losses.Loss] = None,
-        metrics: List[Union[str, Callable, tf.keras.metrics.Metric]] = None,
-        callbacks: List[tf.keras.callbacks.Callback] = None,
+        loss: Optional[Union[str, Callable, tf.keras.losses.Loss]] = None,
+        metrics: Optional[List[Union[str, Callable, tf.keras.metrics.Metric]]] = None,
+        callbacks: Optional[List[tf.keras.callbacks.Callback]] = None,
         epochs: int = 1,
     ):
         timer = _Stopwatch()
@@ -269,10 +269,10 @@ class EagerTrainer(Trainer):
         self,
         dataset: tf.data.Dataset,
         model: tf.keras.Model,
-        loss: Union[str, Callable, tf.keras.losses.Loss] = None,
-        metrics: List[Union[str, Callable, tf.keras.metrics.Metric]] = None,
-        callbacks: List[tf.keras.callbacks.Callback] = None,
-        steps: int = None,
+        loss: Optional[Union[str, Callable, tf.keras.losses.Loss]] = None,
+        metrics: Optional[List[Union[str, Callable, tf.keras.metrics.Metric]]] = None,
+        callbacks: Optional[List[tf.keras.callbacks.Callback]] = None,
+        steps: Optional[int] = None,
     ):
         """
         Evaluate model.
@@ -351,9 +351,9 @@ class EagerTrainer(Trainer):
         self,
         dataset: tf.data.Dataset,
         model: tf.keras.Model,
-        embedding_to_str_fn: Callable = None,
+        embedding_to_str_fn: Optional[Callable] = None,
         output_embedding_file_prefix: str = "embedding",
-        steps: int = None,
+        steps: Optional[int] = None,
     ):
         """
         Generate embeddings.
