@@ -73,6 +73,8 @@ py_test(
     deps = [
         ":example_torch_lp",
         ":linkprediction_test_model",
+        requirement("ray"),
+        requirement("pyarrow"),
         requirement("numpy"),
         requirement("pytest"),
         requirement("fsspec"),
