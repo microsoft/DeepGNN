@@ -32,8 +32,8 @@ py_test(
     srcs_version = "PY3",
     deps = [
         ":deepgnn_pytorch_common",
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/graph_engine/backends/snark:graph_engine_backends_snark",
+        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         requirement("numpy"),
         requirement("pytest"),
         requirement("torch"),
@@ -56,8 +56,8 @@ py_test(
     srcs_version = "PY3",
     deps = [
         ":deepgnn_pytorch_common",
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/graph_engine/backends/snark:graph_engine_backends_snark",
+        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         requirement("numpy"),
         requirement("fsspec"),
         requirement("pytest"),
