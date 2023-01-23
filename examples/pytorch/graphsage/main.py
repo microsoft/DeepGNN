@@ -14,6 +14,7 @@ from deepgnn.pytorch.modeling import BaseModel
 from deepgnn.graph_engine import (
     Graph,
     SamplingStrategy,
+    CSVNodeSampler,
     GENodeSampler,
     GraphEngineBackend,
 )
