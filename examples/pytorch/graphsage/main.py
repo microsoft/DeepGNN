@@ -131,7 +131,7 @@ def train_func(config: Dict):
     )
     dataset = torch.utils.data.DataLoader(
         dataset=dataset,
-        num_workers=0,
+        num_workers=2,
     )
     losses_full = []
     for epoch in range(epochs_trained, args.num_epochs):
