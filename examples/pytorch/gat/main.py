@@ -36,15 +36,12 @@ def init_args(parser):
     parser.add_argument("--head_num", type=str2list_int, default="8,1", help="the number of attention headers.")
     parser.add_argument("--hidden_dim", type=int, default=8, help="hidden layer dimension.")
     parser.add_argument("--num_classes", type=int, default=-1, help="number of classes for category")
-    parser.add_argument("--ffd_drop", type=float, default=0.0, help="feature dropout rate.")
-    parser.add_argument("--attn_drop", type=float, default=0.0, help="attention layer dropout rate.")
+    parser.add_argument("--ffd_drop", type=float, default=0.6, help="feature dropout rate.")
+    parser.add_argument("--attn_drop", type=float, default=0.6, help="attention layer dropout rate.")
     parser.add_argument("--l2_coef", type=float, default=0.0005, help="l2 loss")
 
     # GAT Query part
     parser.add_argument("--neighbor_edge_types", type=str2list_int, default="0", help="Graph Edge for attention encoder.",)
-
-    # evaluate node file.
-    parser.add_argument("--eval_file", default="", type=str, help="")
 # fmt: on
 
 
@@ -89,7 +86,7 @@ def train_func(config: Dict):
 
     optimizer = torch.optim.Adam(
         filter(lambda p: p.requires_grad, model.parameters()),
-        lr=args.learning_rate * session.get_world_size(),
+        lr=0.005 * session.get_world_size(),
         weight_decay=0.0005,
     )
     optimizer = hvd.DistributedOptimizer(
@@ -154,9 +151,7 @@ def _main():
 
     trainer = HorovodTrainer(
         train_func,
-        train_loop_config={
-            "args": args,
-        },
+        train_loop_config={},
         scaling_config=ScalingConfig(num_workers=1, use_gpu=args.gpu),
     )
     return trainer.fit()

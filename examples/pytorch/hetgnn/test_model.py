@@ -32,10 +32,9 @@ from deepgnn.graph_engine import (
 from deepgnn.graph_engine.data.citation import Cora
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
 from model import HetGnnModel  # type: ignore
-from main import create_model, create_dataset, create_optimizer, init_args  # type: ignore
+from main import run_ray, create_model, create_dataset, create_optimizer, init_args  # type: ignore
 from sampler import HetGnnDataSampler  # type: ignore
 import evaluation  # type: ignore
-from deepgnn.pytorch.common.ray_train import run_ray
 
 node_base_index = 1000000
 

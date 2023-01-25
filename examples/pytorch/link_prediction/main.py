@@ -81,12 +81,22 @@ def _main():
     # run_dist is the unified entry for pytorch model distributed training/evaluation/inference.
     # User only needs to prepare initializing function for model, dataset, optimizer and args.
     # reference: `deepgnn/pytorch/training/factory.py`
-    run_ray(
-        init_model_fn=create_model,
-        init_dataset_fn=create_dataset,
-        init_optimizer_fn=create_optimizer,
-        init_args_fn=init_args,
+    ray.init(num_cpus=num_cpus)
+
+    args = get_args(init_args_fn, kwargs["run_args"] if "run_args" in kwargs else None)
+
+    trainer = TorchTrainer(
+        train_func,
+        train_loop_config={
+            "args": args,
+            "init_model_fn": create_model,
+            "init_dataset_fn": create_dataset,
+            "init_optimizer_fn": create_optimizer,
+            **kwargs,
+        },
+        scaling_config=ScalingConfig(num_workers=1, use_gpu=args.gpu),
     )
+    return trainer.fit()
 
 
 if __name__ == "__main__":
