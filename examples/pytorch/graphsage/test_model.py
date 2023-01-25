@@ -10,7 +10,7 @@ from typing import Dict
 import numpy as np
 import numpy.testing as npt
 import torch
-
+import ray
 from deepgnn import get_logger
 from deepgnn.pytorch.common import F1Score
 from deepgnn.graph_engine.data.citation import Cora
