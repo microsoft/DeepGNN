@@ -103,8 +103,6 @@ def run_ray(
             "init_optimizer_fn": init_optimizer_fn,
             **kwargs,
         },
-        scaling_config=ScalingConfig(
-            num_workers=1, use_gpu=args.gpu, resources_per_worker={"CPU": 2}
-        ),
+        scaling_config=ScalingConfig(num_workers=1, use_gpu=args.gpu),
     )
     return trainer.fit()

@@ -13,7 +13,6 @@ py_library(
         "consts.py",
         "metrics.py",
         "optimization.py",
-        "horovod_train.py",
         "ray_train.py",
         "utils.py",
     ],

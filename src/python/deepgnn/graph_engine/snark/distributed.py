@@ -66,9 +66,6 @@ class Server:
         stream: bool = False,
     ):
         """Init snark server."""
-        self._hostname = hostname
-        self._ssl_cert = ssl_cert
-
         temp_dir = tempfile.TemporaryDirectory()
         temp_path = temp_dir.name
         meta_path = download_meta(data_path, temp_path, config_path)

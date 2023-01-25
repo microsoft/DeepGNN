@@ -44,7 +44,7 @@ def create_dataset(
     rank: int = 0,
     world_size: int = 1,
     address: str = "",
-):
+) -> ray.data.DatasetPipeline:
     g = DistributedClient([address])
     max_id = g.node_count(args.node_type) if args.max_id in [-1, None] else args.max_id
     dataset = ray.data.range(max_id).repartition(max_id // args.batch_size)
@@ -160,9 +160,7 @@ def run_ray(init_dataset_fn, **kwargs):
             "init_dataset_fn": init_dataset_fn,
             **kwargs,
         },
-        scaling_config=ScalingConfig(
-            num_workers=1, use_gpu=args.gpu, resources_per_worker={"CPU": 2}
-        ),
+        scaling_config=ScalingConfig(num_workers=1, use_gpu=args.gpu),
     )
     return trainer.fit()
 
