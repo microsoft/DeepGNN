@@ -131,7 +131,7 @@ def load_checkpoint(model, logger=None, args=None, model_dir=".", world_rank=0):
     ckpt_path = ckpts[-1] if len(ckpts) > 0 else None
     if ckpt_path is not None:
         init_ckpt = torch.load(ckpt_path, map_location="cpu")
-        if args is not None and args.mode == TrainMode.TRAIN:
+        if args is None or args.mode == TrainMode.TRAIN:
             epochs_trained = init_ckpt["epoch"]
             steps_in_epoch_trained = init_ckpt["step"]
 
