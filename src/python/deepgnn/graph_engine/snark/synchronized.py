@@ -1,95 +1,49 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 """Synchronized server - client setup."""
-from typing import Optional, List
-from time import sleep
+from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
 import ray
 
 
 @ray.remote
-class ServerState:
-    """State of a single server."""
-
-    def __init__(self, hostname: str):
-        """Init server state."""
-        self.hostname = hostname
-        self._clients = 0
-
-    def get_hostname(self) -> str:
-        """Get hostname of server."""
-        return self.hostname
-
-    def add_client(self):
-        """Add client to server."""
-        self._clients += 1
+class ServerWrapper(object):
+    def __init__(self):
+        self.server = Server("localhost:9999", "/tmp/cora", 0, 1)
 
     def reset(self):
-        """Reset server state."""
-        self._clients -= 1
+        self.server.reset()
 
-    def safe_to_terminate(self) -> bool:
-        """Is server safe to terminate?."""
-        return self._clients == 0
+    def get_hostname(self):
+        return self.server._hostname
 
 
-class ServerStateWrapped:
-    """Wrapped client facing state of a single server."""
-
-    def __init__(self, server_state: ServerState):
-        """Init wrapped server state."""
-        self.server_state = server_state
-
-    def get_hostname(self) -> str:
-        """Get hostname of server."""
-        return ray.get(self.server_state.get_hostname.remote())  # type: ignore
-
-    def add_client(self):
-        """Add client to server."""
-        return ray.get(self.server_state.add_client.remote())  # type: ignore
-
-    def reset(self):
-        """Reset server state."""
-        return ray.get(self.server_state.reset.remote())  # type: ignore
-
-    def safe_to_terminate(self) -> bool:
-        """Is server safe to terminate?."""
-        return ray.get(self.server_state.safe_to_terminate.remote())  # type: ignore
+@ray.remote
+def start_servers(num: int):
+    return [ServerWrapper.remote() for i in range(num)]
 
 
-def _set_server_state(
-    hostname: str, index: int, namespace: str = "deepgnn"
-) -> Optional[ServerState]:
-    """Add server state to ray namespace."""
-    try:
-        ray.init(address="auto", ignore_reinit_error=True)
-        return ServerState.options(name=f"server_{index}", namespace=namespace).remote(  # type: ignore
-            hostname
-        )
-    except ConnectionError:
-        return None
+@ray.remote
+def start_clients(servers, n_clients):
+    return [
+        DistributedClient([ray.get(server.get_hostname.remote()) for server in servers])
+        for _ in range(n_clients)
+    ]
 
 
-def get_server_state(
-    num_servers: int = 1,
-    timeout: int = 30,
-    connect_delay: int = 5,
-    namespace: str = "deepgnn",
-) -> List[ServerStateWrapped]:
-    """Pull server state from ray namespace."""
-    ray.init(address="auto", ignore_reinit_error=True)
-    server_states = []
-    for i in range(num_servers):
-        print(f"Connecting to Server {i}...")
-        for _ in range(timeout // connect_delay):
-            try:
-                server_state = ray.get_actor(f"server_{i}", namespace=namespace)
-                break
-            except ValueError:
-                sleep(connect_delay)
-        else:
-            raise TimeoutError(f"Failed to connect to server {i}!")
-        print(f"Connected to Server {i}.")
-        server_states.append(ServerStateWrapped(server_state))
-    for state in server_states:
-        state.add_client()
-    return server_states
+@ray.remote
+def train(servers, clients):
+
+    for cl in clients:
+        cl.reset()
+    for s in servers:
+        ray.get(s.reset.remote())
+    return
+
+
+servers = start_servers.bind(2)
+clients = start_clients.bind(servers, 3)
+output = train.bind(servers, clients)
+
+from ray import workflow
+
+print(workflow.run(output))
