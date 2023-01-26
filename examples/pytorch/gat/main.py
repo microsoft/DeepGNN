@@ -1,13 +1,11 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-from typing import Optional, Dict
+from typing import Dict
 import os
-import platform
+import tempfile
 import numpy as np
-import argparse
 import torch
-
 import ray
 import ray.train as train
 import horovod.torch as hvd
@@ -16,24 +14,14 @@ from ray.train.horovod import HorovodTrainer
 from ray.air import session
 from ray.air.config import ScalingConfig
 
-from deepgnn import str2list_int, setup_default_logging_config
-from deepgnn import get_logger
-from deepgnn import TrainMode, get_logger
-from deepgnn.graph_engine import create_backend, BackendOptions
-from deepgnn.graph_engine.samplers import GENodeSampler, GEEdgeSampler
-from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
-from deepgnn.pytorch.modeling import BaseModel
-
+from deepgnn import setup_default_logging_config
 from model_geometric import GAT, GATQueryParameter  # type: ignore
 from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
+from deepgnn.graph_engine.data.citation import Cora
 
 
 def train_func(config: Dict):
     """Training loop for ray trainer."""
-    logger = get_logger()
-    model_dir = config["model_dir"]
-    os.makedirs(model_dir, exist_ok=True)
-
     hvd.init()
     train.torch.enable_reproducibility(seed=session.get_world_rank())
 
@@ -53,16 +41,7 @@ def train_func(config: Dict):
         attn_drop=0.6,
         q_param=p,
     )
-
     model = train.torch.prepare_model(model)
-    if config["mode"] == "train":
-        model.train()
-    else:
-        model.eval()
-
-    epochs_trained, steps_in_epoch_trained = load_checkpoint(
-        model, logger, model_dir=model_dir, world_rank=session.get_world_rank()
-    )
 
     optimizer = torch.optim.Adam(
         filter(lambda p: p.requires_grad, model.parameters()),
@@ -73,11 +52,10 @@ def train_func(config: Dict):
         optimizer, named_parameters=model.named_parameters()
     )
 
-    address = "localhost:9999"
-    s = Server(address, config["data_dir"], 0, config["partitions"])
-    g = DistributedClient([address])
-    dataset = ray.data.read_text(config["sample_file"])
-    dataset = dataset.repartition(dataset.count() // config["batch_size"])
+    g = config["get_graph"]()
+    batch_size = 140
+    dataset = ray.data.read_text(f"{config['data_dir']}/train.nodes")
+    dataset = dataset.repartition(dataset.count() // batch_size)
     pipe = dataset.window(blocks_per_window=4).repeat(config["num_epochs"])
 
     def transform_batch(idx: list) -> dict:
@@ -85,33 +63,38 @@ def train_func(config: Dict):
 
     pipe = pipe.map_batches(transform_batch)
 
+    test_dataset = ray.data.read_text(f"{config['data_dir']}/test.nodes")
+    test_dataset = test_dataset.repartition(1)
+    test_dataset = test_dataset.map_batches(transform_batch)
+    test_dataset_iter = test_dataset.repeat(config["num_epochs"]).iter_epochs()
+
     for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
-        if epoch < epochs_trained:
-            continue
-        scores = []
-        labels = []
+        model.train()
+        train_scores = []
+        train_labels = []
         losses = []
         for step, batch in enumerate(
-            epoch_pipe.iter_torch_batches(batch_size=config["batch_size"])
+            epoch_pipe.iter_torch_batches(batch_size=batch_size)
         ):
-            if step < steps_in_epoch_trained:
-                continue
             loss, score, label = model(batch)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            scores.append(score)
-            labels.append(label)
+            train_scores.append(score)
+            train_labels.append(label)
             losses.append(loss.item())
 
-        steps_in_epoch_trained = 0
-        if epoch % 1 == 0:
-            save_checkpoint(model, logger, epoch, step, model_dir=model_dir)
+        model.eval()
+        batch = next(next(test_dataset_iter).iter_torch_batches(batch_size=1000))
+        loss, score, label = model(batch)
+        test_scores = [score]
+        test_labels = [label]
 
         session.report(
             {
-                "metric": model.compute_metric(scores, labels).item(),
+                "train_metric": model.compute_metric(train_scores, train_labels).item(),
+                "test_metric": model.compute_metric(test_scores, test_labels).item(),
                 "loss": np.mean(losses),
             },
         )
@@ -121,41 +104,27 @@ def _main():
     setup_default_logging_config(enable_telemetry=True)
     ray.init(num_cpus=4)
 
+    data_dir = tempfile.TemporaryDirectory()
+    Cora(data_dir.name)
+
+    address = "localhost:9999"
+    s = Server(address, data_dir.name, 0, 1)
+
+    def get_graph():
+        return DistributedClient([address])
+
     trainer = HorovodTrainer(
         train_func,
         train_loop_config={
-            "data_dir": "/tmp/cora",
-            "model_dir": "/tmp/model_output",
-            "sample_file": "/tmp/cora/train.nodes",
-            "partitions": 1,
+            "get_graph": get_graph,
+            "data_dir": data_dir.name,
             "num_epochs": 180,
-            "batch_size": 140,
             "feature_idx": 0,
             "feature_dim": 1433,
             "label_idx": 1,
             "label_dim": 1,
             "num_classes": 7,
             "mode": "train",
-        },
-        scaling_config=ScalingConfig(num_workers=1),
-    )
-    trainer.fit()
-
-    trainer = HorovodTrainer(
-        train_func,
-        train_loop_config={
-            "data_dir": "/tmp/cora",
-            "model_dir": "/tmp/model_output",
-            "sample_file": "/tmp/cora/test.nodes",
-            "partitions": 1,
-            "num_epochs": 1,
-            "batch_size": 1000,
-            "feature_idx": 0,
-            "feature_dim": 1433,
-            "label_idx": 1,
-            "label_dim": 1,
-            "num_classes": 7,
-            "mode": "evaluate",
         },
         scaling_config=ScalingConfig(num_workers=1),
     )
