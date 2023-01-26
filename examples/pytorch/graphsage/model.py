@@ -76,7 +76,9 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
             np.float32,
         )
 
-        n2_out = context["inputs"]  # Output nodes of 2nd (final) layer of convolution
+        n2_out = context[
+            "inputs"
+        ].flatten()  # Output nodes of 2nd (final) layer of convolution
         # input nodes of 2nd layer of convolution (besides the output nodes themselves)
         n2_in = graph.sample_neighbors(n2_out, self.edge_type, self.fanouts[1])[
             0

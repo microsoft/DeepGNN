@@ -142,7 +142,7 @@ def _main():
 
     trainer = HorovodTrainer(
         train_func,
-        train_loop_config={},
+        train_loop_config={"args": args},
         scaling_config=ScalingConfig(num_workers=1, use_gpu=args.gpu),
     )
     return trainer.fit()
