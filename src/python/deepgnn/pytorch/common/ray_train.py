@@ -13,7 +13,11 @@ from deepgnn import TrainMode, get_logger
 from deepgnn.graph_engine import create_backend, BackendOptions
 from deepgnn.graph_engine.samplers import GENodeSampler, GEEdgeSampler
 from deepgnn.pytorch.common import get_args
-from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
+from deepgnn.pytorch.common.utils import (
+    load_checkpoint,
+    save_checkpoint,
+    open_inference_fp,
+)
 
 
 def train_func(config: Dict):
@@ -38,6 +42,9 @@ def train_func(config: Dict):
     epochs_trained, steps_in_epoch_trained = load_checkpoint(
         model, logger, args, session.get_world_rank()
     )
+
+    if args.mode == TrainMode.INFERENCE:
+        inference_fp = open_inference_fp(args, session.get_world_rank())
 
     optimizer = config["init_optimizer_fn"](
         args,
@@ -73,25 +80,32 @@ def train_func(config: Dict):
         for step, batch in enumerate(dataset):
             if step < steps_in_epoch_trained:
                 continue
-            loss, score, label = model(batch)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+            if args.mode == TrainMode.INFERENCE:
+                embedding = model.get_embedding(batch)
+                model.output_embedding(inference_fp, batch, embedding)
+            else:
+                loss, score, label = model(batch)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
-            scores.append(score)
-            labels.append(label)
-            losses.append(loss.item())
+                scores.append(score)
+                labels.append(label)
+                losses.append(loss.item())
 
         steps_in_epoch_trained = 0
         if epoch % args.save_ckpt_by_epochs == 0:
             save_checkpoint(model, logger, epoch, step, args)
 
-        session.report(
-            {
-                "metric": model.compute_metric(scores, labels).item(),
-                "loss": np.mean(losses),
-            },
-        )
+        if args.mode == TrainMode.INFERENCE:
+            session.report({})
+        else:
+            session.report(
+                {
+                    "metric": model.compute_metric(scores, labels).item(),
+                    "loss": np.mean(losses),
+                },
+            )
 
 
 def run_ray(

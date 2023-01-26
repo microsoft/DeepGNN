@@ -11,7 +11,8 @@ from pathlib import Path
 from urllib.parse import urlparse
 from deepgnn import TrainMode
 from deepgnn import get_logger
-from deepgnn.pytorch.common.consts import PREFIX_CHECKPOINT
+from deepgnn.pytorch.common.consts import PREFIX_CHECKPOINT, PREFIX_EMBEDDING
+from deepgnn.graph_engine.adl_uploader import AdlDataWriter
 
 
 def get_python_type(dtype_str: str):
@@ -164,3 +165,18 @@ def save_checkpoint(
         rotate_checkpoints(save_path, args.max_saved_ckpts)
     if logger is not None:
         logger.info(f"Saved checkpoint to {save_path}.")
+
+
+def open_inference_fp(args, rank):
+    """Open inference file pointer."""
+    embed_path = os.path.join(args.save_path, f"{PREFIX_EMBEDDING}-{rank}")
+    if args.enable_adl_uploader:
+        return AdlDataWriter(
+            process_num=args.uploader_process_num,
+            threads_per_process=args.uploader_threads_num,
+            queue_size=200,
+            store_name=args.uploader_store_name,
+            file_path_prefix=embed_path,
+        )
+    else:
+        return open(embed_path + ".tsv", "w", encoding="utf-8")
