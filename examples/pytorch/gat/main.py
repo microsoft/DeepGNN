@@ -18,7 +18,6 @@ from ray.air.config import ScalingConfig
 
 from deepgnn import str2list_int, setup_default_logging_config
 from deepgnn import get_logger
-from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn import TrainMode, get_logger
 from deepgnn.graph_engine import create_backend, BackendOptions
 from deepgnn.graph_engine.samplers import GENodeSampler, GEEdgeSampler
@@ -26,8 +25,8 @@ from deepgnn.pytorch.common import get_args
 from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
 from deepgnn.pytorch.modeling import BaseModel
 
-from deepgnn.graph_engine import FileNodeSampler, GraphEngineBackend
 from model_geometric import GAT, GATQueryParameter  # type: ignore
+from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
 
 
 # fmt: off
@@ -93,26 +92,18 @@ def train_func(config: Dict):
         optimizer, named_parameters=model.named_parameters()
     )
 
-    backend = create_backend(
-        BackendOptions(args), is_leader=(session.get_world_rank() == 0)
-    )
-    dataset = TorchDeepGNNDataset(
-        sampler_class=FileNodeSampler,
-        backend=backend,
-        query_fn=model.q.query_training,
-        prefetch_queue_size=2,
-        prefetch_worker_size=2,
-        sample_files=args.sample_file,
-        batch_size=args.batch_size,
-        shuffle=True,
-        drop_last=True,
-        worker_index=session.get_world_rank(),
-        num_workers=session.get_world_size(),
-    )
-    dataset = torch.utils.data.DataLoader(
-        dataset=dataset,
-        num_workers=2,
-    )
+    address = "localhost:9999"
+    s = Server(address, args.data_dir, 0, len(args.partitions))
+    g = DistributedClient([address])
+    max_id = g.node_count(args.node_type) if args.max_id in [-1, None] else args.max_id
+    dataset = ray.data.range(max_id).repartition(max_id // args.batch_size)
+    pipe = dataset.window(blocks_per_window=4).repeat(args.num_epochs)
+
+    def transform_batch(idx: list) -> dict:
+        return model.q.query_training(g, np.array(idx))
+
+    pipe = pipe.map_batches(transform_batch)
+
     for epoch in range(epochs_trained, args.num_epochs):
         scores = []
         labels = []

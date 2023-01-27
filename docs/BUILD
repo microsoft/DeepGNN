@@ -112,7 +112,6 @@ py_test(
     srcs_version = "PY3",
     tags = ["exclusive"],
     deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
         "//src/python/deepgnn/graph_engine/data:graph_engine_data",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/pytorch:deepgnn_pytorch",
@@ -148,7 +147,6 @@ py_test(
     srcs_version = "PY3",
     tags = ["exclusive"],
     deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
         "//src/python/deepgnn/graph_engine/data:graph_engine_data",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/pytorch:deepgnn_pytorch",
@@ -184,7 +182,6 @@ py_test(
     srcs_version = "PY3",
     tags = ["exclusive"],
     deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
         "//src/python/deepgnn/graph_engine/data:graph_engine_data",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/pytorch:deepgnn_pytorch",
@@ -220,15 +217,12 @@ py_test(
     srcs_version = "PY3",
     tags = ["exclusive"],
     deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
         "//src/python/deepgnn/graph_engine/data:graph_engine_data",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/pytorch:deepgnn_pytorch",
         "//src/python/deepgnn/pytorch/common:deepgnn_pytorch_common",
         "//src/python/deepgnn/pytorch/modeling:deepgnn_pytorch_modeling",
         "//src/python/deepgnn/pytorch/nn:deepgnn_pytorch_nn",
-        requirement("ray"),
-        requirement("pyarrow"),
         requirement("azure-datalake-store"),
         requirement("fsspec"),
         requirement("numpy"),
@@ -254,8 +248,8 @@ py_test(
     main = "doctest_template.py",
     python_version = "PY3",
     srcs_version = "PY3",
+    tags = ["exclusive"],
     deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
         "//src/python/deepgnn/graph_engine/data:graph_engine_data",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/tf:deepgnn_tf",
@@ -285,7 +279,6 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
         "//src/python/deepgnn/graph_engine/data:graph_engine_data",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/tf:deepgnn_tf",

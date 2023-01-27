@@ -46,6 +46,10 @@ if __name__ == "__main__":
             "deepgnn.pytorch.common.ray_train.run_ray",
         )
 
+    rename.rename_external(
+        tree, "deepgnn.graph_engine.GraphEngineBackend", "typing.Any"
+    )
+
     raw_output = pasta.dump(tree)
 
     raw_output = raw_output.replace(
@@ -59,6 +63,20 @@ if __name__ == "__main__":
         "",
     )
     raw_output = raw_output.replace("set_seed(args.seed)", "")
+
+    raw_output = raw_output.replace(
+        "from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset", ""
+    )
+
+    raw_output = raw_output.replace("GENodeSampler", "__file__")
+    raw_output = raw_output.replace("GENodeSampler", "__file__")
+    raw_output = raw_output.replace("CSVNodeSampler", "__file__")
+    raw_output = raw_output.replace("CSVEdgeSampler", "__file__")
+    raw_output = raw_output.replace("RangeNodeSampler", "__file__")
+    raw_output = raw_output.replace("RangeEdgeSampler", "__file__")
+    raw_output = raw_output.replace("FileNodeSampler", "__file__")
+    raw_output = raw_output.replace("FileEdgeSampler", "__file")
+    raw_output = raw_output.replace("TextFileSampler", "__file__")
 
     with open(args.main_path, "w") as file:
         file.write(raw_output)

@@ -11,7 +11,6 @@ py_library(
         "aggregators.py",
         "args.py",
         "consts.py",
-        "dataset.py",
         "metrics.py",
         "optimization.py",
         "ray_train.py",

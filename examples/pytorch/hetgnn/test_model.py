@@ -19,20 +19,14 @@ import torch
 from torch.utils.data import IterableDataset
 
 from deepgnn import get_logger
-from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.graph_engine import (
     Graph,
     SamplingStrategy,
-    GraphType,
-    BackendType,
-    BackendOptions,
-    GraphEngineBackend,
-    create_backend,
 )
 from deepgnn.graph_engine.data.citation import Cora
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
 from model import HetGnnModel  # type: ignore
-from main import run_ray, create_model, create_dataset, create_optimizer, init_args  # type: ignore
+from main import run_ray  # type: ignore
 from sampler import HetGnnDataSampler  # type: ignore
 import evaluation  # type: ignore
 
@@ -72,10 +66,6 @@ def train_academic_data():
     Cora(working_dir.name)
 
     result = run_ray(
-        init_model_fn=create_model,
-        init_dataset_fn=create_dataset,
-        init_optimizer_fn=create_optimizer,
-        init_args_fn=init_args,
         num_cpus=4,
         run_args=[
             "--data_dir",

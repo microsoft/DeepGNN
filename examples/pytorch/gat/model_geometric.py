@@ -1,17 +1,18 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 """GAT model implementation with torch geometric."""
+from typing import List, Any
 from dataclasses import dataclass
 import numpy as np
 import torch
 import torch.nn.functional as F
-from typing import List
 
 from deepgnn.pytorch.common import Accuracy
 from deepgnn.pytorch.modeling.base_model import BaseModel
 
 from deepgnn.graph_engine import Graph, graph_ops
 from torch_geometric.nn import GATConv
+from deepgnn.graph_engine.utils import serialize, deserialize
 
 
 @dataclass
@@ -56,8 +57,8 @@ class GATQuery:
         label = label.astype(np.int32)
         edges = np.transpose(edges)
 
-        graph_tensor = (nodes, feat, edges, input_mask, label)
-        return graph_tensor
+        graph_tensor: List[Any] = [nodes, feat, edges, input_mask, label]
+        return serialize(graph_tensor, inputs.size)
 
 
 class GAT(BaseModel):
@@ -100,13 +101,13 @@ class GAT(BaseModel):
 
     def forward(self, inputs):
         """Calculate loss, make predictions and fetch labels."""
+        nodes, feat, edge_index, mask, label = deserialize(inputs)
         # fmt: off
-        nodes, feat, edge_index, mask, labels = inputs
-        nodes = torch.squeeze(nodes)                # [N]
-        feat = torch.squeeze(feat)                  # [N, F]
-        edge_index = torch.squeeze(edge_index)      # [2, X]
-        mask = torch.squeeze(mask)                  # [N]
-        labels = torch.squeeze(labels)              # [N]
+        nodes = torch.squeeze(nodes.to(torch.int32))                # [N]
+        feat = torch.squeeze(feat.to(torch.float32))                  # [N, F]
+        edge_index = torch.squeeze(edge_index.to(torch.int32))      # [2, X]
+        mask = torch.squeeze(mask.to(torch.bool))                  # [N]
+        labels = torch.squeeze(label.to(torch.int32))               # [N]
         # fmt: on
 
         x = feat

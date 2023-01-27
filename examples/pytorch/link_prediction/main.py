@@ -4,9 +4,9 @@
 import argparse
 import os
 import torch.optim
-
+import ray
+import numpy as np
 from deepgnn import TrainMode, setup_default_logging_config
-from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.pytorch.common.utils import (
     get_logger,
     get_python_type,
@@ -19,7 +19,7 @@ from deepgnn.graph_engine import TextFileSampler, GraphEngineBackend
 from args import init_args  # type: ignore
 from consts import DEFAULT_VOCAB_CHAR_INDEX  # type: ignore
 from model import LinkPredictionModel  # type: ignore
-from typing import Optional
+from deepgnn.graph_engine.snark.distributed import Client as DistributedClient
 
 
 def create_model(args: argparse.Namespace):
@@ -43,27 +43,18 @@ def create_dataset(
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
-    backend: Optional[GraphEngineBackend] = None,
-):
-    store_name, relative_path = get_store_name_and_path(args.train_file_dir)
+    address: str = "",
+) -> ray.data.DatasetPipeline:
+    g = DistributedClient([address])
+    max_id = g.node_count(args.node_type) if args.max_id in [-1, None] else args.max_id
+    dataset = ray.data.range(max_id).repartition(max_id // args.batch_size)
+    pipe = dataset.window(blocks_per_window=4).repeat(args.num_epochs)
 
-    return TorchDeepGNNDataset(
-        sampler_class=TextFileSampler,
-        backend=backend,
-        query_fn=model.query,
-        prefetch_queue_size=10,
-        prefetch_worker_size=2,
-        batch_size=args.batch_size,
-        store_name=store_name,
-        filename=os.path.join(relative_path, "*"),
-        adl_config=args.adl_config,
-        shuffle=False,
-        drop_last=False,
-        worker_index=rank,
-        num_workers=world_size,
-        epochs=-1 if (args.max_samples > 0 and args.mode == TrainMode.TRAIN) else 1,
-        buffer_size=1024,
-    )
+    def transform_batch(idx: list) -> dict:
+        return model.q.query_training(g, np.array(idx))
+
+    pipe = pipe.map_batches(transform_batch)
+    return pipe
 
 
 def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):

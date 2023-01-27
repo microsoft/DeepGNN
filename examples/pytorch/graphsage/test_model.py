@@ -10,12 +10,12 @@ from typing import Dict
 import numpy as np
 import numpy.testing as npt
 import torch
-
+import ray
 from deepgnn import get_logger
 from deepgnn.pytorch.common import F1Score
 from deepgnn.graph_engine.data.citation import Cora
 
-from main import run_ray, create_dataset  # type: ignore
+from main import run_ray  # type: ignore
 from model import PTGSupervisedGraphSage  # type: ignore
 
 from examples.pytorch.conftest import (  # noqa: F401
@@ -49,11 +49,17 @@ def train_graphsage_cora_ddp_trainer(mock_graph):
         model,
         rank: int = 0,
         world_size: int = 1,
-        backend=None,
-    ):
-        return MockSimpleDataLoader(
+        address: str = None,
+    ) -> ray.data.DatasetPipeline:
+        dataset = MockSimpleDataLoader(
             batch_size=256, query_fn=model.query, graph=mock_graph
         )
+        num_workers = 0 if platform.system() == "Windows" else args.data_parallel_num
+        dataset = torch.utils.data.DataLoader(
+            dataset=dataset,
+            num_workers=num_workers,
+        )
+        return dataset
 
     result = run_ray(
         init_dataset_fn=create_mock_dataset,

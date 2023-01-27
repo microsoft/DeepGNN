@@ -4,16 +4,16 @@
 import argparse
 import json
 import torch
+import ray
 import numpy as np
 from deepgnn import TrainMode, setup_default_logging_config
 
 from deepgnn.pytorch.modeling import BaseModel
 from deepgnn.pytorch.common.ray_train import run_ray
-from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.graph_engine import GEEdgeSampler, GraphEngineBackend
 from model import KGEModel  # type: ignore
 from deepgnn import get_logger
-from typing import Optional
+from deepgnn.graph_engine.snark.distributed import Client as DistributedClient
 
 
 def create_model(args: argparse.Namespace):
@@ -31,20 +31,18 @@ def create_dataset(
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
-    backend: Optional[GraphEngineBackend] = None,
-):
-    return TorchDeepGNNDataset(
-        sampler_class=GEEdgeSampler,
-        backend=backend,
-        query_fn=model.query if args.mode == TrainMode.TRAIN else model.query_eval,
-        prefetch_queue_size=10,
-        prefetch_worker_size=2,
-        batch_size=args.batch_size,
-        edge_types=np.array([args.edge_type], dtype=np.int32),
-        epochs=1,
-        sample_num=args.max_id // world_size,
-        num_workers=world_size,
-    )
+    address: str = "",
+) -> ray.data.DatasetPipeline:
+    g = DistributedClient([address])
+    max_id = g.node_count(args.node_type) if args.max_id in [-1, None] else args.max_id
+    dataset = ray.data.range(max_id).repartition(max_id // args.batch_size)
+    pipe = dataset.window(blocks_per_window=4).repeat(args.num_epochs)
+
+    def transform_batch(idx: list) -> dict:
+        return model.q.query_training(g, np.array(idx))
+
+    pipe = pipe.map_batches(transform_batch)
+    return pipe
 
 
 def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):

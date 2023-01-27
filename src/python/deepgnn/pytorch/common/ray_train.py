@@ -1,18 +1,15 @@
 """Baseline Ray Trainer."""
 from typing import Dict
 import os
-import platform
 import numpy as np
-import torch
 import ray
 import ray.train as train
 from ray.train.torch import TorchTrainer
 from ray.air import session
 from ray.air.config import ScalingConfig
 from deepgnn import TrainMode, get_logger
-from deepgnn.graph_engine import create_backend, BackendOptions
-from deepgnn.graph_engine.samplers import GENodeSampler, GEEdgeSampler
 from deepgnn.pytorch.common import get_args
+from deepgnn.graph_engine.snark.distributed import Server
 from deepgnn.pytorch.common.utils import (
     load_checkpoint,
     save_checkpoint,
@@ -53,31 +50,21 @@ def train_func(config: Dict):
     )
     optimizer = train.torch.prepare_optimizer(optimizer)
 
-    backend = create_backend(
-        BackendOptions(args), is_leader=(session.get_world_rank() == 0)
+    address = "localhost:9999"
+    _ = Server(address, args.data_dir, 0, len(args.partitions))
+    pipe = config["init_dataset_fn"](
+        args, model, session.get_world_rank(), session.get_world_size(), address
     )
-    dataset = config["init_dataset_fn"](
-        args,
-        model,
-        rank=session.get_world_rank(),
-        world_size=session.get_world_size(),
-        backend=backend,
-    )
-    num_workers = (
-        0
-        if issubclass(dataset.sampler_class, (GENodeSampler, GEEdgeSampler))
-        or platform.system() == "Windows"
-        else args.data_parallel_num
-    )
-    dataset = torch.utils.data.DataLoader(
-        dataset=dataset,
-        num_workers=num_workers,
-    )
-    for epoch in range(epochs_trained, args.num_epochs):
+
+    for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
+        if epoch < epochs_trained:
+            continue
         scores = []
         labels = []
         losses = []
-        for step, batch in enumerate(dataset):
+        for step, batch in enumerate(
+            epoch_pipe.iter_torch_batches(batch_size=args.batch_size)
+        ):
             if step < steps_in_epoch_trained:
                 continue
             if args.mode == TrainMode.INFERENCE:
