@@ -54,24 +54,22 @@ def train_func(config: Dict):
 
     g = config["get_graph"]()
     batch_size = 140
-    dataset = ray.data.read_text(f"{config['data_dir']}/train.nodes")
-    dataset = dataset.repartition(dataset.count() // batch_size)
-    pipe = dataset.window(blocks_per_window=4).repeat(config["num_epochs"])
+    train_dataset = ray.data.read_text(f"{config['data_dir']}/train.nodes")
+    train_dataset = train_dataset.repartition(train_dataset.count() // batch_size)
+    train_pipe = train_dataset.window(blocks_per_window=4).repeat(config["num_epochs"])
 
     def transform_batch(idx: list) -> dict:
         return model.q.query_training(g, np.array(idx))
 
-    pipe = pipe.map_batches(transform_batch)
+    train_pipe = train_pipe.map_batches(transform_batch)
 
     test_dataset = ray.data.read_text(f"{config['data_dir']}/test.nodes")
     test_dataset = test_dataset.repartition(1)
     test_dataset = test_dataset.map_batches(transform_batch)
     test_dataset_iter = test_dataset.repeat(config["num_epochs"]).iter_epochs()
 
-    for epoch, epoch_pipe in enumerate(pipe.iter_epochs()):
+    for epoch, epoch_pipe in enumerate(train_pipe.iter_epochs()):
         model.train()
-        train_scores = []
-        train_labels = []
         losses = []
         for step, batch in enumerate(
             epoch_pipe.iter_torch_batches(batch_size=batch_size)
@@ -81,8 +79,6 @@ def train_func(config: Dict):
             loss.backward()
             optimizer.step()
 
-            train_scores.append(score)
-            train_labels.append(label)
             losses.append(loss.item())
 
         model.eval()
@@ -93,7 +89,6 @@ def train_func(config: Dict):
 
         session.report(
             {
-                "train_metric": model.compute_metric(train_scores, train_labels).item(),
                 "test_metric": model.compute_metric(test_scores, test_labels).item(),
                 "loss": np.mean(losses),
             },
