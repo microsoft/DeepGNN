@@ -67,7 +67,7 @@ def train_func(config: dict):
     test_dataset = test_dataset.map_batches(transform_batch)
     test_dataset_iter = test_dataset.repeat(config["num_epochs"]).iter_epochs()
 
-    for epoch, epoch_pipe in enumerate(train_pipe.iter_epochs()):
+    for epoch_pipe in train_pipe.iter_epochs():
         model.train()
         losses = []
         for batch in epoch_pipe.iter_torch_batches(batch_size=batch_size):
