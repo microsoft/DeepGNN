@@ -1,7 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-from typing import Dict
 import os
 import tempfile
 import numpy as np
@@ -20,7 +19,7 @@ from deepgnn.graph_engine.snark.distributed import Server, Client as Distributed
 from deepgnn.graph_engine.data.citation import Cora
 
 
-def train_func(config: Dict):
+def train_func(config: dict):
     """Training loop for ray trainer."""
     hvd.init()
     train.torch.enable_reproducibility(seed=session.get_world_rank())
@@ -71,9 +70,7 @@ def train_func(config: Dict):
     for epoch, epoch_pipe in enumerate(train_pipe.iter_epochs()):
         model.train()
         losses = []
-        for step, batch in enumerate(
-            epoch_pipe.iter_torch_batches(batch_size=batch_size)
-        ):
+        for batch in epoch_pipe.iter_torch_batches(batch_size=batch_size):
             loss, score, label = model(batch)
             optimizer.zero_grad()
             loss.backward()
@@ -99,11 +96,10 @@ def _main():
     setup_default_logging_config(enable_telemetry=True)
     ray.init(num_cpus=4)
 
-    data_dir = tempfile.TemporaryDirectory()
-    Cora(data_dir.name)
+    cora = Cora()
 
     address = "localhost:9999"
-    s = Server(address, data_dir.name, 0, 1)
+    s = Server(address, cora.data_dir(), 0, 1)
 
     def get_graph():
         return DistributedClient([address])
@@ -112,7 +108,7 @@ def _main():
         train_func,
         train_loop_config={
             "get_graph": get_graph,
-            "data_dir": data_dir.name,
+            "data_dir": cora.data_dir(),
             "num_epochs": 180,
             "feature_idx": 0,
             "feature_dim": 1433,
