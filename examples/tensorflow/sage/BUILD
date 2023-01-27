@@ -15,6 +15,7 @@ py_library(
         "sage.py",
     ],
     deps = [
+        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/graph_engine/data:graph_engine_data",
         "//src/python/deepgnn/tf:deepgnn_tf",
