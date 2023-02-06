@@ -45,67 +45,39 @@ def train_graphsage_cora_ddp_trainer(mock_graph):
     Cora(working_dir.name)
 
     def create_mock_dataset(
-        args,
+        config,
         model,
         rank: int = 0,
         world_size: int = 1,
-        address: str = None,
+        get_graph: callable = None,
     ) -> ray.data.DatasetPipeline:
         dataset = MockSimpleDataLoader(
             batch_size=256, query_fn=model.query, graph=mock_graph
         )
-        num_workers = 0 if platform.system() == "Windows" else args.data_parallel_num
         dataset = torch.utils.data.DataLoader(
             dataset=dataset,
-            num_workers=num_workers,
+            num_workers=0,
         )
         return dataset
 
     result = run_ray(
         init_dataset_fn=create_mock_dataset,
-        run_args=[
-            "--data_dir",
-            working_dir.name,
-            "--mode",
-            "train",
-            "--seed",
-            "123",
-            "--backend",
-            "snark",
-            "--graph_type",
-            "local",
-            "--converter skip",
-            "--batch_size",
-            "256",
-            "--learning_rate",
-            "0.7",
-            "--num_epochs",
-            "10",
-            "--node_type",
-            "0",
-            "--max_id",
-            "-1",
-            "--model_dir",
-            model_dir.name,
-            "--metric_dir",
-            model_dir.name,
-            "--save_path",
-            model_dir.name,
-            "--feature_idx",
-            "0",
-            "--feature_dim",
-            "1433",
-            "--label_idx",
-            "1",
-            "--label_dim",
-            "7",
-            "--algo",
-            "supervised",
-        ],
+        training_args={
+            "data_dir": working_dir.name,
+            "batch_size": 256,
+            "learning_rate": 0.7,
+            "num_epochs": 10,
+            "feature_idx": 0,
+            "feature_dim": 1433,
+            "label_idx": 1,
+            "label_dim": 7,
+            "model_path": model_dir.name,
+        },
     )
+    assert False, os.listdir(model_dir.name)
     yield {
         "losses": result.metrics["losses"],
-        "model_path": os.path.join(model_dir.name, "gnnmodel-008-000007.pt"),
+        "model_path": os.path.join(model_dir.name, "gnnmodel-001-000007.pt"),
     }
     working_dir.cleanup()
     model_dir.cleanup()

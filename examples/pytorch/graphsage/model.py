@@ -117,8 +117,13 @@ class PTGSupervisedGraphSage(BaseSupervisedModel):
 
     def get_embedding(self, context: dict) -> torch.Tensor:  # type: ignore[override]
         """Generate embedding."""
-        out_1 = context["out_1"][0][0]
-        out_2 = context["out_2"][0][0]
+        out_1 = context["out_1"][0]
+        out_2 = context["out_2"][0]
+        try:
+            out_1 = out_1[0]
+            out_2 = out_2[0]
+        except IndexError:
+            pass
         edges_1 = self.build_edges_tensor(out_1, self.fanouts[0])  # Edges for 1st layer
         x1 = self.convs[0](
             context["x0"].reshape((-1, context["x0"].shape[-1])), edges_1

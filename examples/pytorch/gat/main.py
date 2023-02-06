@@ -115,7 +115,6 @@ def _main():
             "label_idx": 1,
             "label_dim": 1,
             "num_classes": 7,
-            "mode": "train",
         },
         scaling_config=ScalingConfig(num_workers=1),
     )

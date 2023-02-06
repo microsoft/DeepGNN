@@ -15,7 +15,7 @@ from deepgnn.graph_engine import (
     SamplingStrategy,
 )
 from model import PTGSupervisedGraphSage  # type: ignore
-from typing import Dict
+from typing import Dict, Callable
 import os
 import platform
 import numpy as np
@@ -29,6 +29,7 @@ from deepgnn import TrainMode, get_logger
 from deepgnn.pytorch.common import get_args
 from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
 from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
+from deepgnn.graph_engine.data.citation import Cora
 
 
 # fmt: off
@@ -39,16 +40,16 @@ def init_args(parser: argparse.Namespace):
 
 
 def create_dataset(
-    args: argparse.Namespace,
+    config: dict,
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
-    address: str = "",
+    get_graph: Callable[..., DistributedClient] = None,  # type: ignore
 ) -> ray.data.DatasetPipeline:
-    g = DistributedClient([address])
-    max_id = g.node_count(args.node_type) if args.max_id in [-1, None] else args.max_id
-    dataset = ray.data.range(max_id).repartition(max_id // args.batch_size)
-    pipe = dataset.window(blocks_per_window=4).repeat(args.num_epochs)
+    g = get_graph()
+    max_id = g.node_count(0)
+    dataset = ray.data.range(max_id).repartition(max_id // 140)
+    pipe = dataset.window(blocks_per_window=4).repeat(config["num_epochs"])
 
     def transform_batch(idx: list):
         return model.query(g, np.array(idx))
@@ -59,56 +60,42 @@ def create_dataset(
 
 def train_func(config: Dict):
     """Training loop for ray trainer."""
-    args = config["args"]
-
     logger = get_logger()
-    os.makedirs(args.save_path, exist_ok=True)
 
-    train.torch.accelerate(args.fp16)
-    if args.seed:
-        train.torch.enable_reproducibility(seed=args.seed + session.get_world_rank())
+    train.torch.accelerate()
+    train.torch.enable_reproducibility(seed=session.get_world_rank())
 
-    feature_enc = get_feature_encoder(args)
     model = PTGSupervisedGraphSage(
-        num_classes=args.label_dim,
+        num_classes=config["label_dim"],
         metric=F1Score(),
-        label_idx=args.label_idx,
-        label_dim=args.label_dim,
-        feature_dim=args.feature_dim,
-        feature_idx=args.feature_idx,
-        feature_type=get_python_type(args.feature_type),
-        edge_type=args.node_type,
-        fanouts=args.fanouts,
-        feature_enc=feature_enc,
+        label_idx=config["label_idx"],
+        label_dim=config["label_dim"],
+        feature_dim=config["feature_dim"],
+        feature_idx=config["feature_idx"],
+        feature_type=np.float32,
+        edge_type=0,
+        fanouts=[5, 5],
+        feature_enc=None,
     )
-    model = train.torch.prepare_model(model, move_to_device=args.gpu)
-    if args.mode == TrainMode.TRAIN:
-        model.train()
-    else:
-        model.eval()
-
-    epochs_trained, steps_in_epoch_trained = load_checkpoint(
-        model, logger, args, session.get_world_rank()
-    )
+    model = train.torch.prepare_model(model)
+    model.train()
 
     optimizer = torch.optim.SGD(
         filter(lambda p: p.requires_grad, model.parameters()),
-        lr=args.learning_rate * session.get_world_size(),
+        lr=config["learning_rate"] * session.get_world_size(),
     )
     optimizer = train.torch.prepare_optimizer(optimizer)
 
-    address = "localhost:9999"
-    s = Server(address, args.data_dir, 0, len(args.partitions))
     dataset = config["init_dataset_fn"](
-        args,
+        config,
         model,
         rank=session.get_world_rank(),
         world_size=session.get_world_size(),
-        address=address,
+        get_graph=config["get_graph"],
     )
     losses_full = []
     epoch_iter = (
-        range(args.num_epochs)
+        range(config["num_epochs"])
         if not hasattr(dataset, "iter_epochs")
         else dataset.iter_epochs()
     )
@@ -117,13 +104,11 @@ def train_func(config: Dict):
         labels = []
         losses = []
         batch_iter = (
-            dataset
+            dataset  # TODO reset every time
             if isinstance(epoch_pipe, int)
-            else epoch_pipe.iter_torch_batches(batch_size=args.batch_size)
+            else epoch_pipe.iter_torch_batches(batch_size=140)
         )
         for step, batch in enumerate(batch_iter):
-            if step < steps_in_epoch_trained:
-                continue
             loss, score, label = model(batch)
             optimizer.zero_grad()
             loss.backward()
@@ -135,8 +120,9 @@ def train_func(config: Dict):
 
         losses_full.extend(losses)
         steps_in_epoch_trained = 0
-        if epoch % args.save_ckpt_by_epochs == 0:
-            save_checkpoint(model, logger, epoch, step, args)
+
+        if "model_path" in config:
+            save_checkpoint(model, logger, epoch, step, model_dir=config["model_path"])
 
         session.report(
             {
@@ -151,16 +137,34 @@ def run_ray(init_dataset_fn, **kwargs):
     """Run ray trainer."""
     ray.init(num_cpus=4)
 
-    args = get_args(init_args, kwargs["run_args"] if "run_args" in kwargs else None)
+    cora = Cora()
+
+    address = "localhost:9999"
+    s = Server(address, cora.data_dir(), 0, 1)
+
+    def get_graph():
+        return DistributedClient([address])
+
+    training_loop_config = {
+        "get_graph": get_graph,
+        "data_dir": cora.data_dir(),
+        "num_epochs": 100,
+        "feature_idx": 1,
+        "feature_dim": 50,
+        "label_idx": 0,
+        "label_dim": 121,
+        "num_classes": 7,
+        "learning_rate": 0.005,
+        "init_dataset_fn": init_dataset_fn,
+        **kwargs,
+    }
+    if "training_args" in kwargs:
+        training_loop_config.update(kwargs["training_args"])
 
     trainer = TorchTrainer(
         train_func,
-        train_loop_config={
-            "args": args,
-            "init_dataset_fn": init_dataset_fn,
-            **kwargs,
-        },
-        scaling_config=ScalingConfig(num_workers=1, use_gpu=args.gpu),
+        train_loop_config=training_loop_config,
+        scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     )
     return trainer.fit()
 
