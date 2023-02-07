@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added `grpc_options` to distributed client to control service config.
 
+- Added `ppr-go` neighbor sampling strategy.
+
 ### Fixed
 - Implement del method to release C++ client and server. Important for ray actors, because they create numerous clients during training.
 

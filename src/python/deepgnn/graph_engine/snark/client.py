@@ -445,6 +445,23 @@ class MemoryGraph:
         self.lib.RandomWalk.restype = c_int32
         self.lib.RandomWalk.errcheck = _ErrCallback("random walk")  # type: ignore
 
+        self.lib.PPRSampleNeighbor.argtypes = [
+            POINTER(_DEEP_GRAPH),
+            POINTER(c_int64),
+            c_size_t,
+            POINTER(c_int32),
+            c_size_t,
+            c_size_t,
+            c_float,
+            c_float,
+            c_int64,
+            c_float,
+            POINTER(c_int64),
+            POINTER(c_float),
+        ]
+        self.lib.PPRSampleNeighbor.restype = c_int32
+        self.lib.PPRSampleNeighbor.errcheck = _ErrCallback("ppr sample")  # type: ignore
+
         self.lib.GetNodeType.argtypes = [
             POINTER(_DEEP_GRAPH),
             POINTER(c_int64),
@@ -867,6 +884,55 @@ class MemoryGraph:
         )
 
         return result_nodes, result_types
+
+    def ppr_neighbors(
+        self,
+        nodes: np.ndarray,
+        edge_types: Union[List[int], int],
+        count: int = 10,
+        alpha: float = 0.5,
+        eps: float = 1e-4,
+        default_node: int = -1,
+        default_weight: float = 0.5,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Personalized PageRank (PPR) sampling of neighbor nodes.
+
+        Implementation is based on PPR-Go algorithm: https://github.com/TUM-DAML/pprgo_pytorch
+        Args:
+            nodes (np.array): list of nodes to sample neighbors from.
+            edge_types (Union[List[int], int]): types of edges for neighbors selection.
+            count (int, optional): Number of neighbors to sample. Defaults to 10.
+            alpha (float, optional): PPR teleport probability. Defaults to 0.5.
+            eps (float, optional): Stopping threshold for ACL's ApproximatePR. Defaults to 0.0001.
+            default_node (int, optional): Value to use if a node doesn't have neighbors. Defaults to -1.
+            default_weight (float, optional): Alph parameter for PPR sampling. Defaults to 0.5.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: a tuple of neighbor nodes and corresponding PR weights.
+        """
+        nodes = np.array(nodes, dtype=np.int64)
+        edge_types = _make_sorted_list(edge_types)
+
+        TypeArray = c_int32 * len(edge_types)
+        etypes_arr = TypeArray(*edge_types)
+        result_nodes = np.full((len(nodes), count), default_node, dtype=np.int64)
+        result_weights = np.full((len(nodes), count), default_weight, dtype=np.float32)
+        self.lib.PPRSampleNeighbor(
+            self.g_,
+            nodes.ctypes.data_as(POINTER(c_int64)),
+            c_size_t(nodes.size),
+            etypes_arr,
+            c_size_t(len(edge_types)),
+            c_size_t(count),
+            c_float(alpha),
+            c_float(eps),
+            c_int64(default_node),
+            c_float(default_weight),
+            result_nodes.ctypes.data_as(POINTER(c_int64)),
+            result_weights.ctypes.data_as(POINTER(c_float)),
+        )
+
+        return result_nodes, result_weights
 
     def reset(self):
         """Reset graph and unload it from memory."""

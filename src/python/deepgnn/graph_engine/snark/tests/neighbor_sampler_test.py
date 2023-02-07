@@ -338,7 +338,6 @@ def test_neighbor_count_remote_client_handle_empty_list(multi_partition_graph_da
 
 
 def test_neighbor_count_remote_client_nonmatching_edge_type(multi_partition_graph_data):
-
     s1 = server.Server(
         multi_partition_graph_data, [(multi_partition_graph_data, 0)], "localhost:12347"
     )
@@ -594,6 +593,78 @@ def test_karate_club_weighted_neighbor_sampling_different_result(
         nodes=np.array([2, 4, 6], dtype=np.int64), edge_types=0, count=2
     )[0]
     assert not np.array_equal(v1, v2)
+
+
+def test_karate_club_ppr_sampling(
+    karate_club_graph,
+):
+    nodes, weights = karate_club_graph.ppr_neighbors(
+        nodes=np.array([2, 4, 6], dtype=np.int64),
+        edge_types=0,
+        count=5,
+        alpha=0.1,
+        eps=0.0001,
+    )
+
+    npt.assert_array_equal(
+        nodes, [[4, 3, 34, 1, 2], [34, 3, 2, 1, 4], [17, 11, 7, 1, 6]]
+    )
+    npt.assert_array_almost_equal(
+        weights,
+        [
+            [0.052117, 0.067718, 0.071656, 0.115168, 0.17244],
+            [0.065234, 0.076326, 0.078242, 0.121377, 0.153569],
+            [0.058383, 0.060871, 0.087123, 0.146878, 0.172398],
+        ],
+    )
+
+
+def test_karate_club_ppr_sampling_empty_nb_list(
+    karate_club_graph,
+):
+    nodes, weights = karate_club_graph.ppr_neighbors(
+        nodes=np.array([1, 2, 6], dtype=np.int64),
+        edge_types=12,
+        count=2,
+        alpha=0.2,
+        eps=0.0001,
+        default_node=-1,
+        default_weight=0.0,
+    )
+
+    npt.assert_array_equal(nodes, [[1, -1], [2, -1], [6, -1]])
+    npt.assert_array_almost_equal(
+        weights,
+        [
+            [0.2, 0],
+            [0.2, 0],
+            [0.2, 0],
+        ],
+    )
+
+
+def test_karate_club_ppr_sampling_missing_nodes(
+    karate_club_graph,
+):
+    nodes, weights = karate_club_graph.ppr_neighbors(
+        nodes=np.array([35, 36, 37], dtype=np.int64),
+        edge_types=0,
+        count=2,
+        alpha=0.1,
+        eps=0.0001,
+        default_node=-1,
+        default_weight=0.0,
+    )
+
+    npt.assert_array_equal(nodes, [[35, -1], [36, -1], [37, -1]])
+    npt.assert_array_almost_equal(
+        weights,
+        [
+            [0.1, 0],
+            [0.1, 0],
+            [0.1, 0],
+        ],
+    )
 
 
 if __name__ == "__main__":
