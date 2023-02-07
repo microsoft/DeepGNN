@@ -66,7 +66,7 @@ def train_graphsage_cora_ddp_trainer(mock_graph):
             "data_dir": working_dir.name,
             "batch_size": 256,
             "learning_rate": 0.7,
-            "num_epochs": 10,
+            "num_epochs": 20,
             "feature_idx": 0,
             "feature_dim": 1433,
             "label_idx": 1,
@@ -74,10 +74,9 @@ def train_graphsage_cora_ddp_trainer(mock_graph):
             "model_path": model_dir.name,
         },
     )
-    assert False, os.listdir(model_dir.name)
     yield {
         "losses": result.metrics["losses"],
-        "model_path": os.path.join(model_dir.name, "gnnmodel-001-000007.pt"),
+        "model_path": os.path.join(model_dir.name, "gnnmodel-019-000003.pt"),
     }
     working_dir.cleanup()
     model_dir.cleanup()

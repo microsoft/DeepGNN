@@ -104,7 +104,13 @@ def train_func(config: Dict):
         labels = []
         losses = []
         batch_iter = (
-            dataset  # TODO reset every time
+            config["init_dataset_fn"](
+                config,
+                model,
+                rank=session.get_world_rank(),
+                world_size=session.get_world_size(),
+                get_graph=config["get_graph"],
+            )
             if isinstance(epoch_pipe, int)
             else epoch_pipe.iter_torch_batches(batch_size=140)
         )
