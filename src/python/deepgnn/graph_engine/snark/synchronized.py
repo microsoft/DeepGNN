@@ -19,7 +19,7 @@ class ServerWrapper(object):
 
 @ray.remote
 def start_servers(num: int):
-    return [ServerWrapper.remote() for i in range(num)]
+    return [ServerWrapper.remote() for i in range(num)]  # type: ignore
 
 
 @ray.remote
