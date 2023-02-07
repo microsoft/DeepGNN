@@ -893,7 +893,7 @@ class MemoryGraph:
         alpha: float = 0.5,
         eps: float = 1e-4,
         default_node: int = -1,
-        default_weight: float = 0.5,
+        default_weight: float = 0.0,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Personalized PageRank (PPR) sampling of neighbor nodes.
 
@@ -905,7 +905,7 @@ class MemoryGraph:
             alpha (float, optional): PPR teleport probability. Defaults to 0.5.
             eps (float, optional): Stopping threshold for ACL's ApproximatePR. Defaults to 0.0001.
             default_node (int, optional): Value to use if a node doesn't have neighbors. Defaults to -1.
-            default_weight (float, optional): Alph parameter for PPR sampling. Defaults to 0.5.
+            default_weight (float, optional): Weight to use if a node doesn't have neighbors. Defaults to 0.
 
         Returns:
             Tuple[np.ndarray, np.ndarray]: a tuple of neighbor nodes and corresponding PR weights.
