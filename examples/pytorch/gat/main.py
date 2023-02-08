@@ -56,15 +56,15 @@ def train_func(config: dict):
     train_dataset = ray.data.read_text(f"{config['data_dir']}/train.nodes")
     train_dataset = train_dataset.repartition(train_dataset.count() // batch_size)
     train_pipe = train_dataset.window(blocks_per_window=4).repeat(config["num_epochs"])
-
-    def transform_batch(idx: list) -> dict:
-        return model.q.query_training(g, np.array(idx))
-
-    train_pipe = train_pipe.map_batches(transform_batch)
+    train_pipe = train_pipe.map_batches(
+        lambda idx: model.q.query_training(g, np.array(idx))
+    )
 
     test_dataset = ray.data.read_text(f"{config['data_dir']}/test.nodes")
     test_dataset = test_dataset.repartition(1)
-    test_dataset = test_dataset.map_batches(transform_batch)
+    test_dataset = test_dataset.map_batches(
+        lambda idx: model.q.query_training(g, np.array(idx))
+    )
     test_dataset_iter = test_dataset.repeat(config["num_epochs"]).iter_epochs()
 
     for epoch_pipe in train_pipe.iter_epochs():
@@ -86,7 +86,9 @@ def train_func(config: dict):
 
         session.report(
             {
-                "test_metric": model.compute_metric(test_scores, test_labels).item(),
+                model.metric_name(): model.compute_metric(
+                    test_scores, test_labels
+                ).item(),
                 "loss": np.mean(losses),
             },
         )

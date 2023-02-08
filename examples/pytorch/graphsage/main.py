@@ -50,11 +50,7 @@ def create_dataset(
     max_id = g.node_count(0)
     dataset = ray.data.range(max_id).repartition(max_id // 140)
     pipe = dataset.window(blocks_per_window=4).repeat(config["num_epochs"])
-
-    def transform_batch(idx: list):
-        return model.query(g, np.array(idx))
-
-    pipe = pipe.map_batches(transform_batch)
+    pipe = pipe.map_batches(lambda idx: model.query(g, np.array(idx)))
     return pipe
 
 
@@ -132,7 +128,7 @@ def train_func(config: Dict):
 
         session.report(
             {
-                "metric": model.compute_metric(scores, labels).item(),
+                model.metric_name(): model.compute_metric(scores, labels).item(),
                 "loss": np.mean(losses),
                 "losses": losses_full,
             },
