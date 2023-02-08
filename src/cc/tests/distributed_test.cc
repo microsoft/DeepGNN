@@ -375,8 +375,8 @@ TEST(DistributedTest, NodeSparseFeaturesServerMixWithEmptyGE)
                                                          std::vector<size_t>{0}),
         "localhost:0", "", "", "");
 
-    snark::GRPCClient c({server->InProcessChannel()}, 1, 1);
-    //, empty_server->InProcessChannel()
+    snark::GRPCClient c({empty_server->InProcessChannel()}, 1, 1);
+    // server->InProcessChannel(),
     std::vector<snark::NodeId> nodes = {42};
     std::vector<snark::FeatureId> features = {1};
 
