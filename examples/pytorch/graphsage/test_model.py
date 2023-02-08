@@ -10,7 +10,7 @@ from typing import Dict
 import numpy as np
 import numpy.testing as npt
 import torch
-
+import ray
 from deepgnn import get_logger
 from deepgnn.pytorch.common import F1Score
 from deepgnn.graph_engine.data.citation import Cora
@@ -50,7 +50,7 @@ def train_graphsage_cora_ddp_trainer(mock_graph):
         rank: int = 0,
         world_size: int = 1,
         address: str = None,
-    ):
+    ) -> ray.data.DatasetPipeline:
         dataset = MockSimpleDataLoader(
             batch_size=256, query_fn=model.query, graph=mock_graph
         )

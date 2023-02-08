@@ -9,8 +9,12 @@ from ray.air import session
 from ray.air.config import ScalingConfig
 from deepgnn import TrainMode, get_logger
 from deepgnn.pytorch.common import get_args
-from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
 from deepgnn.graph_engine.snark.distributed import Server
+from deepgnn.pytorch.common.utils import (
+    load_checkpoint,
+    save_checkpoint,
+    open_inference_fp,
+)
 
 
 def train_func(config: Dict):
@@ -36,6 +40,9 @@ def train_func(config: Dict):
         model, logger, args, session.get_world_rank()
     )
 
+    if args.mode == TrainMode.INFERENCE:
+        inference_fp = open_inference_fp(args, session.get_world_rank())
+
     optimizer = config["init_optimizer_fn"](
         args,
         model,
@@ -60,25 +67,32 @@ def train_func(config: Dict):
         ):
             if step < steps_in_epoch_trained:
                 continue
-            loss, score, label = model(batch)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+            if args.mode == TrainMode.INFERENCE:
+                embedding = model.get_embedding(batch)
+                model.output_embedding(inference_fp, batch, embedding)
+            else:
+                loss, score, label = model(batch)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
-            scores.append(score)
-            labels.append(label)
-            losses.append(loss.item())
+                scores.append(score)
+                labels.append(label)
+                losses.append(loss.item())
 
         steps_in_epoch_trained = 0
         if epoch % args.save_ckpt_by_epochs == 0:
             save_checkpoint(model, logger, epoch, step, args)
 
-        session.report(
-            {
-                "metric": model.compute_metric(scores, labels).item(),
-                "loss": np.mean(losses),
-            },
-        )
+        if args.mode == TrainMode.INFERENCE:
+            session.report({})
+        else:
+            session.report(
+                {
+                    "metric": model.compute_metric(scores, labels).item(),
+                    "loss": np.mean(losses),
+                },
+            )
 
 
 def run_ray(
@@ -103,8 +117,6 @@ def run_ray(
             "init_optimizer_fn": init_optimizer_fn,
             **kwargs,
         },
-        scaling_config=ScalingConfig(
-            num_workers=1, use_gpu=args.gpu, resources_per_worker={"CPU": 2}
-        ),
+        scaling_config=ScalingConfig(num_workers=1, use_gpu=args.gpu),
     )
     return trainer.fit()

@@ -20,33 +20,3 @@ py_library(
         "//src/python/deepgnn/pytorch/nn:deepgnn_pytorch_nn",
     ],
 )
-
-py_test(
-    name = "test_gat",
-    srcs = ["test_gat.py"],
-    imports = ["../../../src/python/"],
-    main = "test_gat.py",
-    python_version = "PY3",
-    srcs_version = "PY3",
-    deps = [
-        ":example_torch_gat",
-        requirement("ray"),
-        requirement("pyarrow"),
-        requirement("numpy"),
-        requirement("pytest"),
-        requirement("scikit-learn"),
-        requirement("torch"),
-        requirement("transformers"),
-        requirement("fsspec"),
-        requirement("networkx"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("azure-datalake-store"),
-        requirement("torch-cluster"),
-        requirement("torch-scatter"),
-        requirement("torch-sparse"),
-        requirement("torch_geometric"),
-        requirement("horovod"),
-    ],
-)

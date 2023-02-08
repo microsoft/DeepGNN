@@ -146,18 +146,14 @@ jobs:
       - name: Install torch
         run: pip install --timeout 300 torch
       - name: Install dependencies
-        run: HOROVOD_WITH_PYTORCH=1 pip install --timeout 300 -r pytorch/requirements.txt
+        run: pip install --timeout 300 -r pytorch/requirements.txt
       - name: Uninstall cached deepgnn packages
         run: pip uninstall deepgnn-ge deepgnn-torch
       - name: Install wheels
         run: pip install deepgnn_ge*.whl deepgnn_torch*.whl
       - name: Run gat examples
         run: cd ./pytorch/gat/ && sudo chmod +x *.sh && bash ./run.sh CPU
-      - name: Run pytorch geometric examples
-        run: cd ./pytorch/geometric/gat/ && sudo chmod +x *.sh && bash ./run.sh CPU
       - name: Run graphsage supervised examples
-        run: cd ./pytorch/graphsage/ && sudo chmod +x *.sh && bash ./run.sh supervised no CPU && bash ./run.sh supervised no CPU disk yes
-      - name: Run graphsage unsupervised examples
-        run: cd ./pytorch/graphsage/ && sudo chmod +x *.sh && bash ./run.sh unsupervised no CPU
+        run: cd ./pytorch/graphsage/ && sudo chmod +x *.sh && bash ./run.sh no CPU && bash ./run.sh no CPU disk yes
       - name: Run hetgnn examples
         run: cd ./pytorch/hetgnn/ && sudo chmod +x *.sh && bash ./run.sh CPU
