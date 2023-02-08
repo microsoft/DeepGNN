@@ -66,6 +66,8 @@ class Server:
         namespace: str = "deepgnn",
     ):
         """Init snark server."""
+        self._hostname = hostname
+
         temp_dir = tempfile.TemporaryDirectory()
         temp_path = temp_dir.name
         meta_path = download_meta(data_path, temp_path, config_path)
