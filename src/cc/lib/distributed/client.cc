@@ -138,7 +138,7 @@ void GetSparseFeature(const SparseRequest &request,
         }
 
         call->callback = [&reply = replies[shard], &response_index, shard, out_dimensions, &feature_source,
-                          feature_count, uninitialized_shard_index]() {
+                          feature_count]() {
             if (reply.indices().empty())
             {
                 return;
