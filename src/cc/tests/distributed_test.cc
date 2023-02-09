@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "boost/random/uniform_int_distribution.hpp"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace
@@ -985,7 +986,7 @@ TEST(DistributedTest, NodeStringFeaturesMultipleTypesNeighborsSpreadAcrossPartit
     EXPECT_EQ(dimensions, std::vector<int64_t>({12, 12, 12, 0}));
 }
 
-TEST(DistributedTest, NodeSparseFeaturesMultipleTypesNeighborsSpreadAcrossPartitions)
+TEST(DistributedTest, NodeSparseFeaturesSpreadAcrossPartitionsWithNegativeTypes)
 {
     // indices - 1, 14, 20, data - 1
     std::vector<int32_t> f0_data = {3, 3, 1, 0, 14, 0, 20, 0, 1};
@@ -1001,7 +1002,7 @@ TEST(DistributedTest, NodeSparseFeaturesMultipleTypesNeighborsSpreadAcrossPartit
     std::vector<std::vector<float>> f2 = {std::vector<float>(start, start + f2_data.size())};
 
     auto environment = CreateMultiServerSplitFeaturesEnvironment(
-        "NodeSparseFeaturesMultipleTypesNeighborsSpreadAcrossPartitions", f0, f1, f2);
+        "NodeSparseFeaturesSpreadAcrossPartitionsWithNegativeTypes", f0, f1, f2);
     auto &c = *environment.second;
 
     // 0 is a normal node
@@ -1020,6 +1021,113 @@ TEST(DistributedTest, NodeSparseFeaturesMultipleTypesNeighborsSpreadAcrossPartit
     auto tmp = reinterpret_cast<int32_t *>(data.front().data());
     EXPECT_EQ(std::vector<int32_t>({1, 1, 5, 42}), std::vector<int32_t>(tmp, tmp + 4));
     EXPECT_EQ(std::vector<int64_t>({3}), dimensions);
+}
+
+namespace
+{
+std::pair<ServerList, std::shared_ptr<snark::GRPCClient>> CreateMultiServerEnvironmentWithSameNodes(
+    std::string name, std::vector<std::vector<std::vector<float>>> fv)
+{
+    const size_t num_servers = 2;
+    ServerList servers;
+    std::vector<std::shared_ptr<grpc::Channel>> channels;
+
+    TestGraph::MemoryGraph m1;
+    m1.m_nodes.push_back(TestGraph::Node{.m_id = 0, .m_type = 0, .m_weight = 1.0f, .m_float_features = fv[0]});
+    m1.m_nodes.push_back(TestGraph::Node{.m_id = 1, .m_type = 1, .m_weight = 1.0f, .m_float_features = fv[1]});
+    m1.m_nodes.push_back(TestGraph::Node{.m_id = 2, .m_type = -1, .m_weight = 1.0f, .m_float_features = fv[2]});
+    TestGraph::MemoryGraph m2;
+    m2.m_nodes.push_back(TestGraph::Node{.m_id = 0, .m_type = 0, .m_float_features = fv[3]});
+    m2.m_nodes.push_back(TestGraph::Node{.m_id = 1, .m_type = 0, .m_float_features = fv[4]});
+    m2.m_nodes.push_back(TestGraph::Node{.m_id = 2, .m_type = 2, .m_float_features = fv[5]});
+    std::vector<TestGraph::MemoryGraph> test_graphs = {m1, m2};
+
+    for (size_t server = 0; server < num_servers; ++server)
+    {
+        TempFolder path(name);
+        auto partition = TestGraph::convert(path.path, "0_0", std::move(test_graphs[server]), 3);
+        servers.emplace_back(std::make_shared<snark::GRPCServer>(
+            std::make_shared<snark::GraphEngineServiceImpl>(
+                snark::Metadata(path.string()), std::vector<std::string>{path.string()}, std::vector<uint32_t>{0},
+                snark::PartitionStorageType::memory),
+            std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", ""));
+        channels.emplace_back(servers.back()->InProcessChannel());
+    }
+
+    return std::make_pair(std::move(servers), std::make_shared<snark::GRPCClient>(std::move(channels), 1, 1));
+}
+} // namespace
+
+TEST(DistributedTest, NodeSameSparseFeaturesAcrossMultipleServers)
+{
+    std::vector<uint8_t> f0_data = {
+        21,  0,   0,   0,   1,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   1,   0,   0,   0,   0,   0,
+        0,   0,   6,   0,   0,   0,   0,   0,   0,   0,   8,   0,   0,   0,   0,   0,   0,   0,   22,  0,   0,   0,
+        0,   0,   0,   0,   26,  0,   0,   0,   0,   0,   0,   0,   46,  0,   0,   0,   0,   0,   0,   0,   67,  0,
+        0,   0,   0,   0,   0,   0,   93,  0,   0,   0,   0,   0,   0,   0,   113, 0,   0,   0,   0,   0,   0,   0,
+        170, 0,   0,   0,   0,   0,   0,   0,   199, 0,   0,   0,   0,   0,   0,   0,   251, 0,   0,   0,   0,   0,
+        0,   0,   69,  1,   0,   0,   0,   0,   0,   0,   142, 1,   0,   0,   0,   0,   0,   0,   188, 1,   0,   0,
+        0,   0,   0,   0,   209, 1,   0,   0,   0,   0,   0,   0,   25,  2,   0,   0,   0,   0,   0,   0,   72,  2,
+        0,   0,   0,   0,   0,   0,   0,   3,   0,   0,   0,   0,   0,   0,   115, 3,   0,   0,   0,   0,   0,   0,
+        0,   0,   128, 63,  229, 195, 41,  63,  65,  169, 52,  63,  158, 23,  77,  63,  223, 239, 10,  63,  7,   252,
+        77,  63,  254, 136, 58,  63,  125, 119, 43,  63,  71,  154, 80,  62,  133, 149, 114, 63,  166, 223, 134, 62,
+        30,  247, 105, 62,  217, 77,  236, 62,  116, 147, 111, 63,  99,  108, 225, 62,  208, 217, 28,  63,  195, 251,
+        106, 63,  207, 242, 85,  63,  113, 75,  27,  63,  96,  141, 182, 62,  210, 101, 70,  63,
+    };
+
+    // indices - 1, 14, 20, data - 1,2,3
+    std::vector<int32_t> f3_data = {3, 1, 1, 0, 14, 0, 20, 0, 1, 0, 2, 0, 3};
+
+    std::vector<std::vector<std::vector<float>>> fv;
+    auto start = reinterpret_cast<float *>(f0_data.data());
+    fv.push_back({std::vector<float>(start, start + 4 * f0_data.size())});
+    fv.push_back({std::vector<float>()});
+    fv.push_back({std::vector<float>()});
+
+    start = reinterpret_cast<float *>(f3_data.data());
+    fv.push_back({std::vector<float>(start, start + f3_data.size())});
+    fv.push_back({std::vector<float>()});
+    fv.push_back({std::vector<float>()});
+
+    auto environment = CreateMultiServerEnvironmentWithSameNodes("NodeSameSparseFeaturesAcrossMultipleServers", fv);
+    auto &c = *environment.second;
+
+    std::vector<snark::NodeId> nodes = {0, 1, 3};
+    std::vector<snark::FeatureId> features = {0};
+    std::vector<std::vector<uint8_t>> data(features.size());
+    std::vector<std::vector<int64_t>> indices(features.size());
+    std::vector<int64_t> dimensions = {-1};
+
+    c.GetNodeSparseFeature(std::span(nodes), std::span(features), std::span(dimensions), indices, data);
+    EXPECT_EQ(std::vector<int64_t>({1}), dimensions);
+    EXPECT_EQ(indices.size(), 1);
+    EXPECT_EQ(data.size(), 1);
+    auto tmp = reinterpret_cast<float *>(data.front().data());
+    if (indices.front().size() == 6)
+    {
+        EXPECT_THAT(std::vector<float>(tmp, tmp + 3),
+                    ::testing::Pointwise(::testing::FloatEq(), std::vector<float>({1.f, 2.f, 3.f})));
+        EXPECT_EQ(std::vector<int64_t>({0, 1, 0, 14, 0, 20}), indices.front());
+    }
+    else if (indices.front().size() == 42)
+    {
+        EXPECT_THAT(std::vector<float>(tmp, tmp + 21),
+                    ::testing::Pointwise(
+                        ::testing::FloatEq(),
+                        std::vector<float>({1.0000000e+00, 6.6314536e-01, 7.0570761e-01, 8.0114162e-01, 5.4272264e-01,
+                                            8.0462688e-01, 7.2865283e-01, 6.6979200e-01, 2.0371352e-01, 9.4759399e-01,
+                                            2.6342505e-01, 2.2848174e-01, 4.6153143e-01, 9.3584371e-01, 4.4028005e-01,
+                                            6.1269855e-01, 9.1790408e-01, 8.3573622e-01, 6.0661989e-01, 3.5654736e-01,
+                                            7.7499115e-01})));
+        EXPECT_EQ(std::vector<int64_t>({0, 0,   0, 1,   0, 6,   0, 8,   0, 22,  0, 26,  0, 46,
+                                        0, 67,  0, 93,  0, 113, 0, 170, 0, 199, 0, 251, 0, 325,
+                                        0, 398, 0, 444, 0, 465, 0, 537, 0, 584, 0, 768, 0, 883}),
+                  indices.front());
+    }
+    else
+    {
+        FAIL(); // Expected either 6 or 42 indices.
+    }
 }
 
 namespace

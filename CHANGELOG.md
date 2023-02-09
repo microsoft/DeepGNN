@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Implement del method to release C++ client and server. Important for ray actors, because they create numerous clients during training.
 
+- If sparse feature values present on multiple servers, then only one will be returned with source picked randomly.
+
 ## [0.1.57] - 2022-12-15
 
 ### Changed
