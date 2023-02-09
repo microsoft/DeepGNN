@@ -6,6 +6,7 @@ from itertools import repeat
 from typing import Optional, List, Dict, Union, Tuple
 import logging
 import tempfile
+
 import deepgnn.graph_engine.snark.client as client
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.local as ge_snark
@@ -63,11 +64,8 @@ class Server:
         storage_type: client.PartitionStorageType = client.PartitionStorageType.memory,
         config_path: str = "",
         stream: bool = False,
-        namespace: str = "deepgnn",
     ):
         """Init snark server."""
-        self._hostname = hostname
-
         temp_dir = tempfile.TemporaryDirectory()
         temp_path = temp_dir.name
         meta_path = download_meta(data_path, temp_path, config_path)

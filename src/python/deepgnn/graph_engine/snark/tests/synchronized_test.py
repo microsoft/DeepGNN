@@ -26,7 +26,7 @@ def test_simple_client_server_initialized_in_correct_order():
         result = cl.node_features(np.array([0, 1]), np.array([[1, 1]]), np.float32)
         return result
 
-    servers = start_servers.bind(1)
+    servers = start_servers.bind("localhost:9999", "/tmp/cora", 1)
     clients = start_clients.bind(servers, 1)
     output = train.bind(servers, clients, fn)
     result = workflow.run(output)

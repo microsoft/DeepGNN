@@ -9,9 +9,10 @@ import ray
 class ServerWrapper(object):
     """Server wrapper."""
 
-    def __init__(self):
+    def __init__(self, hostname, *server_args, **server_kwargs):
         """Init server wrapper."""
-        self.server = Server("localhost:9999", "/tmp/cora", 0, 1)
+        self._hostname = hostname
+        self.server = Server(hostname, *server_args, **server_kwargs)
 
     def reset(self):
         """Reset server wrapper."""
@@ -19,13 +20,20 @@ class ServerWrapper(object):
 
     def get_hostname(self):
         """Get hostname."""
-        return self.server._hostname
+        return self._hostname
 
 
 @ray.remote
-def start_servers(num: int):
+def start_servers(
+    hostname: str, data_dir: str, n_servers: int, n_partitions: int = 1, **server_kwargs
+):
     """Start N servers."""
-    return [ServerWrapper.remote() for i in range(num)]  # type: ignore
+    return [
+        ServerWrapper.remote(  # type: ignore
+            hostname, data_dir, i, n_partitions // n_servers, **server_kwargs
+        )
+        for i in range(n_servers)
+    ]
 
 
 @ray.remote
