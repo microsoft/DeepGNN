@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Implement del method to release C++ client and server. Important for ray actors, because they create numerous clients during training.
 
+### Removed
+
+- Remove ALL_NODE_TYPE, ALL_EDGE_TYPE, __len__ and __iter__ from Graph API.
+
 ## [0.1.57] - 2022-12-15
 
 ### Changed

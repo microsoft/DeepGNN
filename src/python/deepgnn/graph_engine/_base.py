@@ -23,7 +23,7 @@ class SamplingStrategy(IntEnum):
     TopK = 4
 
 
-class Graph(metaclass=abc.ABCMeta):
+class Graph(abc.ABC):
     """
     Implementation of the iterable dataset for GNN models.
 
