@@ -47,9 +47,6 @@ def train_graphsage_cora_ddp_trainer(mock_graph):
     def create_mock_dataset(
         config,
         model,
-        rank: int = 0,
-        world_size: int = 1,
-        get_graph: callable = None,
     ) -> ray.data.DatasetPipeline:
         dataset = MockSimpleDataLoader(
             batch_size=256, query_fn=model.query, graph=mock_graph

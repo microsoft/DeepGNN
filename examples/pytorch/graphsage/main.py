@@ -1,63 +1,36 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
-import argparse
+from typing import Dict
 import torch
 import numpy as np
-from deepgnn import TrainMode, setup_default_logging_config
-from deepgnn import get_logger
-from deepgnn.pytorch.common import F1Score
-from deepgnn.pytorch.common.utils import get_python_type
-from deepgnn.pytorch.encoding import get_feature_encoder
-from deepgnn.pytorch.modeling import BaseModel
-from deepgnn.graph_engine import (
-    Graph,
-    SamplingStrategy,
-)
-from model import PTGSupervisedGraphSage  # type: ignore
-from typing import Dict, Callable
-import os
-import platform
-import numpy as np
-import torch
 import ray
 import ray.train as train
 from ray.train.torch import TorchTrainer
 from ray.air import session
-from ray.air.config import ScalingConfig
-from deepgnn import TrainMode, get_logger
-from deepgnn.pytorch.common import get_args
-from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
+from ray.air.config import ScalingConfig, RunConfig
+
 from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
 from deepgnn.graph_engine.data.citation import Cora
-
-
-# fmt: off
-def init_args(parser: argparse.Namespace):
-    group = parser.add_argument_group("GraphSAGE Parameters")
-    group.add_argument("--algo", type=str, default="supervised", choices=["supervised"])
-# fmt: on
+from deepgnn import setup_default_logging_config, get_logger
+from deepgnn.pytorch.common import F1Score
+from deepgnn.pytorch.modeling import BaseModel
+from model import PTGSupervisedGraphSage  # type: ignore
+from deepgnn.pytorch.common.utils import save_checkpoint
 
 
 def create_dataset(
-    config: dict,
+    config: Dict,
     model: BaseModel,
-    rank: int = 0,
-    world_size: int = 1,
-    get_graph: Callable[..., DistributedClient] = None,  # type: ignore
 ) -> ray.data.DatasetPipeline:
-    g = get_graph()
+    g = DistributedClient(config["ge_address"])
     max_id = g.node_count(0)
-    dataset = ray.data.range(max_id).repartition(max_id // 140)
+    dataset = ray.data.range(max_id).repartition(max_id // config["batch_size"])
     pipe = dataset.window(blocks_per_window=4).repeat(config["num_epochs"])
-    pipe = pipe.map_batches(lambda idx: model.query(g, np.array(idx)))
-    return pipe
+    return pipe.map_batches(lambda idx: model.query(g, np.array(idx)))
 
 
 def train_func(config: Dict):
     """Training loop for ray trainer."""
-    logger = get_logger()
-
     train.torch.accelerate()
     train.torch.enable_reproducibility(seed=session.get_world_rank())
 
@@ -85,9 +58,6 @@ def train_func(config: Dict):
     dataset = config["init_dataset_fn"](
         config,
         model,
-        rank=session.get_world_rank(),
-        world_size=session.get_world_size(),
-        get_graph=config["get_graph"],
     )
     losses_full = []
     epoch_iter = (
@@ -103,9 +73,6 @@ def train_func(config: Dict):
             config["init_dataset_fn"](
                 config,
                 model,
-                rank=session.get_world_rank(),
-                world_size=session.get_world_size(),
-                get_graph=config["get_graph"],
             )
             if isinstance(epoch_pipe, int)
             else epoch_pipe.iter_torch_batches(batch_size=140)
@@ -121,10 +88,10 @@ def train_func(config: Dict):
             losses.append(loss.item())
 
         losses_full.extend(losses)
-        steps_in_epoch_trained = 0
-
         if "model_path" in config:
-            save_checkpoint(model, logger, epoch, step, model_dir=config["model_path"])
+            save_checkpoint(
+                model, get_logger(), epoch, step, model_dir=config["model_path"]
+            )
 
         session.report(
             {
@@ -139,18 +106,13 @@ def run_ray(init_dataset_fn, **kwargs):
     """Run ray trainer."""
     ray.init(num_cpus=4)
 
-    cora = Cora()
-
     address = "localhost:9999"
+    cora = Cora()
     s = Server(address, cora.data_dir(), 0, 1)
-
-    def get_graph():
-        return DistributedClient([address])
-
     training_loop_config = {
-        "get_graph": get_graph,
-        "data_dir": cora.data_dir(),
-        "num_epochs": 100,
+        "ge_address": address,
+        "batch_size": 140,
+        "num_epochs": 200,
         "feature_idx": 1,
         "feature_dim": 50,
         "label_idx": 0,
@@ -158,10 +120,8 @@ def run_ray(init_dataset_fn, **kwargs):
         "num_classes": 7,
         "learning_rate": 0.005,
         "init_dataset_fn": init_dataset_fn,
-        **kwargs,
     }
-    if "training_args" in kwargs:
-        training_loop_config.update(kwargs["training_args"])
+    training_loop_config.update(kwargs["training_args"])
 
     trainer = TorchTrainer(
         train_func,
