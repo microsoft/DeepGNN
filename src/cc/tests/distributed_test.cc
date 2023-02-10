@@ -1076,7 +1076,8 @@ TEST(DistributedTest, NodeSameSparseFeaturesAcrossMultipleServers)
     };
 
     // indices - 1, 14, 20, data - 1,2,3
-    std::vector<int32_t> f3_data = {3, 1, 1, 0, 14, 0, 20, 0, 1, 0, 2, 0, 3};
+    // in python: struct.unpack('@iii', struct.pack("@fff", 1.0, 2.0, 3.0))
+    std::vector<int32_t> f3_data = {3, 1, 1, 0, 14, 0, 20, 0, 1065353216, 1073741824, 1077936128};
 
     std::vector<std::vector<std::vector<float>>> fv;
     auto start = reinterpret_cast<float *>(f0_data.data());
