@@ -131,17 +131,7 @@ def run_ray(init_dataset_fn, **kwargs):
     return trainer.fit()
 
 
-def _main():
-    # setup default logging component.
-    setup_default_logging_config(enable_telemetry=True)
-
-    # run_dist is the unified entry for pytorch model distributed training/evaluation/inference.
-    # User only needs to prepare initializing function for model, dataset, optimizer and args.
-    # reference: `deepgnn/pytorch/training/factory.py`
+if __name__ == "__main__":
     run_ray(
         init_dataset_fn=create_dataset,
     )
-
-
-if __name__ == "__main__":
-    _main()
