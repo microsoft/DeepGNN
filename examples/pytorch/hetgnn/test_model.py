@@ -81,7 +81,7 @@ class MockHetGnnFileNodeLoader(IterableDataset):
         return context
 
 
-class MockGraph(Graph):
+class MockGraph:
     def __init__(self, feat_data, adj_lists):
         self.feat_data = feat_data
         self.adj_lists = adj_lists
