@@ -4,32 +4,15 @@
 # C++ related modules
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
-# Python related modules
+# Python and platform related modules
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
-    name = "bazel_skylib",
-    sha256 = "07b4117379dde7ab382345c3b0f5edfc6b7cff6c93756eac63da121e0bbcc5de",
-    strip_prefix = "bazel-skylib-1.1.1",
+    name = "platforms",
+    sha256 = "5308fc1d8865406a49427ba24a9ab53087f17f5266a7aabbfc28823f3916e1ca",
     urls = [
-        "http://mirror.tensorflow.org/github.com/bazelbuild/bazel-skylib/archive/1.1.1.tar.gz",
-        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.1.1/bazel-skylib-1.1.1.tar.gz",  # 2021-09-27
-    ],
-)
-load("@bazel_skylib//lib:versions.bzl", "versions")
-versions.check(
-    # Keep this version in sync with:
-    #  * The BAZEL environment variable defined in .github/workflows/ci.yml, which is used for CI and nightly builds.
-    minimum_bazel_version = "4.2.2",
-    # TODO(https://github.com/tensorflow/tensorboard/issues/6115): Support building TensorBoard with Bazel version >= 6.0.0
-    maximum_bazel_version = "5.4.0",
-)
-
-http_archive(
-    name = "build_bazel_rules_apple",
-    sha256 = "a5f00fd89eff67291f6cd3efdc8fad30f4727e6ebb90718f3f05bbf3c3dd5ed7",
-    urls = [
-        "https://github.com/bazelbuild/rules_apple/releases/download/0.33.0/rules_apple.0.33.0.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/platforms/releases/download/0.0.6/platforms-0.0.6.tar.gz",
+        "https://github.com/bazelbuild/platforms/releases/download/0.0.6/platforms-0.0.6.tar.gz",
     ],
 )
 
@@ -113,9 +96,9 @@ http_archive(
 
 http_archive(
     name = "com_github_grpc_grpc",
-    sha256 = "9b1f348b15a7637f5191e4e673194549384f2eccf01fcef7cc1515864d71b424",
-    strip_prefix = "grpc-1.48.0",
-    urls = ["https://github.com/grpc/grpc/archive/v1.48.0.tar.gz"],
+    sha256 = "b55696fb249669744de3e71acc54a9382bea0dce7cd5ba379b356b12b82d4229",
+    strip_prefix = "grpc-1.51.1",
+    urls = ["https://github.com/grpc/grpc/archive/v1.51.1.tar.gz"],
 )
 
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
@@ -147,20 +130,16 @@ rules_foreign_cc_dependencies()
 http_archive(
     name = "mimalloc",
     build_file = "//config:mimalloc.BUILD",
-    sha256 = "5af497f360879bf9d07a5146961d275a25f4177fbe21ee6c437db604422acd60",
-    strip_prefix = "mimalloc-2.0.3",
-    urls = ["https://github.com/microsoft/mimalloc/archive/refs/tags/v2.0.3.tar.gz"],
+    sha256 = "4a29edae32a914a706715e2ac8e7e4109e25353212edeed0888f4e3e15db5850",
+    strip_prefix = "mimalloc-2.0.9",
+    urls = ["https://github.com/microsoft/mimalloc/archive/refs/tags/v2.0.9.tar.gz"],
 )
-
-_RULES_BOOST_COMMIT = "652b21e35e4eeed5579e696da0facbe8dba52b1f"
 
 http_archive(
     name = "com_github_nelhage_rules_boost",
-    sha256 = "c1b8b2adc3b4201683cf94dda7eef3fc0f4f4c0ea5caa3ed3feffe07e1fb5b15",
-    strip_prefix = "rules_boost-%s" % _RULES_BOOST_COMMIT,
-    urls = [
-        "https://github.com/nelhage/rules_boost/archive/%s.tar.gz" % _RULES_BOOST_COMMIT,
-    ],
+    sha256 = "1a3316cde21eccc337c067b21d767d252e4ac2e8041d65eb4b7b91da569c5e3f",
+    strip_prefix = "rules_boost-6b7c1ce2b8d77cb6b3df6ccca0b6cf7ed13136fc",
+    url = "https://github.com/nelhage/rules_boost/archive/6b7c1ce2b8d77cb6b3df6ccca0b6cf7ed13136fc.tar.gz",
 )
 
 load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")

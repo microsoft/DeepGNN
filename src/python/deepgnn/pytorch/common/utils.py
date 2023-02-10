@@ -4,16 +4,15 @@
 
 import numpy as np
 import os
-import random
 import re
 from typing import Tuple, List
 import torch
-
 from pathlib import Path
 from urllib.parse import urlparse
-
+from deepgnn import TrainMode
 from deepgnn import get_logger
-from deepgnn.pytorch.common.consts import PREFIX_CHECKPOINT
+from deepgnn.pytorch.common.consts import PREFIX_CHECKPOINT, PREFIX_EMBEDDING
+from deepgnn.graph_engine.adl_uploader import AdlDataWriter
 
 
 def get_python_type(dtype_str: str):
@@ -26,56 +25,6 @@ def get_python_type(dtype_str: str):
     if dtype_str == "binary":
         return np.uint8
     raise RuntimeError(f"Unknown feature type:{dtype_str}")
-
-
-def set_seed(seed: int):
-    """
-    Set the random seed in ``random``, ``numpy`` and ``torch`` modules.
-
-    Args:
-        seed: The seed to set.
-    """
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-
-
-def to_cuda(context):
-    """
-    Move all tensor data in context to cuda.
-
-    Args:
-        context: nested tensor/numpy array dictionary.
-    """
-    if isinstance(context, dict):
-        for key in context:
-            data = context[key]
-            if (
-                isinstance(data, dict)
-                or isinstance(data, tuple)
-                or isinstance(data, list)
-            ):
-                to_cuda(data)
-            elif isinstance(data, torch.Tensor):
-                context[key] = data.cuda()
-            else:
-                raise RuntimeError(
-                    f"Failed to move {data} to cuda as the type is not unsupported."
-                )
-    elif isinstance(context, tuple) or isinstance(context, list):
-        for i in range(len(context)):
-            data = context[i]
-            if (
-                isinstance(data, dict)
-                or isinstance(data, tuple)
-                or isinstance(data, list)
-            ):
-                to_cuda(data)
-            # for types which can be converted to cuda, call data.cuda() to convert it,
-            # for others, keep it as original.
-            elif isinstance(data, torch.Tensor):
-                context[i] = data.cuda()
 
 
 def get_store_name_and_path(input_path: str) -> Tuple[str, str]:
@@ -171,3 +120,63 @@ def rotate_checkpoints(
                 get_logger().info(
                     f"Deleted checkpoint [{checkpoint}] due to max_saved_ckpts:{max_saved_ckpts}"
                 )
+
+
+def load_checkpoint(model, logger=None, args=None, model_dir=".", world_rank=0):
+    """Load a checkpoint."""
+    epochs_trained = 0
+    steps_in_epoch_trained = 0
+    # Search and sort checkpoints from model path.
+    ckpts = get_sorted_checkpoints(args.model_dir if args is not None else model_dir)
+    ckpt_path = ckpts[-1] if len(ckpts) > 0 else None
+    if ckpt_path is not None:
+        init_ckpt = torch.load(ckpt_path, map_location="cpu")
+        if args is not None and args.mode == TrainMode.TRAIN:
+            epochs_trained = init_ckpt["epoch"]
+            steps_in_epoch_trained = init_ckpt["step"]
+
+        if world_rank == 0:
+            model.load_state_dict(init_ckpt["state_dict"])
+            if logger is not None:
+                logger.info(
+                    f"Loaded initial checkpoint: {ckpt_path},"
+                    f" trained epochs: {epochs_trained}, steps: {steps_in_epoch_trained}"
+                )
+        del init_ckpt
+    return epochs_trained, steps_in_epoch_trained
+
+
+def save_checkpoint(
+    model, logger=None, epoch=0, step=0, args=None, model_dir=".", **kwargs
+):
+    """Save a checkpoint."""
+    save_path = args.save_path if args is not None else model_dir
+
+    os.makedirs(save_path, exist_ok=True)
+    save_path = os.path.join(
+        f"{save_path}",
+        f"{PREFIX_CHECKPOINT}-{epoch:03}-{step:06}.pt",
+    )
+    torch.save(
+        {"state_dict": model.state_dict(), "epoch": epoch, "step": step, **kwargs},
+        save_path,
+    )
+    if args is not None:
+        rotate_checkpoints(save_path, args.max_saved_ckpts)
+    if logger is not None:
+        logger.info(f"Saved checkpoint to {save_path}.")
+
+
+def open_inference_fp(args, rank):
+    """Open inference file pointer."""
+    embed_path = os.path.join(args.save_path, f"{PREFIX_EMBEDDING}-{rank}")
+    if args.enable_adl_uploader:
+        return AdlDataWriter(
+            process_num=args.uploader_process_num,
+            threads_per_process=args.uploader_threads_num,
+            queue_size=200,
+            store_name=args.uploader_store_name,
+            file_path_prefix=embed_path,
+        )
+    else:
+        return open(embed_path + ".tsv", "w", encoding="utf-8")

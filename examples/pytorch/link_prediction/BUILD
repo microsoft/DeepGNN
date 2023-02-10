@@ -17,7 +17,6 @@ py_library(
         "poolers.py",
     ],
     deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/graph_engine:graph_engine_testlib",
         "//src/python/deepgnn/graph_engine/data:graph_engine_data",
@@ -28,7 +27,6 @@ py_library(
         "//src/python/deepgnn/pytorch/modeling:deepgnn_pytorch_modeling",
         "//src/python/deepgnn/pytorch/encoding/twinbert/deepspeed:deepgnn_pytorch_encoding_twinbert_ds",
         "//src/python/deepgnn/pytorch/nn:deepgnn_pytorch_nn",
-        "//src/python/deepgnn/pytorch/training:deepgnn_pytorch_training",
         "//examples/pytorch:example_torch_tests",
     ],
 )
@@ -75,6 +73,8 @@ py_test(
     deps = [
         ":example_torch_lp",
         ":linkprediction_test_model",
+        requirement("ray"),
+        requirement("pyarrow"),
         requirement("numpy"),
         requirement("pytest"),
         requirement("fsspec"),

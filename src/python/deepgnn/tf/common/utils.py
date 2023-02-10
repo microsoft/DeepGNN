@@ -29,7 +29,7 @@ def setup_worker_hooks(
     task_index: int,
     logging_tensor: dict = {},
     summary_tensor: dict = {},
-    dist_sync: ChiefCheckpointSaverHook = None,
+    dist_sync: Optional[ChiefCheckpointSaverHook] = None,
     metric_dir: str = "train",
     log_save_steps: int = 20,
     summary_save_steps: int = 100,
@@ -85,7 +85,7 @@ def setup_worker_hooks(
 def setup_chief_only_hooks(
     task_index: int,
     checkpoint_dir: str,
-    dist_sync: ChiefCheckpointSaverHook = None,
+    dist_sync: Optional[ChiefCheckpointSaverHook] = None,
     checkpoint_save_secs: int = 3600,
 ) -> Optional[List[ChiefCheckpointSaverHook]]:
     """

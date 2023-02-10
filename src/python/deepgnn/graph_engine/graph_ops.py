@@ -12,7 +12,7 @@ def sample_out_edges(
     edge_types: np.ndarray,
     count: int,
     sampling_strategy: str = "byweight",
-    edge_feature_meta: np.ndarray = None,
+    edge_feature_meta: Optional[np.ndarray] = None,
     edge_feature_type: np.dtype = np.dtype(np.float32),
 ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
     """

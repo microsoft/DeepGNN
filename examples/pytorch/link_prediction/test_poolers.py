@@ -9,15 +9,8 @@ import pytest
 import random
 import argparse
 import torch
-
+import ray
 from deepgnn import get_logger
-from deepgnn.graph_engine import (
-    GraphType,
-    BackendType,
-    BackendOptions,
-    TextFileSampler,
-    create_backend,
-)
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
 from examples.pytorch.conftest import MockGraph, load_data  # noqa: F401
 from deepgnn.pytorch.common.consts import (
@@ -41,7 +34,6 @@ from examples.pytorch.link_prediction.consts import (
     SIM_TYPE_FEEDFORWARD,
 )
 from deepgnn.pytorch.encoding import MultiTypeFeatureEncoder
-from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from model import LinkPredictionModel  # type: ignore
 from output_layer import OutputLayer  # type: ignore
 from test_model import (  # type: ignore
@@ -62,33 +54,16 @@ def get_source_dest_vec(params, config, graph):
 
     lp = LinkPredictionModel(args=params, dtype=np.int64, feature_enc=feature_enc)
 
-    args = argparse.Namespace(
-        data_dir="/mock/doesnt/need/physical/path",
-        backend=BackendType.CUSTOM,
-        graph_type=GraphType.LOCAL,
-        converter=DataConverterType.SKIP,
-        custom_backendclass=MockBackend,
-    )
-    backend = create_backend(BackendOptions(args), is_leader=True)
-    dataset = TorchDeepGNNDataset(
-        sampler_class=TextFileSampler,
-        backend=backend,
-        query_fn=lp.query,
-        prefetch_queue_size=1,
-        prefetch_worker_size=1,
-        batch_size=32,
-        store_name=params.store_name,
-        filename=params.filename_pattern,
-        shuffle=False,
-        drop_last=False,
-        worker_index=0,
-        num_workers=1,
-        epochs=1,
-        buffer_size=1024,
-    )
+    dataset = ray.data.read_text(params.filename_pattern)
+    dataset = dataset.repartition(dataset.count() // batch_size)
+    pipe = dataset.window(blocks_per_window=4)
 
-    trainloader = torch.utils.data.DataLoader(dataset)
-    for i, data in enumerate(trainloader):
+    def transform_batch(idx: list) -> dict:
+        return lp.query(idx)
+
+    pipe = pipe.map_batches(transform_batch)
+
+    for i, data in enumerate(pipe.iter_torch_batches(batch_size=batch_size)):
         if i == 0:
             x_batch = data[NODE_FEATURES]
             # source nodes

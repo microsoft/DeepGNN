@@ -4,7 +4,7 @@
 
 from enum import Enum
 from inspect import signature
-from typing import Callable, Iterator
+from typing import Optional, Callable, Iterator
 from deepgnn.graph_engine._base import Graph
 from deepgnn.graph_engine.backends.common import GraphEngineBackend
 from deepgnn.graph_engine.prefetch import Generator
@@ -59,13 +59,13 @@ class DeepGNNDataset:
         self,
         sampler_class: BaseSampler,
         query_fn: Callable,
-        backend: GraphEngineBackend = None,
+        backend: Optional[GraphEngineBackend] = None,
         num_workers: int = 1,
         worker_index: int = 0,
         batch_size: int = 1,
         epochs: int = 1,
         enable_prefetch: bool = False,
-        collate_fn: Callable = None,
+        collate_fn: Optional[Callable] = None,
         # parameters to initialize samplers
         **kwargs,
     ):

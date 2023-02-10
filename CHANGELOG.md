@@ -13,6 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add Reddit dataset download tool at deepgnn.graph_engine.data.reddit.
 
+- Remove FP16 constants, replace argument with boolean to enable or disable.
+
+- Added `grpc_options` to distributed client to control service config.
+
+### Removed
+- Remove our custom PyTorch trainers, use Ray instead.
+
+- Remove TorchDeepGNNDataset, deepgnn.graph_engine.samplers, deepgnn.graph_engine.prefetch and deepgnn.graph_engine.backends.
+
+- Removed `deepgnn.pytorch.common.utils.set_seed`, use ray `train.torch.enable_reproducibility(seed=0)` instead. Remove `deepgnn.pytorch.common.utils.to_cuda`.
+
 ### Fixed
 - Implement del method to release C++ client and server. Important for ray actors, because they create numerous clients during training.
 

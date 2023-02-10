@@ -5,7 +5,7 @@ import argparse
 import os
 import tempfile
 from collections import defaultdict
-from typing import List, Tuple, Dict, Set, DefaultDict
+from typing import Optional, List, Tuple, Dict, Set, DefaultDict
 from deepgnn.graph_engine.data.data_util import Dataset, select_training_test_nodes
 
 
@@ -30,7 +30,7 @@ class CoraFull(Dataset):
 
     def __init__(
         self,
-        output_dir: str = None,
+        output_dir: Optional[str] = None,
         train_node_ratio: float = 1.0,
         random_selection: bool = False,
         url="https://deepgraphpub.blob.core.windows.net/public/testdata/cora.tgz",

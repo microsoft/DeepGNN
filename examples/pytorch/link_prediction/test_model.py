@@ -27,15 +27,6 @@ from deepgnn.pytorch.common.consts import (
 from examples.pytorch.link_prediction.consts import ENCODER_LABEL, FANOUTS_NAME
 from deepgnn.pytorch.encoding import TwinBERTEncoder, MultiTypeFeatureEncoder
 from examples.pytorch.conftest import MockGraph, load_data  # noqa: F401
-from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
-from deepgnn.graph_engine import (
-    GraphType,
-    BackendType,
-    TextFileSampler,
-    BackendOptions,
-    GraphEngineBackend,
-    create_backend,
-)
 from deepgnn.graph_engine.snark.converter.options import DataConverterType
 from args import init_args  # type: ignore
 from model import LinkPredictionModel  # type: ignore
@@ -44,7 +35,19 @@ from deepgnn.graph_engine.test_adl_reader import IS_ADL_CONFIG_VALID
 pytestmark = pytest.mark.skipif(not IS_ADL_CONFIG_VALID, reason="Invalid adl config.")
 
 
-class MockBackend(GraphEngineBackend):
+def setup_module(module):
+    import deepgnn.graph_engine.snark._lib as lib
+
+    lib_name = "libwrapper.so"
+    if platform.system() == "Windows":
+        lib_name = "wrapper.dll"
+
+    os.environ[lib._SNARK_LIB_PATH_ENV_KEY] = os.path.join(
+        os.path.dirname(__file__), "..", "..", "..", "src", "cc", "lib", lib_name
+    )
+
+
+class MockBackend:
     _backend = None
 
     def __new__(cls, options=None, is_leader: bool = False):

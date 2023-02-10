@@ -1,22 +1,23 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-"""GAT model implementation."""
+"""GAT model implementation with torch geometric."""
+from typing import List, Any
 from dataclasses import dataclass
 import numpy as np
 import torch
 import torch.nn.functional as F
-from typing import List
 
 from deepgnn.pytorch.common import Accuracy
 from deepgnn.pytorch.modeling.base_model import BaseModel
-from deepgnn.pytorch.nn.gat_conv import GATConv
 
 from deepgnn.graph_engine import Graph, graph_ops
+from torch_geometric.nn import GATConv
+from deepgnn.graph_engine.utils import serialize, deserialize
 
 
 @dataclass
 class GATQueryParameter:
-    """Graph query configuration for GAT model."""
+    """Configuration for graph query."""
 
     neighbor_edge_types: np.ndarray
     feature_idx: int
@@ -29,7 +30,7 @@ class GATQueryParameter:
 
 
 class GATQuery:
-    """Graph query to generate data for GAT model."""
+    """Query to fetch graph data for the model."""
 
     def __init__(self, p: GATQueryParameter):
         """Initialize graph query."""
@@ -38,7 +39,7 @@ class GATQuery:
         self.feat_meta = np.array([[p.feature_idx, p.feature_dim]], np.int32)
 
     def query_training(self, graph: Graph, inputs: np.ndarray) -> tuple:
-        """Query used to generate data for training."""
+        """Fetch training data."""
         nodes, edges, src_idx = graph_ops.sub_graph(
             graph,
             inputs,
@@ -54,16 +55,14 @@ class GATQuery:
         feat = graph.node_features(nodes, self.feat_meta, self.p.feature_type)
         label = graph.node_features(nodes, self.label_meta, self.p.label_type)
         label = label.astype(np.int32)
-        edges_value = np.ones(edges.shape[0], np.float32)
         edges = np.transpose(edges)
-        adj_shape = np.array([nodes.size, nodes.size], np.int64)
 
-        graph_tensor = (nodes, feat, input_mask, label, edges, edges_value, adj_shape)
-        return graph_tensor
+        graph_tensor: List[Any] = [nodes, feat, edges, input_mask, label]
+        return serialize(graph_tensor, inputs.size)
 
 
 class GAT(BaseModel):
-    """GAT model implementation."""
+    """GAT model."""
 
     def __init__(
         self,
@@ -75,53 +74,47 @@ class GAT(BaseModel):
         ffd_drop: float = 0.0,
         attn_drop: float = 0.0,
     ):
-        """Initialize GAT model."""
+        """Initialize model."""
         self.q = GATQuery(q_param)
         super().__init__(np.float32, 0, 0, None)
         self.num_classes = num_classes
 
         self.out_dim = num_classes
 
-        self.input_layer = GATConv(
-            in_dim=in_dim,
-            attn_heads=head_num[0],
-            out_dim=hidden_dim,
-            act=F.elu,
-            in_drop=ffd_drop,
-            coef_drop=attn_drop,
-            attn_aggregate="concat",
+        self.conv1 = GATConv(
+            in_channels=in_dim,
+            out_channels=hidden_dim,
+            heads=head_num[0],
+            dropout=0.6,
+            concat=True,
         )
         layer0_output_dim = head_num[0] * hidden_dim
-        # TODO: support hidden layer
-        assert len(head_num) == 2
-        self.out_layer = GATConv(
-            in_dim=layer0_output_dim,
-            attn_heads=head_num[1],
-            out_dim=self.out_dim,
-            act=None,
-            in_drop=ffd_drop,
-            coef_drop=attn_drop,
-            attn_aggregate="average",
+        self.conv2 = GATConv(
+            in_channels=layer0_output_dim,
+            out_channels=self.out_dim,
+            heads=1,
+            dropout=0.6,
+            concat=False,
         )
 
         self.metric = Accuracy()
 
     def forward(self, inputs):
-        """Evaluate model, calculate loss, predictions and extract labels."""
+        """Calculate loss, make predictions and fetch labels."""
+        nodes, feat, edge_index, mask, label = deserialize(inputs)
         # fmt: off
-        nodes, feat, mask, labels, edges, edges_value, adj_shape = inputs
-        nodes = torch.squeeze(nodes)                # [N], N: num of nodes in subgraph
-        feat = torch.squeeze(feat)                  # [N, F]
-        mask = torch.squeeze(mask)                  # [N]
-        labels = torch.squeeze(labels)              # [N]
-        edges = torch.squeeze(edges)                # [X, 2], X: num of edges in subgraph
-        edges_value = torch.squeeze(edges_value)    # [X]
-        adj_shape = torch.squeeze(adj_shape)        # [2]
+        nodes = torch.squeeze(nodes.to(torch.int32))                # [N]
+        feat = torch.squeeze(feat.to(torch.float32))                  # [N, F]
+        edge_index = torch.squeeze(edge_index.to(torch.int32))      # [2, X]
+        mask = torch.squeeze(mask.to(torch.bool))                  # [N]
+        labels = torch.squeeze(label.to(torch.int32))               # [N]
         # fmt: on
 
-        sp_adj = torch.sparse_coo_tensor(edges, edges_value, adj_shape.tolist())
-        h_1 = self.input_layer(feat, sp_adj)
-        scores = self.out_layer(h_1, sp_adj)
+        x = feat
+        x = F.dropout(x, p=0.6, training=self.training)
+        x = F.elu(self.conv1(x, edge_index))
+        x = F.dropout(x, p=0.6, training=self.training)
+        scores = self.conv2(x, edge_index)
 
         labels = labels.type(torch.int64)
         labels = labels[mask]  # [batch_size]

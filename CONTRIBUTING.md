@@ -15,7 +15,7 @@ instructions provided by the bot. You will only need to do this once across all 
 
 ## Linux
 
-You'll need [bazel](https://docs.bazel.build/versions/master/install-ubuntu.html) and g++-11 to use project from source:
+You'll need [bazel](https://docs.bazel.build/versions/master/install-ubuntu.html) and g++-12 to use project from source:
 
 ```bash
 sudo apt install curl gnupg
@@ -23,7 +23,7 @@ curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel.gpg
 sudo mv bazel.gpg /etc/apt/trusted.gpg.d/
 echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
 
-sudo apt update && sudo apt install bazel clang-format g++-11
+sudo apt update && sudo apt install bazel clang-format g++-12
 ```
 
 ## MacOS
@@ -36,7 +36,7 @@ brew install bazel
 
 ## Windows
 
-The easiest way to use bazel on windows is via bazelisk, install [golang](https://golang.org/dl/), [bazelisk](https://github.com/bazelbuild/bazelisk), [compilers and language runtimes](https://docs.bazel.build/versions/4.1.0/install-windows.html#installing-compilers-and-language-runtimes).
+The easiest way to use bazel on windows is via bazelisk, install [golang](https://golang.org/dl/), [bazelisk](https://github.com/bazelbuild/bazelisk), [compilers and language runtimes](https://bazel.build/install/windows#install-compilers).
 Run all the build commands in the sections below in a powershell window, but replace `bazel` with `bazelisk` and use `--config=windows`.
 
 # Build
@@ -47,14 +47,14 @@ Get the repo and build it:
 
 ```bash
 git clone https://github.com/microsoft/DeepGNN
-# for Windows and MacOS builds use `windows` and `darwin` config values.
+# for Windows and MacOS builds use `windows` and `macos` config values.
 bazel build -c opt //src/cc/lib:* --config=linux
 ```
 
 For Debug builds use:
 
 ```bash
-# for Windows and MacOS builds use `windows` and `darwin` config values.
+# for Windows and MacOS builds use `windows` and `macos` config values.
 bazel build -c dbg //src/cc/lib:* --config=linux
 ```
 

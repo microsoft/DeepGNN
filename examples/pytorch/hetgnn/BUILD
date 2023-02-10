@@ -8,14 +8,12 @@ py_library(
     name = "example_torch_hetgnn",
     srcs = [
         "args.py",
-        "conftest.py",
         "evaluation.py",
         "model.py",
         "main.py",
         "sampler.py",
     ],
     deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/graph_engine/data:graph_engine_data",
         "//src/python/deepgnn/pytorch:deepgnn_pytorch",
@@ -23,7 +21,6 @@ py_library(
         "//src/python/deepgnn/pytorch/encoding:deepgnn_pytorch_encoding",
         "//src/python/deepgnn/pytorch/modeling:deepgnn_pytorch_modeling",
         "//src/python/deepgnn/pytorch/nn:deepgnn_pytorch_nn",
-        "//src/python/deepgnn/pytorch/training:deepgnn_pytorch_training",
         "//examples/pytorch:example_torch_tests",
     ],
 )
@@ -37,6 +34,8 @@ py_test(
     srcs_version = "PY3",
     deps = [
         ":example_torch_hetgnn",
+        requirement("ray"),
+        requirement("pyarrow"),
         requirement("numpy"),
         requirement("pytest"),
         requirement("scikit-learn"),
@@ -60,6 +59,8 @@ py_test(
     srcs_version = "PY3",
     deps = [
         ":example_torch_hetgnn",
+        requirement("ray"),
+        requirement("pyarrow"),
         requirement("fsspec"),
         requirement("numpy"),
         requirement("pytest"),

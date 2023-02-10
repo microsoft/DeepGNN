@@ -3,25 +3,42 @@
 
 import argparse
 import torch
+import ray
 from deepgnn import TrainMode, setup_default_logging_config
 from deepgnn import get_logger
-from deepgnn.pytorch.common.utils import get_python_type, set_seed
+from deepgnn.pytorch.common.utils import get_python_type
 from deepgnn.pytorch.modeling import BaseModel
-from deepgnn.pytorch.training import run_dist
-from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
-from deepgnn.graph_engine import CSVNodeSampler, GraphEngineBackend
 from args import init_args  # type: ignore
 from model import HetGnnModel  # type: ignore
 from sampler import HetGnnDataSampler  # type: ignore
 
+from typing import Dict
+import os
+import platform
+import numpy as np
+import torch
+import ray
+import ray.train as train
+from ray.train.torch import TorchTrainer
+from ray.air import session
+from ray.air.config import ScalingConfig
+from ray.data import DatasetPipeline
+from deepgnn import TrainMode, get_logger
+from deepgnn.pytorch.common import get_args
+from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
+from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
 
-def create_model(args: argparse.Namespace):
-    get_logger().info(f"Creating HetGnnModel with seed:{args.seed}.")
-    # set seed before instantiating the model
+
+def train_func(config: Dict):
+    """Training loop for ray trainer."""
+    args = config["args"]
+    logger = get_logger()
+
+    train.torch.accelerate(args.fp16)
     if args.seed:
-        set_seed(args.seed)
+        train.torch.enable_reproducibility(seed=args.seed + session.get_world_rank())
 
-    return HetGnnModel(
+    model = HetGnnModel(
         node_type_count=args.node_type_count,
         neighbor_count=args.neighbor_count,
         embed_d=args.feature_dim,  # currently feature dimention is equal to embedding dimention.
@@ -29,45 +46,77 @@ def create_model(args: argparse.Namespace):
         feature_idx=args.feature_idx,
         feature_dim=args.feature_dim,
     )
-
-
-def create_dataset(
-    args: argparse.Namespace,
-    model: BaseModel,
-    rank: int = 0,
-    world_size: int = 1,
-    backend: GraphEngineBackend = None,
-):
-    if args.mode == TrainMode.INFERENCE:
-        return TorchDeepGNNDataset(
-            sampler_class=CSVNodeSampler,
-            backend=backend,
-            query_fn=model.query_inference,
-            prefetch_queue_size=10,
-            prefetch_worker_size=2,
-            batch_size=args.batch_size,
-            sample_file=args.sample_file,
-        )
+    model = train.torch.prepare_model(model, move_to_device=args.gpu)
+    if args.mode == TrainMode.TRAIN:
+        model.train()
     else:
-        return TorchDeepGNNDataset(
-            sampler_class=HetGnnDataSampler,
-            backend=backend,
-            query_fn=model.query,
-            prefetch_queue_size=10,
-            prefetch_worker_size=2,
-            num_nodes=args.max_id // world_size,
-            batch_size=args.batch_size,
-            node_type_count=args.node_type_count,
-            walk_length=args.walk_length,
-        )
+        model.eval()
 
+    epochs_trained, steps_in_epoch_trained = load_checkpoint(model, logger, args)
 
-def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):
-    return torch.optim.Adam(
+    optimizer = torch.optim.Adam(
         filter(lambda p: p.requires_grad, model.parameters()),
-        lr=args.learning_rate * world_size,
+        lr=args.learning_rate * session.get_world_size(),
         weight_decay=0,
     )
+    optimizer = train.torch.prepare_optimizer(optimizer)
+
+    address = "localhost:9999"
+    s = Server(address, args.data_dir, 0, len(args.partitions))
+    g = DistributedClient([address])
+
+    max_id = g.node_count(args.node_type) if args.max_id in [-1, None] else args.max_id
+
+    for epoch in range(args.num_epochs):
+        if epoch < epochs_trained:
+            continue
+        scores = []
+        labels = []
+        losses = []
+
+        sampler = HetGnnDataSampler(g, max_id, args.batch_size, 3)
+
+        for step, batch in enumerate(sampler):
+            if step < steps_in_epoch_trained:
+                continue
+            loss, score, label = model(model.query(g, batch))
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            scores.append(score)
+            labels.append(label)
+            losses.append(loss.item())
+
+        steps_in_epoch_trained = 0
+        if epoch % args.save_ckpt_by_epochs == 0:
+            save_checkpoint(model, logger, epoch, step, args)
+
+        session.report(
+            {
+                "metric": model.compute_metric(scores, labels).item(),
+                "loss": np.mean(losses),
+            },
+        )
+
+
+def run_ray(**kwargs):
+    """Run ray trainer."""
+    ray.init(num_cpus=4)
+
+    args = get_args(init_args, kwargs["run_args"] if "run_args" in kwargs else None)
+
+    trainer = TorchTrainer(
+        train_func,
+        train_loop_config={
+            "args": args,
+            **kwargs,
+        },
+        scaling_config=ScalingConfig(
+            num_workers=1, use_gpu=args.gpu, resources_per_worker={"CPU": 2}
+        ),
+    )
+    return trainer.fit()
 
 
 def _main():
@@ -77,12 +126,21 @@ def _main():
     # run_dist is the unified entry for pytorch model distributed training/evaluation/inference.
     # User only needs to prepare initializing function for model, dataset, optimizer and args.
     # reference: `deepgnn/pytorch/training/factory.py`
-    run_dist(
-        init_model_fn=create_model,
-        init_dataset_fn=create_dataset,
-        init_optimizer_fn=create_optimizer,
-        init_args_fn=init_args,
+    ray.init(num_cpus=4)
+
+    args = get_args(init_args)
+
+    trainer = TorchTrainer(
+        train_func,
+        train_loop_config={
+            "args": args,
+            "init_model_fn": create_model,
+            "init_dataset_fn": create_dataset,
+            "init_optimizer_fn": create_optimizer,
+        },
+        scaling_config=ScalingConfig(num_workers=1, use_gpu=args.gpu),
     )
+    return trainer.fit()
 
 
 if __name__ == "__main__":

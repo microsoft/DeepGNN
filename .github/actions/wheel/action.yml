@@ -23,7 +23,7 @@ runs:
         sudo chown $USER /dt11
       shell: bash
       name: Configure env variables for linux
-    - uses: actions/cache@v3
+    - uses: actions/cache@v3.2.3
       id: compiler-cache
       with:
         path: /dt11
@@ -45,14 +45,12 @@ runs:
 
     - if: runner.os == 'macOS'
       run: |
-        echo "BAZEL_CONFIG=darwin" >> $GITHUB_ENV
+        echo "BAZEL_CONFIG=macos" >> $GITHUB_ENV
         echo "PLAT_NAME=macosx-10.9-x86_64" >> $GITHUB_ENV
       shell: bash
       name: Configure env variables for macos
 
-    - run: echo "USE_BAZEL_VERSION=5.3.1" >> $GITHUB_ENV
-      shell: bash
-    - uses: actions/cache@v3
+    - uses: actions/cache@v3.2.3
       id: build-cache
       with:
         path: ~/bazel-cache

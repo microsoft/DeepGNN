@@ -4,72 +4,38 @@
 import argparse
 import torch
 import numpy as np
-import random
 from deepgnn import TrainMode, setup_default_logging_config
 from deepgnn import get_logger
-from deepgnn.pytorch.common import MRR, F1Score
-from deepgnn.pytorch.common.utils import get_python_type, set_seed
+from deepgnn.pytorch.common import F1Score
+from deepgnn.pytorch.common.utils import get_python_type
 from deepgnn.pytorch.encoding import get_feature_encoder
 from deepgnn.pytorch.modeling import BaseModel
-from deepgnn.pytorch.training import run_dist
-from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from deepgnn.graph_engine import (
-    CSVNodeSampler,
-    GENodeSampler,
+    Graph,
     SamplingStrategy,
-    GraphEngineBackend,
 )
-from model import SupervisedGraphSage, UnSupervisedGraphSage  # type: ignore
+from model import PTGSupervisedGraphSage  # type: ignore
+from typing import Dict
+import os
+import platform
+import numpy as np
+import torch
+import ray
+import ray.train as train
+from ray.train.torch import TorchTrainer
+from ray.air import session
+from ray.air.config import ScalingConfig
+from deepgnn import TrainMode, get_logger
+from deepgnn.pytorch.common import get_args
+from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
+from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
 
 
 # fmt: off
 def init_args(parser: argparse.Namespace):
     group = parser.add_argument_group("GraphSAGE Parameters")
-    group.add_argument("--algo", type=str, default="unsupervised", choices=["unsupervised", "supervised"])
+    group.add_argument("--algo", type=str, default="supervised", choices=["supervised"])
 # fmt: on
-
-
-def create_model(args: argparse.Namespace):
-
-    # set seed before instantiating the model
-    if args.seed:
-        set_seed(args.seed)
-
-    feature_enc = get_feature_encoder(args)
-
-    if args.algo == "supervised":
-        get_logger().info(f"Creating SupervisedGraphSage model with seed:{args.seed}.")
-        return SupervisedGraphSage(
-            num_classes=args.label_dim,
-            metric=F1Score(),
-            label_idx=args.label_idx,
-            label_dim=args.label_dim,
-            feature_dim=args.feature_dim,
-            feature_idx=args.feature_idx,
-            feature_type=get_python_type(args.feature_type),
-            edge_type=args.node_type,
-            fanouts=args.fanouts,
-            feature_enc=feature_enc,
-        )
-
-    elif args.algo == "unsupervised":
-        get_logger().info(
-            f"Creating UnSupervisedGraphSage model with seed:{args.seed}."
-        )
-        return UnSupervisedGraphSage(
-            num_classes=args.dim,
-            metric=MRR(),
-            num_negs=args.num_negs,
-            feature_dim=args.feature_dim,
-            feature_idx=args.feature_idx,
-            feature_type=get_python_type(args.feature_type),
-            edge_type=args.node_type,
-            fanouts=args.fanouts,
-            feature_enc=feature_enc,
-            embed_dim=args.dim,
-        )
-    else:
-        raise RuntimeError(f"Unknown algo: {args.algo}")
 
 
 def create_dataset(
@@ -77,56 +43,137 @@ def create_dataset(
     model: BaseModel,
     rank: int = 0,
     world_size: int = 1,
-    backend: GraphEngineBackend = None,
-):
-    if args.mode == TrainMode.INFERENCE:
-        return TorchDeepGNNDataset(
-            sampler_class=CSVNodeSampler,
-            backend=backend,
-            num_workers=world_size,
-            worker_index=rank,
-            batch_size=args.batch_size,
-            sample_file=args.sample_file,
-            query_fn=model.query,
-            prefetch_queue_size=10,
-            prefetch_worker_size=2,
-        )
-    else:
-        return TorchDeepGNNDataset(
-            sampler_class=GENodeSampler,
-            backend=backend,
-            sample_num=args.max_id,
-            num_workers=world_size,
-            worker_index=rank,
-            node_types=np.array([args.node_type], dtype=np.int32),
-            batch_size=args.batch_size,
-            query_fn=model.query,
-            prefetch_queue_size=10,
-            prefetch_worker_size=2,
-            strategy=SamplingStrategy.RandomWithoutReplacement,
-        )
+    address: str = "",
+) -> ray.data.DatasetPipeline:
+    g = DistributedClient([address])
+    max_id = g.node_count(args.node_type) if args.max_id in [-1, None] else args.max_id
+    dataset = ray.data.range(max_id).repartition(max_id // args.batch_size)
+    pipe = dataset.window(blocks_per_window=4).repeat(args.num_epochs)
+
+    def transform_batch(idx: list):
+        return model.query(g, np.array(idx))
+
+    pipe = pipe.map_batches(transform_batch)
+    return pipe
 
 
-def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):
-    return torch.optim.SGD(
-        filter(lambda p: p.requires_grad, model.parameters()),
-        lr=args.learning_rate * world_size,
+def train_func(config: Dict):
+    """Training loop for ray trainer."""
+    args = config["args"]
+
+    logger = get_logger()
+    os.makedirs(args.save_path, exist_ok=True)
+
+    train.torch.accelerate(args.fp16)
+    if args.seed:
+        train.torch.enable_reproducibility(seed=args.seed + session.get_world_rank())
+
+    feature_enc = get_feature_encoder(args)
+    model = PTGSupervisedGraphSage(
+        num_classes=args.label_dim,
+        metric=F1Score(),
+        label_idx=args.label_idx,
+        label_dim=args.label_dim,
+        feature_dim=args.feature_dim,
+        feature_idx=args.feature_idx,
+        feature_type=get_python_type(args.feature_type),
+        edge_type=args.node_type,
+        fanouts=args.fanouts,
+        feature_enc=feature_enc,
     )
+    model = train.torch.prepare_model(model, move_to_device=args.gpu)
+    if args.mode == TrainMode.TRAIN:
+        model.train()
+    else:
+        model.eval()
+
+    epochs_trained, steps_in_epoch_trained = load_checkpoint(
+        model, logger, args, session.get_world_rank()
+    )
+
+    optimizer = torch.optim.SGD(
+        filter(lambda p: p.requires_grad, model.parameters()),
+        lr=args.learning_rate * session.get_world_size(),
+    )
+    optimizer = train.torch.prepare_optimizer(optimizer)
+
+    address = "localhost:9999"
+    s = Server(address, args.data_dir, 0, len(args.partitions))
+    dataset = config["init_dataset_fn"](
+        args,
+        model,
+        rank=session.get_world_rank(),
+        world_size=session.get_world_size(),
+        address=address,
+    )
+    losses_full = []
+    epoch_iter = (
+        range(args.num_epochs)
+        if not hasattr(dataset, "iter_epochs")
+        else dataset.iter_epochs()
+    )
+    for epoch, epoch_pipe in enumerate(epoch_iter):
+        scores = []
+        labels = []
+        losses = []
+        batch_iter = (
+            dataset
+            if isinstance(epoch_pipe, int)
+            else epoch_pipe.iter_torch_batches(batch_size=args.batch_size)
+        )
+        for step, batch in enumerate(batch_iter):
+            if step < steps_in_epoch_trained:
+                continue
+            loss, score, label = model(batch)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            scores.append(score)
+            labels.append(label)
+            losses.append(loss.item())
+
+        losses_full.extend(losses)
+        steps_in_epoch_trained = 0
+        if epoch % args.save_ckpt_by_epochs == 0:
+            save_checkpoint(model, logger, epoch, step, args)
+
+        session.report(
+            {
+                "metric": model.compute_metric(scores, labels).item(),
+                "loss": np.mean(losses),
+                "losses": losses_full,
+            },
+        )
+
+
+def run_ray(init_dataset_fn, **kwargs):
+    """Run ray trainer."""
+    ray.init(num_cpus=4)
+
+    args = get_args(init_args, kwargs["run_args"] if "run_args" in kwargs else None)
+
+    trainer = TorchTrainer(
+        train_func,
+        train_loop_config={
+            "args": args,
+            "init_dataset_fn": init_dataset_fn,
+            **kwargs,
+        },
+        scaling_config=ScalingConfig(num_workers=1, use_gpu=args.gpu),
+    )
+    return trainer.fit()
 
 
 def _main():
     # setup default logging component.
     setup_default_logging_config(enable_telemetry=True)
 
-    random.seed(42)
     # run_dist is the unified entry for pytorch model distributed training/evaluation/inference.
     # User only needs to prepare initializing function for model, dataset, optimizer and args.
     # reference: `deepgnn/pytorch/training/factory.py`
-    run_dist(
-        init_model_fn=create_model,
+    run_ray(
         init_dataset_fn=create_dataset,
-        init_optimizer_fn=create_optimizer,
-        init_args_fn=init_args,
     )
 
 

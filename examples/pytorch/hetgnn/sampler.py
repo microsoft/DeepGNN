@@ -3,10 +3,10 @@
 """Graph sampler for HetGnn model."""
 import numpy as np
 
-from deepgnn.graph_engine import Graph, SamplingStrategy, BaseSampler, FileNodeSampler
+from deepgnn.graph_engine import Graph, SamplingStrategy
 
 
-class HetGnnDataSampler(BaseSampler):
+class HetGnnDataSampler:
     """
     Implementation of BaseSampler for HetGnn model.
 
@@ -23,7 +23,6 @@ class HetGnnDataSampler(BaseSampler):
         sample_files: str = "",
     ):
         """Initialize sampler."""
-        super().__init__(batch_size, epochs=1, shuffle=False)
         self.graph = graph
         self.num_nodes = num_nodes
         self.nodes_left = num_nodes
@@ -31,17 +30,7 @@ class HetGnnDataSampler(BaseSampler):
         self.node_type_count = node_type_count
         self.walk_length = walk_length
         self.count = int((self.num_nodes + self.batch_size - 1) / self.batch_size)
-        self.samplers = []
-        if len(sample_files) > 0:
-            self.samplers = [
-                FileNodeSampler(
-                    sample_files,
-                    batch_size,
-                    worker_index=k,
-                    num_workers=node_type_count,
-                )
-                for k in range(node_type_count)
-            ]
+        self.samplers = []  # type: ignore
 
     # use N-hop random walk to generate positive/negtive samples.
     # once the dataset is initialized, all the triple list needed by this epoch is

@@ -362,7 +362,7 @@ TEST(DistributedTest, NodeSparseFeaturesServerMixWithEmptyGE)
     TestGraph::MemoryGraph m;
     m.m_nodes.push_back(TestGraph::Node{
         .m_id = snark::NodeId(42), .m_type = 0, .m_weight = 1.0f, .m_float_features = std::move(input_features)});
-    TempFolder path("NodeSparseFeaturesSingleServerMissingFeatures");
+    TempFolder path("NodeSparseFeaturesServerMixWithEmptyGE");
     auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
     snark::Metadata metadata(path.string());
     auto server = std::make_unique<snark::GRPCServer>(

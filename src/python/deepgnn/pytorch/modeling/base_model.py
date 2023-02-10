@@ -11,7 +11,6 @@ from torch.autograd import Variable
 from deepgnn.graph_engine import Graph, SamplingStrategy, QueryOutput
 from deepgnn.pytorch.encoding.feature_encoder import FeatureEncoder
 from deepgnn.pytorch.common.metrics import BaseMetric
-from deepgnn.graph_engine.samplers import BaseSampler
 from deepgnn import get_logger
 
 
@@ -44,7 +43,6 @@ class BaseModel(nn.Module):
         # If feature_enc is valid, overwrite self.feature_dim with feature_enc.feature_dim.
         self.feature_dim = feature_enc.feature_dim if feature_enc else feature_dim
         self.feature_enc = feature_enc
-        self.sampler: Optional[BaseSampler] = None
         self.xent = nn.CrossEntropyLoss()
         self.metric: BaseMetric
 

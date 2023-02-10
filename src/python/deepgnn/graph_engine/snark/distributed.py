@@ -3,7 +3,7 @@
 
 """Snark districuted client implementation."""
 from itertools import repeat
-from typing import List, Dict, Union
+from typing import Optional, List, Dict, Union, Tuple
 import logging
 import tempfile
 
@@ -20,7 +20,8 @@ class Client(ge_snark.Client):
     def __init__(
         self,
         servers: Union[str, List[str]],
-        ssl_cert: str = None,
+        ssl_cert: Optional[str] = None,
+        grpc_options: Optional[List[Tuple[str, str]]] = None,
     ):
         """Init snark client to wrapper around ctypes API of distributed graph."""
         self.logger = get_logger()
@@ -29,7 +30,9 @@ class Client(ge_snark.Client):
             servers = [servers]
         self._servers = servers
         self._ssl_cert = ssl_cert
-        self.graph = client.DistributedGraph(servers, ssl_cert)
+        self.graph = client.DistributedGraph(
+            servers, ssl_cert, grpc_options=grpc_options
+        )
         self.node_samplers: Dict[str, client.NodeSampler] = {}
         self.edge_samplers: Dict[str, client.EdgeSampler] = {}
         self.logger.info(
@@ -55,9 +58,9 @@ class Server:
         data_path: str,
         index: int,
         total_shards: int,
-        ssl_key: str = None,
-        ssl_root: str = None,
-        ssl_cert: str = None,
+        ssl_key: Optional[str] = None,
+        ssl_root: Optional[str] = None,
+        ssl_cert: Optional[str] = None,
         storage_type: client.PartitionStorageType = client.PartitionStorageType.memory,
         config_path: str = "",
         stream: bool = False,
