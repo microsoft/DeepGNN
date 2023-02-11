@@ -25,43 +25,51 @@ from ctypes import (
 from typing import Any, List, Tuple, Union, Optional, Sequence, Dict
 from enum import IntEnum
 
-import time
 import json
 import numpy as np
-
+from tenacity import Retrying, stop_after_attempt, wait_exponential
+from deepgnn import get_logger
 from deepgnn.graph_engine.snark._lib import _get_c_lib
 from deepgnn.graph_engine.snark._downloader import download_graph_data, GraphPath
 from deepgnn.graph_engine.snark.meta import Meta
 
 
-def _parse_grpc_options(options: List[tuple]) -> Dict:
-    """Parsing the grpc_options to use on client side retry calls"""
+def _parse_grpc_options(options: List[Tuple[str, str]]) -> Dict:
+    """Parse the grpc_options to use on client side retry calls."""
     for opt in options:
         if opt[0] == "grpc.service_config":
             try:
                 config = json.loads(opt[1])
-                retries = int(config['methodConfig'][0]['retryPolicy']['maxAttempts'])
-                delay_str = config['methodConfig'][0]['retryPolicy']['initialBackoff']
-                delay = datetime.strptime(delay_str, '%Ss').second
-                return {"retries": retries, "delay": delay}
-            except Exception as e:
-                print('Cannot parse the grpc_options, set the deafult value')
+                max_attempts = int(
+                    config["methodConfig"][0]["retryPolicy"]["maxAttempts"]
+                )
+                initial_backoff = datetime.strptime(
+                    config["methodConfig"][0]["retryPolicy"]["initialBackoff"], "%Ss"
+                ).second
+                max_backoff = datetime.strptime(
+                    config["methodConfig"][0]["retryPolicy"]["maxBackoff"], "%Ss"
+                ).second
+                backoff_multiplier = int(
+                    config["methodConfig"][0]["retryPolicy"]["backoffMultiplier"]
+                )
+                return {
+                    "max_attempts": max_attempts,
+                    "initial_backoff": initial_backoff,
+                    "max_backoff": max_backoff,
+                    "backoff_multiplier": backoff_multiplier,
+                }
+            except Exception as err:
+                get_logger().info(
+                    f"Cannot parse the grpc_options, set the deafult values. {err}"
+                )
                 break
-    return {"retries": 5, "delay": 5} # default options, delay in second
-
-
-def _retry(func, args, retries=1, delay=1):
-    """helper function to retry distributed graph client"""
-    i = 0
-    while True:
-        try:
-            return func(*args)
-        except Exception as ex:
-            if i >= retries:
-                raise RuntimeError(f"Got exception in {func.__name__}: {str(ex)}")
-            i += 1
-            time.sleep(delay)
-            print(f'Trying {func.__name__} again, retry #{i+1}...')
+    # default options, delay in second
+    return {
+        "max_attempts": 5,
+        "initial_backoff": 2,
+        "max_backoff": 10,
+        "backoff_multiplier": 2,
+    }
 
 
 class _DEEP_GRAPH(Structure):
@@ -256,9 +264,7 @@ class MemoryGraph:
         )
         self._describe_clib_functions()
 
-        self.dist_mode = False # used for DistGraph only
-        self.retries = None # used for DistGraph only
-        self.delay = None # used for DistGraph only
+        self._retryer = Retrying(stop=stop_after_attempt(0), reraise=True)  # noop retry
 
     def __del__(self):
         """Delete graph engine client."""
@@ -470,31 +476,16 @@ class MemoryGraph:
         features_in_bytes = features.copy()
         features_in_bytes *= (1, result.itemsize)
 
-        if self.dist_mode:
-            _retry(
-                self.lib.GetNodeFeature,
-                (
-                    self.g_,
-                    nodes.ctypes.data_as(POINTER(c_int64)),
-                    c_size_t(len(nodes)),
-                    features_in_bytes.ctypes.data_as(POINTER(c_int32)),
-                    c_size_t(len(features_in_bytes)),
-                    result.ctypes.data_as(POINTER(c_uint8)),
-                    c_size_t(result.nbytes),
-                ),
-                self.retries,
-                self.delay
-            )
-        else:
-            self.lib.GetNodeFeature(
-                self.g_,
-                nodes.ctypes.data_as(POINTER(c_int64)),
-                c_size_t(len(nodes)),
-                features_in_bytes.ctypes.data_as(POINTER(c_int32)),
-                c_size_t(len(features_in_bytes)),
-                result.ctypes.data_as(POINTER(c_uint8)),
-                c_size_t(result.nbytes),
-            )
+        self._retryer(
+            self.lib.GetNodeFeature,
+            self.g_,
+            nodes.ctypes.data_as(POINTER(c_int64)),
+            c_size_t(len(nodes)),
+            features_in_bytes.ctypes.data_as(POINTER(c_int32)),
+            c_size_t(len(features_in_bytes)),
+            result.ctypes.data_as(POINTER(c_uint8)),
+            c_size_t(result.nbytes),
+        )
 
         return result
 
@@ -520,29 +511,15 @@ class MemoryGraph:
 
         py_cb = _SparseFeatureCallback(dtype, features.size)
 
-        if self.dist_mode:
-            _retry(
-                self.lib.GetNodeSparseFeature,
-                (
-                    self.g_,
-                    nodes.ctypes.data_as(POINTER(c_int64)),
-                    c_size_t(len(nodes)),
-                    features.ctypes.data_as(POINTER(c_int32)),
-                    c_size_t(len(features)),
-                    _SPARSE_FEATURE_CALLBACKFUNC(py_cb),
-                ),
-                self.retries,
-                self.delay
-            )
-        else:
-            self.lib.GetNodeSparseFeature(
-                self.g_,
-                nodes.ctypes.data_as(POINTER(c_int64)),
-                c_size_t(len(nodes)),
-                features.ctypes.data_as(POINTER(c_int32)),
-                c_size_t(len(features)),
-                _SPARSE_FEATURE_CALLBACKFUNC(py_cb),
-            )
+        self._retryer(
+            self.lib.GetNodeSparseFeature,
+            self.g_,
+            nodes.ctypes.data_as(POINTER(c_int64)),
+            c_size_t(len(nodes)),
+            features.ctypes.data_as(POINTER(c_int32)),
+            c_size_t(len(features)),
+            _SPARSE_FEATURE_CALLBACKFUNC(py_cb),
+        )
 
         return py_cb.indices, py_cb.values, py_cb.dimensions
 
@@ -566,31 +543,16 @@ class MemoryGraph:
         dimensions = np.zeros((nodes.size, features.size), dtype=np.int64)
         py_cb = _StringFeatureCallback(dtype)
 
-        if self.dist_mode:
-            _retry(
-                self.lib.GetNodeStringFeature,
-                (
-                    self.g_,
-                    nodes.ctypes.data_as(POINTER(c_int64)),
-                    c_size_t(len(nodes)),
-                    features.ctypes.data_as(POINTER(c_int32)),
-                    c_size_t(len(features)),
-                    dimensions.ctypes.data_as(POINTER(c_int64)),
-                    _STRING_FEATURE_CALLBACKFUNC(py_cb),
-                ),
-                self.retries,
-                self.delay
-            )
-        else:
-            self.lib.GetNodeStringFeature(
-                self.g_,
-                nodes.ctypes.data_as(POINTER(c_int64)),
-                c_size_t(len(nodes)),
-                features.ctypes.data_as(POINTER(c_int32)),
-                c_size_t(len(features)),
-                dimensions.ctypes.data_as(POINTER(c_int64)),
-                _STRING_FEATURE_CALLBACKFUNC(py_cb),
-            )
+        self._retryer(
+            self.lib.GetNodeStringFeature,
+            self.g_,
+            nodes.ctypes.data_as(POINTER(c_int64)),
+            c_size_t(len(nodes)),
+            features.ctypes.data_as(POINTER(c_int32)),
+            c_size_t(len(features)),
+            dimensions.ctypes.data_as(POINTER(c_int64)),
+            _STRING_FEATURE_CALLBACKFUNC(py_cb),
+        )
 
         return py_cb.values, dimensions // py_cb.values.itemsize
 
@@ -627,35 +589,18 @@ class MemoryGraph:
         features_in_bytes = features.copy()
         features_in_bytes *= (1, result.itemsize)
 
-        if self.dist_mode:
-            _retry(
-                self.lib.GetEdgeFeature,
-                (
-                    self.g_,
-                    edge_src.ctypes.data_as(POINTER(c_int64)),
-                    edge_dst.ctypes.data_as(POINTER(c_int64)),
-                    edge_tp.ctypes.data_as(POINTER(c_int32)),
-                    c_size_t(len(edge_src)),
-                    features_in_bytes.ctypes.data_as(POINTER(c_int32)),
-                    c_size_t(len(features)),
-                    result.ctypes.data_as(POINTER(c_uint8)),
-                    c_size_t(result.nbytes),
-                ),
-                self.retries,
-                self.delay
-            )
-        else:
-            self.lib.GetEdgeFeature(
-                self.g_,
-                edge_src.ctypes.data_as(POINTER(c_int64)),
-                edge_dst.ctypes.data_as(POINTER(c_int64)),
-                edge_tp.ctypes.data_as(POINTER(c_int32)),
-                c_size_t(len(edge_src)),
-                features_in_bytes.ctypes.data_as(POINTER(c_int32)),
-                c_size_t(len(features)),
-                result.ctypes.data_as(POINTER(c_uint8)),
-                c_size_t(result.nbytes),
-            )
+        self._retryer(
+            self.lib.GetEdgeFeature,
+            self.g_,
+            edge_src.ctypes.data_as(POINTER(c_int64)),
+            edge_dst.ctypes.data_as(POINTER(c_int64)),
+            edge_tp.ctypes.data_as(POINTER(c_int32)),
+            c_size_t(len(edge_src)),
+            features_in_bytes.ctypes.data_as(POINTER(c_int32)),
+            c_size_t(len(features)),
+            result.ctypes.data_as(POINTER(c_uint8)),
+            c_size_t(result.nbytes),
+        )
 
         return result
 
@@ -691,33 +636,17 @@ class MemoryGraph:
         features = np.array(features, dtype=np.int32)
         py_cb = _SparseFeatureCallback(dtype, features.size)
 
-        if self.dist_mode:
-            _retry(
-                self.lib.GetEdgeSparseFeature,
-                (
-                    self.g_,
-                    edge_src.ctypes.data_as(POINTER(c_int64)),
-                    edge_dst.ctypes.data_as(POINTER(c_int64)),
-                    edge_tp.ctypes.data_as(POINTER(c_int32)),
-                    c_size_t(len(edge_src)),
-                    features.ctypes.data_as(POINTER(c_int32)),
-                    c_size_t(len(features)),
-                    _SPARSE_FEATURE_CALLBACKFUNC(py_cb),
-                ),
-                self.retries,
-                self.delay
-            )
-        else:
-            self.lib.GetEdgeSparseFeature(
-                self.g_,
-                edge_src.ctypes.data_as(POINTER(c_int64)),
-                edge_dst.ctypes.data_as(POINTER(c_int64)),
-                edge_tp.ctypes.data_as(POINTER(c_int32)),
-                c_size_t(len(edge_src)),
-                features.ctypes.data_as(POINTER(c_int32)),
-                c_size_t(len(features)),
-                _SPARSE_FEATURE_CALLBACKFUNC(py_cb),
-            )
+        self._retryer(
+            self.lib.GetEdgeSparseFeature,
+            self.g_,
+            edge_src.ctypes.data_as(POINTER(c_int64)),
+            edge_dst.ctypes.data_as(POINTER(c_int64)),
+            edge_tp.ctypes.data_as(POINTER(c_int32)),
+            c_size_t(len(edge_src)),
+            features.ctypes.data_as(POINTER(c_int32)),
+            c_size_t(len(features)),
+            _SPARSE_FEATURE_CALLBACKFUNC(py_cb),
+        )
 
         return py_cb.indices, py_cb.values, py_cb.dimensions
 
@@ -754,35 +683,18 @@ class MemoryGraph:
         dimensions = np.zeros((edge_src.size, features.size), dtype=np.int64)
         py_cb = _StringFeatureCallback(dtype)
 
-        if self.dist_mode:
-            _retry(
-                self.lib.GetEdgeStringFeature,
-                (
-                    self.g_,
-                    edge_src.ctypes.data_as(POINTER(c_int64)),
-                    edge_dst.ctypes.data_as(POINTER(c_int64)),
-                    edge_tp.ctypes.data_as(POINTER(c_int32)),
-                    c_size_t(len(edge_src)),
-                    features.ctypes.data_as(POINTER(c_int32)),
-                    c_size_t(len(features)),
-                    dimensions.ctypes.data_as(POINTER(c_int64)),
-                    _STRING_FEATURE_CALLBACKFUNC(py_cb),
-                ),
-                self.retries,
-                self.delay
-            )
-        else:
-            self.lib.GetEdgeStringFeature(
-                self.g_,
-                edge_src.ctypes.data_as(POINTER(c_int64)),
-                edge_dst.ctypes.data_as(POINTER(c_int64)),
-                edge_tp.ctypes.data_as(POINTER(c_int32)),
-                c_size_t(len(edge_src)),
-                features.ctypes.data_as(POINTER(c_int32)),
-                c_size_t(len(features)),
-                dimensions.ctypes.data_as(POINTER(c_int64)),
-                _STRING_FEATURE_CALLBACKFUNC(py_cb),
-            )
+        self._retryer(
+            self.lib.GetEdgeStringFeature,
+            self.g_,
+            edge_src.ctypes.data_as(POINTER(c_int64)),
+            edge_dst.ctypes.data_as(POINTER(c_int64)),
+            edge_tp.ctypes.data_as(POINTER(c_int32)),
+            c_size_t(len(edge_src)),
+            features.ctypes.data_as(POINTER(c_int32)),
+            c_size_t(len(features)),
+            dimensions.ctypes.data_as(POINTER(c_int64)),
+            _STRING_FEATURE_CALLBACKFUNC(py_cb),
+        )
 
         return py_cb.values, dimensions // py_cb.values.itemsize
 
@@ -804,29 +716,15 @@ class MemoryGraph:
         etypes_arr = TypeArray(*edge_types)
         counts = np.empty(len(nodes), dtype=np.uint64)
 
-        if self.dist_mode:
-            _retry(
-                self.lib.NeighborCount,
-                (
-                    self.g_,
-                    nodes.ctypes.data_as(POINTER(c_int64)),
-                    nodes.size,
-                    etypes_arr,
-                    len(edge_types),
-                    counts.ctypes.data_as(POINTER(c_uint64)),
-                ),
-                self.retries,
-                self.delay
-            )
-        else:
-            self.lib.NeighborCount(
-                self.g_,
-                nodes.ctypes.data_as(POINTER(c_int64)),
-                nodes.size,
-                etypes_arr,
-                len(edge_types),
-                counts.ctypes.data_as(POINTER(c_uint64)),
-            )
+        self._retryer(
+            self.lib.NeighborCount,
+            self.g_,
+            nodes.ctypes.data_as(POINTER(c_int64)),
+            nodes.size,
+            etypes_arr,
+            len(edge_types),
+            counts.ctypes.data_as(POINTER(c_uint64)),
+        )
 
         return counts
 
@@ -855,31 +753,16 @@ class MemoryGraph:
 
         py_cb = _NeighborsCallback()
 
-        if self.dist_mode:
-            _retry(
-                self.lib.GetNeighbors,
-                (
-                    self.g_,
-                    nodes.ctypes.data_as(POINTER(c_int64)),
-                    nodes.size,
-                    etypes_arr,
-                    len(edge_types),
-                    result_counts.ctypes.data_as(POINTER(c_uint64)),
-                    _NEIGHBORS_CALLBACKFUNC(py_cb),
-                ),
-                self.retries,
-                self.delay
-            )
-        else:
-            self.lib.GetNeighbors(
-                self.g_,
-                nodes.ctypes.data_as(POINTER(c_int64)),
-                nodes.size,
-                etypes_arr,
-                len(edge_types),
-                result_counts.ctypes.data_as(POINTER(c_uint64)),
-                _NEIGHBORS_CALLBACKFUNC(py_cb),
-            )
+        self._retryer(
+            self.lib.GetNeighbors,
+            self.g_,
+            nodes.ctypes.data_as(POINTER(c_int64)),
+            nodes.size,
+            etypes_arr,
+            len(edge_types),
+            result_counts.ctypes.data_as(POINTER(c_uint64)),
+            _NEIGHBORS_CALLBACKFUNC(py_cb),
+        )
 
         return py_cb.node_ids, py_cb.weights, py_cb.edge_types, result_counts
 
@@ -914,43 +797,22 @@ class MemoryGraph:
         result_types = np.full((len(nodes), count), default_edge_type, dtype=np.int32)
         result_weights = np.full((len(nodes), count), default_weight, dtype=np.float32)
 
-        if self.dist_mode:
-            _retry(
-                self.lib.WeightedSampleNeighbor,
-                (
-                    self.g_,
-                    c_int64(seed if seed is not None else random.getrandbits(64)),
-                    nodes.ctypes.data_as(POINTER(c_int64)),
-                    c_size_t(nodes.size),
-                    etypes_arr,
-                    c_size_t(len(edge_types)),
-                    c_size_t(count),
-                    result_nodes.ctypes.data_as(POINTER(c_int64)),
-                    result_types.ctypes.data_as(POINTER(c_int32)),
-                    result_weights.ctypes.data_as(POINTER(c_float)),
-                    c_int64(default_node),
-                    c_float(default_weight),
-                    c_int32(default_edge_type),
-                ),
-                self.retries,
-                self.delay
-            )
-        else:
-            self.lib.WeightedSampleNeighbor(
-                self.g_,
-                c_int64(seed if seed is not None else random.getrandbits(64)),
-                nodes.ctypes.data_as(POINTER(c_int64)),
-                c_size_t(nodes.size),
-                etypes_arr,
-                c_size_t(len(edge_types)),
-                c_size_t(count),
-                result_nodes.ctypes.data_as(POINTER(c_int64)),
-                result_types.ctypes.data_as(POINTER(c_int32)),
-                result_weights.ctypes.data_as(POINTER(c_float)),
-                c_int64(default_node),
-                c_float(default_weight),
-                c_int32(default_edge_type),
-            )
+        self._retryer(
+            self.lib.WeightedSampleNeighbor,
+            self.g_,
+            c_int64(seed if seed is not None else random.getrandbits(64)),
+            nodes.ctypes.data_as(POINTER(c_int64)),
+            c_size_t(nodes.size),
+            etypes_arr,
+            c_size_t(len(edge_types)),
+            c_size_t(count),
+            result_nodes.ctypes.data_as(POINTER(c_int64)),
+            result_types.ctypes.data_as(POINTER(c_int32)),
+            result_weights.ctypes.data_as(POINTER(c_float)),
+            c_int64(default_node),
+            c_float(default_weight),
+            c_int32(default_edge_type),
+        )
 
         return result_nodes, result_weights, result_types
 
@@ -986,41 +848,21 @@ class MemoryGraph:
         result_nodes = np.full((len(nodes), count), default_node, dtype=np.int64)
         result_types = np.full((len(nodes), count), default_type, dtype=np.int32)
 
-        if self.dist_mode:
-            _retry(
-                self.lib.UniformSampleNeighbor,
-                (
-                    self.g_,
-                    c_bool(without_replacement),
-                    c_int64(seed if seed is not None else random.getrandbits(64)),
-                    nodes.ctypes.data_as(POINTER(c_int64)),
-                    c_size_t(nodes.size),
-                    etypes_arr,
-                    c_size_t(len(edge_types)),
-                    c_size_t(count),
-                    result_nodes.ctypes.data_as(POINTER(c_int64)),
-                    result_types.ctypes.data_as(POINTER(c_int32)),
-                    c_int64(default_node),
-                    c_int32(default_type),
-                ),
-                self.retries,
-                self.delay
-            )
-        else:
-            self.lib.UniformSampleNeighbor(
-                self.g_,
-                c_bool(without_replacement),
-                c_int64(seed if seed is not None else random.getrandbits(64)),
-                nodes.ctypes.data_as(POINTER(c_int64)),
-                c_size_t(nodes.size),
-                etypes_arr,
-                c_size_t(len(edge_types)),
-                c_size_t(count),
-                result_nodes.ctypes.data_as(POINTER(c_int64)),
-                result_types.ctypes.data_as(POINTER(c_int32)),
-                c_int64(default_node),
-                c_int32(default_type),
-            )
+        self._retryer(
+            self.lib.UniformSampleNeighbor,
+            self.g_,
+            c_bool(without_replacement),
+            c_int64(seed if seed is not None else random.getrandbits(64)),
+            nodes.ctypes.data_as(POINTER(c_int64)),
+            c_size_t(nodes.size),
+            etypes_arr,
+            c_size_t(len(edge_types)),
+            c_size_t(count),
+            result_nodes.ctypes.data_as(POINTER(c_int64)),
+            result_types.ctypes.data_as(POINTER(c_int32)),
+            c_int64(default_node),
+            c_int32(default_type),
+        )
 
         return result_nodes, result_types
 
@@ -1077,39 +919,20 @@ class MemoryGraph:
         etypes_arr = TypeArray(*edge_types)
         result_nodes = np.empty((len(node_ids), walk_len + 1), dtype=np.int64)
 
-        if self.dist_mode:
-            _retry(
-                self.lib.RandomWalk,
-                (
-                    self.g_,
-                    c_int64(random.getrandbits(64) if seed is None else seed),
-                    c_float(p),
-                    c_float(q),
-                    c_int64(default_node),
-                    node_ids.ctypes.data_as(POINTER(c_int64)),
-                    c_size_t(node_ids.size),
-                    etypes_arr,
-                    c_size_t(len(edge_types)),
-                    c_size_t(walk_len),
-                    result_nodes.ctypes.data_as(POINTER(c_int64)),
-                ),
-                self.retries,
-                self.delay
-            )
-        else:
-            self.lib.RandomWalk(
-                self.g_,
-                c_int64(random.getrandbits(64) if seed is None else seed),
-                c_float(p),
-                c_float(q),
-                c_int64(default_node),
-                node_ids.ctypes.data_as(POINTER(c_int64)),
-                c_size_t(node_ids.size),
-                etypes_arr,
-                c_size_t(len(edge_types)),
-                c_size_t(walk_len),
-                result_nodes.ctypes.data_as(POINTER(c_int64)),
-            )
+        self._retryer(
+            self.lib.RandomWalk,
+            self.g_,
+            c_int64(random.getrandbits(64) if seed is None else seed),
+            c_float(p),
+            c_float(q),
+            c_int64(default_node),
+            node_ids.ctypes.data_as(POINTER(c_int64)),
+            c_size_t(node_ids.size),
+            etypes_arr,
+            c_size_t(len(edge_types)),
+            c_size_t(walk_len),
+            result_nodes.ctypes.data_as(POINTER(c_int64)),
+        )
 
         return result_nodes
 
@@ -1126,27 +949,14 @@ class MemoryGraph:
         nodes = np.array(nodes, dtype=np.int64)
         result = np.empty(len(nodes), dtype=np.int32)
 
-        if self.dist_mode:
-            _retry(
-                self.lib.GetNodeType,
-                (
-                    self.g_,
-                    nodes.ctypes.data_as(POINTER(c_int64)),
-                    c_size_t(len(nodes)),
-                    result.ctypes.data_as(POINTER(c_int32)),
-                    c_int32(default_type),
-                ),
-                self.retries,
-                self.delay
-            )
-        else:
-            self.lib.GetNodeType(
-                self.g_,
-                nodes.ctypes.data_as(POINTER(c_int64)),
-                c_size_t(len(nodes)),
-                result.ctypes.data_as(POINTER(c_int32)),
-                c_int32(default_type),
-            )
+        self._retryer(
+            self.lib.GetNodeType,
+            self.g_,
+            nodes.ctypes.data_as(POINTER(c_int64)),
+            c_size_t(len(nodes)),
+            result.ctypes.data_as(POINTER(c_int32)),
+            c_int32(default_type),
+        )
 
         return result
 
@@ -1233,8 +1043,15 @@ class DistributedGraph(MemoryGraph):
         # Forcing retry on grpc calls
         self.dist_mode = True
         retry_ops = _parse_grpc_options(grpc_options)
-        self.retries = retry_ops['retries']
-        self.delay = retry_ops['delay']
+        self._retryer = Retrying(
+            stop=stop_after_attempt(retry_ops["max_attempts"]),
+            wait=wait_exponential(
+                multiplier=retry_ops["backoff_multiplier"],
+                min=retry_ops["initial_backoff"],
+                max=retry_ops["max_attempts"],
+            ),
+            reraise=True,
+        )
 
         super()._describe_clib_functions()
 
@@ -1339,27 +1156,14 @@ class NodeSampler:
         result_nodes = np.empty(size, dtype=np.int64)
         result_types = np.empty(size, dtype=np.int32)
 
-        if self.graph.dist_mode:
-            _retry(
-                self.lib.SampleNodes,
-                (
-                    self.ns_,
-                    c_int64(seed if seed is not None else random.getrandbits(64)),
-                    c_size_t(size),
-                    result_nodes.ctypes.data_as(POINTER(c_int64)),
-                    result_types.ctypes.data_as(POINTER(c_int32)),
-                ),
-                self.graph.retries,
-                self.graph.delay
-            )
-        else:
-            self.lib.SampleNodes(
-                self.ns_,
-                c_int64(seed if seed is not None else random.getrandbits(64)),
-                c_size_t(size),
-                result_nodes.ctypes.data_as(POINTER(c_int64)),
-                result_types.ctypes.data_as(POINTER(c_int32)),
-            )
+        self.graph._retryer(
+            self.lib.SampleNodes,
+            self.ns_,
+            c_int64(seed if seed is not None else random.getrandbits(64)),
+            c_size_t(size),
+            result_nodes.ctypes.data_as(POINTER(c_int64)),
+            result_types.ctypes.data_as(POINTER(c_int32)),
+        )
 
         return (result_nodes, result_types)
 
@@ -1467,29 +1271,15 @@ class EdgeSampler:
         result_dst = np.empty(size, dtype=np.int64)
         result_types = np.empty(size, dtype=np.int32)
 
-        if self.graph.dist_mode:
-            _retry(
-                self.lib.SampleEdges,
-                (
-                    self.es_,
-                    c_int64(seed if seed is not None else random.getrandbits(64)),
-                    c_size_t(size),
-                    result_src.ctypes.data_as(POINTER(c_int64)),
-                    result_dst.ctypes.data_as(POINTER(c_int64)),
-                    result_types.ctypes.data_as(POINTER(c_int32)),
-                ),
-                self.graph.retries,
-                self.graph.delay
-            )
-        else:
-            self.lib.SampleEdges(
-                self.es_,
-                c_int64(seed if seed is not None else random.getrandbits(64)),
-                c_size_t(size),
-                result_src.ctypes.data_as(POINTER(c_int64)),
-                result_dst.ctypes.data_as(POINTER(c_int64)),
-                result_types.ctypes.data_as(POINTER(c_int32)),
-            )
+        self.graph._retryer(
+            self.lib.SampleEdges,
+            self.es_,
+            c_int64(seed if seed is not None else random.getrandbits(64)),
+            c_size_t(size),
+            result_src.ctypes.data_as(POINTER(c_int64)),
+            result_dst.ctypes.data_as(POINTER(c_int64)),
+            result_types.ctypes.data_as(POINTER(c_int32)),
+        )
 
         return (result_src, result_dst, result_types)
 
