@@ -275,6 +275,8 @@ py_test(
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/graph_engine/data:graph_engine_data",
         "//src/python/deepgnn/graph_engine:graph_engine",
+        requirement("ray"),
+        requirement("pyarrow"),
         requirement("numpy"),
         requirement("pytest"),
         requirement("opencensus"),
