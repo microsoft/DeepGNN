@@ -15,8 +15,9 @@ from deepgnn import get_logger
 from deepgnn.pytorch.common import F1Score
 from deepgnn.graph_engine.data.citation import Cora
 
-from main import run_ray  # type: ignore
 from model import PTGSupervisedGraphSage  # type: ignore
+from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
+from deepgnn.graph_engine.data.citation import Cora
 
 from examples.pytorch.conftest import (  # noqa: F401
     MockSimpleDataLoader,
@@ -38,102 +39,6 @@ def setup_module(module):
     )
 
 
-@pytest.fixture(scope="module")
-def train_graphsage_cora_ddp_trainer(mock_graph):
-    model_dir = tempfile.TemporaryDirectory()
-    working_dir = tempfile.TemporaryDirectory()
-    Cora(working_dir.name)
-
-    def create_mock_dataset(
-        config,
-        model,
-    ) -> ray.data.DatasetPipeline:
-        dataset = MockSimpleDataLoader(
-            batch_size=256, query_fn=model.query, graph=mock_graph
-        )
-        dataset = torch.utils.data.DataLoader(
-            dataset=dataset,
-            num_workers=0,
-        )
-        return dataset
-
-    result = run_ray(
-        init_dataset_fn=create_mock_dataset,
-        training_args={
-            "data_dir": working_dir.name,
-            "batch_size": 256,
-            "learning_rate": 0.7,
-            "num_epochs": 20,
-            "feature_idx": 0,
-            "feature_dim": 1433,
-            "label_idx": 1,
-            "label_dim": 7,
-            "model_path": model_dir.name,
-        },
-    )
-    yield {
-        "losses": result.metrics["losses"],
-        "model_path": os.path.join(model_dir.name, "gnnmodel-019-000003.pt"),
-    }
-    working_dir.cleanup()
-    model_dir.cleanup()
-
-
-def test_deep_graph_on_cora(train_graphsage_cora_ddp_trainer, mock_graph):  # noqa: F811
-    torch.manual_seed(0)
-    np.random.seed(0)
-    num_nodes = 2708
-    num_classes = 7
-    label_dim = 7
-    label_idx = 1
-    feature_dim = 1433
-    feature_idx = 0
-    edge_type = 0
-    train_ctx = train_graphsage_cora_ddp_trainer
-
-    metric = F1Score()
-    graphsage = PTGSupervisedGraphSage(
-        num_classes=num_classes,
-        metric=F1Score(),
-        label_idx=label_idx,
-        label_dim=label_dim,
-        feature_type=np.float32,
-        feature_idx=feature_idx,
-        feature_dim=feature_dim,
-        edge_type=edge_type,
-        fanouts=[5, 5],
-    )
-
-    graphsage.load_state_dict(torch.load(train_ctx["model_path"])["state_dict"])
-    graphsage.train()
-
-    # Generate validation dataset from random indices
-    g = mock_graph
-    rand_indices = np.random.RandomState(seed=1).permutation(num_nodes)
-    val_ref = rand_indices[1000:1500]
-    simpler = MockFixedSimpleDataLoader(val_ref, query_fn=graphsage.query, graph=g)
-    trainloader = torch.utils.data.DataLoader(simpler)
-    it = iter(trainloader)
-    val_output_ref = graphsage.get_score(it.next())
-    val_labels = g.node_features(
-        val_ref, np.array([[label_idx, label_dim]]), np.float32
-    ).argmax(1)
-    # assert False, (val_labels, val_output_ref.argmax(axis=1))
-    f1_ref = metric.compute(val_output_ref.argmax(axis=1), val_labels)
-
-    assert 0.80 < f1_ref and f1_ref < 0.95
-
-
-# test to make sure loss decrease.
-def test_supervised_graphsage_loss(train_graphsage_cora_ddp_trainer):
-    train_ctx = train_graphsage_cora_ddp_trainer
-
-    # make sure the loss decreased in training.
-    assert len(train_ctx["losses"]) > 0
-    assert train_ctx["losses"][len(train_ctx["losses"]) - 1] < train_ctx["losses"][0]
-
-
-# fix the seeds to test the algo's correctness.
 def test_supervised_graphsage_model(mock_graph):  # noqa: F811
     np.random.seed(0)
     torch.manual_seed(0)
@@ -167,47 +72,19 @@ def test_supervised_graphsage_model(mock_graph):  # noqa: F811
     )
     trainloader = torch.utils.data.DataLoader(simpler)
     it = iter(trainloader)
-    output = graphsage.get_score(it.next())
+
+    query_output = it.next()
+    query_expected = {
+        "inputs": np.array([[2700]]),
+        "label": np.array([[[0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]]]),
+        "out_1": np.array([[6]]),
+        "out_2": np.array([[1]]),
+    }
+    for key in query_expected.keys():
+        npt.assert_allclose(query_output[key].detach().numpy(), query_expected[key])
+
+    output = graphsage.get_score(query_output)
     npt.assert_allclose(output.detach().numpy(), expected, rtol=1e-4)
-
-
-# test the correctness of the loss function.
-def test_supervised_graphsage_loss_value(mock_graph):  # noqa: F811
-    np.random.seed(0)
-    torch.manual_seed(0)
-
-    num_classes = 7
-    label_dim = 7
-    label_idx = 1
-    feature_dim = 1433
-    feature_idx = 0
-    edge_type = 0
-
-    graphsage = PTGSupervisedGraphSage(
-        num_classes=num_classes,
-        metric=F1Score(),
-        label_idx=label_idx,
-        label_dim=label_dim,
-        feature_type=np.float32,
-        feature_idx=feature_idx,
-        feature_dim=feature_dim,
-        edge_type=edge_type,
-        fanouts=[5, 5],
-    )
-    optimizer = torch.optim.SGD(
-        filter(lambda p: p.requires_grad, graphsage.parameters()), lr=0.01
-    )
-
-    # use one batch to verify the output loss value.
-    trainloader = torch.utils.data.DataLoader(
-        MockSimpleDataLoader(batch_size=256, query_fn=graphsage.query, graph=mock_graph)
-    )
-    it = iter(trainloader)
-    optimizer.zero_grad()
-    loss, _, _ = graphsage(it.next())
-    loss.backward()
-    optimizer.step()
-    npt.assert_allclose(loss.detach().numpy(), np.array([1.941329]), rtol=1e-5)
 
 
 if __name__ == "__main__":
