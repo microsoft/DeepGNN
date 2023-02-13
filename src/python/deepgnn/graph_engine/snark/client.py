@@ -63,7 +63,9 @@ def _parse_grpc_options(options: List[Tuple[str, str]]) -> Dict:
                 break
 
     # default options, delay in second
-    get_logger().warning("Setting default retry parameters to max_attempts=5, initial_backoff=2, max_backoff=10, backoff_multiplier=2")
+    get_logger().warning(
+        "Setting default retry parameters to max_attempts=5, initial_backoff=2, max_backoff=10, backoff_multiplier=2"
+    )
     return {
         "max_attempts": 5,
         "initial_backoff": 2,

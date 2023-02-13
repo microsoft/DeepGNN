@@ -83,7 +83,7 @@ def graph_engine(version: str):
             "fsspec>=2021.8.1",
             "scikit-learn",
             "scipy",
-            "tenacity>=8"
+            "tenacity>=8",
         ],
         project_urls={
             "Source": "https://github.com/microsoft/DeepGNN",
