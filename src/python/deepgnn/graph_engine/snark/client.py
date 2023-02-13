@@ -59,11 +59,11 @@ def _parse_grpc_options(options: List[Tuple[str, str]]) -> Dict:
                     "backoff_multiplier": backoff_multiplier,
                 }
             except Exception as err:
-                get_logger().info(
-                    f"Cannot parse the grpc_options, set the deafult values. {err}"
-                )
+                get_logger().warning(f"Cannot parse the grpc_options: {err}")
                 break
+
     # default options, delay in second
+    get_logger().warning("Setting default retry parameters to max_attempts=5, initial_backoff=2, max_backoff=10, backoff_multiplier=2")
     return {
         "max_attempts": 5,
         "initial_backoff": 2,
@@ -1040,8 +1040,7 @@ class DistributedGraph(MemoryGraph):
             # Keep an empty object to avoid ifs
             self.path = GraphPath("")
 
-        # Forcing retry on grpc calls
-        self.dist_mode = True
+        # Using grpc options on DistributedGraph API calls
         retry_ops = _parse_grpc_options(grpc_options)
         self._retryer = Retrying(
             stop=stop_after_attempt(retry_ops["max_attempts"]),
