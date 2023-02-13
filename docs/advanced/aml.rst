@@ -34,127 +34,197 @@ See docs/torch/node_class.rst for more details. This will work on TF as well.
     >>> from ray.air.config import ScalingConfig, RunConfig
 
     >>> import deepgnn.pytorch
-    >>> from deepgnn.pytorch.nn.gat_conv import GATConv
+    >>> from torch_geometric.nn import GATConv
     >>> from deepgnn.graph_engine import Graph, graph_ops
     >>> from deepgnn.graph_engine.snark.local import Client
     >>> from deepgnn.pytorch.modeling import BaseModel
 	>>> from deepgnn.graph_engine.data.citation import Cora
-
-	>>> Cora("/tmp/cora/")
-	<deepgnn.graph_engine.data.citation.Cora object at 0x...>
+    >>> from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
 
     >>> @dataclass
-    ... class GATQuery:
-    ...     feature_meta: list = field(default_factory=lambda: np.array([[0, 1433]]))
-    ...     label_meta: list = field(default_factory=lambda: np.array([[1, 1]]))
+    ... class GATQueryParameter:
+    ...     """Configuration for graph query."""
+    ...
+    ...     neighbor_edge_types: np.ndarray
+    ...     feature_idx: int
+    ...     feature_dim: int
+    ...     label_idx: int
+    ...     label_dim: int
     ...     feature_type: np.dtype = np.float32
     ...     label_type: np.dtype = np.float32
-    ...     neighbor_edge_types: list = field(default_factory=lambda: [0])
     ...     num_hops: int = 2
+
+
+    >>> class GATQuery:
+    ...     """Query to fetch graph data for the model."""
     ...
-    ...     def query(self, g: Client, idx: int) -> Dict[Any, np.ndarray]:
-    ...         """Query used to generate data for training."""
-    ...         if isinstance(idx, (int, float)):
-    ...             idx = [idx]
-    ...         inputs = np.array(idx, np.int64)
+    ...     def __init__(self, p: GATQueryParameter):
+    ...         """Initialize graph query."""
+    ...         self.p = p
+    ...         self.label_meta = np.array([[p.label_idx, p.label_dim]], np.int32)
+    ...         self.feat_meta = np.array([[p.feature_idx, p.feature_dim]], np.int32)
+    ...
+    ...     def query_training(self, graph: Graph, inputs: np.ndarray) -> tuple:
+    ...         """Fetch training data."""
     ...         nodes, edges, src_idx = graph_ops.sub_graph(
-    ...             g,
+    ...             graph,
     ...             inputs,
-    ...             edge_types=np.array(self.neighbor_edge_types, np.int64),
-    ...             num_hops=self.num_hops,
+    ...             edge_types=self.p.neighbor_edge_types,
+    ...             num_hops=self.p.num_hops,
     ...             self_loop=True,
     ...             undirected=True,
     ...             return_edges=True,
     ...         )
-    ...         input_mask = np.zeros(nodes.size, np.bool)
+    ...         input_mask = np.zeros(nodes.size, np.bool_)
     ...         input_mask[src_idx] = True
     ...
-    ...         feat = g.node_features(nodes, self.feature_meta, self.feature_type)
-    ...         label = g.node_features(nodes, self.label_meta, self.label_type).astype(np.int64)
-    ...         return {"nodes": np.expand_dims(nodes, 0), "feat": np.expand_dims(feat, 0), "labels": np.expand_dims(label, 0), "input_mask": np.expand_dims(input_mask, 0), "edges": np.expand_dims(edges, 0)}
+    ...         feat = graph.node_features(nodes, self.feat_meta, self.p.feature_type)
+    ...         label = graph.node_features(nodes, self.label_meta, self.p.label_type)
+    ...         label = label.astype(np.int32)
+    ...         edges = np.transpose(edges)
+    ...
+    ...         graph_tensor: List[Any] = [nodes, feat, edges, input_mask, label]
+    ...         return serialize(graph_tensor, inputs.size)
 
     >>> class GAT(BaseModel):
+    ...     """GAT model."""
+    ...
     ...     def __init__(
     ...         self,
     ...         in_dim: int,
+    ...         q_param: GATQueryParameter,
     ...         head_num: List = [8, 1],
     ...         hidden_dim: int = 8,
     ...         num_classes: int = -1,
     ...         ffd_drop: float = 0.0,
     ...         attn_drop: float = 0.0,
     ...     ):
+    ...         """Initialize model."""
+    ...         self.q = GATQuery(q_param)
     ...         super().__init__(np.float32, 0, 0, None)
     ...         self.num_classes = num_classes
+    ...
     ...         self.out_dim = num_classes
     ...
-    ...         self.input_layer = GATConv(
-    ...             in_dim=in_dim,
-    ...             attn_heads=head_num[0],
-    ...             out_dim=hidden_dim,
-    ...             act=F.elu,
-    ...             in_drop=ffd_drop,
-    ...             coef_drop=attn_drop,
-    ...             attn_aggregate="concat",
+    ...         self.conv1 = GATConv(
+    ...             in_channels=in_dim,
+    ...             out_channels=hidden_dim,
+    ...             heads=head_num[0],
+    ...             dropout=0.6,
+    ...             concat=True,
     ...         )
     ...         layer0_output_dim = head_num[0] * hidden_dim
-    ...         assert len(head_num) == 2
-    ...         self.out_layer = GATConv(
-    ...             in_dim=layer0_output_dim,
-    ...             attn_heads=head_num[1],
-    ...             out_dim=self.out_dim,
-    ...             act=None,
-    ...             in_drop=ffd_drop,
-    ...             coef_drop=attn_drop,
-    ...             attn_aggregate="average",
+    ...         self.conv2 = GATConv(
+    ...             in_channels=layer0_output_dim,
+    ...             out_channels=self.out_dim,
+    ...             heads=1,
+    ...             dropout=0.6,
+    ...             concat=False,
     ...         )
     ...
-    ...     def forward(self, context: Dict[Any, np.ndarray]):
-    ...         nodes = torch.squeeze(context["nodes"])                # [N], N: num of nodes in subgraph
-    ...         feat = torch.squeeze(context["feat"])                  # [N, F]
-    ...         mask = torch.squeeze(context["input_mask"])            # [N]
-    ...         labels = torch.squeeze(context["labels"])              # [N]
-    ...         edges = torch.squeeze(context["edges"].reshape((-1, 2)))                # [X, 2], X: num of edges in subgraph
+    ...         self.metric = Accuracy()
     ...
-    ...         edges = np.transpose(edges)
+    ...     def forward(self, inputs):
+    ...         """Calculate loss, make predictions and fetch labels."""
+    ...         nodes, feat, edge_index, mask, label = deserialize(inputs)
+    ...         # fmt: off
+    ...         nodes = torch.squeeze(nodes.to(torch.int32))                # [N]
+    ...         feat = torch.squeeze(feat.to(torch.float32))                  # [N, F]
+    ...         edge_index = torch.squeeze(edge_index.to(torch.int32))      # [2, X]
+    ...         mask = torch.squeeze(mask.to(torch.bool))                  # [N]
+    ...         labels = torch.squeeze(label.to(torch.int32))               # [N]
+    ...         # fmt: on
     ...
-    ...         # TODO This is not stable, when doing batch_size < graph size ends up with size < index values. use torch.unique to remap edges
-    ...         sp_adj = torch.sparse_coo_tensor(edges, torch.ones(edges.shape[1], dtype=torch.float32), (nodes.shape[0], nodes.shape[0]))
-    ...         h_1 = self.input_layer(feat, sp_adj)
-    ...         scores = self.out_layer(h_1, sp_adj)
+    ...         x = feat
+    ...         x = F.dropout(x, p=0.6, training=self.training)
+    ...         x = F.elu(self.conv1(x, edge_index))
+    ...         x = F.dropout(x, p=0.6, training=self.training)
+    ...         scores = self.conv2(x, edge_index)
     ...
+    ...         labels = labels.type(torch.int64)
+    ...         labels = labels[mask]  # [batch_size]
     ...         scores = scores[mask]  # [batch_size]
-    ...         return scores
+    ...         pred = scores.argmax(dim=1)
+    ...         loss = self.xent(scores, labels)
+    ...         return loss, pred, labels
 
-    >>> def train_func(config: Dict):
-    ...     train.torch.enable_reproducibility(seed=0)
+
+    >>> def train_func(config: dict):
+    ...     """Training loop for ray trainer."""
+    ...     address = "localhost:9999"
+    ...     s = Server(address, config["data_dir"], 0, 1)
+    ...     def get_graph():
+    ...         return DistributedClient([address])
+    ...     config["get_graph"] = get_graph
     ...
-    ...     model = GAT(in_dim=1433, num_classes=7)
+    ...     train.torch.enable_reproducibility(seed=session.get_world_rank())
+    ...
+    ...     p = GATQueryParameter(
+    ...         neighbor_edge_types=np.array([0], np.int32),
+    ...         feature_idx=config["feature_idx"],
+    ...         feature_dim=config["feature_dim"],
+    ...         label_idx=config["label_idx"],
+    ...         label_dim=config["label_dim"],
+    ...     )
+    ...     model = GAT(
+    ...         in_dim=config["feature_dim"],
+    ...         head_num=[8, 1],
+    ...         hidden_dim=8,
+    ...         num_classes=config["num_classes"],
+    ...         ffd_drop=0.6,
+    ...         attn_drop=0.6,
+    ...         q_param=p,
+    ...     )
     ...     model = train.torch.prepare_model(model)
     ...
-    ...     optimizer = torch.optim.Adam(model.parameters(), lr=.005, weight_decay=0.0005)
+    ...     optimizer = torch.optim.Adam(
+    ...         filter(lambda p: p.requires_grad, model.parameters()),
+    ...         lr=0.005 * session.get_world_size(),
+    ...         weight_decay=0.0005,
+    ...     )
     ...     optimizer = train.torch.prepare_optimizer(optimizer)
     ...
-    ...     loss_fn = nn.CrossEntropyLoss()
+    ...     g = config["get_graph"]()
+    ...     batch_size = 140
+    ...     train_dataset = ray.data.read_text(f"{config['data_dir']}/train.nodes")
+    ...     train_dataset = train_dataset.repartition(train_dataset.count() // batch_size)
+    ...     train_pipe = train_dataset.window(blocks_per_window=4).repeat(config["num_epochs"])
+    ...     train_pipe = train_pipe.map_batches(
+    ...         lambda idx: model.q.query_training(g, np.array(idx))
+    ...     )
     ...
-    ...     dataset = ray.data.range(2708, parallelism=1)
-    ...     pipe = dataset.window(blocks_per_window=10)
-    ...     g = Client("/tmp/cora", [0], delayed_start=True)
-    ...     q = GATQuery()
-    ...     def transform_batch(batch: list) -> dict:
-    ...         return q.query(g, batch)
-    ...     pipe = pipe.map_batches(transform_batch)
+    ...     test_dataset = ray.data.read_text(f"{config['data_dir']}/test.nodes")
+    ...     test_dataset = test_dataset.repartition(1)
+    ...     test_dataset = test_dataset.map_batches(
+    ...         lambda idx: model.q.query_training(g, np.array(idx))
+    ...     )
+    ...     test_dataset_iter = test_dataset.repeat(config["num_epochs"]).iter_epochs()
     ...
-    ...     model.train()
-    ...     for epoch, epoch_pipe in enumerate(pipe.repeat(1).iter_epochs()):
-    ...         for i, batch in enumerate(epoch_pipe.random_shuffle_each_window().iter_torch_batches(batch_size=2708)):
-    ...             scores = model(batch)
-    ...             labels = batch["labels"][batch["input_mask"]].flatten()
-    ...             loss = loss_fn(scores.type(torch.float32), labels)
+    ...     for epoch_pipe in train_pipe.iter_epochs():
+    ...         model.train()
+    ...         losses = []
+    ...         for batch in epoch_pipe.iter_torch_batches(batch_size=batch_size):
+    ...             loss, score, label = model(batch)
     ...             optimizer.zero_grad()
     ...             loss.backward()
     ...             optimizer.step()
     ...
-    ...             session.report({"metric": (scores.argmax(1) == labels).sum(), "loss": loss.item()})
+    ...             losses.append(loss.item())
+    ...
+    ...         model.eval()
+    ...         batch = next(next(test_dataset_iter).iter_torch_batches(batch_size=1000))
+    ...         loss, score, label = model(batch)
+    ...         test_scores = [score]
+    ...         test_labels = [label]
+    ...
+    ...         session.report(
+    ...             {
+    ...                 model.metric_name(): model.compute_metric(
+    ...                     test_scores, test_labels
+    ...                 ).item(),
+    ...                 "loss": np.mean(losses),
+    ...             },
+    ...         )
 
 Ray Connect to AML
 ==================
@@ -165,13 +235,23 @@ Ray Connect to AML
     >>> from azureml.core import Workspace
     >>> from ray_on_aml.core import Ray_On_AML
 
-    >>> ws = Workspace.from_config("../config.json")
+    >>> ws = Workspace.from_config("docs/advanced/config.json")
     >>> ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="multi-node", maxnode=2)
-    >>> ray = ray_on_aml.getRay(gpu_support=False)
+    >>> ray = ray_on_aml.getRay()
+
+    >>> cora = Cora()
 
     >>> trainer = TorchTrainer(
     ...     train_func,
-    ...     train_loop_config={},
+    ...     train_loop_config={
+    ...         "data_dir": cora.data_dir(),
+    ...         "num_epochs": 180,
+    ...         "feature_idx": 0,
+    ...         "feature_dim": 1433,
+    ...         "label_idx": 1,
+    ...         "label_dim": 1,
+    ...         "num_classes": 7,
+    ...     },
     ...     run_config=RunConfig(),
     ...     scaling_config=ScalingConfig(
     ...         num_workers=1, resources_per_worker={"CPU": 1, "GPU": 0}, use_gpu=False
@@ -179,25 +259,3 @@ Ray Connect to AML
     ... )
     >>> result = trainer.fit()
     == Status ==...
-
-    >>> ray_on_aml.shutdown()
-    Cancel active AML runs if any
-    Shutting down ray if any
-
-GPU Mode
-========
-
-Example configuration for using AML on GPU.
-
-.. code-block:: python
-
-    >>> ray = ray_on_aml.getRay(gpu_support=True)
-
-    >>> trainer = TorchTrainer(
-    ...     train_func,
-    ...     train_loop_config={},
-    ...     run_config=RunConfig(),
-    ...     scaling_config=ScalingConfig(
-    ...         num_workers=1, resources_per_worker={"CPU": 1, "GPU": 0}, use_gpu=False
-    ...     ),
-    ... )
