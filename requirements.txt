@@ -100,7 +100,7 @@ importlib-metadata==5.0.0
 importlib-resources==5.9.0
 iniconfig==1.1.1
 ipykernel==6.16.0
-ipython==8.5.0
+ipython==8.10.0
 ipython_genutils==0.2.0
 isodate==0.6.1
 jedi==0.18.1
