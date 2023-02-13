@@ -3,9 +3,10 @@
 
 """Define graph API for GNN models."""
 
+import abc
 import fsspec
 import numpy as np
-from typing import Tuple, Union, Iterator
+from typing import Tuple, Union
 from enum import IntEnum
 from fsspec.utils import infer_storage_options
 
@@ -22,7 +23,7 @@ class SamplingStrategy(IntEnum):
     TopK = 4
 
 
-class Graph:
+class Graph(abc.ABC):
     """
     Implementation of the iterable dataset for GNN models.
 
@@ -30,17 +31,7 @@ class Graph:
     additional graph operators are needed to implement GNN models.
     """
 
-    ALL_NODE_TYPE = -1
-    ALL_EDGE_TYPE = -1
-
-    def __iter__(self) -> Iterator:
-        """Node or Edge iterator."""
-        raise NotImplementedError
-
-    def __len__(self) -> int:
-        """Return the number of nodes or edges in the graph."""
-        raise NotImplementedError
-
+    @abc.abstractmethod
     def sample_nodes(
         self, size: int, node_types: Union[int, np.ndarray], strategy: SamplingStrategy
     ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
@@ -58,6 +49,7 @@ class Graph:
         """
         raise NotImplementedError
 
+    @abc.abstractmethod
     def sample_edges(
         self, size: int, edge_types: Union[int, np.ndarray], strategy: SamplingStrategy
     ) -> np.ndarray:
@@ -73,6 +65,7 @@ class Graph:
         """
         raise NotImplementedError
 
+    @abc.abstractmethod
     def sample_neighbors(
         self,
         nodes: np.ndarray,
@@ -99,6 +92,7 @@ class Graph:
         """
         raise NotImplementedError
 
+    @abc.abstractmethod
     def random_walk(
         self,
         node_ids: np.ndarray,
@@ -121,6 +115,7 @@ class Graph:
         """
         raise NotImplementedError
 
+    @abc.abstractmethod
     def neighbors(
         self, nodes: np.ndarray, edge_types: Union[int, np.ndarray]
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -140,6 +135,7 @@ class Graph:
         """
         raise NotImplementedError
 
+    @abc.abstractmethod
     def node_features(
         self, nodes: np.ndarray, features: np.ndarray, feature_type: np.dtype
     ) -> np.ndarray:
@@ -154,6 +150,7 @@ class Graph:
         """
         raise NotImplementedError
 
+    @abc.abstractmethod
     def edge_features(
         self, edges: np.ndarray, features: np.ndarray, feature_type: np.dtype
     ) -> np.ndarray:
@@ -165,6 +162,7 @@ class Graph:
         """
         raise NotImplementedError
 
+    @abc.abstractmethod
     def node_types(self, nodes: np.ndarray) -> np.ndarray:
         """Fetch node types.
 
@@ -173,10 +171,12 @@ class Graph:
         """
         raise NotImplementedError
 
+    @abc.abstractmethod
     def node_count(self, types: Union[int, np.ndarray]) -> int:
         """Return the number of nodes."""
         raise NotImplementedError
 
+    @abc.abstractmethod
     def edge_count(self, types: Union[int, np.ndarray]) -> int:
         """Return the number of edges."""
         raise NotImplementedError

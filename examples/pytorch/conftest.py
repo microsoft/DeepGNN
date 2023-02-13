@@ -88,7 +88,7 @@ class MockFixedSimpleDataLoader(IterableDataset):
         return self.query_fn(self.graph, self.inputs)
 
 
-class MockGraph(Graph):
+class MockGraph:
     def __init__(self, feat_data, labels, adj_lists):
         self.feat_data = feat_data
         self.labels = labels
