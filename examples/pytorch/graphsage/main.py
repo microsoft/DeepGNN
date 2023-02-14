@@ -64,7 +64,7 @@ def train_func(config: dict):
             losses.append(loss.item())
 
         if i % 10 == 0:
-            get_logger().info(
+            print(
                 f"Epoch {i:0>3d} {model.metric_name()}: {model.compute_metric(scores, labels).item():.4f} Loss: {np.mean(losses):.4f}"
             )
 
@@ -92,9 +92,6 @@ def _main():
         train_func,
         train_loop_config=training_loop_config,
         scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
-        run_config=RunConfig(
-            verbose=0,
-        ),
     ).fit()
 
 
