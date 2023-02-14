@@ -22,14 +22,56 @@ from ctypes import (
     c_size_t,
     c_uint32,
 )
-from typing import Any, List, Tuple, Union, Optional, Sequence
+from typing import Any, List, Tuple, Union, Optional, Sequence, Dict
 from enum import IntEnum
 
+import json
 import numpy as np
-
+from tenacity import Retrying, stop_after_attempt, wait_exponential
+from deepgnn import get_logger
 from deepgnn.graph_engine.snark._lib import _get_c_lib
 from deepgnn.graph_engine.snark._downloader import download_graph_data, GraphPath
 from deepgnn.graph_engine.snark.meta import Meta
+
+
+def _parse_grpc_options(options: List[Tuple[str, str]]) -> Dict:
+    """Parse the grpc_options to use on client side retry calls."""
+    for opt in options:
+        if opt[0] == "grpc.service_config":
+            try:
+                config = json.loads(opt[1])
+                max_attempts = int(
+                    config["methodConfig"][0]["retryPolicy"]["maxAttempts"]
+                )
+                initial_backoff = datetime.strptime(
+                    config["methodConfig"][0]["retryPolicy"]["initialBackoff"], "%Ss"
+                ).second
+                max_backoff = datetime.strptime(
+                    config["methodConfig"][0]["retryPolicy"]["maxBackoff"], "%Ss"
+                ).second
+                backoff_multiplier = int(
+                    config["methodConfig"][0]["retryPolicy"]["backoffMultiplier"]
+                )
+                return {
+                    "max_attempts": max_attempts,
+                    "initial_backoff": initial_backoff,
+                    "max_backoff": max_backoff,
+                    "backoff_multiplier": backoff_multiplier,
+                }
+            except Exception as err:
+                get_logger().warning(f"Cannot parse the grpc_options: {err}")
+                break
+
+    # default options, delay in second
+    get_logger().warning(
+        "Setting default retry parameters to max_attempts=5, initial_backoff=2, max_backoff=10, backoff_multiplier=2"
+    )
+    return {
+        "max_attempts": 5,
+        "initial_backoff": 2,
+        "max_backoff": 10,
+        "backoff_multiplier": 2,
+    }
 
 
 class _DEEP_GRAPH(Structure):
@@ -223,6 +265,8 @@ class MemoryGraph:
             c_char_p(bytes(config_path, "utf-8")),
         )
         self._describe_clib_functions()
+
+        self._retryer = Retrying(stop=stop_after_attempt(0), reraise=True)  # noop retry
 
     def __del__(self):
         """Delete graph engine client."""
@@ -433,7 +477,9 @@ class MemoryGraph:
         result = np.zeros((len(nodes), features[:, 1].sum()), dtype=dtype)
         features_in_bytes = features.copy()
         features_in_bytes *= (1, result.itemsize)
-        self.lib.GetNodeFeature(
+
+        self._retryer(
+            self.lib.GetNodeFeature,
             self.g_,
             nodes.ctypes.data_as(POINTER(c_int64)),
             c_size_t(len(nodes)),
@@ -466,7 +512,9 @@ class MemoryGraph:
         assert len(features.shape) == 1
 
         py_cb = _SparseFeatureCallback(dtype, features.size)
-        self.lib.GetNodeSparseFeature(
+
+        self._retryer(
+            self.lib.GetNodeSparseFeature,
             self.g_,
             nodes.ctypes.data_as(POINTER(c_int64)),
             c_size_t(len(nodes)),
@@ -497,7 +545,8 @@ class MemoryGraph:
         dimensions = np.zeros((nodes.size, features.size), dtype=np.int64)
         py_cb = _StringFeatureCallback(dtype)
 
-        self.lib.GetNodeStringFeature(
+        self._retryer(
+            self.lib.GetNodeStringFeature,
             self.g_,
             nodes.ctypes.data_as(POINTER(c_int64)),
             c_size_t(len(nodes)),
@@ -542,7 +591,8 @@ class MemoryGraph:
         features_in_bytes = features.copy()
         features_in_bytes *= (1, result.itemsize)
 
-        self.lib.GetEdgeFeature(
+        self._retryer(
+            self.lib.GetEdgeFeature,
             self.g_,
             edge_src.ctypes.data_as(POINTER(c_int64)),
             edge_dst.ctypes.data_as(POINTER(c_int64)),
@@ -588,7 +638,8 @@ class MemoryGraph:
         features = np.array(features, dtype=np.int32)
         py_cb = _SparseFeatureCallback(dtype, features.size)
 
-        self.lib.GetEdgeSparseFeature(
+        self._retryer(
+            self.lib.GetEdgeSparseFeature,
             self.g_,
             edge_src.ctypes.data_as(POINTER(c_int64)),
             edge_dst.ctypes.data_as(POINTER(c_int64)),
@@ -634,7 +685,8 @@ class MemoryGraph:
         dimensions = np.zeros((edge_src.size, features.size), dtype=np.int64)
         py_cb = _StringFeatureCallback(dtype)
 
-        self.lib.GetEdgeStringFeature(
+        self._retryer(
+            self.lib.GetEdgeStringFeature,
             self.g_,
             edge_src.ctypes.data_as(POINTER(c_int64)),
             edge_dst.ctypes.data_as(POINTER(c_int64)),
@@ -666,7 +718,8 @@ class MemoryGraph:
         etypes_arr = TypeArray(*edge_types)
         counts = np.empty(len(nodes), dtype=np.uint64)
 
-        self.lib.NeighborCount(
+        self._retryer(
+            self.lib.NeighborCount,
             self.g_,
             nodes.ctypes.data_as(POINTER(c_int64)),
             nodes.size,
@@ -701,7 +754,9 @@ class MemoryGraph:
         result_counts = np.empty(len(nodes), dtype=np.uint64)
 
         py_cb = _NeighborsCallback()
-        self.lib.GetNeighbors(
+
+        self._retryer(
+            self.lib.GetNeighbors,
             self.g_,
             nodes.ctypes.data_as(POINTER(c_int64)),
             nodes.size,
@@ -743,7 +798,9 @@ class MemoryGraph:
         result_nodes = np.full((len(nodes), count), default_node, dtype=np.int64)
         result_types = np.full((len(nodes), count), default_edge_type, dtype=np.int32)
         result_weights = np.full((len(nodes), count), default_weight, dtype=np.float32)
-        self.lib.WeightedSampleNeighbor(
+
+        self._retryer(
+            self.lib.WeightedSampleNeighbor,
             self.g_,
             c_int64(seed if seed is not None else random.getrandbits(64)),
             nodes.ctypes.data_as(POINTER(c_int64)),
@@ -758,6 +815,7 @@ class MemoryGraph:
             c_float(default_weight),
             c_int32(default_edge_type),
         )
+
         return result_nodes, result_weights, result_types
 
     def uniform_sample_neighbors(
@@ -791,7 +849,9 @@ class MemoryGraph:
         etypes_arr = TypeArray(*edge_types)
         result_nodes = np.full((len(nodes), count), default_node, dtype=np.int64)
         result_types = np.full((len(nodes), count), default_type, dtype=np.int32)
-        self.lib.UniformSampleNeighbor(
+
+        self._retryer(
+            self.lib.UniformSampleNeighbor,
             self.g_,
             c_bool(without_replacement),
             c_int64(seed if seed is not None else random.getrandbits(64)),
@@ -860,7 +920,9 @@ class MemoryGraph:
         TypeArray = c_int32 * len(edge_types)
         etypes_arr = TypeArray(*edge_types)
         result_nodes = np.empty((len(node_ids), walk_len + 1), dtype=np.int64)
-        self.lib.RandomWalk(
+
+        self._retryer(
+            self.lib.RandomWalk,
             self.g_,
             c_int64(random.getrandbits(64) if seed is None else seed),
             c_float(p),
@@ -888,7 +950,9 @@ class MemoryGraph:
         """
         nodes = np.array(nodes, dtype=np.int64)
         result = np.empty(len(nodes), dtype=np.int32)
-        self.lib.GetNodeType(
+
+        self._retryer(
+            self.lib.GetNodeType,
             self.g_,
             nodes.ctypes.data_as(POINTER(c_int64)),
             c_size_t(len(nodes)),
@@ -977,6 +1041,18 @@ class DistributedGraph(MemoryGraph):
             self.meta = Meta(meta_dir)
             # Keep an empty object to avoid ifs
             self.path = GraphPath("")
+
+        # Using grpc options on DistributedGraph API calls
+        retry_ops = _parse_grpc_options(grpc_options)
+        self._retryer = Retrying(
+            stop=stop_after_attempt(retry_ops["max_attempts"]),
+            wait=wait_exponential(
+                multiplier=retry_ops["backoff_multiplier"],
+                min=retry_ops["initial_backoff"],
+                max=retry_ops["max_attempts"],
+            ),
+            reraise=True,
+        )
 
         super()._describe_clib_functions()
 
@@ -1081,7 +1157,8 @@ class NodeSampler:
         result_nodes = np.empty(size, dtype=np.int64)
         result_types = np.empty(size, dtype=np.int32)
 
-        self.lib.SampleNodes(
+        self.graph._retryer(
+            self.lib.SampleNodes,
             self.ns_,
             c_int64(seed if seed is not None else random.getrandbits(64)),
             c_size_t(size),
@@ -1195,7 +1272,8 @@ class EdgeSampler:
         result_dst = np.empty(size, dtype=np.int64)
         result_types = np.empty(size, dtype=np.int32)
 
-        self.lib.SampleEdges(
+        self.graph._retryer(
+            self.lib.SampleEdges,
             self.es_,
             c_int64(seed if seed is not None else random.getrandbits(64)),
             c_size_t(size),

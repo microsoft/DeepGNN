@@ -40,6 +40,6 @@ py_test(
         requirement("scikit-learn"),
         requirement("networkx"),
         requirement("fsspec"),
-
+        requirement("tenacity"),
     ],
 )

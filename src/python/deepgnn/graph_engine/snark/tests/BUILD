@@ -37,6 +37,7 @@ py_test(
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
         requirement("azure-datalake-store"),
+        requirement("tenacity"),
     ],
 )
 
@@ -61,6 +62,7 @@ py_test(
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
         requirement("azure-datalake-store"),
+        requirement("tenacity"),
     ],
 )
 
@@ -127,6 +129,7 @@ py_test(
         requirement("opencensus-ext-azure"),
         requirement("fsspec"),
         requirement("azure-datalake-store"),
+        requirement("tenacity"),
     ],
 )
 
@@ -148,6 +151,7 @@ py_test(
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
         requirement("azure-datalake-store"),
+        requirement("tenacity"),
     ],
 )
 
@@ -193,6 +197,7 @@ py_test(
         requirement("azure-datalake-store"),
         requirement("fsspec"),
         requirement("aiohttp"),
+        requirement("tenacity"),
     ],
 )
 
@@ -214,6 +219,7 @@ py_test(
         requirement("opencensus-ext-azure"),
         requirement("fsspec"),
         requirement("azure-datalake-store"),
+        requirement("tenacity"),
     ],
 )
 
@@ -235,6 +241,7 @@ py_test(
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
         requirement("azure-datalake-store"),
+        requirement("tenacity"),
     ],
 )
 
@@ -260,6 +267,7 @@ py_test(
         requirement("pytest"),
         requirement("scipy"),
         requirement("scikit-learn"),
+        requirement("tenacity"),
     ],
     target_compatible_with = ["@platforms//os:linux"],
 )
