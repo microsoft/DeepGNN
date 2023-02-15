@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.58] - 2022-02-15
+
 ### Added
 - Add usage example for Ray Train, see [docs/torch/ray_usage.rst](https://github.com/microsoft/DeepGNN/tree/main/docs/torch/ray_usage.rst).
 
@@ -23,7 +25,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - If sparse feature values present on multiple servers, then only one will be returned with source picked randomly.
 
 ### Removed
-
 - Remove ALL_NODE_TYPE, ALL_EDGE_TYPE, __len__ and __iter__ from Graph API.
 
 ## [0.1.57] - 2022-12-15
