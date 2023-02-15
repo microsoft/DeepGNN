@@ -1,48 +1,28 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+from typing import Optional, Callable, Iterator
 import argparse
-import torch
-import ray
-from deepgnn import TrainMode, setup_default_logging_config
-from deepgnn import get_logger
-from deepgnn.pytorch.common.utils import get_python_type
-from deepgnn.pytorch.modeling import BaseModel
-from args import init_args  # type: ignore
-from model import HetGnnModel  # type: ignore
-from sampler import HetGnnDataSampler  # type: ignore
-
 from typing import Dict
 import os
 import platform
 import numpy as np
 import torch
+from torch.utils.data import IterableDataset
 import ray
 import ray.train as train
 from ray.train.torch import TorchTrainer
 from ray.air import session
 from ray.air.config import ScalingConfig
-from ray.data import DatasetPipeline
-from deepgnn import TrainMode, get_logger
-from deepgnn.pytorch.common import get_args
-from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
 from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
 from deepgnn.graph_engine.data.citation import Cora
-from torch.utils.data import IterableDataset
-from typing import Optional, Callable, Iterator
-from inspect import signature
-from deepgnn.graph_engine._base import Graph
+from args import init_args  # type: ignore
+from model import HetGnnModel  # type: ignore
+from sampler import HetGnnDataSampler  # type: ignore
 
 
 class TorchDeepGNNDataset(IterableDataset):
-    """Implementation of TorchDeepGNNDataset for use in a Torch Dataloader.
-    TorchDeepGNNDataset initializes and executes a node or edge sampler given as
-    sampler_class. For every batch of data requested, batch_size items are sampled
-    from the sampler and passed to the given query_fn which pulls all necessaary
-    information about the samples using the graph engine API. The output from
-    the query function is passed to the trainer worker as the input to the
-    model forward function.
-    """
+    """Implementation of TorchDeepGNNDataset for use in a Torch Dataloader."""
 
     class _DeepGNNDatasetIterator:
         def __init__(
@@ -66,61 +46,34 @@ class TorchDeepGNNDataset(IterableDataset):
 
     def __init__(
         self,
-        sampler_class: HetGnnDataSampler,
         query_fn: Callable,
         backend=None,
-        num_workers: int = 1,
-        worker_index: int = 0,
+        num_nodes: int = -1,
         batch_size: int = 1,
-        epochs: int = 1,
-        enable_prefetch: bool = False,
-        collate_fn: Optional[Callable] = None,
-        # parameters to initialize samplers
-        **kwargs,
+        node_type_count: int = -1,
+        walk_length: int = -1,
     ):
         """Initialize DeepGNN dataset."""
-        assert sampler_class is not None
-
-        self.num_workers = num_workers
-        self.sampler_class = sampler_class
-        self.backend = backend
-        self.worker_index = worker_index
-        self.batch_size = batch_size
-        self.epochs = epochs
+        self.graph: DistributedClient = backend
         self.query_fn = query_fn
-        self.enable_prefetch = enable_prefetch
-        self.collate_fn = collate_fn
-        self.kwargs = kwargs
-        self.graph: DistributedClient = self.backend
-        self.sampler = None
+
+        self.num_nodes = batch_size
+        self.batch_size = batch_size
+        self.node_type_count = node_type_count
+        self.walk_length = walk_length
 
     def __iter__(self) -> Iterator:
         """Create an iterator for graph."""
-        worker_info = torch.utils.data.get_worker_info()
-        if worker_info is not None:
-            self.kwargs.update(
-                {
-                    "data_parallel_index": worker_info.id,
-                    "data_parallel_num": worker_info.num_workers,
-                }
-            )
-
-        sig = signature(self.sampler_class.__init__)
-        sampler_args = {}
-        for key in sig.parameters:
-            if key == "self":
-                continue
-            if sig.parameters[key].annotation == Graph:
-                sampler_args[key] = self.graph
-            elif key in self.kwargs.keys():
-                sampler_args[key] = self.kwargs[key]
-            elif hasattr(self, key):
-                sampler_args[key] = getattr(self, key)
-
-        self.sampler = self.sampler_class(**sampler_args)
+        sampler = HetGnnDataSampler(
+            self.graph,
+            self.num_nodes,
+            self.batch_size,
+            self.node_type_count,
+            self.walk_length,
+        )
 
         return self._DeepGNNDatasetIterator(
-            graph=self.graph, sampler=self.sampler, query_fn=self.query_fn
+            graph=self.graph, sampler=sampler, query_fn=self.query_fn
         )
 
 
@@ -151,7 +104,6 @@ def train_func(config: Dict):
     max_id = g.node_count(0)
 
     dataset = TorchDeepGNNDataset(
-        sampler_class=HetGnnDataSampler,
         backend=g,
         query_fn=model.query,
         num_nodes=max_id,
@@ -184,12 +136,6 @@ def train_func(config: Dict):
 
 
 def _main():
-    # setup default logging component.
-    setup_default_logging_config(enable_telemetry=True)
-
-    # run_dist is the unified entry for pytorch model distributed training/evaluation/inference.
-    # User only needs to prepare initializing function for model, dataset, optimizer and args.
-    # reference: `deepgnn/pytorch/training/factory.py`
     ray.init(num_cpus=4)
 
     cora = Cora()
