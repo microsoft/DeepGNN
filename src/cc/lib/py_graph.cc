@@ -9,6 +9,7 @@
 #include <functional>
 #include <future>
 #include <memory>
+#include <queue>
 #include <random>
 #include <set>
 #include <span>
@@ -922,6 +923,178 @@ int32_t RandomWalk(PyGraph *py_graph, int64_t seed, float p, float q, NodeID def
             }
         }
     }
+    return 0;
+}
+
+namespace
+{
+
+// Auxilarry data structure to group all variables in one place.
+typedef struct
+{
+    absl::flat_hash_map<NodeID, size_t> lookup;
+    std::vector<NodeID> node_ids;
+    std::vector<size_t> nb_index;
+    std::vector<uint64_t> counts;
+} NB_Count_Cache;
+
+// Cache neighbor counts for each node in the input list.
+void lookup_neighbor_counts(PyGraph *py_graph, NB_Count_Cache &cache, const std::vector<NodeID> &neighbors,
+                            Type *in_edge_types, size_t in_edge_types_size, std::vector<uint64_t> &neighbor_counts)
+{
+    assert(cache.node_ids.empty());
+    assert(cache.counts.empty());
+    assert(cache.nb_index.empty());
+
+    for (size_t nb_index = 0; nb_index < neighbors.size(); ++nb_index)
+    {
+        auto it = cache.lookup.find(neighbors[nb_index]);
+        if (it != cache.lookup.end())
+        {
+            neighbor_counts[nb_index] = it->second;
+        }
+        else
+        {
+            cache.node_ids.emplace_back(neighbors[nb_index]);
+            cache.nb_index.emplace_back(nb_index);
+        }
+    }
+
+    if (cache.node_ids.empty())
+    {
+        return;
+    }
+
+    const size_t nodes_size = cache.node_ids.size();
+    cache.counts.resize(nodes_size);
+    NeighborCount(py_graph, cache.node_ids.data(), nodes_size, in_edge_types, in_edge_types_size, cache.counts.data());
+    for (size_t i = 0; i < nodes_size; ++i)
+    {
+        cache.lookup[cache.node_ids[i]] = cache.counts[i];
+        neighbor_counts[cache.nb_index[i]] = cache.counts[i];
+    }
+
+    cache.node_ids.clear();
+    cache.counts.clear();
+    cache.nb_index.clear();
+}
+} // namespace
+
+// Implementation of PPR-go is based on https://github.com/TUM-DAML/pprgo_pytorch/blob/master/pprgo/ppr.py
+int32_t PPRSampleNeighbor(PyGraph *py_graph, NodeID *in_node_ids, size_t int_node_ids_size, Type *in_edge_types,
+                          size_t in_edge_types_size, const size_t count, const float alpha, const float eps,
+                          const NodeID default_node_id, const float default_weight, NodeID *out_neighbor_ids,
+                          float *out_weights)
+{
+    if (py_graph->graph == nullptr)
+    {
+        RAW_LOG_ERROR("Internal graph is not initialized");
+        return 1;
+    }
+
+    const float alpha_eps = alpha * eps;
+    std::vector<NodeID> q;
+
+    std::vector<NodeID> neighbors;
+    std::vector<float> weights;
+    std::vector<Type> types;
+
+    absl::flat_hash_map<NodeID, float> p;
+    absl::flat_hash_map<NodeID, float> r;
+    using WN = std::pair<float, NodeID>;
+    std::priority_queue<WN, std::vector<WN>, std::greater<WN>> pq;
+    std::vector<uint64_t> neighbor_counts;
+    NB_Count_Cache nb_cache;
+
+    for (size_t node_index = 0; node_index < int_node_ids_size; ++node_index)
+    {
+        p.clear();
+        r.clear();
+        const auto inode = in_node_ids[node_index];
+        r[inode] = alpha;
+        q.emplace_back(inode);
+        while (!q.empty())
+        {
+            auto unode = q.back();
+            q.pop_back();
+            float res = 0;
+            auto r_unode = r.find(unode);
+            if (r_unode != std::end(r))
+            {
+                res = r_unode->second;
+            }
+            p[unode] += res;
+            r[unode] = 0;
+
+            neighbors.resize(0);
+            weights.resize(0);
+            types.resize(0);
+            uint64_t curr_count = 0;
+            GetNeighborsInternal(py_graph, &unode, 1, in_edge_types, in_edge_types_size, &curr_count, neighbors, types,
+                                 weights);
+            neighbor_counts.resize(neighbors.size());
+            lookup_neighbor_counts(py_graph, nb_cache, neighbors, in_edge_types, in_edge_types_size, neighbor_counts);
+            const float _val = (1 - alpha) * res / neighbors.size();
+            for (size_t nb_index = 0; nb_index < neighbors.size(); ++nb_index)
+            {
+                auto vnode = neighbors[nb_index];
+                r[vnode] += _val;
+
+                float res_vnode = 0;
+                auto r_vnode = r.find(vnode);
+                if (r_vnode != std::end(r))
+                {
+                    res_vnode = r_vnode->second;
+                }
+
+                if (res_vnode >= alpha_eps * neighbor_counts[nb_index])
+                {
+                    auto f = std::find(std::begin(q), std::end(q), vnode);
+                    if (f == std::end(q))
+                    {
+                        q.emplace_back(vnode);
+                    }
+                }
+            }
+        }
+
+        for (auto kv : p)
+        {
+            if (pq.size() < count)
+            {
+                pq.emplace(kv.second, kv.first);
+            }
+            else
+            {
+                const auto &top = pq.top();
+                if (top.first > kv.second)
+                {
+                    continue;
+                }
+                pq.pop();
+                pq.emplace(kv.second, kv.first);
+            }
+        }
+
+        for (size_t ppr_count = 0; ppr_count < count; ++ppr_count)
+        {
+            const auto out_index = node_index * count + ppr_count;
+            if (pq.empty())
+            {
+                out_neighbor_ids[out_index] = default_node_id;
+                out_weights[out_index] = default_weight;
+                continue;
+            }
+
+            auto q = pq.top();
+            out_neighbor_ids[out_index] = q.second;
+            out_weights[out_index] = q.first;
+            pq.pop();
+        }
+
+        assert(pq.empty());
+    }
+
     return 0;
 }
 

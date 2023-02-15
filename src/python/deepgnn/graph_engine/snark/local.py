@@ -16,6 +16,7 @@ _sampling_map: Dict[SamplingStrategy, str] = {
     SamplingStrategy.Random: "uniform",
     SamplingStrategy.RandomWithoutReplacement: "withoutreplacement",
     SamplingStrategy.TopK: "topk",
+    SamplingStrategy.PPRGo: "ppr-go",
 }
 
 
@@ -101,7 +102,9 @@ class Client(Graph):
         strategy: str = "byweight",
         default_node: int = -1,
         default_weight: float = 0.0,
-        default_node_type: int = -1,
+        default_edge_type: int = -1,
+        alpha: float = 0.5,
+        eps: float = 0.0001,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Sample node neighbors."""
         if strategy == "byweight":
@@ -122,7 +125,7 @@ class Client(Graph):
                 self.__check_types(edge_types),
                 count,
                 default_node,
-                default_node_type,
+                default_edge_type,
                 seed=int(random.getrandbits(64)),
             )
             return (
@@ -131,6 +134,23 @@ class Client(Graph):
                 result[1],
                 np.empty((1), dtype=np.int32),
             )
+        if strategy == "ppr-go":
+            result = self.graph.ppr_neighbors(  # type: ignore
+                nodes,
+                self.__check_types(edge_types),
+                count,
+                alpha,
+                eps,
+                default_node,
+                default_weight,
+            )
+            return (
+                result[0],
+                result[1],
+                np.empty(0, dtype=np.int32),
+                np.empty(0, dtype=np.int32),
+            )
+
         raise NotImplementedError(f"Unknown strategy type {strategy}")
 
     def node_features(

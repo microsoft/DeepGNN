@@ -338,7 +338,6 @@ def test_neighbor_count_remote_client_handle_empty_list(multi_partition_graph_da
 
 
 def test_neighbor_count_remote_client_nonmatching_edge_type(multi_partition_graph_data):
-
     s1 = server.Server(
         multi_partition_graph_data, [(multi_partition_graph_data, 0)], "localhost:12347"
     )
@@ -546,8 +545,8 @@ def karate_club_json(folder):
     return data.name
 
 
-@pytest.fixture(scope="module")
-def karate_club_graph():
+@pytest.fixture(scope="module", params=["memory", "distributed"])
+def karate_club_graph(request):
     with tempfile.TemporaryDirectory() as workdir:
         data_name = karate_club_json(workdir)
         d = dispatcher.QueueDispatcher(Path(workdir), 2, Counter(), JsonDecoder())
@@ -560,7 +559,14 @@ def karate_club_graph():
             skip_edge_sampler=True,
             skip_node_sampler=True,
         ).convert()
-        yield client.MemoryGraph(workdir, [(workdir, 0), (workdir, 1)])
+        if request.param == "memory":
+            yield client.MemoryGraph(workdir, [(workdir, 0), (workdir, 1)])
+        else:
+            s1 = server.Server(workdir, [(workdir, 0)], "localhost:12359")
+            s2 = server.Server(workdir, [(workdir, 1)], "localhost:12369")
+            yield client.DistributedGraph(["localhost:12359", "localhost:12369"])
+            s1.reset()
+            s2.reset()
 
 
 def test_karate_club_uniform_neighbor_sampling_different_result(
@@ -594,6 +600,93 @@ def test_karate_club_weighted_neighbor_sampling_different_result(
         nodes=np.array([2, 4, 6], dtype=np.int64), edge_types=0, count=2
     )[0]
     assert not np.array_equal(v1, v2)
+
+
+def test_karate_club_ppr_sampling(
+    karate_club_graph,
+):
+    nodes, weights = karate_club_graph.ppr_neighbors(
+        nodes=np.array([2, 4, 6, 8, 11, 13, 20, 22], dtype=np.int64),
+        edge_types=0,
+        count=5,
+        alpha=0.1,
+        eps=0.0001,
+    )
+
+    npt.assert_array_equal(
+        nodes,
+        [
+            [4, 3, 34, 1, 2],
+            [34, 3, 2, 1, 4],
+            [17, 11, 7, 1, 6],
+            [4, 3, 2, 1, 8],
+            [7, 5, 6, 11, 1],
+            [3, 2, 4, 13, 1],
+            [33, 2, 34, 1, 20],
+            [3, 34, 2, 22, 1],
+        ],
+    )
+    npt.assert_array_almost_equal(
+        weights,
+        [
+            [0.05211685, 0.06771754, 0.07165639, 0.11516844, 0.17243971],
+            [0.06523439, 0.07632561, 0.0782424, 0.12137671, 0.15356852],
+            [0.05838294, 0.06087079, 0.0871229, 0.14687803, 0.17239806],
+            [0.06680953, 0.08266786, 0.08469853, 0.1229835, 0.13283907],
+            [0.06148485, 0.06670617, 0.081143, 0.14703868, 0.156228],
+            [0.06026748, 0.06429449, 0.08961273, 0.12202281, 0.15270987],
+            [0.05358997, 0.08245811, 0.1060928, 0.11746016, 0.12044134],
+            [0.05639789, 0.06037995, 0.10675042, 0.11910437, 0.1498548],
+        ],
+    )
+
+
+def test_karate_club_ppr_sampling_empty_nb_list(
+    karate_club_graph,
+):
+    nodes, weights = karate_club_graph.ppr_neighbors(
+        nodes=np.array([1, 2, 6], dtype=np.int64),
+        edge_types=12,
+        count=2,
+        alpha=0.2,
+        eps=0.0001,
+        default_node=-1,
+        default_weight=0.0,
+    )
+
+    npt.assert_array_equal(nodes, [[1, -1], [2, -1], [6, -1]])
+    npt.assert_array_almost_equal(
+        weights,
+        [
+            [0.2, 0],
+            [0.2, 0],
+            [0.2, 0],
+        ],
+    )
+
+
+def test_karate_club_ppr_sampling_missing_nodes(
+    karate_club_graph,
+):
+    nodes, weights = karate_club_graph.ppr_neighbors(
+        nodes=np.array([35, 36, 37], dtype=np.int64),
+        edge_types=0,
+        count=2,
+        alpha=0.1,
+        eps=0.0001,
+        default_node=-1,
+        default_weight=0.0,
+    )
+
+    npt.assert_array_equal(nodes, [[35, -1], [36, -1], [37, -1]])
+    npt.assert_array_almost_equal(
+        weights,
+        [
+            [0.1, 0],
+            [0.1, 0],
+            [0.1, 0],
+        ],
+    )
 
 
 if __name__ == "__main__":

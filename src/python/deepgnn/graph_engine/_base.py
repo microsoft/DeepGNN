@@ -21,6 +21,7 @@ class SamplingStrategy(IntEnum):
     Random = 2  # RandomWithReplacement
     RandomWithoutReplacement = 3
     TopK = 4
+    PPRGo = 5
 
 
 class Graph(abc.ABC):
