@@ -926,6 +926,60 @@ int32_t RandomWalk(PyGraph *py_graph, int64_t seed, float p, float q, NodeID def
     return 0;
 }
 
+namespace
+{
+
+// Auxilarry data structure to group all variables in one place.
+typedef struct
+{
+    absl::flat_hash_map<NodeID, size_t> lookup;
+    std::vector<NodeID> node_ids;
+    std::vector<size_t> nb_index;
+    std::vector<uint64_t> counts;
+} NB_Count_Cache;
+
+// Cache neighbor counts for each node in the input list.
+void lookup_neighbor_counts(PyGraph *py_graph, NB_Count_Cache &cache, const std::vector<NodeID> &neighbors,
+                            Type *in_edge_types, size_t in_edge_types_size, std::vector<uint64_t> &neighbor_counts)
+{
+    assert(cache.node_ids.empty());
+    assert(cache.counts.empty());
+    assert(cache.nb_index.empty());
+
+    for (size_t nb_index = 0; nb_index < neighbors.size(); ++nb_index)
+    {
+        auto it = cache.lookup.find(neighbors[nb_index]);
+        if (it != cache.lookup.end())
+        {
+            neighbor_counts[nb_index] = it->second;
+        }
+        else
+        {
+            cache.node_ids.emplace_back(neighbors[nb_index]);
+            cache.nb_index.emplace_back(nb_index);
+        }
+    }
+
+    if (cache.node_ids.empty())
+    {
+        return;
+    }
+
+    const size_t nodes_size = cache.node_ids.size();
+    cache.counts.resize(nodes_size);
+    NeighborCount(py_graph, cache.node_ids.data(), nodes_size, in_edge_types, in_edge_types_size, cache.counts.data());
+    for (size_t i = 0; i < nodes_size; ++i)
+    {
+        cache.lookup[cache.node_ids[i]] = cache.counts[i];
+        neighbor_counts[cache.nb_index[i]] = cache.counts[i];
+    }
+
+    cache.node_ids.clear();
+    cache.counts.clear();
+    cache.nb_index.clear();
+}
+} // namespace
+
 // Implementation of PPR-go is based on https://github.com/TUM-DAML/pprgo_pytorch/blob/master/pprgo/ppr.py
 int32_t PPRSampleNeighbor(PyGraph *py_graph, NodeID *in_node_ids, size_t int_node_ids_size, Type *in_edge_types,
                           size_t in_edge_types_size, const size_t count, const float alpha, const float eps,
@@ -950,6 +1004,8 @@ int32_t PPRSampleNeighbor(PyGraph *py_graph, NodeID *in_node_ids, size_t int_nod
     using WN = std::pair<float, NodeID>;
     std::priority_queue<WN, std::vector<WN>, std::greater<WN>> pq;
     std::vector<uint64_t> neighbor_counts;
+    NB_Count_Cache nb_cache;
+
     for (size_t node_index = 0; node_index < int_node_ids_size; ++node_index)
     {
         p.clear();
@@ -977,8 +1033,7 @@ int32_t PPRSampleNeighbor(PyGraph *py_graph, NodeID *in_node_ids, size_t int_nod
             GetNeighborsInternal(py_graph, &unode, 1, in_edge_types, in_edge_types_size, &curr_count, neighbors, types,
                                  weights);
             neighbor_counts.resize(neighbors.size());
-            NeighborCount(py_graph, neighbors.data(), neighbors.size(), in_edge_types, in_edge_types_size,
-                          neighbor_counts.data());
+            lookup_neighbor_counts(py_graph, nb_cache, neighbors, in_edge_types, in_edge_types_size, neighbor_counts);
             const float _val = (1 - alpha) * res / neighbors.size();
             for (size_t nb_index = 0; nb_index < neighbors.size(); ++nb_index)
             {

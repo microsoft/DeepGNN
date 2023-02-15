@@ -545,8 +545,8 @@ def karate_club_json(folder):
     return data.name
 
 
-@pytest.fixture(scope="module")
-def karate_club_graph():
+@pytest.fixture(scope="module", params=["memory", "distributed"])
+def karate_club_graph(request):
     with tempfile.TemporaryDirectory() as workdir:
         data_name = karate_club_json(workdir)
         d = dispatcher.QueueDispatcher(Path(workdir), 2, Counter(), JsonDecoder())
@@ -559,7 +559,14 @@ def karate_club_graph():
             skip_edge_sampler=True,
             skip_node_sampler=True,
         ).convert()
-        yield client.MemoryGraph(workdir, [(workdir, 0), (workdir, 1)])
+        if request.param == "memory":
+            yield client.MemoryGraph(workdir, [(workdir, 0), (workdir, 1)])
+        else:
+            s1 = server.Server(workdir, [(workdir, 0)], "localhost:12359")
+            s2 = server.Server(workdir, [(workdir, 1)], "localhost:12369")
+            yield client.DistributedGraph(["localhost:12359", "localhost:12369"])
+            s1.reset()
+            s2.reset()
 
 
 def test_karate_club_uniform_neighbor_sampling_different_result(
@@ -599,7 +606,7 @@ def test_karate_club_ppr_sampling(
     karate_club_graph,
 ):
     nodes, weights = karate_club_graph.ppr_neighbors(
-        nodes=np.array([2, 4, 6], dtype=np.int64),
+        nodes=np.array([2, 4, 6, 8, 11, 13, 20, 22], dtype=np.int64),
         edge_types=0,
         count=5,
         alpha=0.1,
@@ -607,14 +614,29 @@ def test_karate_club_ppr_sampling(
     )
 
     npt.assert_array_equal(
-        nodes, [[4, 3, 34, 1, 2], [34, 3, 2, 1, 4], [17, 11, 7, 1, 6]]
+        nodes,
+        [
+            [4, 3, 34, 1, 2],
+            [34, 3, 2, 1, 4],
+            [17, 11, 7, 1, 6],
+            [4, 3, 2, 1, 8],
+            [7, 5, 6, 11, 1],
+            [3, 2, 4, 13, 1],
+            [33, 2, 34, 1, 20],
+            [3, 34, 2, 22, 1],
+        ],
     )
     npt.assert_array_almost_equal(
         weights,
         [
-            [0.052117, 0.067718, 0.071656, 0.115168, 0.17244],
-            [0.065234, 0.076326, 0.078242, 0.121377, 0.153569],
-            [0.058383, 0.060871, 0.087123, 0.146878, 0.172398],
+            [0.05211685, 0.06771754, 0.07165639, 0.11516844, 0.17243971],
+            [0.06523439, 0.07632561, 0.0782424, 0.12137671, 0.15356852],
+            [0.05838294, 0.06087079, 0.0871229, 0.14687803, 0.17239806],
+            [0.06680953, 0.08266786, 0.08469853, 0.1229835, 0.13283907],
+            [0.06148485, 0.06670617, 0.081143, 0.14703868, 0.156228],
+            [0.06026748, 0.06429449, 0.08961273, 0.12202281, 0.15270987],
+            [0.05358997, 0.08245811, 0.1060928, 0.11746016, 0.12044134],
+            [0.05639789, 0.06037995, 0.10675042, 0.11910437, 0.1498548],
         ],
     )
 
