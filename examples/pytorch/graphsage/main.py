@@ -2,7 +2,6 @@
 # Licensed under the MIT License.
 import torch
 import numpy as np
-import numpy as np
 import ray
 import ray.train as train
 from ray.train.torch import TorchTrainer
@@ -11,9 +10,7 @@ from ray.air.config import ScalingConfig, RunConfig
 
 from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
 from deepgnn.graph_engine.data.citation import Cora
-from deepgnn import setup_default_logging_config, get_logger
 from deepgnn.pytorch.common import F1Score
-from deepgnn.pytorch.modeling import BaseModel
 from model import PTGSupervisedGraphSage  # type: ignore
 
 
@@ -70,7 +67,6 @@ def train_func(config: dict):
 
 
 def _main():
-    setup_default_logging_config(enable_telemetry=True)
     ray.init(num_cpus=4)
 
     address = "localhost:9999"
