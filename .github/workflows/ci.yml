@@ -152,20 +152,8 @@ jobs:
       - name: Install wheels
         run: pip install deepgnn_ge*.whl deepgnn_torch*.whl
       - name: Run gat examples
-        run: |
-          cd ./pytorch/gat/
-          sudo chmod +x *.sh
-          python main.py > log.txt
-          if [ "$(grep -ic '0.826 | 0.721931' log.txt)" != "1" ]; then exit 3; fi
+        run: cd .. && bazel test -c dbg --config=linux //examples/pytorch/gat:gat_example
       - name: Run graphsage supervised examples
-        run: |
-          cd ./pytorch/graphsage/
-          sudo chmod +x *.sh
-          python main.py > log.txt
-          if [ "$(grep -ic 'Epoch 190 F1Score: 0.1786 Loss: 4.6198' log.txt)" != "1" ]; then exit 3; fi
+        run: cd .. && bazel test -c dbg --config=linux //examples/pytorch/graphsage:graphsage_example
       - name: Run hetgnn examples
-        run: |
-          cd ./pytorch/hetgnn/
-          sudo chmod +x *.sh
-          python main.py > log.txt
-          if [ "$(grep -ic '0.919048 | 1.32412' log.txt)" != "1" ]; then exit 3; fi
+        run: cd .. && bazel test -c dbg --config=linux //examples/pytorch/hetgnn:hetgnn_example
