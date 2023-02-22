@@ -34,6 +34,7 @@ py_test(
         requirement("azure-datalake-store"),
         requirement("networkx"),
         requirement("fsspec"),
+        requirement("tenacity"),
     ],
 )
 
@@ -52,5 +53,6 @@ py_test(
         requirement("opencensus-context"),
         requirement("azure-datalake-store"),
         requirement("opencensus-ext-azure"),
+        requirement("tenacity"),
     ],
 )

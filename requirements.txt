@@ -108,7 +108,7 @@ importlib-metadata==5.0.0
 importlib-resources==5.9.0
 iniconfig==1.1.1
 ipykernel==6.16.0
-ipython==8.5.0
+ipython==8.10.0
 ipython_genutils==0.2.0
 isodate==0.6.1
 jedi==0.18.1
@@ -233,6 +233,7 @@ stack_data==0.5.1
 starlette==0.22.0
 tabulate==0.8.10
 tblib==1.7.0
+tenacity==8.2.1
 tensorboard==2.10.1
 tensorboard-data-server==0.6.1
 tensorboard-plugin-wit==1.8.1
@@ -268,7 +269,7 @@ virtualenv==20.16.5
 wcwidth==0.2.5
 webencodings==0.5.1
 websocket-client==1.4.1
-Werkzeug==2.2.2
+Werkzeug==2.2.3
 wheel==0.38.1
 wrapt==1.14.1
 yacs==0.1.8

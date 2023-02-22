@@ -14,6 +14,7 @@ _NeighborCount
 _GetNeighbors
 _WeightedSampleNeighbor
 _UniformSampleNeighbor
+_PPRSampleNeighbor
 _CreateWeightedNodeSampler
 _CreateUniformNodeSampler
 _CreateUniformNodeSamplerWithoutReplacement

@@ -51,7 +51,7 @@ class MockEdgeDataLoader(IterableDataset):
         return context
 
 
-class MockGraph(Graph):
+class MockGraph:
     def __init__(self, edge_array, edge_fea, nodes_nei, nodes_res_nei):
         self.edge_array = np.array(edge_array, dtype=np.int64)
         self.edge_fea = edge_fea

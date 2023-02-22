@@ -48,6 +48,7 @@ py_test(
         requirement("torch-scatter"),
         requirement("torch-sparse"),
         requirement("torch_geometric"),
+        requirement("tenacity"),
     ],
 )
 

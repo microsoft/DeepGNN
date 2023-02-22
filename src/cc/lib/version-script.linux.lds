@@ -16,6 +16,7 @@
         GetNeighbors;
         WeightedSampleNeighbor;
         UniformSampleNeighbor;
+        PPRSampleNeighbor;
         CreateWeightedNodeSampler;
         CreateUniformNodeSampler;
         CreateUniformNodeSamplerWithoutReplacement;
