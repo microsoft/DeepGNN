@@ -152,8 +152,8 @@ jobs:
       - name: Install wheels
         run: pip install deepgnn_ge*.whl deepgnn_torch*.whl
       - name: Run gat examples
-        run: cd ./pytorch/gat/ && sudo chmod +x *.sh && bash ./run.sh CPU
+        run: cd .. && bazel test -c dbg --config=linux //examples/pytorch/gat:gat_example
       - name: Run graphsage supervised examples
-        run: cd ./pytorch/graphsage/ && sudo chmod +x *.sh && bash ./run.sh no CPU && bash ./run.sh no CPU disk yes
+        run: cd .. && bazel test -c dbg --config=linux //examples/pytorch/graphsage:graphsage_example
       - name: Run hetgnn examples
-        run: cd ./pytorch/hetgnn/ && sudo chmod +x *.sh && bash ./run.sh CPU
+        run: cd .. && bazel test -c dbg --config=linux //examples/pytorch/hetgnn:hetgnn_example
