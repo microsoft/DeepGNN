@@ -104,7 +104,6 @@ Our goal is to create a model capable of predicting whether an edge exists betwe
 
     >>> from typing import Dict
     >>> from dataclasses import dataclass
-    >>> import tempfile
     >>> import argparse
     >>> import numpy as np
     >>> import torch
@@ -119,7 +118,6 @@ Our goal is to create a model capable of predicting whether an edge exists betwe
     >>> from deepgnn.graph_engine import SamplingStrategy, GEEdgeSampler, GraphEngineBackend
     >>> from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
     >>> from deepgnn.pytorch.common.metrics import F1Score
-    >>> from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
 
 Query is the interface between the model and graph database. It uses the graph engine API to perform graph functions like `node_features` and `sample_neighbors`, for a full reference on this interface see, `this guide <../graph_engine/overview>`_. Typically Query is initialized by the model as `self.q` so its functions may also be used ad-hoc by the model.
 
@@ -262,7 +260,6 @@ Training Loop
     ...             label_dim=1,
     ...     )
     ...     model = LinkPrediction(p)
-    ...     load_checkpoint(model, model_dir=config["model_dir"])
     ...     model = train.torch.prepare_model(model)
     ...
     ...     # Initialize the optimizer and wrap it with Ray
@@ -293,8 +290,6 @@ Training Loop
     ...             optimizer.step()
     ...
     ...             session.report({"metric": (pred == label).float().mean().item(), "loss": loss.item()})
-    ...
-    ...     save_checkpoint(model, epoch=epoch, step=step, model_dir=config["model_dir"])
 
     >>> address = "localhost:9999"
     >>> s = Server(address, working_dir, 0, 1)
@@ -306,8 +301,6 @@ Finally we train the model to predict whether an edge exists between any two nod
 
 .. code-block:: python
 
-    >>> model_dir = tempfile.TemporaryDirectory()
-
     >>> ray.init(num_cpus=4)
     RayContext(...)
     >>> trainer = TorchTrainer(
@@ -316,7 +309,6 @@ Finally we train the model to predict whether an edge exists between any two nod
     ...         "ge_address": address,
     ...         "batch_size": 64,
     ...         "n_epochs": 100,
-    ...         "model_dir": f"{model_dir.name}/model.pt",
     ...     },
     ...     run_config=RunConfig(verbose=0),
     ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False, _max_cpu_fraction_per_node = 0.8),
