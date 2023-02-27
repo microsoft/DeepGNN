@@ -185,9 +185,6 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     # Set random seed
     ...     train.torch.enable_reproducibility(seed=session.get_world_rank())
     ...
-    ...     # Start server
-    ...     g = graph_init_fn()
-    ...
     ...     # Initialize the model and wrap it with Ray
     ...     model = GAT(in_dim=1433, num_classes=7)
     ...     load_checkpoint(model, model_dir=config["model_dir"])
@@ -201,6 +198,7 @@ Then we define a standard torch training loop using the ray dataset, with no cha
     ...     loss_fn = nn.CrossEntropyLoss()
     ...
     ...     # Ray Dataset
+    ...     g = DistributedClient(config["ge_address"])
     ...     dataset = ray.data.range(2708).repartition(2708 // config["batch_size"])  # -> Dataset(num_blocks=6, num_rows=2708, schema=<class 'int'>)
     ...     pipe = dataset.window(blocks_per_window=10).repeat(config["n_epochs"])  # -> DatasetPipeline(num_windows=1, num_stages=1)
     ...     q = GATQuery()
@@ -226,8 +224,6 @@ Then we define a standard torch training loop using the ray dataset, with no cha
 
     >>> address = "localhost:9999"
     >>> s = Server(address, data_dir.name, 0, 1)
-    >>> def graph_init_fn():
-    ...     return DistributedClient([address])
 
 In this step we start the training job.
 First we start a local ray cluster with `ray.init() <https://docs.ray.io/en/latest/ray-core/package-ref.html#ray-init>`_.
@@ -246,7 +242,7 @@ Finally we call trainer.fit() to execute the training loop.
     >>> trainer = TorchTrainer(
     ...     train_func,
     ...     train_loop_config={
-    ...         "graph_init_fn": graph_init_fn,
+    ...         "ge_address": address,
     ...         "batch_size": 2708,
     ...         "sample_filename": "train.nodes",
     ...         "n_epochs": 100,
@@ -265,6 +261,7 @@ Evaluate
     >>> trainer = TorchTrainer(
     ...     train_func,
     ...     train_loop_config={
+    ...         "ge_address": address,
     ...         "batch_size": 2708,
     ...         "data_dir": data_dir.name,
     ...         "sample_filename": "test.nodes",

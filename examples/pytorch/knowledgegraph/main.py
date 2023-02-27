@@ -26,10 +26,7 @@ def train_func(config: dict):
     train.torch.accelerate()
     train.torch.enable_reproducibility(seed=session.get_world_rank())
 
-    address = "localhost:9999"
-    cora = Cora()
-    s = Server(address, cora.data_dir(), 0, 1)
-    g = DistributedClient([address])
+    g = DistributedClient(config["ge_address"])
 
     with open("metadata.ini", "w") as f:
         f.write("[DEFAULT]")
@@ -90,9 +87,15 @@ def _main():
     # reference: `deepgnn/pytorch/training/factory.py`
     ray.init(num_cpus=4)
 
+    address = "localhost:9999"
+    cora = Cora()
+    s = Server(address, cora.data_dir(), 0, 1)
+
     trainer = TorchTrainer(
         train_func,
-        train_loop_config={},
+        train_loop_config={
+            "ge_address": address,
+        },
         scaling_config=ScalingConfig(num_workers=1),
     )
     return trainer.fit()

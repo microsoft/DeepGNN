@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Moved `deepgnn.pytorch.training.args` into `deepgnn.pytorch.common.args`.
+
 ### Removed
 
 - Remove FP16 constants, replace argument with boolean to enable or disable.
