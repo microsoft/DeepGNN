@@ -219,21 +219,25 @@ if __name__ == "__main__":
 
     try:
         ws = Workspace.from_config()
-        print('Workspace name: ' + ws.name, 
-                'Subscription id: ' + ws.subscription_id, 
-                'Resource group: ' + ws.resource_group, sep = '\n')
-    except UserErrorException:
+        print(
+            "Workspace name: " + ws.name,
+            "Subscription id: " + ws.subscription_id,
+            "Resource group: " + ws.resource_group,
+            sep="\n",
+        )
+    except Exception:
         from azureml.core.authentication import ServicePrincipalAuthentication
+
         svc_pr = ServicePrincipalAuthentication(
-                tenant_id='${TENANT_ID}',
-                service_principal_id='${SERVICE_ID}',
-                service_principal_password='${SERVICE_PASSWORD}',
+            tenant_id="${TENANT_ID}",
+            service_principal_id="${SERVICE_ID}",
+            service_principal_password="${SERVICE_PASSWORD}",
         )
         ws = Workspace(
-                subscription_id='${SUBSCRIPTION_ID}',
-                resource_group='${RESOURCE_GROUP}',
-                workspace_name='${WORKSPACE_NAME}',
-                auth=svc_pr,
+            subscription_id="${SUBSCRIPTION_ID}",
+            resource_group="${RESOURCE_GROUP}",
+            workspace_name="${WORKSPACE_NAME}",
+            auth=svc_pr,
         )
     ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="multi-node", maxnode=2)
 
