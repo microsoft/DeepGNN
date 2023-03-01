@@ -133,8 +133,9 @@ extern "C"
 
     DEEPGNN_DLL extern int32_t PPRSampleNeighbor(PyGraph *graph, NodeID *in_node_ids, size_t int_node_ids_size,
                                                  Type *in_edge_types, size_t in_edge_types_size, size_t count,
-                                                 float alpha, float eps, NodeID default_node_id, float default_weight,
-                                                 NodeID *out_neighbor_ids, float *out_weights);
+                                                 float alpha, float eps, size_t num_hops_to_prefetch,
+                                                 NodeID default_node_id, float default_weight, NodeID *out_neighbor_ids,
+                                                 float *out_weights);
     // TODO(alsamylk): sorted neighbors
 
     DEEPGNN_DLL extern int32_t CreateWeightedNodeSampler(PyGraph *graph, PySampler *node_sampler, size_t count,
