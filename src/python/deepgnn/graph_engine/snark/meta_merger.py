@@ -9,7 +9,7 @@ import fsspec
 
 from deepgnn.graph_engine._base import get_fs
 
-# Content of sample meta.txt
+# Content of sample meta.json
 
 # Fields            Description             Action
 # ====================================================
@@ -104,7 +104,7 @@ class Meta:
 
 def merge(fs, output_dir: str, meta_list: List[Meta]):
     """Merge meta files."""
-    with fs.open("{}/meta.txt".format(output_dir), "w") as mtxt:
+    with fs.open("{}/meta.json".format(output_dir), "w") as mtxt:
         assert all(
             map(lambda x: x.version == meta_list[0].version, meta_list)
         ), "All partitions must have the same binary version"
@@ -161,7 +161,7 @@ if __name__ == "__main__":
     # import here for special usage of the module.
     import argparse
 
-    parser = argparse.ArgumentParser(description="Merge all meta.txt.")
-    parser.add_argument("-d", "--data_dir", help="meta.txt folder path")
+    parser = argparse.ArgumentParser(description="Merge all meta.json.")
+    parser.add_argument("-d", "--data_dir", help="meta.json folder path")
     args = parser.parse_args()
     merge_metadata_files(args.data_dir)

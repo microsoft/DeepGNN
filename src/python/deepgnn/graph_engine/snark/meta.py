@@ -4,6 +4,7 @@
 """Meta module provides functionality to work with binary graph files."""
 import enum
 import os
+import json
 import tempfile
 from ctypes import c_char_p
 from deepgnn.graph_engine.snark._lib import _get_c_lib
@@ -15,7 +16,7 @@ BINARY_DATA_VERSION = "v1"
 
 # Use custom separators in case we want to download data from remote filesystems.
 def _get_meta_path(path: str, sep=os.path.sep) -> str:
-    return sep.join([path, "meta.txt"])
+    return sep.join([path, "meta.json"])
 
 
 def _get_node_map_path(
@@ -107,7 +108,7 @@ def download_meta(
     dest_path: str,
     config_path: str,
 ) -> str:
-    """Get meta.txt path based on the local or remote path."""
+    """Get meta.json path based on the local or remote path."""
     path = src_path
 
     if (
@@ -155,35 +156,29 @@ class Meta:
         temp_path = temp_dir.name
         meta_path = download_meta(path, temp_path, config_path)
 
-        meta = open(meta_path, "r")  # type: ignore
+        with open(meta_path, "r") as file:
+            meta = json.load(file)  # type: ignore
 
-        self.version = str(meta.readline().strip())
+        self.version = meta["binary_data_version"]
         if self.version[0] != "v":
             raise RuntimeError(
-                "First line in meta file should be version, please regenerate binary data"
+                "Meta file should contain binary_data_version, please regenerate binary data"
             )
 
-        self.node_count = int(meta.readline())
-        self.edge_count = int(meta.readline())
-        self.node_type_count = int(meta.readline())
-        self.edge_type_count = int(meta.readline())
-        self._node_feature_count = int(meta.readline())
-        self._edge_feature_count = int(meta.readline())
-        self._partition_count = int(meta.readline())
+        self.node_count = int(meta["node_count"])
+        self.edge_count = int(meta["edge_count"])
+        self.node_type_count = int(meta["node_type_num"])
+        self.edge_type_count = int(meta["edge_type_num"])
+        self._node_feature_count = int(meta["node_feature_num"])
+        self._edge_feature_count = int(meta["edge_feature_num"])
+        self._partition_count = int(meta["n_partitions"])
         self._node_weights = [float(0)] * self.node_type_count
         self._edge_weights = [float(0)] * self.edge_type_count
-        for _ in range(self._partition_count):
-            meta.readline()  # Partition id
+        for id in meta["partition_ids"]:
             for i in range(self.node_type_count):
-                self._node_weights[i] += float(meta.readline())
+                self._node_weights[i] += float(meta[f"node_weight_{id}"][i])
             for i in range(self.edge_type_count):
-                self._edge_weights[i] += float(meta.readline())
-        self.node_count_per_type = []
-        self.edge_count_per_type = []
+                self._edge_weights[i] += float(meta[f"edge_weight_{id}"][i])
 
-        for _ in range(self.node_type_count):
-            self.node_count_per_type.append(int(meta.readline()))
-        for _ in range(self.edge_type_count):
-            self.edge_count_per_type.append(int(meta.readline()))
-
-        meta.close()
+        self.node_count_per_type = meta["node_count_per_type"]
+        self.edge_count_per_type = meta["edge_count_per_type"]
