@@ -104,7 +104,6 @@ Our goal is to create a model capable of predicting whether an edge exists betwe
 
     >>> from typing import Dict
     >>> from dataclasses import dataclass
-    >>> import tempfile
     >>> import argparse
     >>> import numpy as np
     >>> import torch
@@ -119,7 +118,6 @@ Our goal is to create a model capable of predicting whether an edge exists betwe
     >>> from deepgnn.graph_engine import SamplingStrategy, GEEdgeSampler, GraphEngineBackend
     >>> from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
     >>> from deepgnn.pytorch.common.metrics import F1Score
-    >>> from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
 
 Query is the interface between the model and graph database. It uses the graph engine API to perform graph functions like `node_features` and `sample_neighbors`, for a full reference on this interface see, `this guide <../graph_engine/overview>`_. Typically Query is initialized by the model as `self.q` so its functions may also be used ad-hoc by the model.
 
@@ -253,9 +251,6 @@ Training Loop
     ...     # Set random seed
     ...     train.torch.enable_reproducibility(seed=session.get_world_rank())
     ...
-    ...     # Start GE
-    ...     g = config["graph_init_fn"]()
-    ...
     ...     # Initialize the model and wrap it with Ray
     ...     p = LinkPredictionQueryParameter(
     ...             neighbor_edge_types=np.array([0], np.int32),
@@ -265,7 +260,6 @@ Training Loop
     ...             label_dim=1,
     ...     )
     ...     model = LinkPrediction(p)
-    ...     load_checkpoint(model, model_dir=config["model_dir"])
     ...     model = train.torch.prepare_model(model)
     ...
     ...     # Initialize the optimizer and wrap it with Ray
@@ -276,6 +270,7 @@ Training Loop
     ...     loss_fn = nn.CrossEntropyLoss()
     ...
     ...     # Ray Dataset
+    ...     g = DistributedClient(config["ge_address"])
     ...     max_id = g.node_count(np.array([0]))
     ...     edge_batch_generator = (lambda: ray.data.from_numpy(g.sample_edges(config["batch_size"], np.array([0], dtype=np.int32), SamplingStrategy.Weighted)) for _ in range(max_id // config["batch_size"]))
     ...     pipe = DatasetPipeline.from_iterable(edge_batch_generator).repeat(config["n_epochs"])
@@ -295,13 +290,9 @@ Training Loop
     ...             optimizer.step()
     ...
     ...             session.report({"metric": (pred == label).float().mean().item(), "loss": loss.item()})
-    ...
-    ...     save_checkpoint(model, epoch=epoch, step=step, model_dir=config["model_dir"])
 
     >>> address = "localhost:9999"
     >>> s = Server(address, working_dir, 0, 1)
-    >>> def graph_init_fn():
-    ...     return DistributedClient([address])
 
 Train
 =====
@@ -310,17 +301,14 @@ Finally we train the model to predict whether an edge exists between any two nod
 
 .. code-block:: python
 
-    >>> model_dir = tempfile.TemporaryDirectory()
-
-    >>> ray.init(num_cpus=3)
+    >>> ray.init(num_cpus=4)
     RayContext(...)
     >>> trainer = TorchTrainer(
     ...     train_func,
     ...     train_loop_config={
-    ...         "graph_init_fn": graph_init_fn,
+    ...         "ge_address": address,
     ...         "batch_size": 64,
     ...         "n_epochs": 100,
-    ...         "model_dir": f"{model_dir.name}/model.pt",
     ...     },
     ...     run_config=RunConfig(verbose=0),
     ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False, _max_cpu_fraction_per_node = 0.8),

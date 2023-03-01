@@ -27,6 +27,7 @@ py_test(
         requirement("opencensus"),
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
+        requirement("tenacity"),
     ],
 )
 
@@ -50,6 +51,7 @@ py_test(
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
         requirement("avro-python3"),
+        requirement("tenacity"),
     ],
 )
 
@@ -73,6 +75,7 @@ py_test(
         requirement("opencensus"),
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
+        requirement("tenacity"),
     ],
 )
 
@@ -96,6 +99,7 @@ py_test(
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
         requirement("pyspark"),
+        requirement("tenacity"),
     ],
 )
 
@@ -131,6 +135,7 @@ py_test(
         requirement("tensorflow"),
         requirement("transformers"),
         requirement("torch"),
+        requirement("tenacity"),
     ],
 )
 
@@ -166,6 +171,7 @@ py_test(
         requirement("tensorflow"),
         requirement("transformers"),
         requirement("torch"),
+        requirement("tenacity"),
     ],
 )
 
@@ -201,6 +207,7 @@ py_test(
         requirement("tensorflow"),
         requirement("transformers"),
         requirement("torch"),
+        requirement("tenacity"),
     ],
 )
 
@@ -223,6 +230,8 @@ py_test(
         "//src/python/deepgnn/pytorch/common:deepgnn_pytorch_common",
         "//src/python/deepgnn/pytorch/modeling:deepgnn_pytorch_modeling",
         "//src/python/deepgnn/pytorch/nn:deepgnn_pytorch_nn",
+        requirement("ray"),
+        requirement("pyarrow"),
         requirement("azure-datalake-store"),
         requirement("fsspec"),
         requirement("numpy"),
@@ -234,6 +243,7 @@ py_test(
         requirement("tensorflow"),
         requirement("transformers"),
         requirement("torch"),
+        requirement("tenacity"),
     ],
 )
 
@@ -264,6 +274,7 @@ py_test(
         requirement("opencensus-ext-azure"),
         requirement("scikit-learn"),
         requirement("tensorflow"),
+        requirement("tenacity"),
     ],
 )
 
@@ -294,6 +305,7 @@ py_test(
         requirement("opencensus-ext-azure"),
         requirement("scikit-learn"),
         requirement("tensorflow"),
+        requirement("tenacity"),
     ],
 )
 
@@ -329,6 +341,7 @@ py_test(
         requirement("scikit-learn"),
         requirement("tensorflow"),
         requirement("torch"),
+        requirement("tenacity"),
     ],
 )
 

@@ -111,6 +111,13 @@ void GetSparseFeature(const SparseRequest &request,
     std::vector<std::vector<SparseFeatureIndex>> response_index(input_size,
                                                                 std::vector<SparseFeatureIndex>(feature_count));
 
+    // We store source of feature values as atomic variable to avoid locking and construct indices concurrently.
+    const auto uninitialized_shard_index = std::numeric_limits<size_t>::max();
+    std::vector<std::atomic<size_t>> feature_source(input_size * feature_count);
+    for (auto &fs : feature_source)
+    {
+        fs.exchange(uninitialized_shard_index);
+    }
     for (size_t shard = 0; shard < engine_stubs.size(); ++shard)
     {
         auto *call = new AsyncClientCall();
@@ -130,7 +137,8 @@ void GetSparseFeature(const SparseRequest &request,
             throw std::runtime_error("Unknown request type for GetSparseFeature");
         }
 
-        call->callback = [&reply = replies[shard], &response_index, shard, out_dimensions]() {
+        call->callback = [&reply = replies[shard], &response_index, shard, out_dimensions, &feature_source,
+                          feature_count]() {
             if (reply.indices().empty())
             {
                 return;
@@ -164,6 +172,15 @@ void GetSparseFeature(const SparseRequest &request,
                      node_offset += feature_dim, value_offset += value_increment)
                 {
                     const auto item_index = reply.indices(node_offset);
+                    size_t temp_shard = uninitialized_shard_index;
+                    const auto is_current_shard_source =
+                        feature_source[item_index * feature_count + feature_index].compare_exchange_strong(temp_shard,
+                                                                                                           shard);
+                    if (!is_current_shard_source && temp_shard != shard)
+                    {
+                        continue;
+                    }
+
                     int64_t count = std::get<2>(response_index[item_index][feature_index]);
                     if (count == 0)
                     {

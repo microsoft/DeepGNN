@@ -1,85 +1,124 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+from typing import Optional, Callable, Iterator
 import argparse
-import torch
-import ray
-from deepgnn import TrainMode, setup_default_logging_config
-from deepgnn import get_logger
-from deepgnn.pytorch.common.utils import get_python_type
-from deepgnn.pytorch.modeling import BaseModel
-from args import init_args  # type: ignore
-from model import HetGnnModel  # type: ignore
-from sampler import HetGnnDataSampler  # type: ignore
-
 from typing import Dict
 import os
 import platform
 import numpy as np
 import torch
+from torch.utils.data import IterableDataset
 import ray
 import ray.train as train
 from ray.train.torch import TorchTrainer
 from ray.air import session
 from ray.air.config import ScalingConfig
-from ray.data import DatasetPipeline
-from deepgnn import TrainMode, get_logger
-from deepgnn.pytorch.common import get_args
-from deepgnn.pytorch.common.utils import load_checkpoint, save_checkpoint
 from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
+from deepgnn.graph_engine.data.citation import Cora
+from args import init_args  # type: ignore
+from model import HetGnnModel  # type: ignore
+from sampler import HetGnnDataSampler  # type: ignore
+
+
+class TorchDeepGNNDataset(IterableDataset):
+    """Implementation of TorchDeepGNNDataset for use in a Torch Dataloader."""
+
+    class _DeepGNNDatasetIterator:
+        def __init__(
+            self,
+            graph: DistributedClient,
+            sampler: HetGnnDataSampler,
+            query_fn: Callable,
+        ):
+            self.graph = graph
+            self.sampler = sampler
+            self.query_fn = query_fn
+            self.sampler_iter = iter(self.sampler)
+
+        def __next__(self):
+            inputs = next(self.sampler_iter)
+            graph_tensor = self.query_fn(self.graph, inputs)
+            return graph_tensor
+
+        def __iter__(self):
+            return self
+
+    def __init__(
+        self,
+        query_fn: Callable,
+        backend=None,
+        num_nodes: int = -1,
+        batch_size: int = 1,
+        node_type_count: int = -1,
+        walk_length: int = -1,
+    ):
+        """Initialize DeepGNN dataset."""
+        self.graph: DistributedClient = backend
+        self.query_fn = query_fn
+
+        self.num_nodes = batch_size
+        self.batch_size = batch_size
+        self.node_type_count = node_type_count
+        self.walk_length = walk_length
+
+    def __iter__(self) -> Iterator:
+        """Create an iterator for graph."""
+        sampler = HetGnnDataSampler(
+            self.graph,
+            self.num_nodes,
+            self.batch_size,
+            self.node_type_count,
+            self.walk_length,
+        )
+
+        return self._DeepGNNDatasetIterator(
+            graph=self.graph, sampler=sampler, query_fn=self.query_fn
+        )
 
 
 def train_func(config: Dict):
     """Training loop for ray trainer."""
-    args = config["args"]
-    logger = get_logger()
-
-    train.torch.accelerate(args.fp16)
-    if args.seed:
-        train.torch.enable_reproducibility(seed=args.seed + session.get_world_rank())
+    train.torch.accelerate()
+    train.torch.enable_reproducibility(seed=session.get_world_rank())
 
     model = HetGnnModel(
-        node_type_count=args.node_type_count,
-        neighbor_count=args.neighbor_count,
-        embed_d=args.feature_dim,  # currently feature dimention is equal to embedding dimention.
-        feature_type=get_python_type(args.feature_type),
-        feature_idx=args.feature_idx,
-        feature_dim=args.feature_dim,
+        node_type_count=3,
+        neighbor_count=5,
+        embed_d=50,  # currently feature dimention is equal to embedding dimention.
+        feature_type=np.float32,
+        feature_idx=1,
+        feature_dim=50,
     )
-    model = train.torch.prepare_model(model, move_to_device=args.gpu)
-    if args.mode == TrainMode.TRAIN:
-        model.train()
-    else:
-        model.eval()
-
-    epochs_trained, steps_in_epoch_trained = load_checkpoint(model, logger, args)
+    model = train.torch.prepare_model(model)
+    model.train()
 
     optimizer = torch.optim.Adam(
         filter(lambda p: p.requires_grad, model.parameters()),
-        lr=args.learning_rate * session.get_world_size(),
+        lr=0.005 * session.get_world_size(),
         weight_decay=0,
     )
     optimizer = train.torch.prepare_optimizer(optimizer)
 
-    address = "localhost:9999"
-    s = Server(address, args.data_dir, 0, len(args.partitions))
-    g = DistributedClient([address])
+    g = DistributedClient([config["ge_address"]])
+    max_id = g.node_count(0)
 
-    max_id = g.node_count(args.node_type) if args.max_id in [-1, None] else args.max_id
+    dataset = TorchDeepGNNDataset(
+        backend=g,
+        query_fn=model.query,
+        num_nodes=max_id,
+        batch_size=140,
+        node_type_count=1,
+        walk_length=3,
+    )
 
-    for epoch in range(args.num_epochs):
-        if epoch < epochs_trained:
-            continue
+    for epoch in range(10):
         scores = []
         labels = []
         losses = []
 
-        sampler = HetGnnDataSampler(g, max_id, args.batch_size, 3)
-
-        for step, batch in enumerate(sampler):
-            if step < steps_in_epoch_trained:
-                continue
-            loss, score, label = model(model.query(g, batch))
+        for step, batch in enumerate(dataset):
+            loss, score, label = model(batch)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -87,10 +126,6 @@ def train_func(config: Dict):
             scores.append(score)
             labels.append(label)
             losses.append(loss.item())
-
-        steps_in_epoch_trained = 0
-        if epoch % args.save_ckpt_by_epochs == 0:
-            save_checkpoint(model, logger, epoch, step, args)
 
         session.report(
             {
@@ -100,45 +135,19 @@ def train_func(config: Dict):
         )
 
 
-def run_ray(**kwargs):
-    """Run ray trainer."""
-    ray.init(num_cpus=4)
-
-    args = get_args(init_args, kwargs["run_args"] if "run_args" in kwargs else None)
-
-    trainer = TorchTrainer(
-        train_func,
-        train_loop_config={
-            "args": args,
-            **kwargs,
-        },
-        scaling_config=ScalingConfig(
-            num_workers=1, use_gpu=args.gpu, resources_per_worker={"CPU": 2}
-        ),
-    )
-    return trainer.fit()
-
-
 def _main():
-    # setup default logging component.
-    setup_default_logging_config(enable_telemetry=True)
-
-    # run_dist is the unified entry for pytorch model distributed training/evaluation/inference.
-    # User only needs to prepare initializing function for model, dataset, optimizer and args.
-    # reference: `deepgnn/pytorch/training/factory.py`
     ray.init(num_cpus=4)
 
-    args = get_args(init_args)
+    cora = Cora()
+    address = "localhost:9999"
+    s = Server(address, cora.data_dir(), 0, 1)
 
     trainer = TorchTrainer(
         train_func,
         train_loop_config={
-            "args": args,
-            "init_model_fn": create_model,
-            "init_dataset_fn": create_dataset,
-            "init_optimizer_fn": create_optimizer,
+            "ge_address": address,
         },
-        scaling_config=ScalingConfig(num_workers=1, use_gpu=args.gpu),
+        scaling_config=ScalingConfig(num_workers=1),
     )
     return trainer.fit()
 
