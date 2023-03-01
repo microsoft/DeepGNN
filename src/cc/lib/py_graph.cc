@@ -1021,7 +1021,6 @@ void lookup_neighbor_lists(PyGraph *py_graph, NB_Count_Cache &cache, std::span<N
         lookup_neighbor_counts(py_graph, cache, cache.nb_ids, in_edge_types, in_edge_types_size, neighbor_counts);
 
         neighbor_counts.clear();
-        // cache.nb_ids.clear();
         cache.nb_types.clear();
         cache.nb_weights.clear();
         return;
