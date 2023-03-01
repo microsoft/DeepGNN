@@ -110,7 +110,7 @@ jobs:
       - name: Install wheels
         run: pip install deepgnn_ge*.whl deepgnn_tf*.whl
       - name: Run AML example
-        run: cd ../docs/advanced/ && python aml.py
+        run: python aml.py
       - name: Run graphsage examples
         run: cd ./tensorflow/sage/ && sudo chmod +x *.sh && bash ./run.sh CPU && bash ./run.sh CPU disk yes
       - name: Run gcn examples
