@@ -130,6 +130,12 @@ jobs:
       HOROVOD_WITHOUT_TENSORFLOW: 1
       HOROVOD_WITH_PYTORCH: 1
       HOROVOD_WITHOUT_MXNET: 1
+      TENANT_ID: ${{ secrets.TENANT_ID }}
+      SERVICE_ID: ${{ secrets.SERVICE_ID }}
+      SERVICE_PASSWORD: ${{ secrets.SERVICE_PASSWORD }}
+      SUBSCRIPTION_ID: ${{ secrets.SUBSCRIPTION_ID }}
+      RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
+      WORKSPACE_NAME: ${{ secrets.WORKSPACE_NAME }}
     steps:
       - name: Download wheels
         uses: actions/download-artifact@v3.0.2

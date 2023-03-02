@@ -3,6 +3,7 @@
 """This example demonstrates how to use ray to submit a job to Azure ML using ray-on-aml."""
 from typing import List, Any
 from dataclasses import dataclass
+import os
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -229,14 +230,14 @@ if __name__ == "__main__":
         from azureml.core.authentication import ServicePrincipalAuthentication
 
         svc_pr = ServicePrincipalAuthentication(
-            tenant_id="${TENANT_ID}",
-            service_principal_id="${SERVICE_ID}",
-            service_principal_password="${SERVICE_PASSWORD}",
+            tenant_id=os.environ["TENANT_ID"],
+            service_principal_id=os.environ["SERVICE_ID"],
+            service_principal_password=os.environ["SERVICE_PASSWORD"],
         )
         ws = Workspace(
-            subscription_id="${SUBSCRIPTION_ID}",
-            resource_group="${RESOURCE_GROUP}",
-            workspace_name="${WORKSPACE_NAME}",
+            subscription_id=os.environ["SUBSCRIPTION_ID"],
+            resource_group=os.environ["RESOURCE_GROUP"],
+            workspace_name=os.environ["WORKSPACE_NAME"],
             auth=svc_pr,
         )
     ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="multi-node", maxnode=2)
