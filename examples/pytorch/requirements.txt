@@ -1,6 +1,7 @@
 azureml==0.2.7
 azureml-core==1.48.0
 horovod[pytorch]==0.25.0;sys_platform != 'win32'
+mlflow==2.1.1
 ray-on-aml==0.2.4
 ray[air,train]==2.2.0
 torch-geometric==2.0.4
