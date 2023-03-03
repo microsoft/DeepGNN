@@ -158,7 +158,7 @@ jobs:
       - name: Install wheels
         run: pip install deepgnn_ge*.whl deepgnn_torch*.whl
       - name: Run AML example
-        run: python aml.py
+        run: python pytorch/aml.py
       - name: Run gat examples
         run: bazel test -c opt --config=linux //examples/pytorch/gat:gat_example
       - name: Run graphsage supervised examples
