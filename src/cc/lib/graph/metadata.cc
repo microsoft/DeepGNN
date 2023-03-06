@@ -7,8 +7,12 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <glog/logging.h>
 #include <glog/raw_logging.h>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 namespace snark
 {

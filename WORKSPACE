@@ -161,3 +161,10 @@ http_archive(
     strip_prefix = "hadoop-3.3.1",
     urls = ["https://dlcdn.apache.org/hadoop/common/hadoop-3.3.1/hadoop-3.3.1.tar.gz"],
 )
+
+http_archive(
+    name = "json",
+    build_file = "//config:json.BUILD",
+    strip_prefix = "json-3.11.2",
+    urls = ["https://github.com/nlohmann/json/archive/refs/tags/v3.11.2.tar.gz"],
+)
