@@ -1183,8 +1183,11 @@ struct SamplerData
                 EXPECT_EQ(0, fclose(alias));
             }
             {
+                std::string version_str = "n";
+                version_str += std::to_string(snark::MINIMUM_SUPPORTED_VERSION);
+
                 json json_meta = {
-                    {"binary_data_version", snark::MINIMUM_SUPPORTED_VERSION},
+                    {"binary_data_version", version_str},
                     {"node_count", num_nodes_in_server},
                     {"edge_count", num_edge_records_in_server / 2},
                     {"node_type_num", 1},

@@ -100,8 +100,11 @@ Metadata::Metadata(std::filesystem::path path, std::string config_path)
 
 void Metadata::Write(std::filesystem::path path) const
 {
+    std::string version_str = "v";
+    version_str += std::to_string(m_version);
+
     json json_meta = {
-        {"binary_data_version", m_version},
+        {"binary_data_version", version_str},
         {"node_count", m_node_count},
         {"edge_count", m_edge_count},
         {"node_type_num", m_node_type_count},

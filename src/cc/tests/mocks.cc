@@ -97,8 +97,11 @@ snark::Partition convert(std::filesystem::path path, std::string suffix, MemoryG
         edge_index_out.close();
     }
     {
+        std::string version_str = "v";
+        version_str += std::to_string(snark::MINIMUM_SUPPORTED_VERSION);
+
         json json_meta = {
-            {"binary_data_version", snark::MINIMUM_SUPPORTED_VERSION},
+            {"binary_data_version", version_str},
             {"node_count", counter},
             {"edge_count", nb_index.size()},
             {"node_type_num", node_types},
