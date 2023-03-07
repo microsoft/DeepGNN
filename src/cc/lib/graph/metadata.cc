@@ -98,77 +98,40 @@ Metadata::Metadata(std::filesystem::path path, std::string config_path)
 
 void Metadata::Write(std::filesystem::path path) const
 {
-    auto meta = open_meta(std::move(path), "w+");
-    if (fprintf(meta, "v%zu\n", m_version) <= 0)
-    {
-        exit(errno);
-    }
-    if (fprintf(meta, "%zu\n", m_node_count) <= 0)
-    {
-        exit(errno);
-    }
-    if (fprintf(meta, "%zu\n", m_edge_count) <= 0)
-    {
-        exit(errno);
-    }
-    if (fprintf(meta, "%zu\n", m_node_type_count) <= 0)
-    {
-        exit(errno);
-    }
-    if (fprintf(meta, "%zu\n", m_edge_type_count) <= 0)
-    {
-        exit(errno);
-    }
-    if (fprintf(meta, "%zu\n", m_node_feature_count) <= 0)
-    {
-        exit(errno);
-    }
-    if (fprintf(meta, "%zu\n", m_edge_feature_count) <= 0)
-    {
-        exit(errno);
-    }
+    json json_meta = {
+        {"binary_data_version", m_version},
+        {"node_count", m_node_count},
+        {"edge_count", m_edge_count},
+        {"node_type_num", m_node_type_count},
+        {"edge_type_num", m_edge_type_count},
+        {"node_feature_num", m_node_feature_count},
+        {"edge_feature_num", m_edge_feature_count},
+        {"n_partitions", m_partition_count},
+    };
 
-    if (fprintf(meta, "%zu\n", m_partition_count) <= 0)
-    {
-        exit(errno);
-    }
+    std::vector<size_t> partition_ids;
 
     for (size_t p = 0; p < m_partition_count; ++p)
     {
-        if (fprintf(meta, "%zu\n", p) <= 0)
-        {
-            exit(errno);
-        }
-        for (size_t i = 0; i < m_node_type_count; ++i)
-        {
-            if (fprintf(meta, "%f\n", m_partition_node_weights[p][i]) <= 0)
-            {
-                exit(errno);
-            }
-        }
-        for (size_t i = 0; i < m_edge_type_count; ++i)
-        {
-            if (fprintf(meta, "%f\n", m_partition_edge_weights[p][i]) <= 0)
-            {
-                exit(errno);
-            }
-        }
+        partition_ids.push_back(p);
+
+        std::string m_node_type_count_str = "node_weight_";
+        m_node_type_count_str += std::to_string(p);
+        std::string m_edge_type_count_str = "edge_weight_";
+        m_edge_type_count_str += std::to_string(p);
+
+        json_meta[m_node_type_count_str] = m_partition_node_weights[p];
+        json_meta[m_edge_type_count_str] = m_partition_edge_weights[p];
     }
-    for (size_t i = 0; i < m_node_type_count; ++i)
-    {
-        if (fprintf(meta, "%zu\n", m_node_count_per_type[i]) <= 0)
-        {
-            exit(errno);
-        }
-    }
-    for (size_t i = 0; i < m_edge_type_count; ++i)
-    {
-        if (fprintf(meta, "%zu\n", m_edge_count_per_type[i]) <= 0)
-        {
-            exit(errno);
-        }
-    }
-    fclose(meta);
+
+    json_meta["partition_ids"] = partition_ids;
+
+    json_meta["node_count_per_type"] = m_node_count_per_type;
+    json_meta["edge_count_per_type"] = m_edge_count_per_type;
+
+    std::ofstream meta(path / "meta.txt");
+    meta << json_meta << std::endl;
+    meta.close();
 }
 
 } // namespace snark
