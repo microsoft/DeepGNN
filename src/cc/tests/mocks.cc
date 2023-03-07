@@ -114,7 +114,7 @@ snark::Partition convert(std::filesystem::path path, std::string suffix, MemoryG
         json_meta["node_count_per_type"] = node_type_counts;
         json_meta["edge_count_per_type"] = {edge_index.size()};
 
-        std::ofstream meta(path / "meta.txt");
+        std::ofstream meta(path / "meta.json");
         meta << json_meta << std::endl;
         meta.close();
     }

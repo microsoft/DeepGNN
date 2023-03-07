@@ -1115,14 +1115,14 @@ int32_t HDFSMoveMeta(const char *filename_src, const char *filename_dst, const c
     auto data = read_hdfs<char>(filename_src, config_path);
     if (data.size() > 100000) // 100kB defined as max size of meta
     {
-        RAW_LOG_ERROR("HDFSReadMeta meta.txt too large, %li > 100kB!", data.size());
+        RAW_LOG_ERROR("HDFSReadMeta meta.json too large, %li > 100kB!", data.size());
         return 1;
     }
 
     auto file = fopen(filename_dst, "w");
     if (file == nullptr)
     {
-        RAW_LOG_ERROR("Failed to open meta.txt for writing at '%s'!", filename_dst);
+        RAW_LOG_ERROR("Failed to open meta.json for writing at '%s'!", filename_dst);
         return 1;
     }
     fwrite(data.data(), sizeof(char), data.size(), file);

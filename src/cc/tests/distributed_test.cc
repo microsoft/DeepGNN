@@ -1200,7 +1200,7 @@ struct SamplerData
                 json_meta["node_count_per_type"] = {num_nodes_in_server};
                 json_meta["edge_count_per_type"] = {num_edge_records_in_server / 2};
 
-                std::ofstream meta(path / "meta.txt");
+                std::ofstream meta(path / "meta.json");
                 meta << json_meta << std::endl;
                 meta.close();
             }

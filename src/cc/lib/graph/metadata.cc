@@ -25,7 +25,7 @@ Metadata::Metadata(std::filesystem::path path, std::string config_path)
         RAW_LOG_FATAL("HDFS streaming only supported on Linux!");
 #else
     {
-        auto full_path = path / "meta.txt";
+        auto full_path = path / "meta.json";
         auto buffer = read_hdfs<char>(full_path.string(), m_config_path);
 
         path = std::filesystem::temp_directory_path();
@@ -41,10 +41,12 @@ Metadata::Metadata(std::filesystem::path path, std::string config_path)
     }
 #endif
 
-    std::ifstream f(path / "meta.txt");
+    std::ifstream f(path / "meta.json");
     json meta = json::parse(f);
 
-    m_version = meta["binary_data_version"];
+    std::string version_full = meta["binary_data_version"];
+    version_full.erase(0, 1);
+    m_version = stoi(version_full);
     if (m_version < MINIMUM_SUPPORTED_VERSION)
     {
         RAW_LOG_FATAL("Unsupported version of binary data %zu. Minimum supported version is %zu. Please use latest "
@@ -129,7 +131,7 @@ void Metadata::Write(std::filesystem::path path) const
     json_meta["node_count_per_type"] = m_node_count_per_type;
     json_meta["edge_count_per_type"] = m_edge_count_per_type;
 
-    std::ofstream meta(path / "meta.txt");
+    std::ofstream meta(path / "meta.json");
     meta << json_meta << std::endl;
     meta.close();
 }

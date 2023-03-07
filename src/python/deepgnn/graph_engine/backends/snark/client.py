@@ -174,7 +174,7 @@ class SnarkDistributedBackend(GraphEngineBackend):
             options.servers is None or len(options.servers) == 0
         ):
             # TODO(alsamylk): provide a better metadata reader in snark
-            with open(os.path.join(options.data_dir, "meta.txt"), "r") as meta:
+            with open(os.path.join(options.data_dir, "meta.json"), "r") as meta:
                 # Use a simple heuristic: number of original partitions, but cap it at 4
                 # to avoid extreme cases. Partition count is written on 7th line.
                 lines = meta.readlines()

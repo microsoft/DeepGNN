@@ -23,7 +23,7 @@ FILE *open_file(std::filesystem::path s, const char *mode)
 
 FILE *open_meta(std::filesystem::path path, std::string mode)
 {
-    return open_file(path / "meta.txt", mode.c_str());
+    return open_file(path / "meta.json", mode.c_str());
 }
 
 FILE *open_node_map(std::filesystem::path path, std::string suffix)
