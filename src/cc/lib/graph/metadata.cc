@@ -41,14 +41,10 @@ Metadata::Metadata(std::filesystem::path path, std::string config_path)
     }
 #endif
 
-    auto meta = open_meta(std::move(path), "rt");
-    if (fscanf(meta, "v%zu\n", &m_version) <= 0)
-    {
-        RAW_LOG_ERROR(
-            "Failed to read binary data version from meta file. Please use latest deepgnn package to convert data.");
-        exit(errno);
-    }
+    std::ifstream f(path / "meta.txt");
+    json meta = json::parse(f);
 
+    m_version = meta["binary_data_version"];
     if (m_version < MINIMUM_SUPPORTED_VERSION)
     {
         RAW_LOG_FATAL("Unsupported version of binary data %zu. Minimum supported version is %zu. Please use latest "
@@ -56,86 +52,48 @@ Metadata::Metadata(std::filesystem::path path, std::string config_path)
                       m_version, MINIMUM_SUPPORTED_VERSION);
     }
 
-    if (fscanf(meta, "%zu\n", &m_node_count) <= 0)
-    {
-        exit(errno);
-    }
-    if (fscanf(meta, "%zu\n", &m_edge_count) <= 0)
-    {
-        exit(errno);
-    }
-    if (fscanf(meta, "%zu\n", &m_node_type_count) <= 0)
-    {
-        exit(errno);
-    }
-    if (fscanf(meta, "%zu\n", &m_edge_type_count) <= 0)
-    {
-        exit(errno);
-    }
-    if (fscanf(meta, "%zu\n", &m_node_feature_count) <= 0)
-    {
-        exit(errno);
-    }
-    if (fscanf(meta, "%zu\n", &m_edge_feature_count) <= 0)
-    {
-        exit(errno);
-    }
-
-    if (fscanf(meta, "%zu\n", &m_partition_count) <= 0)
-    {
-        exit(errno);
-    }
+    m_node_count = meta["node_count"];
+    m_edge_count = meta["edge_count"];
+    m_node_type_count = meta["node_type_num"];
+    m_edge_type_count = meta["edge_type_num"];
+    m_node_feature_count = meta["node_feature_num"];
+    m_edge_feature_count = meta["edge_feature_num"];
+    m_partition_count = meta["n_partitions"];
 
     m_partition_node_weights =
         std::vector<std::vector<float>>(m_partition_count, std::vector<float>(m_node_type_count, 0.0f));
     m_partition_edge_weights =
         std::vector<std::vector<float>>(m_partition_count, std::vector<float>(m_edge_type_count, 0.0f));
 
-    float edge_weight, node_weight;
     uint32_t partition_num;
     for (size_t p = 0; p < m_partition_count; ++p)
     {
-        if (fscanf(meta, "%ul\n", &partition_num) <= 0)
-        {
-            exit(errno);
-        }
+        partition_num = meta["partition_ids"][p];
+        std::string m_node_type_count_str = "node_weight_";
+        m_node_type_count_str += std::to_string(partition_num);
+        std::string m_edge_type_count_str = "edge_weight_";
+        m_edge_type_count_str += std::to_string(partition_num);
+
         for (size_t i = 0; i < m_node_type_count; ++i)
         {
-            if (fscanf(meta, "%f\n", &node_weight) <= 0)
-            {
-                exit(errno);
-            }
-            m_partition_node_weights[partition_num][i] = node_weight;
+            m_partition_node_weights[partition_num][i] = meta[m_node_type_count_str][i];
         }
         for (size_t i = 0; i < m_edge_type_count; ++i)
         {
-            if (fscanf(meta, "%f\n", &edge_weight) <= 0)
-            {
-                exit(errno);
-            }
-            m_partition_edge_weights[partition_num][i] = edge_weight;
+            m_partition_edge_weights[partition_num][i] = meta[m_edge_type_count_str][i];
         }
     }
-    size_t count;
+
     m_node_count_per_type.resize(m_node_type_count);
     for (size_t i = 0; i < m_node_type_count; ++i)
     {
-        if (fscanf(meta, "%zu\n", &count) <= 0)
-        {
-            exit(errno);
-        }
-        m_node_count_per_type[i] = count;
+        m_node_count_per_type[i] = meta["node_count_per_type"][i];
     }
     m_edge_count_per_type.resize(m_edge_type_count);
     for (size_t i = 0; i < m_edge_type_count; ++i)
     {
-        if (fscanf(meta, "%zu\n", &count) <= 0)
-        {
-            exit(errno);
-        }
-        m_edge_count_per_type[i] = count;
+        m_edge_count_per_type[i] = meta["edge_count_per_type"][i];
     }
-    fclose(meta);
 }
 
 void Metadata::Write(std::filesystem::path path) const
