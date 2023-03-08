@@ -23,6 +23,7 @@
 #endif
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
 #include "boost/random/uniform_real_distribution.hpp"
 
 #include <grpcpp/create_channel.h>
@@ -934,6 +935,7 @@ typedef struct
 {
     absl::flat_hash_map<NodeID, size_t> lookup_count;
     absl::flat_hash_map<NodeID, std::vector<NodeID>> lookup_neighbors;
+    absl::flat_hash_set<NodeID> unique_nodes;
     std::vector<NodeID> node_ids;
     std::vector<size_t> nb_index;
     std::vector<uint64_t> counts;
@@ -991,11 +993,13 @@ void lookup_neighbor_lists(PyGraph *py_graph, NB_Count_Cache &cache, std::span<N
                            std::vector<uint64_t> &neighbor_counts, bool skip_last_step)
 {
     assert(cache.node_ids.empty());
+    assert(cache.unique_nodes.empty());
     for (auto node_id : input)
     {
         auto it = cache.lookup_neighbors.find(node_id);
-        if (it == std::end(cache.lookup_neighbors))
+        if (it == std::end(cache.lookup_neighbors) && cache.unique_nodes.find(node_id) == std::end(cache.unique_nodes))
         {
+            cache.unique_nodes.emplace(node_id);
             cache.node_ids.emplace_back(node_id);
         }
     }
@@ -1033,6 +1037,7 @@ void lookup_neighbor_lists(PyGraph *py_graph, NB_Count_Cache &cache, std::span<N
     cache.nb_ids.clear();
     cache.nb_types.clear();
     cache.nb_weights.clear();
+    cache.unique_nodes.clear();
 }
 
 } // namespace
