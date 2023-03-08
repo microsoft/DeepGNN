@@ -1049,7 +1049,6 @@ void lookup_neighbor_lists(PyGraph *py_graph, NB_Count_Cache &cache, std::span<N
     neighbors = cache.lookup_neighbors[input.back()];
     neighbor_counts.resize(neighbors.size());
     cache.node_ids.clear();
-    cache.unique_nodes.clear();
     lookup_neighbor_counts(py_graph, cache, neighbors, in_edge_types, in_edge_types_size, neighbor_counts);
     cache.nb_ids.clear();
     cache.nb_types.clear();
@@ -1092,7 +1091,6 @@ int32_t PPRSampleNeighbor(PyGraph *py_graph, NodeID *in_node_ids, size_t in_node
     {
         snd_hop = std::move(nb_cache.nb_ids);
         nb_cache.nb_ids.clear();
-        nb_cache.unique_nodes.clear();
         lookup_neighbor_lists(py_graph, nb_cache, std::span<NodeID>(snd_hop), neighbors, in_edge_types,
                               in_edge_types_size, neighbor_counts, true);
     }
