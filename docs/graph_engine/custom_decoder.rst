@@ -110,20 +110,25 @@ Here we manually write a meta.txt file for our graph engine to load.
 
 .. code-block:: python
 
-    >>> with open(working_dir.name + "/meta.txt", "w") as f:
-    ...     content = [
-    ...         "v1",  # converter version
-    ...         writer.node_count,
-    ...         writer.edge_count,
-    ...         writer.node_type_num,
-    ...         writer.edge_type_num,
-    ...         writer.node_feature_num,
-    ...         writer.edge_feature_num,
-    ...         1,  # partition count
-    ...         0,  # partition id
-    ...     ] + writer.node_weight + writer.edge_weight + writer.node_type_count + writer.edge_type_count
-    ...     f.write("\n".join([str(line) for line in content]) + "\n")
-    31
+    >>> import json
+    >>> with open(working_dir.name + "/meta.json", "w") as f:
+    ...     content = {
+    ...         "binary_data_version": "v2",  # converter version
+    ...         "node_count": writer.node_count,
+    ...         "edge_count": writer.edge_count,
+    ...         "node_type_num": writer.node_type_num,
+    ...         "edge_type_num": writer.edge_type_num,
+    ...         "node_feature_num": writer.node_feature_num,
+    ...         "edge_feature_num": writer.edge_feature_num,
+    ...         "n_partitions": 1,  # partition count
+    ...         "partition_ids": [0],  # partition id
+    ...         "node_weight_0": writer.node_weight,
+    ...         "edge_weight_0": writer.edge_weight,
+    ...         "node_count_per_type": writer.node_type_count,
+    ...         "edge_count_per_type": writer.edge_type_count,
+    ...     }
+    ...     f.write(json.dumps(content))
+    294
 
 We load the generated binaries into a graph engine and demonstrate it working.
 
