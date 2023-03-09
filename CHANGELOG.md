@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Change generated file meta.txt to meta.json in json format.
+
 ## [0.1.58] - 2022-02-15
 
 ### Added
