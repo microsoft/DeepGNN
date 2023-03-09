@@ -17,6 +17,9 @@
 #ifdef SNARK_PLATFORM_LINUX
 #include <mimalloc-override.h>
 #endif
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 using NeighborRecord = std::tuple<snark::NodeId, snark::Type, float>;
 struct Node
@@ -135,24 +138,42 @@ snark::Graph create_graph(size_t num_types, size_t num_nodes_per_partition, size
     }
 
     {
-        std::ofstream meta(path / "meta.txt");
-        meta << "v" << snark::MINIMUM_SUPPORTED_VERSION << "\n";
-        meta << num_nodes << "\n";
-        meta << num_edges << "\n";
+        std::string version_str = "v";
+        version_str += std::to_string(snark::MINIMUM_SUPPORTED_VERSION);
 
-        meta << 1 << "\n";              // node_types_count
-        meta << 1 << "\n";              // edge_types_count
-        meta << 0 << "\n";              // node_features_count
-        meta << 0 << "\n";              // edge_features_count
-        meta << num_partitions << "\n"; // partition_count
+        json json_meta = {
+            {"binary_data_version", version_str},
+            {"node_count", num_nodes},
+            {"edge_count", num_edges},
+            {"node_type_num", 1},
+            {"edge_type_num", 1},
+            {"node_feature_num", 0},
+            {"edge_feature_num", 0},
+            {"n_partitions", num_partitions},
+        };
+
+        std::vector<size_t> partition_ids;
+
         for (size_t partition_id = 0; partition_id < num_partitions; ++partition_id)
         {
-            meta << partition_id << "\n";                      // partition id
-            meta << partition_num_nodes[partition_id] << "\n"; // partition node weight
-            meta << 1 << "\n";                                 // partition edge weight
+            partition_ids.push_back(partition_id);
+
+            std::string m_node_type_count_str = "node_weight_";
+            m_node_type_count_str += std::to_string(partition_id);
+            std::string m_edge_type_count_str = "edge_weight_";
+            m_edge_type_count_str += std::to_string(partition_id);
+
+            json_meta[m_node_type_count_str] = {partition_num_nodes[partition_id]};
+            json_meta[m_edge_type_count_str] = {1};
         }
-        meta << num_nodes << "\n";
-        meta << num_edges << "\n";
+
+        json_meta["partition_ids"] = partition_ids;
+
+        json_meta["node_count_per_type"] = {num_nodes};
+        json_meta["edge_count_per_type"] = {num_edges};
+
+        std::ofstream meta(path / "meta.json");
+        meta << json_meta << std::endl;
         meta.close();
     };
     return snark::Graph(snark::Metadata{path.string()}, std::move(partition_paths), std::move(partition_indices),
