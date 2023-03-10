@@ -6,9 +6,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Added `num_hops_to_prefetch` argument for `ppr-go` neighbor sampling strategy to cache inputs locally for distributed graphs.
-
 ## [0.1.58] - 2022-02-15
 
 ### Added

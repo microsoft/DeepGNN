@@ -454,7 +454,6 @@ class MemoryGraph:
             c_size_t,
             c_float,
             c_float,
-            c_size_t,
             c_int64,
             c_float,
             POINTER(c_int64),
@@ -895,7 +894,6 @@ class MemoryGraph:
         eps: float = 1e-4,
         default_node: int = -1,
         default_weight: float = 0.0,
-        num_hops_to_prefetch: int = 2,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Personalized PageRank (PPR) sampling of neighbor nodes.
 
@@ -906,7 +904,6 @@ class MemoryGraph:
             count (int, optional): Number of neighbors to sample. Defaults to 10.
             alpha (float, optional): PPR teleport probability. Defaults to 0.5.
             eps (float, optional): Stopping threshold for ACL's ApproximatePR. Defaults to 0.0001.
-            num_hops_to_prefetch (int, optional): Number of neighbor hops to prefetch. Memory/speed tradeoff. Defaults to 2.
             default_node (int, optional): Value to use if a node doesn't have neighbors. Defaults to -1.
             default_weight (float, optional): Weight to use if a node doesn't have neighbors. Defaults to 0.
 
@@ -929,7 +926,6 @@ class MemoryGraph:
             c_size_t(count),
             c_float(alpha),
             c_float(eps),
-            c_size_t(num_hops_to_prefetch),
             c_int64(default_node),
             c_float(default_weight),
             result_nodes.ctypes.data_as(POINTER(c_int64)),

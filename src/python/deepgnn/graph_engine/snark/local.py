@@ -105,7 +105,6 @@ class Client(Graph):
         default_edge_type: int = -1,
         alpha: float = 0.5,
         eps: float = 0.0001,
-        num_hops_to_prefetch: int = 2,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Sample node neighbors."""
         if strategy == "byweight":
@@ -144,7 +143,6 @@ class Client(Graph):
                 eps,
                 default_node,
                 default_weight,
-                num_hops_to_prefetch,
             )
             return (
                 result[0],

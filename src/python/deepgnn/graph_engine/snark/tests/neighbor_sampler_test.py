@@ -611,7 +611,6 @@ def test_karate_club_ppr_sampling(
         count=5,
         alpha=0.1,
         eps=0.0001,
-        num_hops_to_prefetch=2,
     )
 
     npt.assert_array_equal(
@@ -653,7 +652,6 @@ def test_karate_club_ppr_sampling_empty_nb_list(
         eps=0.0001,
         default_node=-1,
         default_weight=0.0,
-        num_hops_to_prefetch=1,
     )
 
     npt.assert_array_equal(nodes, [[1, -1], [2, -1], [6, -1]])

@@ -28,18 +28,30 @@ def setup_module():
     lib._LIB_PATH = get_lib_name()
 
 
-def sample(graph, batches, alpha, epsilon, num_hops_to_prefetch):
+def weighted_sample(graph, batches):
     total = 0
     for batch in batches:
-        nodes, weights, types, counts = graph.sample_neighbors(
+        nodes = graph.sample_neighbors(
+            strategy="byweight",
+            nodes=batch,
+            edge_types=np.array([0], dtype=np.int32),
+            count=50,
+        )[0]
+        total += len(nodes)
+    return total
+
+
+def sample(graph, batches, alpha, epsilon):
+    total = 0
+    for batch in batches:
+        nodes = graph.sample_neighbors(
             strategy="ppr-go",
             nodes=batch,
             edge_types=np.array([0], dtype=np.int32),
             count=50,
             alpha=alpha,
             eps=epsilon,
-            num_hops_to_prefetch=num_hops_to_prefetch,
-        )
+        )[0]
         total += len(nodes)
     return total
 
@@ -68,14 +80,25 @@ def test_ppr_on_cora_distributed(benchmark, dataset):
         dataset.graph.data_dir(), partitions=[0], hostname="localhost:50051"
     )
     c = distributed.Client(["localhost:50051"])
-    result = benchmark(sample, c, dataset.inputs, 0.85, 0.0001, 2)
+    result = benchmark(
+        sample,
+        c,
+        dataset.inputs,
+        0.85,
+        0.0001,
+    )
     c.reset()
     s.reset()
     assert result == dataset.returned_nodes_count
 
 
 def test_ppr_on_cora_in_memory(benchmark, dataset):
-    result = benchmark(sample, dataset.graph, dataset.inputs, 0.85, 0.0001, 2)
+    result = benchmark(sample, dataset.graph, dataset.inputs, 0.85, 0.0001)
+    assert result == dataset.returned_nodes_count
+
+
+def test_weighted_on_cora_in_memory(benchmark, dataset):
+    result = benchmark(weighted_sample, dataset.graph, dataset.inputs)
     assert result == dataset.returned_nodes_count
 
 
