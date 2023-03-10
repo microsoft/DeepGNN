@@ -238,42 +238,30 @@ node_features: *|type1:v1 v2;type2:v1 v2|*, Node feature vectors, type can be on
 
 neighbors: *| int, int, float, int, features |*, src_id, dst_id, edge_weight, edge_type and a feature vector in the same form as node_features.
 
-Generated meta.txt Format
+Generated meta.json Format
 =========================
 
-Graph `meta.txt` is as follows with all pieces of text replaced by integers,
+Graph `meta.json` is as follows with all pieces of text replaced by integers,
 
 .. code-block:: text
 
-	binary_data_version
-	node_count
-	edge_count
-	node_type_count
-	edge_type_count
-	node_feature_count
-	edge_feature_count
-	partition_count
-	partition_id_0 == 0
-	p0_node_type_0
-	...
-	p0_node_type_n
-	p0_edge_type_0
-	...
-	p0_edge_type_n
-	...
-	partition_id_N == N
-	pN_node_type_0
-	...
-	pN_node_type_n
-	pN_edge_type_0
-	...
-	pN_edge_type_n
-	node_count_per_type_0
-	...
-	node_count_per_type_n
-	edge_count_per_type_0
-	...
-	edge_count_per_type_n
+	{
+	"binary_data_version": binary_data_version,
+	"node_count": node_count,
+	"edge_count": edge_count,
+	"node_type_count": node_type_count,
+	"edge_type_count": edge_type_count,
+	"node_count_per_type": [node_count_per_type_0, ..., node_count_per_type_n],
+	"edge_count_per_type": [edge_count_per_type_0, ..., edge_count_per_type_n],
+	"node_feature_count": node_feature_count,
+	"edge_feature_count": edge_feature_count,
+	"n_partitions": partition_count,
+	"partition_ids": [partition_id_0, ...],
+	"node_weight_0": [p0_node_type_0, ..., p0_node_type_n],
+	"edge_weight_0": [p0_edge_type_0, ..., p0_edge_type_n],
+	"node_weight_N": [pN_node_type_0, ..., pN_node_type_n],
+	"edge_weight_N": [pN_edge_type_0, ..., pN_edge_type_n],
+	}
 
 **************
 fsspec support

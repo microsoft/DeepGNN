@@ -244,15 +244,12 @@ def test_snark_backend_distributed_graph_features_missing_from_graph(distributed
 
 def test_meta_version_message():
     working_dir = tempfile.TemporaryDirectory()
-    meta_file = working_dir.name + f"/meta.txt"
+    meta_file = working_dir.name + f"/meta.json"
     with open(meta_file, "w+") as f:
-        f.writelines(["15\n", "30\n", "2\n", "1\n", "2\n", "1\n"])
-    with pytest.raises(RuntimeError) as excinfo:
+        f.writelines(['{"node_count": 10, "edge_count": 10}'])
+    with pytest.raises(KeyError) as excinfo:
         Meta(working_dir.name)
-        assert (
-            "First line in meta file should be version, please regenerate binary data"
-            in str(excinfo.value)
-        )
+        assert "KeyError: 'binary_data_version'" in str(excinfo.value)
 
 
 if __name__ == "__main__":

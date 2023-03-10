@@ -106,7 +106,7 @@ as long as the suffix value is incremented.
     >>> reader.close()
     >>> writer.close()
 
-Here we manually write a meta.txt file for our graph engine to load.
+Here we manually write a meta.json file for our graph engine to load.
 
 .. code-block:: python
 
