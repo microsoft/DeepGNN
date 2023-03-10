@@ -61,6 +61,9 @@ class SnarkDistributedBackend(GraphEngineBackend):
                     self.ssl_cert: Optional[str] = (
                         options.ssl_cert if options.enable_ssl else None
                     )
+                    self.grpc_options = options.grpc_options
+                    self.num_threads = options.num_threads
+                    self.num_cq_per_thread = options.num_cq_per_thread
                     self._client: Optional[DistributedClient] = None
 
                 @property
@@ -68,7 +71,11 @@ class SnarkDistributedBackend(GraphEngineBackend):
                     with self.lock:
                         if self._client is None:
                             self._client = DistributedClient(
-                                self.servers, self.ssl_cert
+                                self.servers,
+                                self.ssl_cert,
+                                grpc_options=self.grpc_options,
+                                num_threads=self.num_threads,
+                                num_cq_per_thread=self.num_cq_per_thread,
                             )
                     return self._client
 
