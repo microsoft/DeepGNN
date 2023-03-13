@@ -456,7 +456,11 @@ def linearize(value):
 
 
 def write_multi_binary(output_dir, partitions):
-
+    for i, p in enumerate(partitions):
+        writer = BinaryWriter(output_dir, i)
+        for v in p:
+            writer.add([linearize(v)])
+        writer.close()
     content = {
         "binary_data_version": "v2",  # converter version
         "node_count": 3,

@@ -269,24 +269,31 @@ def write_multi_binary(output_dir, partitions):
         else:
             return f"{json_input['src_id']},{json_input['dst_id']},{json_input['edge_type']},{json_input['weight']},{features}"
 
-    partition_meta = ""
     for i, p in enumerate(partitions):
         decoder = EdgeListDecoder()
         writer = BinaryWriter(output_dir, i)
         for v in p:
             writer.add(decoder.decode(json_to_edge_list_helper(v)))
         writer.close()
-        nf = "\n".join(map(str, writer.node_type_count))
-        ef = "\n".join(map(str, writer.edge_type_count))
-        if nf == "":
-            nf = "0\n0\n0"
-        if ef == "":
-            ef = "0\n0"
-        partition_meta += f"{i}\n3\n3\n3\n2\n2\n{nf}\n{ef}\n"
-    meta = open(os.path.join(output_dir, "meta.txt"), "w+")
-    meta.write(f"v3\n3\n3\n2\n15\n15\n2\n")
-    meta.write(partition_meta)
-    meta.close()
+    content = {
+        "binary_data_version": "v2",  # converter version
+        "node_count": 3,
+        "edge_count": 3,
+        "node_type_num": 3,
+        "edge_type_num": 2,
+        "node_feature_num": 15,
+        "edge_feature_num": 15,
+        "n_partitions": 2,  # partition count
+        "partition_ids": [0, 1],  # partition id
+        "node_weight_0": [3, 3, 3],
+        "edge_weight_0": [2, 2],
+        "node_weight_1": [3, 3, 3],
+        "edge_weight_1": [2, 2],
+        "node_count_per_type": [1, 1, 1],
+        "edge_count_per_type": [1, 2],
+    }
+    with open(os.path.join(output_dir, "meta.json"), "w+") as f:
+        f.write(json.dumps(content))
 
 
 @pytest.fixture(scope="module")
@@ -1628,14 +1635,31 @@ def test_partitions_from_separate_folders():
         ).convert()
     meta_folder = os.path.join(folder.name, "p_meta")
     os.makedirs(name=meta_folder, exist_ok=True)
-    with open(os.path.join(meta_folder, "meta.txt"), "w+") as meta:
-        meta.write(f"v2\n4\n0\n2\n0\n2\n0\n4\n")
-        meta.write(f"0\n")
-        meta.write(f"0\n1\n1\n0\n0\n")  # p1
-        meta.write(f"1\n1\n1\n0\n0\n")  # p2
-        meta.write(f"2\n1\n1\n0\n0\n")  # p3
-        meta.write(f"3\n1\n1\n0\n0\n")  # p4
-        meta.write(f"2\n2\n")
+
+    content = {
+        "binary_data_version": "v2",  # converter version
+        "node_count": 4,
+        "edge_count": 0,
+        "node_type_num": 2,
+        "edge_type_num": 0,
+        "node_feature_num": 2,
+        "edge_feature_num": 0,
+        "n_partitions": 4,  # partition count
+        "partition_ids": [0, 1, 2, 3],  # partition id
+        "node_weight_0": [1, 1, 0, 0],
+        "edge_weight_0": [],
+        "node_weight_1": [1, 1, 0, 0],
+        "edge_weight_1": [],
+        "node_weight_2": [1, 1, 0, 0],
+        "edge_weight_2": [],
+        "node_weight_3": [1, 1, 0, 0],
+        "edge_weight_3": [],
+        "node_count_per_type": [2, 2],
+        "edge_count_per_type": [],
+    }
+    with open(os.path.join(meta_folder, "meta.json"), "w+") as f:
+        f.write(json.dumps(content))
+
     cl = client.MemoryGraph(
         meta_folder,
         [(partition_paths[0], 0), (partition_paths[1], 1)],
