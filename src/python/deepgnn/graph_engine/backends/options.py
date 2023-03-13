@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 """Options to initialize graph engine."""
 import argparse
-from typing import List
+from typing import List, Optional, Tuple
 from enum import Enum
 from deepgnn.graph_engine.snark.converter.options import ConverterOptions
 from deepgnn.graph_engine.snark.client import PartitionStorageType
@@ -43,6 +43,9 @@ class BackendOptions:
         self.storage_type = PartitionStorageType.memory
         self.config_path = ""
         self.stream = False
+        self.grpc_options: List[Tuple] = []
+        self.num_threads: Optional[int] = None
+        self.num_cq_per_thread: Optional[int] = None
 
         # sometimes user need to implement their own backend, using this custom
         # field, user can start graph engine using their own code.

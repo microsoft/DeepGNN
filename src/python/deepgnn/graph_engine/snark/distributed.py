@@ -22,6 +22,8 @@ class Client(ge_snark.Client):
         servers: Union[str, List[str]],
         ssl_cert: Optional[str] = None,
         grpc_options: Optional[List[Tuple[str, str]]] = None,
+        num_threads: Optional[int] = None,
+        num_cq_per_thread: Optional[int] = None,
     ):
         """Init snark client to wrapper around ctypes API of distributed graph."""
         self.logger = get_logger()
@@ -31,7 +33,11 @@ class Client(ge_snark.Client):
         self._servers = servers
         self._ssl_cert = ssl_cert
         self.graph = client.DistributedGraph(
-            servers, ssl_cert, grpc_options=grpc_options
+            servers,
+            ssl_cert,
+            grpc_options=grpc_options,
+            num_threads=num_threads,
+            num_cq_per_thread=num_cq_per_thread,
         )
         self.node_samplers: Dict[str, client.NodeSampler] = {}
         self.edge_samplers: Dict[str, client.EdgeSampler] = {}

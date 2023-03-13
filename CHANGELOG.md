@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Change generated file meta.txt to meta.json in json format.
 
+### Added
+
+- All `DistributedGraph` config options (e.g. `grpc_options`, `num_threads`, ...) are exposed to `DistributedClient` and `BackendOptions`
+
 ## [0.1.58] - 2022-02-15
 
 ### Added
