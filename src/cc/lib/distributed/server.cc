@@ -131,6 +131,9 @@ GRPCServer::GRPCServer(std::shared_ptr<snark::GraphEngineServiceImpl> engine_ser
         creds = grpc::SslServerCredentials(opts);
     }
 
+    // For ppr-go batching requests from client might be > 4mb.
+    builder.SetMaxReceiveMessageSize(-1);
+
     builder.AddListeningPort(host_name, std::move(creds));
     if (!m_engine_service_impl)
     {
