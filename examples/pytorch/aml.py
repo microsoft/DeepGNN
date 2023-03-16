@@ -153,7 +153,7 @@ def train_func(config: dict):
         label_idx=config["label_idx"],
         label_dim=config["label_dim"],
     )
-    model = GAT(
+    model_original = GAT(
         in_dim=config["feature_dim"],
         head_num=[8, 1],
         hidden_dim=8,
@@ -162,7 +162,7 @@ def train_func(config: dict):
         attn_drop=0.6,
         q_param=p,
     )
-    model = train.torch.prepare_model(model)
+    model = train.torch.prepare_model(model_original)
 
     optimizer = torch.optim.Adam(
         filter(lambda p: p.requires_grad, model.parameters()),
@@ -177,13 +177,13 @@ def train_func(config: dict):
     train_dataset = train_dataset.repartition(train_dataset.count() // batch_size)
     train_pipe = train_dataset.window(blocks_per_window=4).repeat(config["num_epochs"])
     train_pipe = train_pipe.map_batches(
-        lambda idx: model.q.query_training(g, np.array(idx))
+        lambda idx: model_original.q.query_training(g, np.array(idx))
     )
 
     test_dataset = ray.data.read_text(f"{cora.data_dir()}/test.nodes")
     test_dataset = test_dataset.repartition(1)
     test_dataset = test_dataset.map_batches(
-        lambda idx: model.q.query_training(g, np.array(idx))
+        lambda idx: model_original.q.query_training(g, np.array(idx))
     )
     test_dataset_iter = test_dataset.repeat(config["num_epochs"]).iter_epochs()
 
@@ -206,7 +206,7 @@ def train_func(config: dict):
 
         session.report(
             {
-                model.metric_name(): model.compute_metric(
+                model_original.metric_name(): model_original.compute_metric(
                     test_scores, test_labels
                 ).item(),
                 "loss": np.mean(losses),
@@ -257,7 +257,7 @@ if __name__ == "__main__":
             "num_classes": 7,
         },
         run_config=RunConfig(),
-        scaling_config=ScalingConfig(num_workers=1),
+        scaling_config=ScalingConfig(num_workers=2),
     )
     result = trainer.fit()
 
