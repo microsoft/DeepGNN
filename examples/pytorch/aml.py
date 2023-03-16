@@ -134,13 +134,22 @@ class GAT(BaseModel):
 
 def train_func(config: dict):
     """Training loop for ray trainer."""
-    cora = Cora()
+    cora = Cora(n_partitions=session.get_world_size())
 
-    address = "localhost:9999"
-    _ = Server(address, cora.data_dir(), 0, 1)
+    address = [
+        "localhost:9994",
+        "localhost:9995",
+        "localhost:9996",
+        "localhost:9997",
+        "localhost:9998",
+        "localhost:9999",
+    ][: session.get_world_size()]
+    _ = Server(
+        address[session.get_world_rank()], cora.data_dir(), session.get_world_rank(), 1
+    )
 
     def get_graph():
-        return DistributedClient([address])
+        return DistributedClient(address)
 
     config["get_graph"] = get_graph
 
@@ -240,7 +249,7 @@ if __name__ == "__main__":
             workspace_name=os.environ["WORKSPACE_NAME"],
             auth=svc_pr,
         )
-    ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="multi-node", maxnode=2)
+    ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="gpu-cluster", maxnode=2)
 
     ray.init()
 

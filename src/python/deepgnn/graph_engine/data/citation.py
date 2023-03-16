@@ -179,12 +179,17 @@ class CitationGraph(Client):
     """Citation graph dataset."""
 
     def __init__(
-        self, name: str, output_dir: Optional[str] = None, split: str = "public"
+        self,
+        name: str,
+        output_dir: Optional[str] = None,
+        split: str = "public",
+        n_partitions: int = 1,
     ):
         """Initialize dataset."""
         assert name in ["cora", "citeseer"]
         self.GRAPH_NAME = name
         self.output_dir = output_dir
+        self.n_partitions = n_partitions
         if self.output_dir is None:
             self.output_dir = os.path.join(
                 tempfile.gettempdir(), "citation", self.GRAPH_NAME
@@ -229,7 +234,7 @@ class CitationGraph(Client):
 
         convert.MultiWorkersConverter(
             graph_path=graph_file,
-            partition_count=1,
+            partition_count=self.n_partitions,
             output_dir=data_dir,
             decoder=decoders.EdgeListDecoder(),
         ).convert()
@@ -330,9 +335,14 @@ class Cora(CitationGraph):
     - Node Feature Dim: 1433
     """
 
-    def __init__(self, output_dir: Optional[str] = None, split: str = "public"):
+    def __init__(
+        self,
+        output_dir: Optional[str] = None,
+        split: str = "public",
+        n_partitions: int = 1,
+    ):
         """Initialize dataset."""
-        super().__init__("cora", output_dir, split)
+        super().__init__("cora", output_dir, split, n_partitions)
 
 
 class Citeseer(CitationGraph):
