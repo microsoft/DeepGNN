@@ -8,7 +8,6 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-import ray
 import ray.train as train
 from ray.train.torch import TorchTrainer
 from ray.air import session
@@ -134,6 +133,8 @@ class GAT(BaseModel):
 
 def train_func(config: dict):
     """Training loop for ray trainer."""
+    print(ray.get_runtime_context().node_id)
+
     cora = Cora(n_partitions=session.get_world_size())
 
     address = [
@@ -251,9 +252,9 @@ if __name__ == "__main__":
         )
     ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="gpu-cluster", maxnode=2)
 
-    ray.init()
+    ray = ray_on_aml.getRay(ci_is_head=True, num_node=2)
 
-    ray = ray_on_aml.getRay(ci_is_head=True, num_node=1)
+    client = ray.init(ignore_reinit_error=True)
 
     trainer = TorchTrainer(
         train_func,
@@ -266,7 +267,7 @@ if __name__ == "__main__":
             "num_classes": 7,
         },
         run_config=RunConfig(),
-        scaling_config=ScalingConfig(num_workers=2),
+        scaling_config=ScalingConfig(num_workers=2, placement_strategy="SPREAD"),
     )
     result = trainer.fit()
 
