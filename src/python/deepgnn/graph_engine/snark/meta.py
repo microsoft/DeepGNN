@@ -156,8 +156,13 @@ class Meta:
         temp_path = temp_dir.name
         meta_path = download_meta(path, temp_path, config_path)
 
-        with open(meta_path, "r") as file:
-            meta = json.load(file)  # type: ignore
+        try:
+            with open(meta_path, "r") as file:
+                meta = json.load(file)  # type: ignore
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                "Failed to find meta.json file. Please use latest deepgnn package to convert data."
+            )
 
         self.version = meta["binary_data_version"]
         if self.version[0] != "v":

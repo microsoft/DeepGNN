@@ -14,6 +14,8 @@
 
 using json = nlohmann::json;
 
+#include <filesystem>
+
 namespace snark
 {
 
@@ -135,7 +137,7 @@ void Metadata::Write(std::filesystem::path path) const
     json_meta["edge_count_per_type"] = m_edge_count_per_type;
 
     std::ofstream meta(path / "meta.json");
-    meta << json_meta << std::endl;
+    meta << json_meta;
     meta.close();
 }
 
