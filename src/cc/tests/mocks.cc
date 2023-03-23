@@ -109,10 +109,8 @@ snark::Partition convert(std::filesystem::path path, std::string suffix, MemoryG
             {"node_feature_num", 1},
             {"edge_feature_num", (edge_features.empty() ? 0 : 1)},
             {"n_partitions", 1},
-            {"partition_ids", {0}},
         };
-        json_meta["node_weight_0"] = node_type_weights;
-        json_meta["edge_weight_0"] = {1};
+        json_meta["partitions"] = {{"0", {{"node_weight", node_type_weights}, {"edge_weight", {1}}}}};
 
         json_meta["node_count_per_type"] = node_type_counts;
         json_meta["edge_count_per_type"] = {edge_index.size()};

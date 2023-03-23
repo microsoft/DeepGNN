@@ -14,8 +14,6 @@
 
 using json = nlohmann::json;
 
-#include <filesystem>
-
 namespace snark
 {
 
@@ -69,22 +67,15 @@ Metadata::Metadata(std::filesystem::path path, std::string config_path)
     m_partition_edge_weights =
         std::vector<std::vector<float>>(m_partition_count, std::vector<float>(m_edge_type_count, 0.0f));
 
-    uint32_t partition_num;
     for (size_t p = 0; p < m_partition_count; ++p)
     {
-        partition_num = meta["partition_ids"][p];
-        std::string m_node_type_count_str = "node_weight_";
-        m_node_type_count_str += std::to_string(partition_num);
-        std::string m_edge_type_count_str = "edge_weight_";
-        m_edge_type_count_str += std::to_string(partition_num);
-
         for (size_t i = 0; i < m_node_type_count; ++i)
         {
-            m_partition_node_weights[partition_num][i] = meta[m_node_type_count_str][i];
+            m_partition_node_weights[p][i] = meta["partitions"][std::to_string(p)]["node_weight"][i];
         }
         for (size_t i = 0; i < m_edge_type_count; ++i)
         {
-            m_partition_edge_weights[partition_num][i] = meta[m_edge_type_count_str][i];
+            m_partition_edge_weights[p][i] = meta["partitions"][std::to_string(p)]["edge_weight"][i];
         }
     }
 
