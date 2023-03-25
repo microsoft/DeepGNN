@@ -133,6 +133,9 @@ class GAT(BaseModel):
 
 def train_func(config: dict):
     """Training loop for ray trainer."""
+    print(ray.cluster_resources())
+    print(ray.available_resources())
+    print(ray.nodes())
     print(ray.get_runtime_context().node_id)
 
     cora = Cora(n_partitions=session.get_world_size())
@@ -252,23 +255,26 @@ if __name__ == "__main__":
         )
     ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="gpu-cluster", maxnode=2)
 
-    ray = ray_on_aml.getRay(ci_is_head=True, num_node=2)
+    try:
+        ray = ray_on_aml.getRay(ci_is_head=True, num_node=2)
 
-    client = ray.init(ignore_reinit_error=True)
-
-    trainer = TorchTrainer(
-        train_func,
-        train_loop_config={
-            "num_epochs": 180,
-            "feature_idx": 0,
-            "feature_dim": 1433,
-            "label_idx": 1,
-            "label_dim": 1,
-            "num_classes": 7,
-        },
-        run_config=RunConfig(),
-        scaling_config=ScalingConfig(num_workers=2, placement_strategy="SPREAD"),
-    )
-    result = trainer.fit()
-
+        trainer = TorchTrainer(
+            train_func,
+            train_loop_config={
+                "num_epochs": 10,
+                "feature_idx": 0,
+                "feature_dim": 1433,
+                "label_idx": 1,
+                "label_dim": 1,
+                "num_classes": 7,
+            },
+            run_config=RunConfig(),
+            scaling_config=ScalingConfig(
+                num_workers=2, placement_strategy="STRICT_SPREAD"
+            ),
+        )
+        result = trainer.fit()
+    except Exception as e:
+        ray_on_aml.shutdown()
+        raise e
     ray_on_aml.shutdown()
