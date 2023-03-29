@@ -121,14 +121,12 @@ Here we manually write a meta.json file for our graph engine to load.
     ...         "node_feature_num": writer.node_feature_num,
     ...         "edge_feature_num": writer.edge_feature_num,
     ...         "n_partitions": 1,  # partition count
-    ...         "partition_ids": [0],  # partition id
-    ...         "node_weight_0": writer.node_weight,
-    ...         "edge_weight_0": writer.edge_weight,
+    ...         "partitions": {"0": {"node_weight": writer.node_weight, "edge_weight": writer.edge_weight}},
     ...         "node_count_per_type": writer.node_type_count,
     ...         "edge_count_per_type": writer.edge_type_count,
     ...     }
     ...     f.write(json.dumps(content))
-    294
+    291
 
 We load the generated binaries into a graph engine and demonstrate it working.
 

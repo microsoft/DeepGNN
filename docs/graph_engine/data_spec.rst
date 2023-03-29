@@ -256,11 +256,16 @@ Graph `meta.json` is as follows with all pieces of text replaced by integers,
 	"node_feature_count": node_feature_count,
 	"edge_feature_count": edge_feature_count,
 	"n_partitions": partition_count,
-	"partition_ids": [partition_id_0, ...],
-	"node_weight_0": [p0_node_type_0, ..., p0_node_type_n],
-	"edge_weight_0": [p0_edge_type_0, ..., p0_edge_type_n],
-	"node_weight_N": [pN_node_type_0, ..., pN_node_type_n],
-	"edge_weight_N": [pN_edge_type_0, ..., pN_edge_type_n],
+	"partitions": {
+		"0": {
+			"node_weight": [p0_node_type_0, ..., p0_node_type_n],
+			"edge_weight": [p0_edge_type_0, ..., p0_edge_type_n],
+		},
+		"N": {
+			"node_weight": [pN_node_type_0, ..., pN_node_type_n],
+			"edge_weight": [pN_edge_type_0, ..., pN_edge_type_n],
+		}
+	},
 	}
 
 **************

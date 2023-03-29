@@ -6,6 +6,7 @@ from itertools import repeat
 from typing import Optional, List, Dict, Union, Tuple
 import logging
 import tempfile
+import json
 
 import deepgnn.graph_engine.snark.client as client
 import deepgnn.graph_engine.snark.server as server
@@ -79,10 +80,8 @@ class Server:
         with open(meta_path, "r") as meta:
             # TODO(alsamylk): expose graph metadata reader in snark.
             # Based on snark.client._read_meta() method
-            skip_lines = 7
-            for _ in range(skip_lines):
-                meta.readline()
-            partition_count = int(meta.readline())
+            json_meta = json.load(meta)
+            partition_count = json_meta["n_partitions"]
 
         ssl_config = None
         if ssl_key is not None:

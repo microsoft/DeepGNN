@@ -75,7 +75,6 @@ increment relevant counters for each node and edge for each processed node. When
     ...         self.node_feature_count = 2
     ...         self.edge_feature_count = 0
     ...         self.partition_count = 1
-    ...         self.partition_ids = [partition_id]
     ...         self.node_weights = [0, 0, 0]
     ...         self.edge_weights = [0, 0, 0]
     ...         self.node_count_per_type = [0, 0, 0]
@@ -100,13 +99,11 @@ increment relevant counters for each node and edge for each processed node. When
     ...             "node_feature_num": self.node_feature_count,
     ...             "edge_feature_num": self.edge_feature_count,
     ...             "n_partitions": self.partition_count,  # partition count
-    ...             "partition_ids": list(range(self.partition_count)),  # partition id
-    ...             "node_weight_0": self.node_weights,
-    ...             "edge_weight_0": self.edge_weights,
+    ...             "partitions": {"0": {"node_weight": self.node_weights, "edge_weight": self.edge_weights}},
     ...             "node_count_per_type": self.node_count_per_type,
     ...             "edge_count_per_type": self.edge_count_per_type,
     ...         }
-    ...         with open(os.path.join(binary_dir, "meta_%d.json" % self.partition_ids[0]), "w+") as f:
+    ...         with open(os.path.join(binary_dir, "meta_0.json"), "w+") as f:
     ...             f.write(json.dumps(content))
 
 
