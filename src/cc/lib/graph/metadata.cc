@@ -107,22 +107,13 @@ void Metadata::Write(std::filesystem::path path) const
         {"n_partitions", m_partition_count},
     };
 
-    std::vector<size_t> partition_ids;
-
+    json_meta["partitions"] = {{"0", {{"node_weight", {0}}}}};
     for (size_t p = 0; p < m_partition_count; ++p)
     {
-        partition_ids.push_back(p);
-
-        std::string m_node_type_count_str = "node_weight_";
-        m_node_type_count_str += std::to_string(p);
-        std::string m_edge_type_count_str = "edge_weight_";
-        m_edge_type_count_str += std::to_string(p);
-
-        json_meta[m_node_type_count_str] = m_partition_node_weights[p];
-        json_meta[m_edge_type_count_str] = m_partition_edge_weights[p];
+        json_meta["partitions"][std::to_string(p)] = {{"node_weight", {0}}};
+        json_meta["partitions"][std::to_string(p)]["node_weight"] = m_partition_node_weights[p];
+        json_meta["partitions"][std::to_string(p)]["edge_weight"] = m_partition_edge_weights[p];
     }
-
-    json_meta["partition_ids"] = partition_ids;
 
     json_meta["node_count_per_type"] = m_node_count_per_type;
     json_meta["edge_count_per_type"] = m_edge_count_per_type;
