@@ -68,11 +68,15 @@ class Meta:
         self.partition_ids = meta["partition_ids"]
         self.node_weights = [[float(0)] * self.node_type_num] * self.partition_count
         self.edge_weights = [[float(0)] * self.edge_type_num] * self.partition_count
-        for j, id in enumerate(self.partition_ids):
+        for j, id in enumerate(meta["partitions"]):
             for i in range(self.node_type_num):
-                self.node_weights[j][i] += float(meta[f"node_weight_{id}"][i])
+                self.node_weights[j][i] += float(
+                    meta["partitions"][id]["node_weight"][i]
+                )
             for i in range(self.edge_type_num):
-                self.edge_weights[j][i] += float(meta[f"edge_weight_{id}"][i])
+                self.edge_weights[j][i] += float(
+                    meta["partitions"][id]["edge_weight"][i]
+                )
 
         self.node_count_per_type = meta["node_count_per_type"]
         self.edge_count_per_type = meta["edge_count_per_type"]
@@ -106,8 +110,6 @@ def merge(fs, output_dir: str, meta_list: List[Meta]):
         "edge_feature_num": int(meta_list[0].edge_feature_count),
         "n_partitions": sum([i.partition_count for i in meta_list]),
     }
-    content["partition_ids"] = list(range(content["n_partitions"]))
-
     offset = 0
     for i in meta_list:
         data, offset = i.get_partition(offset)

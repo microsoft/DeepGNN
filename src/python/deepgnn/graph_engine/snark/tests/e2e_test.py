@@ -285,10 +285,10 @@ def write_multi_binary(output_dir, partitions):
         "edge_feature_num": 15,
         "n_partitions": 2,  # partition count
         "partition_ids": [0, 1],  # partition id
-        "node_weight_0": [3, 3, 3],
-        "edge_weight_0": [2, 2],
-        "node_weight_1": [3, 3, 3],
-        "edge_weight_1": [2, 2],
+        "partitions": {
+            "0": {"node_weight": [3, 3, 3], "edge_weight": [2, 2]},
+            "1": {"node_weight": [3, 3, 3], "edge_weight": [2, 2]},
+        },
         "node_count_per_type": [1, 1, 1],
         "edge_count_per_type": [1, 2],
     }
@@ -1645,15 +1645,9 @@ def test_partitions_from_separate_folders():
         "node_feature_num": 2,
         "edge_feature_num": 0,
         "n_partitions": 4,  # partition count
-        "partition_ids": [0, 1, 2, 3],  # partition id
-        "node_weight_0": [1, 1, 0, 0],
-        "edge_weight_0": [],
-        "node_weight_1": [1, 1, 0, 0],
-        "edge_weight_1": [],
-        "node_weight_2": [1, 1, 0, 0],
-        "edge_weight_2": [],
-        "node_weight_3": [1, 1, 0, 0],
-        "edge_weight_3": [],
+        "partitions": {
+            f"{i}": {"node_weight": [1, 1, 0, 0], "edge_weight": []} for i in range(4)
+        },
         "node_count_per_type": [2, 2],
         "edge_count_per_type": [],
     }

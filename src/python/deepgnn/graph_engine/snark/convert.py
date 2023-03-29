@@ -167,7 +167,7 @@ class MultiWorkersConverter:
 
         edge_count_per_type = [0] * int(gettr("edge_type_num"))
         node_count_per_type = [0] * int(gettr("node_type_num"))
-        ids = []
+        mjson["partitions"] = {}
         for p in partitions:
             edge_count_per_type = list(
                 map(add, edge_count_per_type, partition_gettr(p, "edge_type_count"))
@@ -177,11 +177,12 @@ class MultiWorkersConverter:
             )
 
             i = p["id"] if isinstance(p, dict) else 0
-            ids.append(i)
-            mjson[f"node_weight_{i}"] = partition_gettr(p, "node_weight")
-            mjson[f"edge_weight_{i}"] = partition_gettr(p, "edge_weight")
 
-        mjson["partition_ids"] = ids
+            mjson["partitions"][f"{i}"] = {
+                "node_weight": partition_gettr(p, "node_weight"),
+                "edge_weight": partition_gettr(p, "edge_weight"),
+            }
+
         mjson["node_count_per_type"] = node_count_per_type
         mjson["edge_count_per_type"] = edge_count_per_type
 

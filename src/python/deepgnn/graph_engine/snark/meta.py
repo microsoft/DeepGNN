@@ -179,11 +179,11 @@ class Meta:
         self._partition_count = int(meta["n_partitions"])
         self._node_weights = [float(0)] * self.node_type_count
         self._edge_weights = [float(0)] * self.edge_type_count
-        for id in meta["partition_ids"]:
+        for id in meta["partitions"]:
             for i in range(self.node_type_count):
-                self._node_weights[i] += float(meta[f"node_weight_{id}"][i])
+                self._node_weights[i] += float(meta["partitions"][id]["node_weight"][i])
             for i in range(self.edge_type_count):
-                self._edge_weights[i] += float(meta[f"edge_weight_{id}"][i])
+                self._edge_weights[i] += float(meta["partitions"][id]["edge_weight"][i])
 
         self.node_count_per_type = meta["node_count_per_type"]
         self.edge_count_per_type = meta["edge_count_per_type"]
