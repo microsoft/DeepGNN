@@ -65,7 +65,6 @@ class Meta:
         self.node_feature_count = int(meta["node_feature_num"])
         self.edge_feature_count = int(meta["edge_feature_num"])
         self.partition_count = int(meta["n_partitions"])
-        self.partition_ids = meta["partition_ids"]
         self.node_weights = [[float(0)] * self.node_type_num] * self.partition_count
         self.edge_weights = [[float(0)] * self.edge_type_num] * self.partition_count
         for j, id in enumerate(meta["partitions"]):
@@ -84,15 +83,14 @@ class Meta:
     def get_partition(self, offset):
         """Return the sub content of meta info."""
         return {
-            **{
-                f"node_weight_{offset + i}": self.node_weights[i]
-                for i in range(len(self.partition_ids))
-            },
-            **{
-                f"edge_weight_{offset + i}": self.edge_weights[i]
-                for i in range(len(self.partition_ids))
-            },
-        }, offset + len(self.partition_ids)
+            "partitions": {
+                f"{i}": {
+                    "node_weight": self.node_weights[i],
+                    "edge_weight": self.edge_weights[i],
+                }
+                for i in range(self.partition_count)
+            }
+        }, offset + self.partition_count
 
 
 def merge(fs, output_dir: str, meta_list: List[Meta]):

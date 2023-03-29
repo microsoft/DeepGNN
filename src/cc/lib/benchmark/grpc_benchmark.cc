@@ -186,8 +186,6 @@ void BM_DISTRIBUTED_SAMPLER_MULTIPLE_SERVERS(benchmark::State &state)
                 {"edge_feature_num", 0},
                 {"n_partitions", 1},
             };
-            json_meta["partition_ids"] = {0};
-
             json_meta["partitions"] = {{"0", {{"node_weight", {1}}, {"edge_weight", {1}}}}};
 
             json_meta["node_count_per_type"] = {num_nodes_in_server};

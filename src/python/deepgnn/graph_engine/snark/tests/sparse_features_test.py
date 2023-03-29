@@ -470,7 +470,6 @@ def write_multi_binary(output_dir, partitions):
         "node_feature_num": 15,
         "edge_feature_num": 15,
         "n_partitions": 2,  # partition count
-        "partition_ids": [0, 1],  # partition id
         "partitions": {
             f"{i}": {"node_weight": [3, 3, 3], "edge_weight": [2, 2]} for i in range(2)
         },

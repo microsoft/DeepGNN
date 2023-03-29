@@ -355,7 +355,6 @@ def test_sanity_metadata(triangle_graph):
 
         # partition information
         assert int(result["n_partitions"]) == 1
-        assert result["partition_ids"] == [0]
         assert result["partitions"]["0"]["node_weight"] == [1, 1, 1]
         assert result["partitions"]["0"]["edge_weight"] == [0.5, 1.7]
 
