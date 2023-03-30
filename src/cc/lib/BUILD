@@ -33,6 +33,7 @@ cc_binary(
             "//src/cc/lib/graph",
             "@com_github_google_glog//:glog",
             "@com_google_absl//absl/container:flat_hash_map",
+            "@com_google_absl//absl/container:flat_hash_set",
             "@boost//:random",
         ],
         "@platforms//os:macos": [
@@ -41,6 +42,7 @@ cc_binary(
             "//src/cc/lib/graph",
             "@com_github_google_glog//:glog",
             "@com_google_absl//absl/container:flat_hash_map",
+            "@com_google_absl//absl/container:flat_hash_set",
             "@boost//:random",
         ],
         "@platforms//os:linux": [
@@ -50,6 +52,7 @@ cc_binary(
             "//src/cc/lib/graph",
             "@com_github_google_glog//:glog",
             "@com_google_absl//absl/container:flat_hash_map",
+            "@com_google_absl//absl/container:flat_hash_set",
             "@boost//:random",
         ],
     }),
