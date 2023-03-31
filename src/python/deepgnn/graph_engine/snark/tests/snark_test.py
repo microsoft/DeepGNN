@@ -249,7 +249,10 @@ def test_meta_version_message():
         f.writelines(['{"node_count": 10, "edge_count": 10}'])
     with pytest.raises(KeyError) as excinfo:
         Meta(working_dir.name)
-        assert "KeyError: 'binary_data_version'" in str(excinfo.value)
+        assert (
+            "First line in meta file should be version, please regenerate binary data"
+            in str(excinfo.value)
+        )
 
 
 if __name__ == "__main__":

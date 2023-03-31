@@ -170,20 +170,20 @@ class Meta:
                 "Meta file should contain binary_data_version, please regenerate binary data"
             )
 
-        self.node_count = int(meta["node_count"])
-        self.edge_count = int(meta["edge_count"])
-        self.node_type_count = int(meta["node_type_num"])
-        self.edge_type_count = int(meta["edge_type_num"])
-        self._node_feature_count = int(meta["node_feature_num"])
-        self._edge_feature_count = int(meta["edge_feature_num"])
-        self._partition_count = int(meta["n_partitions"])
-        self._node_weights = [float(0)] * self.node_type_count
-        self._edge_weights = [float(0)] * self.edge_type_count
+        self.node_count = meta["node_count"]
+        self.edge_count = meta["edge_count"]
+        self.node_type_count = meta["node_type_num"]
+        self.edge_type_count = meta["edge_type_num"]
+        self._node_feature_count = meta["node_feature_num"]
+        self._edge_feature_count = meta["edge_feature_num"]
+        self.partition_count = meta["n_partitions"]
+        self._node_weights = [0.0] * self.node_type_count
+        self._edge_weights = [0.0] * self.edge_type_count
         for id in meta["partitions"]:
             for i in range(self.node_type_count):
-                self._node_weights[i] += float(meta["partitions"][id]["node_weight"][i])
+                self._node_weights[i] += meta["partitions"][id]["node_weight"][i]
             for i in range(self.edge_type_count):
-                self._edge_weights[i] += float(meta["partitions"][id]["edge_weight"][i])
+                self._edge_weights[i] += meta["partitions"][id]["edge_weight"][i]
 
         self.node_count_per_type = meta["node_count_per_type"]
         self.edge_count_per_type = meta["edge_count_per_type"]

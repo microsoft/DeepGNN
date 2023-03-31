@@ -46,9 +46,7 @@ class Meta:
         """
         self.fs = fs
         self.path = path
-        self._from_file()
 
-    def _from_file(self):
         with self.fs.open(self.path, "r") as file:
             meta = json.load(file)  # type: ignore
 
@@ -58,24 +56,20 @@ class Meta:
                 "Meta file should contain binary_data_version, please regenerate binary data"
             )
 
-        self.node_count = int(meta["node_count"])
-        self.edge_count = int(meta["edge_count"])
-        self.node_type_num = int(meta["node_type_num"])
-        self.edge_type_num = int(meta["edge_type_num"])
-        self.node_feature_count = int(meta["node_feature_num"])
-        self.edge_feature_count = int(meta["edge_feature_num"])
-        self.partition_count = int(meta["n_partitions"])
-        self.node_weights = [[float(0)] * self.node_type_num] * self.partition_count
-        self.edge_weights = [[float(0)] * self.edge_type_num] * self.partition_count
+        self.node_count = meta["node_count"]
+        self.edge_count = meta["edge_count"]
+        self.node_type_num = meta["node_type_num"]
+        self.edge_type_num = meta["edge_type_num"]
+        self.node_feature_count = meta["node_feature_num"]
+        self.edge_feature_count = meta["edge_feature_num"]
+        self.partition_count = meta["n_partitions"]
+        self.node_weights = [[0.0] * self.node_type_num] * self.partition_count
+        self.edge_weights = [[0.0] * self.edge_type_num] * self.partition_count
         for j, id in enumerate(meta["partitions"]):
             for i in range(self.node_type_num):
-                self.node_weights[j][i] += float(
-                    meta["partitions"][id]["node_weight"][i]
-                )
+                self.node_weights[j][i] += meta["partitions"][id]["node_weight"][i]
             for i in range(self.edge_type_num):
-                self.edge_weights[j][i] += float(
-                    meta["partitions"][id]["edge_weight"][i]
-                )
+                self.edge_weights[j][i] += meta["partitions"][id]["edge_weight"][i]
 
         self.node_count_per_type = meta["node_count_per_type"]
         self.edge_count_per_type = meta["edge_count_per_type"]
