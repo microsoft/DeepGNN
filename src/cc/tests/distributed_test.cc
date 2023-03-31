@@ -1192,8 +1192,8 @@ struct SamplerData
                     {"edge_count", num_edge_records_in_server / 2},
                     {"node_type_num", 1},
                     {"edge_type_num", 1},
-                    {"node_feature_num", 0},
-                    {"edge_feature_num", 0},
+                    {"node_feature_count", 0},
+                    {"edge_feature_count", 0},
                 };
                 json_meta["partitions"] = {{"0", {{"node_weight", {1}}, {"edge_weight", {1}}}}};
 

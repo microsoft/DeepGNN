@@ -160,8 +160,8 @@ class MultiWorkersConverter:
             "edge_count": gettr("edge_count"),
             "node_type_num": gettr("node_type_num"),
             "edge_type_num": gettr("edge_type_num"),
-            "node_feature_num": gettr("node_feature_num"),
-            "edge_feature_num": gettr("edge_feature_num"),
+            "node_feature_count": gettr("node_feature_count"),
+            "edge_feature_count": gettr("edge_feature_count"),
         }
 
         edge_count_per_type = [0] * int(gettr("edge_type_num"))

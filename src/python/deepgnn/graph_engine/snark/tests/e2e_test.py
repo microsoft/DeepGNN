@@ -281,8 +281,8 @@ def write_multi_binary(output_dir, partitions):
         "edge_count": 3,
         "node_type_num": 3,
         "edge_type_num": 2,
-        "node_feature_num": 15,
-        "edge_feature_num": 15,
+        "node_feature_count": 15,
+        "edge_feature_count": 15,
         "partitions": {
             "0": {"node_weight": [3, 3, 3], "edge_weight": [2, 2]},
             "1": {"node_weight": [3, 3, 3], "edge_weight": [2, 2]},
@@ -1640,8 +1640,8 @@ def test_partitions_from_separate_folders():
         "edge_count": 0,
         "node_type_num": 2,
         "edge_type_num": 0,
-        "node_feature_num": 2,
-        "edge_feature_num": 0,
+        "node_feature_count": 2,
+        "edge_feature_count": 0,
         "partitions": {
             f"{i}": {"node_weight": [1, 1, 0, 0], "edge_weight": []} for i in range(4)
         },

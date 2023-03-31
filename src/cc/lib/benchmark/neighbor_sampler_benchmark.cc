@@ -147,8 +147,8 @@ snark::Graph create_graph(size_t num_types, size_t num_nodes_per_partition, size
             {"edge_count", num_edges},
             {"node_type_num", 1},
             {"edge_type_num", 1},
-            {"node_feature_num", 0},
-            {"edge_feature_num", 0},
+            {"node_feature_count", 0},
+            {"edge_feature_count", 0},
         };
 
         json_meta["partitions"] = {{"0", {{"node_weight", {0}}}}};
