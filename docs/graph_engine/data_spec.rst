@@ -255,7 +255,6 @@ Graph `meta.json` is as follows with all pieces of text replaced by integers,
 	"edge_count_per_type": [edge_count_per_type_0, ..., edge_count_per_type_n],
 	"node_feature_count": node_feature_count,
 	"edge_feature_count": edge_feature_count,
-	"n_partitions": partition_count,
 	"partitions": {
 		"0": {
 			"node_weight": [p0_node_type_0, ..., p0_node_type_n],

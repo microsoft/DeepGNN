@@ -98,7 +98,6 @@ increment relevant counters for each node and edge for each processed node. When
     ...             "edge_type_num": self.edge_type_count,
     ...             "node_feature_num": self.node_feature_count,
     ...             "edge_feature_num": self.edge_feature_count,
-    ...             "n_partitions": self.partition_count,  # partition count
     ...             "partitions": {"0": {"node_weight": self.node_weights, "edge_weight": self.edge_weights}},
     ...             "node_count_per_type": self.node_count_per_type,
     ...             "edge_count_per_type": self.edge_count_per_type,

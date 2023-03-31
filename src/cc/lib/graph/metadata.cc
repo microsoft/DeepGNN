@@ -60,7 +60,8 @@ Metadata::Metadata(std::filesystem::path path, std::string config_path)
     m_edge_type_count = meta["edge_type_num"];
     m_node_feature_count = meta["node_feature_num"];
     m_edge_feature_count = meta["edge_feature_num"];
-    m_partition_count = meta["n_partitions"];
+
+    m_partition_count = meta["partitions"].size();
 
     m_partition_node_weights =
         std::vector<std::vector<float>>(m_partition_count, std::vector<float>(m_node_type_count, 0.0f));
@@ -104,7 +105,6 @@ void Metadata::Write(std::filesystem::path path) const
         {"edge_type_num", m_edge_type_count},
         {"node_feature_num", m_node_feature_count},
         {"edge_feature_num", m_edge_feature_count},
-        {"n_partitions", m_partition_count},
     };
 
     json_meta["partitions"] = {{"0", {{"node_weight", {0}}}}};

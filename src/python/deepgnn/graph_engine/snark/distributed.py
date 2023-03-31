@@ -81,7 +81,7 @@ class Server:
             # TODO(alsamylk): expose graph metadata reader in snark.
             # Based on snark.client._read_meta() method
             json_meta = json.load(meta)
-            partition_count = json_meta["n_partitions"]
+            partition_count = len(json_meta["partitions"])
 
         ssl_config = None
         if ssl_key is not None:

@@ -176,7 +176,7 @@ class Meta:
         self.edge_type_count = meta["edge_type_num"]
         self._node_feature_count = meta["node_feature_num"]
         self._edge_feature_count = meta["edge_feature_num"]
-        self.partition_count = meta["n_partitions"]
+        self.partition_count = len(meta["partitions"])
         self._node_weights = [0.0] * self.node_type_count
         self._edge_weights = [0.0] * self.edge_type_count
         for id in meta["partitions"]:

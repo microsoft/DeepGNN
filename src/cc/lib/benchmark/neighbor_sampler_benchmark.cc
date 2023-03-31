@@ -149,7 +149,6 @@ snark::Graph create_graph(size_t num_types, size_t num_nodes_per_partition, size
             {"edge_type_num", 1},
             {"node_feature_num", 0},
             {"edge_feature_num", 0},
-            {"n_partitions", num_partitions},
         };
 
         json_meta["partitions"] = {{"0", {{"node_weight", {0}}}}};

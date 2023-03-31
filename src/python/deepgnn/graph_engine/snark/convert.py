@@ -162,7 +162,6 @@ class MultiWorkersConverter:
             "edge_type_num": gettr("edge_type_num"),
             "node_feature_num": gettr("node_feature_num"),
             "edge_feature_num": gettr("edge_feature_num"),
-            "n_partitions": len(partitions),
         }
 
         edge_count_per_type = [0] * int(gettr("edge_type_num"))
