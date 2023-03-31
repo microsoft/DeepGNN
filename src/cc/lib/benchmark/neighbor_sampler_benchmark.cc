@@ -145,8 +145,8 @@ snark::Graph create_graph(size_t num_types, size_t num_nodes_per_partition, size
             {"binary_data_version", version_str},
             {"node_count", num_nodes},
             {"edge_count", num_edges},
-            {"node_type_num", 1},
-            {"edge_type_num", 1},
+            {"node_type_count", 1},
+            {"edge_type_count", 1},
             {"node_feature_count", 0},
             {"edge_feature_count", 0},
         };

@@ -279,8 +279,8 @@ def write_multi_binary(output_dir, partitions):
         "binary_data_version": "v2",  # converter version
         "node_count": 3,
         "edge_count": 3,
-        "node_type_num": 3,
-        "edge_type_num": 2,
+        "node_type_count": 3,
+        "edge_type_count": 2,
         "node_feature_count": 15,
         "edge_feature_count": 15,
         "partitions": {
@@ -1638,8 +1638,8 @@ def test_partitions_from_separate_folders():
         "binary_data_version": "v2",  # converter version
         "node_count": 4,
         "edge_count": 0,
-        "node_type_num": 2,
-        "edge_type_num": 0,
+        "node_type_count": 2,
+        "edge_type_count": 0,
         "node_feature_count": 2,
         "edge_feature_count": 0,
         "partitions": {

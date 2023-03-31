@@ -104,8 +104,8 @@ snark::Partition convert(std::filesystem::path path, std::string suffix, MemoryG
             {"binary_data_version", version_str},
             {"node_count", counter},
             {"edge_count", nb_index.size()},
-            {"node_type_num", node_types},
-            {"edge_type_num", 1},
+            {"node_type_count", node_types},
+            {"edge_type_count", 1},
             {"node_feature_count", 1},
             {"edge_feature_count", (edge_features.empty() ? 0 : 1)},
         };

@@ -1190,8 +1190,8 @@ struct SamplerData
                     {"binary_data_version", version_str},
                     {"node_count", num_nodes_in_server},
                     {"edge_count", num_edge_records_in_server / 2},
-                    {"node_type_num", 1},
-                    {"edge_type_num", 1},
+                    {"node_type_count", 1},
+                    {"edge_type_count", 1},
                     {"node_feature_count", 0},
                     {"edge_feature_count", 0},
                 };

@@ -17,8 +17,8 @@ from deepgnn.graph_engine._base import get_fs
 # v1                binary version          equal
 # 2708              node_count              additive
 # 10556             edge_count              additive
-# 4                 node_type_num           equal
-# 1                 edge_type_num           equal
+# 4                 node_type_count           equal
+# 1                 edge_type_count           equal
 # 2                 node_xxx_feature_num    equal
 # 0                 edge_xxx_feature_num    equal
 # 1                 partitions count        equal
@@ -58,17 +58,17 @@ class Meta:
 
         self.node_count = meta["node_count"]
         self.edge_count = meta["edge_count"]
-        self.node_type_num = meta["node_type_num"]
-        self.edge_type_num = meta["edge_type_num"]
+        self.node_type_count = meta["node_type_count"]
+        self.edge_type_count = meta["edge_type_count"]
         self.node_feature_count = meta["node_feature_count"]
         self.edge_feature_count = meta["edge_feature_count"]
         self.partition_count = len(meta["partitions"])
-        self.node_weights = [[0.0] * self.node_type_num] * self.partition_count
-        self.edge_weights = [[0.0] * self.edge_type_num] * self.partition_count
+        self.node_weights = [[0.0] * self.node_type_count] * self.partition_count
+        self.edge_weights = [[0.0] * self.edge_type_count] * self.partition_count
         for j, id in enumerate(meta["partitions"]):
-            for i in range(self.node_type_num):
+            for i in range(self.node_type_count):
                 self.node_weights[j][i] += meta["partitions"][id]["node_weight"][i]
-            for i in range(self.edge_type_num):
+            for i in range(self.edge_type_count):
                 self.edge_weights[j][i] += meta["partitions"][id]["edge_weight"][i]
 
         self.node_count_per_type = meta["node_count_per_type"]
@@ -94,8 +94,8 @@ def merge(fs, output_dir: str, meta_list: List[Meta]):
         "binary_data_version": meta_list[0].version,
         "node_count": sum([i.node_count for i in meta_list]),
         "edge_count": sum([i.edge_count for i in meta_list]),
-        "node_type_num": meta_list[0].node_type_num,
-        "edge_type_num": meta_list[0].edge_type_num,
+        "node_type_count": meta_list[0].node_type_count,
+        "edge_type_count": meta_list[0].edge_type_count,
         "node_feature_count": int(meta_list[0].node_feature_count),
         "edge_feature_count": int(meta_list[0].edge_feature_count),
     }
@@ -107,11 +107,11 @@ def merge(fs, output_dir: str, meta_list: List[Meta]):
 
     content["node_count_per_type"] = [
         sum([i.node_count_per_type[count] for i in meta_list])
-        for count in range(int(meta_list[0].node_type_num))
+        for count in range(int(meta_list[0].node_type_count))
     ]
     content["edge_count_per_type"] = [
         sum([i.edge_count_per_type[count] for i in meta_list])
-        for count in range(int(meta_list[0].edge_type_num))
+        for count in range(int(meta_list[0].edge_type_count))
     ]
 
     with fs.open("{}/meta.json".format(output_dir), "w") as file:

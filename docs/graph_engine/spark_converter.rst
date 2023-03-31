@@ -94,8 +94,8 @@ increment relevant counters for each node and edge for each processed node. When
     ...             "binary_data_version": BINARY_DATA_VERSION,  # converter version
     ...             "node_count": self.node_count,
     ...             "edge_count": self.edge_count,
-    ...             "node_type_num": self.node_type_count,
-    ...             "edge_type_num": self.edge_type_count,
+    ...             "node_type_count": self.node_type_count,
+    ...             "edge_type_count": self.edge_type_count,
     ...             "node_feature_count": self.node_feature_count,
     ...             "edge_feature_count": self.edge_feature_count,
     ...             "partitions": {"0": {"node_weight": self.node_weights, "edge_weight": self.edge_weights}},

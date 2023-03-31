@@ -116,8 +116,8 @@ Here we manually write a meta.json file for our graph engine to load.
     ...         "binary_data_version": "v2",  # converter version
     ...         "node_count": writer.node_count,
     ...         "edge_count": writer.edge_count,
-    ...         "node_type_num": writer.node_type_num,
-    ...         "edge_type_num": writer.edge_type_num,
+    ...         "node_type_count": writer.node_type_num,
+    ...         "edge_type_count": writer.edge_type_num,
     ...         "node_feature_count": writer.node_feature_count,
     ...         "edge_feature_count": writer.edge_feature_count,
     ...         "partitions": {"0": {"node_weight": writer.node_weight, "edge_weight": writer.edge_weight}},

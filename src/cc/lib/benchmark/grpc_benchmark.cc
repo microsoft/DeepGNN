@@ -180,8 +180,8 @@ void BM_DISTRIBUTED_SAMPLER_MULTIPLE_SERVERS(benchmark::State &state)
                 {"binary_data_version", version_str},
                 {"node_count", num_nodes_in_server},
                 {"edge_count", 0},
-                {"node_type_num", 1},
-                {"edge_type_num", 1},
+                {"node_type_count", 1},
+                {"edge_type_count", 1},
                 {"node_feature_count", 0},
                 {"edge_feature_count", 0},
             };

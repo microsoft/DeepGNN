@@ -158,8 +158,8 @@ class MultiWorkersConverter:
             "binary_data_version": BINARY_DATA_VERSION,
             "node_count": gettr("node_count"),
             "edge_count": gettr("edge_count"),
-            "node_type_num": gettr("node_type_num"),
-            "edge_type_num": gettr("edge_type_num"),
+            "node_type_count": gettr("node_type_num"),
+            "edge_type_count": gettr("edge_type_num"),
             "node_feature_count": gettr("node_feature_count"),
             "edge_feature_count": gettr("edge_feature_count"),
         }

@@ -125,8 +125,8 @@ def main(root_path: str):
 
     with open(output_meta, "w") as wf_meta:
         meta_data = {
-            "node_type_num": 1,
-            "edge_type_num": 2,
+            "node_type_count": 1,
+            "edge_type_count": 2,
             "node_uint64_feature_num": 0,
             "node_float_feature_num": 0,
             "node_binary_feature_num": 0,

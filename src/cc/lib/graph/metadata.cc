@@ -56,8 +56,8 @@ Metadata::Metadata(std::filesystem::path path, std::string config_path)
 
     m_node_count = meta["node_count"];
     m_edge_count = meta["edge_count"];
-    m_node_type_count = meta["node_type_num"];
-    m_edge_type_count = meta["edge_type_num"];
+    m_node_type_count = meta["node_type_count"];
+    m_edge_type_count = meta["edge_type_count"];
     m_node_feature_count = meta["node_feature_count"];
     m_edge_feature_count = meta["edge_feature_count"];
 
@@ -101,8 +101,8 @@ void Metadata::Write(std::filesystem::path path) const
         {"binary_data_version", version_str},
         {"node_count", m_node_count},
         {"edge_count", m_edge_count},
-        {"node_type_num", m_node_type_count},
-        {"edge_type_num", m_edge_type_count},
+        {"node_type_count", m_node_type_count},
+        {"edge_type_count", m_edge_type_count},
         {"node_feature_count", m_node_feature_count},
         {"edge_feature_count", m_edge_feature_count},
     };

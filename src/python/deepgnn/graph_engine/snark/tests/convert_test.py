@@ -348,8 +348,8 @@ def test_sanity_metadata(triangle_graph):
         assert result["binary_data_version"] == BINARY_DATA_VERSION
         assert int(result["node_count"]) == 3
         assert int(result["edge_count"]) == 3
-        assert int(result["node_type_num"]) == 3
-        assert int(result["edge_type_num"]) == 2
+        assert int(result["node_type_count"]) == 3
+        assert int(result["edge_type_count"]) == 2
         assert int(result["node_feature_count"]) == 2
         assert int(result["edge_feature_count"]) == 2
 

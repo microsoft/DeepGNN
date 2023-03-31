@@ -154,8 +154,8 @@ class PipeDispatcher(Dispatcher):
             flag, output = self.q_out.get()
             self.node_count += output["node_count"]
             self.edge_count += output["edge_count"]
-            self.node_type_num = max(self.node_type_num, output["node_type_num"])
-            self.edge_type_num = max(self.edge_type_num, output["edge_type_num"])
+            self.node_type_num = max(self.node_type_num, output["node_type_count"])
+            self.edge_type_num = max(self.edge_type_num, output["edge_type_count"])
             self.node_feature_count = max(
                 self.node_feature_count, output["node_feature_count"]
             )
@@ -329,8 +329,8 @@ class QueueDispatcher(Dispatcher):
             flag, output = self.q_out.get()
             self.node_count += output["node_count"]
             self.edge_count += output["edge_count"]
-            self.node_type_num = max(self.node_type_num, output["node_type_num"])
-            self.edge_type_num = max(self.edge_type_num, output["edge_type_num"])
+            self.node_type_num = max(self.node_type_num, output["node_type_count"])
+            self.edge_type_num = max(self.edge_type_num, output["edge_type_count"])
             self.node_feature_count = max(
                 self.node_feature_count, output["node_feature_count"]
             )
