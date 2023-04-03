@@ -17,10 +17,10 @@ from deepgnn.graph_engine._base import get_fs
 # v1                binary version          equal
 # 2708              node_count              additive
 # 10556             edge_count              additive
-# 4                 node_type_count           equal
-# 1                 edge_type_count           equal
-# 2                 node_xxx_feature_num    equal
-# 0                 edge_xxx_feature_num    equal
+# 4                 node_type_count         equal
+# 1                 edge_type_count         equal
+# 2                 node_xxx_feature_count  equal
+# 0                 edge_xxx_feature_count  equal
 # 1                 partitions count        equal
 # 0                 Partition id            equal
 # 140.0             node weight 1           additive
