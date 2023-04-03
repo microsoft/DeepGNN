@@ -12,27 +12,27 @@ from deepgnn.graph_engine._base import get_fs
 
 # Content of sample meta.json
 
-# Fields            Description             Action
-# ====================================================
-# v1                binary version          equal
-# 2708              node_count              additive
-# 10556             edge_count              additive
-# 4                 node_type_count         equal
-# 1                 edge_type_count         equal
-# 2                 node_xxx_feature_count  equal
-# 0                 edge_xxx_feature_count  equal
-# 1                 partitions count        equal
-# 0                 Partition id            equal
-# 140.0             node weight 1           additive
-# 500.0             node weight 2           additive
-# 1000.0            node weight 3           additive
-# 1068.0            node weight 4           additive
-# 10556.0           edge weight 1           additive
-# 140               node count type 1       additive
-# 500               node count type 2       additive
-# 1000              node count type 3       additive
-# 1068              node count type 4       additive
-# 10556             edge count type 1       additive
+# Field                   Action
+# ================================
+# binary version          equal
+# node_count              additive
+# edge_count              additive
+# node_type_count         equal
+# edge_type_count         equal
+# node_xxx_feature_count  equal
+# edge_xxx_feature_count  equal
+# partitions count        equal
+# Partition id            equal
+# node weight 1           additive
+# node weight 2           additive
+# node weight 3           additive
+# node weight 4           additive
+# edge weight 1           additive
+# node count type 1       additive
+# node count type 2       additive
+# node count type 3       additive
+# node count type 4       additive
+# edge count type 1       additive
 
 
 class Meta:
