@@ -346,12 +346,12 @@ def test_sanity_metadata(triangle_graph):
         result = json.load(ni)
 
         assert result["binary_data_version"] == BINARY_DATA_VERSION
-        assert int(result["node_count"]) == 3
-        assert int(result["edge_count"]) == 3
-        assert int(result["node_type_count"]) == 3
-        assert int(result["edge_type_count"]) == 2
-        assert int(result["node_feature_count"]) == 2
-        assert int(result["edge_feature_count"]) == 2
+        assert result["node_count"] == 3
+        assert result["edge_count"] == 3
+        assert result["node_type_count"] == 3
+        assert result["edge_type_count"] == 2
+        assert result["node_feature_count"] == 2
+        assert result["edge_feature_count"] == 2
 
         # partition information
         assert result["partitions"]["0"]["node_weight"] == [1, 1, 1]

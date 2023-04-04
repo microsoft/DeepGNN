@@ -149,18 +149,17 @@ snark::Graph create_graph(size_t num_types, size_t num_nodes_per_partition, size
             {"edge_type_count", 1},
             {"node_feature_count", 0},
             {"edge_feature_count", 0},
+            {"node_count_per_type", {num_nodes}},
+            {"edge_count_per_type", {num_edges}},
+            {"partitions", {{"0", {{"node_weight", {0}}}}}},
         };
 
-        json_meta["partitions"] = {{"0", {{"node_weight", {0}}}}};
         for (size_t partition_id = 0; partition_id < num_partitions; ++partition_id)
         {
             json_meta["partitions"][std::to_string(partition_id)] = {{"node_weight", {0}}};
             json_meta["partitions"][std::to_string(partition_id)]["node_weight"] = {partition_num_nodes[partition_id]};
             json_meta["partitions"][std::to_string(partition_id)]["edge_weight"] = {1};
         }
-
-        json_meta["node_count_per_type"] = {num_nodes};
-        json_meta["edge_count_per_type"] = {num_edges};
 
         std::ofstream meta(path / "meta.json");
         meta << json_meta << std::endl;

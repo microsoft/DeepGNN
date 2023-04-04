@@ -14,25 +14,17 @@ from deepgnn.graph_engine._base import get_fs
 
 # Field                   Action
 # ================================
-# binary version          equal
+# binary_version          equal
 # node_count              additive
 # edge_count              additive
 # node_type_count         equal
 # edge_type_count         equal
-# node_xxx_feature_count  equal
-# edge_xxx_feature_count  equal
-# partitions count        equal
-# Partition id            equal
-# node weight 1           additive
-# node weight 2           additive
-# node weight 3           additive
-# node weight 4           additive
-# edge weight 1           additive
-# node count type 1       additive
-# node count type 2       additive
-# node count type 3       additive
-# node count type 4       additive
-# edge count type 1       additive
+# node_feature_count      equal
+# edge_feature_count      equal
+# node weight             additive
+# edge weight             additive
+# node count              additive
+# edge count              additive
 
 
 class Meta:
