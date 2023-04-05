@@ -125,7 +125,7 @@ Here we manually write a meta.json file for our graph engine to load.
     ...         "edge_count_per_type": writer.edge_type_count,
     ...     }
     ...     f.write(json.dumps(content))
-    291
+    280
 
 We load the generated binaries into a graph engine and demonstrate it working.
 
