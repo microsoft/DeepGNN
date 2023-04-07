@@ -27,6 +27,9 @@
 #include "boost/random/uniform_int_distribution.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 namespace
 {
@@ -1180,22 +1183,26 @@ struct SamplerData
                 EXPECT_EQ(0, fclose(alias));
             }
             {
-                auto meta = fopen((path / "meta.txt").string().c_str(), "w+");
-                fprintf(meta, "v%ld\n", snark::MINIMUM_SUPPORTED_VERSION);
-                fprintf(meta, "%ld\n", num_nodes_in_server);
-                fprintf(meta, "%ld\n", num_edge_records_in_server / 2);
-                fprintf(meta, "1\n");                        // node_types_count
-                fprintf(meta, "1\n");                        // edge_types_count
-                fprintf(meta, "0\n");                        // node_features_count
-                fprintf(meta, "0\n");                        // edge_features_count
-                fprintf(meta, "1\n");                        // partition_count
-                fprintf(meta, "0\n");                        // partition id
-                fprintf(meta, "1\n");                        // partition node weight
-                fprintf(meta, "1\n");                        // partition edge weight
-                fprintf(meta, "%ld\n", num_nodes_in_server); // node count for type 0
-                fprintf(meta, "%ld\n",
-                        num_edge_records_in_server / 2); // edge count for type 0
-                EXPECT_EQ(0, fclose(meta));
+                std::string version_str = "n";
+                version_str += std::to_string(snark::MINIMUM_SUPPORTED_VERSION);
+
+                json json_meta = {
+                    {"binary_data_version", version_str},
+                    {"node_count", num_nodes_in_server},
+                    {"edge_count", num_edge_records_in_server / 2},
+                    {"node_type_count", 1},
+                    {"edge_type_count", 1},
+                    {"node_feature_count", 0},
+                    {"edge_feature_count", 0},
+                };
+                json_meta["partitions"] = {{"0", {{"node_weight", {1}}, {"edge_weight", {1}}}}};
+
+                json_meta["node_count_per_type"] = {num_nodes_in_server};
+                json_meta["edge_count_per_type"] = {num_edge_records_in_server / 2};
+
+                std::ofstream meta(path / "meta.json");
+                meta << json_meta << std::endl;
+                meta.close();
             }
 
             servers.emplace_back(std::make_unique<snark::GRPCServer>(

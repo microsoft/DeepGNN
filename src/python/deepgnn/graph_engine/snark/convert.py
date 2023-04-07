@@ -7,6 +7,7 @@ import multiprocessing as mp
 import math
 from operator import add
 import fsspec
+import json
 from deepgnn import get_logger
 from deepgnn.graph_engine._adl_reader import TextFileIterator
 from deepgnn.graph_engine._base import get_fs
@@ -152,55 +153,46 @@ class MultiWorkersConverter:
             partition_gettr = lambda p, key: getattr(p, key)  # noqa: E731
 
         fs, _ = get_fs(self.output_dir)
+
+        mjson = {
+            "binary_data_version": BINARY_DATA_VERSION,
+            "node_count": gettr("node_count"),
+            "edge_count": gettr("edge_count"),
+            "node_type_count": gettr("node_type_num"),
+            "edge_type_count": gettr("edge_type_num"),
+            "node_feature_count": gettr("node_feature_count"),
+            "edge_feature_count": gettr("edge_feature_count"),
+        }
+
+        edge_count_per_type = [0] * int(gettr("edge_type_num"))
+        node_count_per_type = [0] * int(gettr("node_type_num"))
+        mjson["partitions"] = {}
+        for p in partitions:
+            edge_count_per_type = list(
+                map(add, edge_count_per_type, partition_gettr(p, "edge_type_count"))
+            )
+            node_count_per_type = list(
+                map(add, node_count_per_type, partition_gettr(p, "node_type_count"))
+            )
+
+            i = p["id"] if isinstance(p, dict) else 0
+
+            mjson["partitions"][f"{i}"] = {
+                "node_weight": partition_gettr(p, "node_weight"),
+                "edge_weight": partition_gettr(p, "edge_weight"),
+            }
+
+        mjson["node_count_per_type"] = node_count_per_type
+        mjson["edge_count_per_type"] = edge_count_per_type
+
         with fs.open(
-            "{}/meta{}.txt".format(
+            "{}/meta{}.json".format(
                 self.output_dir,
                 "" if self.worker_count == 1 else f"_{self.worker_index}",
             ),
             "w",
-        ) as mtxt:
-
-            mtxt.writelines(
-                [
-                    str(BINARY_DATA_VERSION),
-                    "\n",
-                    str(gettr("node_count")),
-                    "\n",
-                    str(gettr("edge_count")),
-                    "\n",
-                    str(gettr("node_type_num")),
-                    "\n",
-                    str(gettr("edge_type_num")),
-                    "\n",
-                    str(gettr("node_feature_num")),
-                    "\n",
-                    str(gettr("edge_feature_num")),
-                    "\n",
-                    str(len(partitions)),
-                    "\n",
-                ]
-            )
-
-            edge_count_per_type = [0] * int(gettr("edge_type_num"))
-            node_count_per_type = [0] * int(gettr("node_type_num"))
-            for p in partitions:
-                edge_count_per_type = list(
-                    map(add, edge_count_per_type, partition_gettr(p, "edge_type_count"))
-                )
-                node_count_per_type = list(
-                    map(add, node_count_per_type, partition_gettr(p, "node_type_count"))
-                )
-
-                mtxt.writelines([str(p["id"] if isinstance(p, dict) else 0), "\n"])
-                for nw in partition_gettr(p, "node_weight"):
-                    mtxt.writelines([str(nw), "\n"])
-
-                for ew in partition_gettr(p, "edge_weight"):
-                    mtxt.writelines([str(ew), "\n"])
-            for count in node_count_per_type:
-                mtxt.writelines([str(count), "\n"])
-            for count in edge_count_per_type:
-                mtxt.writelines([str(count), "\n"])
+        ) as file:
+            file.write(json.dumps(mjson))
 
 
 if __name__ == "__main__":

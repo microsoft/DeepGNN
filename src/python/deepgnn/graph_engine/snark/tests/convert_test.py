@@ -342,33 +342,24 @@ def test_sanity_metadata(triangle_graph):
         output_dir=output.name,
         decoder=decoder(),
     ).convert()
-    with open("{}/meta.txt".format(output.name), "r") as ni:
-        result = ni.readlines()
+    with open("{}/meta.json".format(output.name), "r") as ni:
+        result = json.load(ni)
 
-        assert len(result) == 19
-        assert result[0].strip() == BINARY_DATA_VERSION
-        assert int(result[1]) == 3
-        assert int(result[2]) == 3
-        assert int(result[3]) == 3
-        assert int(result[4]) == 2
-        assert int(result[5]) == 2
-        assert int(result[6]) == 2
+        assert result["binary_data_version"] == BINARY_DATA_VERSION
+        assert result["node_count"] == 3
+        assert result["edge_count"] == 3
+        assert result["node_type_count"] == 3
+        assert result["edge_type_count"] == 2
+        assert result["node_feature_count"] == 2
+        assert result["edge_feature_count"] == 2
 
         # partition information
-        assert int(result[7]) == 1
-        assert int(result[8]) == 0
-        assert float(result[9]) == 1
-        assert float(result[10]) == 1
-        assert float(result[11]) == 1
-        assert float(result[12]) == 0.5
-        assert float(result[13]) == 1.7
+        assert result["partitions"]["0"]["node_weight"] == [1, 1, 1]
+        assert result["partitions"]["0"]["edge_weight"] == [0.5, 1.7]
 
         # type counts
-        assert int(result[14]) == 1
-        assert int(result[15]) == 1
-        assert int(result[16]) == 1
-        assert int(result[17]) == 1
-        assert int(result[18]) == 2
+        assert result["node_count_per_type"] == [1, 1, 1]
+        assert result["edge_count_per_type"] == [1, 2]
 
 
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)

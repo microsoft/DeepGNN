@@ -11,7 +11,7 @@
 namespace snark
 {
 
-const size_t MINIMUM_SUPPORTED_VERSION = 1;
+const size_t MINIMUM_SUPPORTED_VERSION = 2;
 
 struct Metadata
 {

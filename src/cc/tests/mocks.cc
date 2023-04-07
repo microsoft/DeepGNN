@@ -5,6 +5,9 @@
 #include "src/cc/lib/graph/metadata.h"
 
 #include <fstream>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 namespace TestGraph
 {
@@ -94,27 +97,25 @@ snark::Partition convert(std::filesystem::path path, std::string suffix, MemoryG
         edge_index_out.close();
     }
     {
-        std::ofstream meta(path / "meta.txt");
-        meta << "v" << snark::MINIMUM_SUPPORTED_VERSION << "\n";
-        meta << counter << "\n";
-        meta << nb_index.size() << "\n";
+        std::string version_str = "v";
+        version_str += std::to_string(snark::MINIMUM_SUPPORTED_VERSION);
 
-        meta << node_types << "\n";
-        meta << 1 << "\n";                               // edge_types_count
-        meta << 1 << "\n";                               // node_features_count
-        meta << (edge_features.empty() ? 0 : 1) << "\n"; // edge_features_count
-        meta << 1 << "\n";                               // partition_count
-        meta << 0 << "\n";                               // partition id
-        for (auto weight : node_type_weights)
-        {
-            meta << weight << "\n"; // partition node weight
-        }
-        meta << 1 << "\n"; // partition edge weight
-        for (auto count : node_type_counts)
-        {
-            meta << count << "\n"; // node type count
-        }
-        meta << edge_index.size() << "\n"; // edge count
+        json json_meta = {
+            {"binary_data_version", version_str},
+            {"node_count", counter},
+            {"edge_count", nb_index.size()},
+            {"node_type_count", node_types},
+            {"edge_type_count", 1},
+            {"node_feature_count", 1},
+            {"edge_feature_count", (edge_features.empty() ? 0 : 1)},
+        };
+        json_meta["partitions"] = {{"0", {{"node_weight", node_type_weights}, {"edge_weight", {1}}}}};
+
+        json_meta["node_count_per_type"] = node_type_counts;
+        json_meta["edge_count_per_type"] = {edge_index.size()};
+
+        std::ofstream meta(path / "meta.json");
+        meta << json_meta << std::endl;
         meta.close();
     }
     {

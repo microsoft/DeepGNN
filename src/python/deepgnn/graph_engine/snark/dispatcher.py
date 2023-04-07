@@ -129,8 +129,8 @@ class PipeDispatcher(Dispatcher):
         self.edge_count = 0
         self.node_type_num = 0
         self.edge_type_num = 0
-        self.node_feature_num = 0
-        self.edge_feature_num = 0
+        self.node_feature_count = 0
+        self.edge_feature_count = 0
         self.partitions: typing.List[typing.Dict] = []
 
     def dispatch(self, line: str):
@@ -154,13 +154,13 @@ class PipeDispatcher(Dispatcher):
             flag, output = self.q_out.get()
             self.node_count += output["node_count"]
             self.edge_count += output["edge_count"]
-            self.node_type_num = max(self.node_type_num, output["node_type_num"])
-            self.edge_type_num = max(self.edge_type_num, output["edge_type_num"])
-            self.node_feature_num = max(
-                self.node_feature_num, output["node_feature_num"]
+            self.node_type_num = max(self.node_type_num, output["node_type_count"])
+            self.edge_type_num = max(self.edge_type_num, output["edge_type_count"])
+            self.node_feature_count = max(
+                self.node_feature_count, output["node_feature_count"]
             )
-            self.edge_feature_num = max(
-                self.edge_feature_num, output["edge_feature_num"]
+            self.edge_feature_count = max(
+                self.edge_feature_count, output["edge_feature_count"]
             )
             self.partitions.append(output["partition"])
 
@@ -301,8 +301,8 @@ class QueueDispatcher(Dispatcher):
         self.edge_count = 0
         self.node_type_num = 0
         self.edge_type_num = 0
-        self.node_feature_num = 0
-        self.edge_feature_num = 0
+        self.node_feature_count = 0
+        self.edge_feature_count = 0
         self.partitions: typing.List[typing.Dict] = []
 
     def dispatch(self, line: str):
@@ -329,13 +329,13 @@ class QueueDispatcher(Dispatcher):
             flag, output = self.q_out.get()
             self.node_count += output["node_count"]
             self.edge_count += output["edge_count"]
-            self.node_type_num = max(self.node_type_num, output["node_type_num"])
-            self.edge_type_num = max(self.edge_type_num, output["edge_type_num"])
-            self.node_feature_num = max(
-                self.node_feature_num, output["node_feature_num"]
+            self.node_type_num = max(self.node_type_num, output["node_type_count"])
+            self.edge_type_num = max(self.edge_type_num, output["edge_type_count"])
+            self.node_feature_count = max(
+                self.node_feature_count, output["node_feature_count"]
             )
-            self.edge_feature_num = max(
-                self.edge_feature_num, output["edge_feature_num"]
+            self.edge_feature_count = max(
+                self.edge_feature_count, output["edge_feature_count"]
             )
             self.partitions.append(output["partition"])
 
