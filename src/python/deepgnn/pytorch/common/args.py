@@ -34,7 +34,7 @@ def init_dataset_args(parser: argparse.ArgumentParser):
     group.add_argument("--prefetch_size", default=16, type=int, help="Number of queries to prefetch.")
     group.add_argument("--num_parallel", default=2, type=int, help="Number of graph queries to run in parallel.")
     group.add_argument("--data_parallel_num", default=2, type=int, help="How many subprocesses to use for data loading.")
-    group.add_argument("--prefetch_factor", default=0, type=int, help="Number of samples loaded in advance by each worker.")
+    group.add_argument("--prefetch_factor", default=None, type=int, help="Number of samples loaded in advance by each worker.")
     group.add_argument("--max_id", type=int, help="Max node id.")
     group.add_argument("--strategy", type=str, default="RandomWithoutReplacement", help="GraphEngine Sampler: Weighted/Random/RandomWithoutReplacement.")
 
