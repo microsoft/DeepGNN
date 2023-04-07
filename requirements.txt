@@ -90,7 +90,7 @@ grpcio-health-checking==1.49.1
 grpcio-tools==1.49.1
 h5py==3.7.0
 heapdict==1.0.1
-horovod==0.25.0;sys_platform != 'win32'
+horovod==0.26.0;sys_platform != 'win32'
 huggingface-hub==0.10.1
 idna==3.4
 idna-ssl==1.1.0
@@ -112,7 +112,7 @@ jsonpickle==2.2.0
 jsonschema==4.16.0
 jupyter_client==7.4.2
 jupyter_core==4.11.1
-keras==2.10.0
+keras==2.11.0
 keras-preprocessing==1.1.2
 keras_preprocessing==1.1.2
 keyring==23.9.3
