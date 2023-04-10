@@ -192,8 +192,8 @@ TEST(DistributedTest, NodeSparseFeaturesMultipleServers)
             std::shared_ptr<snark::GraphSamplerServiceImpl>{}, "localhost:0", "", "", ""));
         channels.emplace_back(servers.back()->InProcessChannel());
     }
-    snark::GRPCClient c(channels, 1, 1);
 
+    snark::GRPCClient c(channels, 1, 1);
     std::vector<snark::NodeId> input_nodes = {2, 5, 0, 1};
     std::vector<snark::FeatureId> features = {1, 0};
     std::vector<std::vector<uint8_t>> values(features.size());

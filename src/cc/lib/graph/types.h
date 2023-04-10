@@ -3,7 +3,7 @@
 
 #ifndef SNARK_TYPES_H
 #define SNARK_TYPES_H
-#include <cstdlib>
+#include <cstdint>
 #include <utility>
 
 namespace snark

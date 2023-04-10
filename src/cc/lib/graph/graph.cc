@@ -379,7 +379,7 @@ void Graph::NeighborCount(std::span<const NodeId> input_node_ids, std::span<cons
             {
                 output_neighbors_counts[idx] += m_partitions[m_partitions_indices[index]].NeighborCount(
                     m_internal_indices[index],
-                    timestamps.empty() ? std::nullopt : std::optional<snark::Timestamp>{timestamps[index]},
+                    timestamps.empty() ? std::nullopt : std::optional<snark::Timestamp>{timestamps[idx]},
                     input_edge_types);
             }
         }
@@ -391,6 +391,7 @@ void Graph::FullNeighbor(std::span<const NodeId> input_node_ids, std::span<const
                          std::vector<Type> &output_neighbor_types, std::vector<float> &output_neighbors_weights,
                          std::span<uint64_t> output_neighbors_counts) const
 {
+    std::fill(std::begin(output_neighbors_counts), std::end(output_neighbors_counts), 0);
     for (size_t node_index = 0; node_index < input_node_ids.size(); ++node_index)
     {
         auto internal_id = m_node_map.find(input_node_ids[node_index]);
@@ -406,7 +407,7 @@ void Graph::FullNeighbor(std::span<const NodeId> input_node_ids, std::span<const
             {
                 output_neighbors_counts[node_index] += m_partitions[m_partitions_indices[index]].FullNeighbor(
                     m_internal_indices[index],
-                    timestamps.empty() ? std::nullopt : std::optional<snark::Timestamp>{timestamps[index]},
+                    timestamps.empty() ? std::nullopt : std::optional<snark::Timestamp>{timestamps[node_index]},
                     input_edge_types, output_neighbor_ids, output_neighbor_types, output_neighbors_weights);
             }
         }

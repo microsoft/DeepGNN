@@ -11,6 +11,17 @@ using json = nlohmann::json;
 
 namespace TestGraph
 {
+void save_edge_timestamps(std::ofstream &out,
+                          const std::vector<std::pair<snark::Timestamp, snark::Timestamp>> &timestamps,
+                          snark::Timestamp watermark)
+{
+    out.write(reinterpret_cast<const char *>(&watermark), sizeof(snark::Timestamp));
+    for (const auto &ts : timestamps)
+    {
+        out.write(reinterpret_cast<const char *>(&ts.first), sizeof(snark::Timestamp));
+        out.write(reinterpret_cast<const char *>(&ts.second), sizeof(snark::Timestamp));
+    }
+}
 snark::Partition convert(std::filesystem::path path, std::string suffix, MemoryGraph t, size_t node_types)
 {
     std::vector<NeighborRecord> edge_index;
@@ -96,6 +107,14 @@ snark::Partition convert(std::filesystem::path path, std::string suffix, MemoryG
         edge_feature_index_out.close();
         edge_index_out.close();
     }
+
+    if (!t.m_edge_timestamps.empty())
+    {
+        std::ofstream edge_timestamps_out(path / ("edge_" + suffix + ".timestamp"),
+                                          std::ios_base::binary | std::ios_base::out);
+        save_edge_timestamps(edge_timestamps_out, t.m_edge_timestamps, t.m_watermark);
+    }
+
     {
         std::string version_str = "v";
         version_str += std::to_string(snark::MINIMUM_SUPPORTED_VERSION);

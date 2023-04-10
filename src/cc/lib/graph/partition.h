@@ -99,6 +99,7 @@ struct Partition
     void ReadNodeFeaturesData(std::filesystem::path path, std::string suffix);
     void ReadEdgeFeaturesIndex(std::filesystem::path path, std::string suffix);
     void ReadEdgeFeaturesData(std::filesystem::path path, std::string suffix);
+    void ReadEdgeTimestamps(std::filesystem::path path, std::string suffix);
 
     void UniformSampleNeighborWithoutReplacement(int64_t seed, uint64_t internal_node_ids,
                                                  std::optional<Timestamp> timestamp,
@@ -135,6 +136,8 @@ struct Partition
     std::vector<float> m_edge_weights;
 
     std::vector<uint64_t> m_neighbors_index;
+    std::vector<std::pair<Timestamp, Timestamp>> m_edge_timestamps;
+    Timestamp m_watermark;
 
     std::vector<Type> m_node_types;
     Metadata m_metadata;

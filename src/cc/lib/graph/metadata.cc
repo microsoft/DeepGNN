@@ -18,7 +18,7 @@ namespace snark
 {
 
 Metadata::Metadata(std::filesystem::path path, std::string config_path)
-    : m_path(path.string()), m_config_path(config_path)
+    : m_version(MINIMUM_SUPPORTED_VERSION), m_path(path.string()), m_config_path(config_path), m_watermark(-1)
 {
     if (is_hdfs_path(path))
 #ifndef SNARK_PLATFORM_LINUX

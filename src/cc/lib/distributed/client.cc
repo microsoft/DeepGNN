@@ -79,7 +79,7 @@ void ExtractFeatures(const std::vector<SparseFeatureIndex> &response_index,
         for (size_t node_index = 0; node_index < node_count; ++node_index)
         {
             auto &response_index_item = response_index[node_index * feature_count + feature_index];
-            if (replies[response_index_item.shard].indices().empty())
+            if (response_index_item.shard < 0 || replies[response_index_item.shard].indices().empty())
             {
                 continue;
             }
