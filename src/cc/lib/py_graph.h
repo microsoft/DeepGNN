@@ -69,6 +69,7 @@ extern "C"
 {
 #endif
     typedef int64_t NodeID;
+    typedef int64_t Timestamp;
     typedef int32_t Type;
     typedef int32_t Feature;
 
@@ -93,39 +94,44 @@ extern "C"
 
     DEEPGNN_DLL extern int32_t GetNodeType(PyGraph *graph, NodeID *node_ids, size_t node_ids_size, Type *output,
                                            Type default_type);
-    DEEPGNN_DLL extern int32_t GetNodeFeature(PyGraph *graph, NodeID *node_ids, size_t node_ids_size, Feature *features,
-                                              size_t features_size, uint8_t *output, size_t output_size);
+    DEEPGNN_DLL extern int32_t GetNodeFeature(PyGraph *graph, NodeID *node_ids, size_t node_ids_size,
+                                              Timestamp *time_stamps, Feature *features, size_t features_size,
+                                              uint8_t *output, size_t output_size);
     DEEPGNN_DLL extern int32_t GetNodeSparseFeature(PyGraph *graph, NodeID *node_ids, size_t node_ids_size,
-                                                    Feature *features, size_t features_size,
+                                                    Timestamp *time_stamps, Feature *features, size_t features_size,
                                                     GetSparseFeaturesCallback callback);
     DEEPGNN_DLL extern int32_t GetNodeStringFeature(PyGraph *graph, NodeID *node_ids, size_t node_ids_size,
+                                                    Timestamp *time_stamps, Feature *features, size_t features_size,
+                                                    int64_t *dimensions, GetStringFeaturesCallback callback);
+    DEEPGNN_DLL extern int32_t GetEdgeFeature(PyGraph *graph, NodeID *edge_src_ids, NodeID *edge_dst_ids,
+                                              Type *edge_types, size_t edge_size, Timestamp *time_stamps,
+                                              Feature *features, size_t features_size, uint8_t *output,
+                                              size_t output_size);
+    DEEPGNN_DLL extern int32_t GetEdgeSparseFeature(PyGraph *graph, NodeID *edge_src_ids, NodeID *edge_dst_ids,
+                                                    Type *edge_types, size_t edge_size, Timestamp *time_stamps,
+                                                    Feature *features, size_t features_size,
+                                                    GetSparseFeaturesCallback callback);
+    DEEPGNN_DLL extern int32_t GetEdgeStringFeature(PyGraph *graph, NodeID *edge_src_ids, NodeID *edge_dst_ids,
+                                                    Type *edge_types, size_t edge_size, Timestamp *time_stamps,
                                                     Feature *features, size_t features_size, int64_t *dimensions,
                                                     GetStringFeaturesCallback callback);
-    DEEPGNN_DLL extern int32_t GetEdgeFeature(PyGraph *graph, NodeID *edge_src_ids, NodeID *edge_dst_ids,
-                                              Type *edge_types, size_t edge_size, Feature *features,
-                                              size_t features_size, uint8_t *output, size_t output_size);
-    DEEPGNN_DLL extern int32_t GetEdgeSparseFeature(PyGraph *graph, NodeID *edge_src_ids, NodeID *edge_dst_ids,
-                                                    Type *edge_types, size_t edge_size, Feature *features,
-                                                    size_t features_size, GetSparseFeaturesCallback callback);
-    DEEPGNN_DLL extern int32_t GetEdgeStringFeature(PyGraph *graph, NodeID *edge_src_ids, NodeID *edge_dst_ids,
-                                                    Type *edge_types, size_t edge_size, Feature *features,
-                                                    size_t features_size, int64_t *dimensions,
-                                                    GetStringFeaturesCallback callback);
     DEEPGNN_DLL extern int32_t NeighborCount(PyGraph *py_graph, NodeID *in_node_ids, size_t in_node_ids_size,
-                                             Type *in_edge_types, size_t in_edge_types_size,
+                                             Timestamp *time_stamps, Type *in_edge_types, size_t in_edge_types_size,
                                              uint64_t *out_neighbor_counts);
     DEEPGNN_DLL extern int32_t GetNeighbors(PyGraph *graph, NodeID *in_node_ids, size_t in_node_ids_size,
-                                            Type *in_edge_types, size_t in_edge_types_size,
+                                            Timestamp *time_stamps, Type *in_edge_types, size_t in_edge_types_size,
                                             uint64_t *out_neighbor_counts, GetNeighborsCallback callback);
     DEEPGNN_DLL extern int32_t WeightedSampleNeighbor(PyGraph *graph, int64_t seed, NodeID *in_node_ids,
                                                       size_t in_node_ids_size, Type *in_edge_types,
-                                                      size_t in_edge_types_size, size_t count, NodeID *out_neighbor_ids,
-                                                      Type *out_types, float *out_weights, NodeID default_node_id,
-                                                      float default_weight, Type default_edge_type);
+                                                      size_t in_edge_types_size, Timestamp *time_stamps, size_t count,
+                                                      NodeID *out_neighbor_ids, Type *out_types, float *out_weights,
+                                                      NodeID default_node_id, float default_weight,
+                                                      Type default_edge_type);
     DEEPGNN_DLL extern int32_t UniformSampleNeighbor(PyGraph *graph, bool without_replacement, int64_t seed,
                                                      NodeID *in_node_ids, size_t int_node_ids_size, Type *in_edge_types,
-                                                     size_t in_edge_types_size, size_t count, NodeID *out_neighbor_ids,
-                                                     Type *out_types, NodeID default_node_id, Type default_edge_type);
+                                                     size_t in_edge_types_size, Timestamp *time_stamps, size_t count,
+                                                     NodeID *out_neighbor_ids, Type *out_types, NodeID default_node_id,
+                                                     Type default_edge_type);
 
     DEEPGNN_DLL extern int32_t RandomWalk(PyGraph *graph, int64_t seed, float p, float q, NodeID default_node_id,
                                           NodeID *in_node_ids, size_t in_node_ids_size, Type *in_edge_types,
@@ -135,6 +141,7 @@ extern "C"
                                                  Type *in_edge_types, size_t in_edge_types_size, size_t count,
                                                  float alpha, float eps, NodeID default_node_id, float default_weight,
                                                  NodeID *out_neighbor_ids, float *out_weights);
+
     // TODO(alsamylk): sorted neighbors
 
     DEEPGNN_DLL extern int32_t CreateWeightedNodeSampler(PyGraph *graph, PySampler *node_sampler, size_t count,

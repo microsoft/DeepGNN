@@ -81,7 +81,7 @@ TEST(HDFSTest, NodeFeature)
     std::vector<snark::NodeId> nodes = {0, 1};
     std::vector<uint8_t> output(4 * 3 * 2);
     std::vector<snark::FeatureMeta> features = {{0, 12}};
-    g.GetNodeFeature(std::span(nodes), std::span(features), std::span(output));
+    g.GetNodeFeature(std::span(nodes), {}, std::span(features), std::span(output));
     std::span res(reinterpret_cast<float *>(output.data()), output.size() / sizeof(float));
     EXPECT_EQ(std::vector<float>(std::begin(res), std::end(res)), std::vector<float>({1, 2, 3, 5, 6, 7}));
 }
@@ -118,7 +118,7 @@ TEST(HDFSTest, NeighborSample)
     std::vector<float> neighbor_weights(count * nodes.size(), -1);
     std::vector<float> total_neighbor_weights(nodes.size());
 
-    g.SampleNeighbor(42, std::span(nodes), std::span(types), count, std::span(neighbor_nodes),
+    g.SampleNeighbor(42, std::span(nodes), std::span(types), {}, count, std::span(neighbor_nodes),
                      std::span(neighbor_types), std::span(neighbor_weights), std::span(total_neighbor_weights), 0, 0,
                      -1);
     EXPECT_EQ(std::vector<snark::NodeId>({5, 1, 3, 7, 7, 8}), neighbor_nodes);
@@ -149,7 +149,7 @@ TEST(HDFSTest, EdgeFeatureNoFeature)
     std::vector<snark::Type> edge_types = {0};
     std::vector<uint8_t> large_output(4 * 3);
     std::vector<snark::FeatureMeta> features = {{1, 12}};
-    g.GetEdgeFeature(std::span(nodes_src), std::span(nodes_dest), std::span(edge_types), std::span(features),
+    g.GetEdgeFeature(std::span(nodes_src), std::span(nodes_dest), std::span(edge_types), {}, std::span(features),
                      std::span(large_output));
     std::span large_res(reinterpret_cast<float *>(large_output.data()), large_output.size() / 4);
     EXPECT_EQ(std::vector<float>(std::begin(large_res), std::end(large_res)), std::vector<float>(3, 0.0f));

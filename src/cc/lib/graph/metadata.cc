@@ -4,7 +4,7 @@
 #include "metadata.h"
 #include "locator.h"
 
-#include <cstdio>
+#include <cinttypes>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -60,8 +60,8 @@ Metadata::Metadata(std::filesystem::path path, std::string config_path)
     m_edge_type_count = meta["edge_type_count"];
     m_node_feature_count = meta["node_feature_count"];
     m_edge_feature_count = meta["edge_feature_count"];
-
     m_partition_count = meta["partitions"].size();
+    m_watermark = meta["watermark"];
 
     m_partition_node_weights =
         std::vector<std::vector<float>>(m_partition_count, std::vector<float>(m_node_type_count, 0.0f));
@@ -105,6 +105,7 @@ void Metadata::Write(std::filesystem::path path) const
         {"edge_type_count", m_edge_type_count},
         {"node_feature_count", m_node_feature_count},
         {"edge_feature_count", m_edge_feature_count},
+        {"watermark", m_watermark},
     };
 
     json_meta["partitions"] = {{"0", {{"node_weight", {0}}}}};

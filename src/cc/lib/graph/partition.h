@@ -3,8 +3,10 @@
 
 #ifndef SNARK_PARTITION_H
 #define SNARK_PARTITION_H
+
 #include <cstdlib>
 #include <filesystem>
+#include <optional>
 #include <random>
 #include <span>
 #include <string>
@@ -16,6 +18,7 @@
 #include "types.h"
 #include "xoroshiro.h"
 
+#include "absl/container/inlined_vector.h"
 #include "boost/random/uniform_real_distribution.hpp"
 
 namespace snark
@@ -26,36 +29,43 @@ struct Partition
     Partition(Metadata m_metadata, std::filesystem::path path, std::string suffix, PartitionStorageType storage_type);
 
     Type GetNodeType(uint64_t internal_node_id) const;
-    bool HasNodeFeatures(uint64_t internal_node_id) const;
-    bool GetNodeFeature(uint64_t internal_node_id, std::span<snark::FeatureMeta> features,
-                        std::span<uint8_t> output) const;
-    bool GetNodeSparseFeature(uint64_t internal_node_id, std::span<const snark::FeatureId> features, int64_t prefix,
-                              std::span<int64_t> out_dimensions, std::vector<std::vector<int64_t>> &out_indices,
-                              std::vector<std::vector<uint8_t>> &out_values) const;
 
-    bool GetNodeStringFeature(uint64_t internal_node_id, std::span<const snark::FeatureId> features,
+    void GetNodeFeature(uint64_t internal_node_id, std::optional<Timestamp> timestamp,
+                        std::span<snark::FeatureMeta> features, std::span<Timestamp> feature_flags,
+                        std::span<uint8_t> output) const;
+    void GetNodeSparseFeature(uint64_t internal_node_id, std::optional<Timestamp> timestamp,
+                              std::span<const snark::FeatureId> features, std::span<Timestamp> feature_flags,
+                              int64_t prefix, std::span<int64_t> out_dimensions,
+                              std::vector<std::vector<int64_t>> &out_indices,
+                              std::vector<std::vector<uint8_t>> &out_values, std::vector<uint64_t> &values_sizes) const;
+    void GetNodeStringFeature(uint64_t internal_node_id, std::optional<Timestamp> timestamp,
+                              std::span<const snark::FeatureId> features, std::span<Timestamp> feature_flags,
                               std::span<int64_t> out_dimensions, std::vector<uint8_t> &out_values) const;
 
     // Return true if an edge was found in the partition
-    bool GetEdgeFeature(uint64_t internal_src_node_id, NodeId input_edge_dst, Type input_edge_type,
-                        std::span<snark::FeatureMeta> features, std::span<uint8_t> output) const;
+    void GetEdgeFeature(uint64_t internal_src_node_id, NodeId input_edge_dst, Type input_edge_type,
+                        std::optional<Timestamp> timestamp, std::span<snark::FeatureMeta> features,
+                        std::span<Timestamp> feature_flags, std::span<uint8_t> output) const;
 
-    bool GetEdgeSparseFeature(uint64_t internal_src_node_id, NodeId input_edge_dst, Type input_edge_type,
-                              std::span<const snark::FeatureId> features, int64_t prefix,
-                              std::span<int64_t> out_dimensions, std::vector<std::vector<int64_t>> &out_indices,
-                              std::vector<std::vector<uint8_t>> &out_values) const;
+    void GetEdgeSparseFeature(uint64_t internal_src_node_id, NodeId input_edge_dst, Type input_edge_type,
+                              std::optional<Timestamp> timestamp, std::span<const snark::FeatureId> features,
+                              std::span<Timestamp> feature_flags, int64_t prefix, std::span<int64_t> out_dimensions,
+                              std::vector<std::vector<int64_t>> &out_indices,
+                              std::vector<std::vector<uint8_t>> &out_values, std::vector<uint64_t> &values_sizes) const;
 
-    bool GetEdgeStringFeature(uint64_t internal_src_node_id, NodeId input_edge_dst, Type input_edge_type,
-                              std::span<const snark::FeatureId> features, std::span<int64_t> out_dimensions,
+    void GetEdgeStringFeature(uint64_t internal_src_node_id, NodeId input_edge_dst, Type input_edge_type,
+                              std::optional<Timestamp> timestamp, std::span<const snark::FeatureId> features,
+                              std::span<Timestamp> feature_flags, std::span<int64_t> out_dimensions,
                               std::vector<uint8_t> &out_values) const;
 
     // Retrieve total number of neighbors with specified edge types and returns the total number
     // of such neighbors.
-    size_t NeighborCount(uint64_t internal_node_id, std::span<const Type> edge_types) const;
+    size_t NeighborCount(uint64_t internal_node_id, std::optional<Timestamp> timestamp,
+                         std::span<const Type> edge_types) const;
 
     // Backfill out_* vectors with information about neighbors of the node
     // with id equal to node_id and returns total number of such neighbors.
-    size_t FullNeighbor(uint64_t internal_node_id, std::span<const Type> edge_types,
+    size_t FullNeighbor(uint64_t internal_node_id, std::optional<Timestamp> timestamp, std::span<const Type> edge_types,
                         std::vector<NodeId> &out_neighbors_ids, std::vector<Type> &out_edge_types,
                         std::vector<float> &out_edge_weights) const;
 
@@ -63,19 +73,22 @@ struct Partition
     // out_partition contains information about neighbor weights for a
     // particular node in that partition. This is useful in case node neighbors
     // are distributed accross multiple partitions.
-    void SampleNeighbor(int64_t seed, uint64_t internal_node_id, std::span<const Type> in_edge_types, uint64_t count,
-                        std::span<NodeId> out_nodes, std::span<Type> out_types, std::span<float> out_weights,
-                        float &out_partition, NodeId default_node_id, float default_weight, Type default_type) const;
+    void SampleNeighbor(int64_t seed, uint64_t internal_node_id, std::optional<Timestamp> timestamp,
+                        std::span<const Type> in_edge_types, uint64_t count, std::span<NodeId> out_nodes,
+                        std::span<Type> out_types, std::span<float> out_weights, float &out_partition,
+                        NodeId default_node_id, float default_weight, Type default_type) const;
 
     // in_edge_types has to have types in strictly increasing order.
     void UniformSampleNeighbor(bool without_replacement, int64_t seed, uint64_t internal_node_id,
-                               std::span<const Type> in_edge_types, uint64_t count, std::span<NodeId> out_nodes,
-                               std::span<Type> out_types, uint64_t &out_partition_count, NodeId default_node_id,
-                               Type default_edge_type) const;
+                               std::optional<Timestamp> timestamp, std::span<const Type> in_edge_types, uint64_t count,
+                               std::span<NodeId> out_nodes, std::span<Type> out_types, uint64_t &out_partition_count,
+                               NodeId default_node_id, Type default_edge_type) const;
 
     Metadata GetMetadata() const;
 
   private:
+    std::optional<size_t> EdgeFeatureOffset(uint64_t internal_src_node_id, NodeId input_edge_dst,
+                                            Type input_edge_type) const;
     void ReadNodeMap(std::filesystem::path path, std::string suffix);
     void ReadNodeIndex(std::filesystem::path path, std::string suffix);
     void ReadEdges(std::filesystem::path path, std::string suffix);
@@ -88,13 +101,14 @@ struct Partition
     void ReadEdgeFeaturesData(std::filesystem::path path, std::string suffix);
 
     void UniformSampleNeighborWithoutReplacement(int64_t seed, uint64_t internal_node_ids,
+                                                 std::optional<Timestamp> timestamp,
                                                  std::span<const Type> in_edge_types, uint64_t count,
                                                  std::span<NodeId> out_nodes, std::span<Type> out_types,
                                                  uint64_t &out_partition_count, NodeId default_node_id,
                                                  Type default_edge_type) const;
     void UniformSampleNeighborWithReplacement(int64_t seed, uint64_t internal_node_ids,
-                                              std::span<const Type> in_edge_types, uint64_t count,
-                                              std::span<NodeId> out_nodes, std::span<Type> out_types,
+                                              std::optional<Timestamp> timestamp, std::span<const Type> in_edge_types,
+                                              uint64_t count, std::span<NodeId> out_nodes, std::span<Type> out_types,
                                               uint64_t &out_partition_count, NodeId default_node_id,
                                               Type default_edge_type) const;
     void UniformSampleMergeWithoutReplacement(

@@ -37,6 +37,7 @@ struct Metadata
     std::vector<std::vector<float>> m_partition_edge_weights;
     std::vector<size_t> m_node_count_per_type;
     std::vector<size_t> m_edge_count_per_type;
+    int64_t m_watermark;
 };
 } // namespace snark
 

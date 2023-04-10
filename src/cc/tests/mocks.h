@@ -26,7 +26,11 @@ struct Node
 struct MemoryGraph
 {
     std::vector<Node> m_nodes;
+    snark::Timestamp m_watermark = -1;
 };
 
 snark::Partition convert(std::filesystem::path path, std::string suffix, MemoryGraph t, size_t node_types);
+
+std::vector<float> serialize_temporal_features(std::vector<snark::Timestamp> timestamps,
+                                               std::vector<std::vector<float>> features);
 } // namespace TestGraph
