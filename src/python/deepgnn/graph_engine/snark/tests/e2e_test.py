@@ -11,8 +11,6 @@ import time
 from pathlib import Path
 import platform
 from typing import List, Tuple
-import socket
-from contextlib import closing
 
 import numpy as np
 import numpy.testing as npt
@@ -27,7 +25,7 @@ import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.dispatcher as dispatcher
 import deepgnn.graph_engine.snark._lib as lib
 from deepgnn.graph_engine.snark.converter.writers import BinaryWriter
-from util_test import json_to_edge_list_feature
+from util_test import json_to_edge_list_feature, find_free_port
 
 
 nodes = [
@@ -106,13 +104,6 @@ edges = [
         "float16_feature": {"13": [95, 96, 97], "14": [105, 106, 107]},
     },
 ]
-
-
-def find_free_port():
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind(("", 0))
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        return s.getsockname()[1]
 
 
 def triangle_graph_json(folder):
@@ -263,11 +254,13 @@ class Counter:
 
 def write_multi_binary(output_dir, partitions):
     def json_to_edge_list_helper(json_input):
-        features = json_to_edge_list_feature(JsonDecoder()._pull_features(json_input))
+        features = json_to_edge_list_feature(
+            JsonDecoder()._pull_features(json_input, -1, -1)
+        )
         if "node_id" in json_input:
             return f"{json_input['node_id']},-1,{json_input['node_type']},{json_input['node_weight']},{features}"
         else:
-            return f"{json_input['src_id']},{json_input['dst_id']},{json_input['edge_type']},{json_input['weight']},{features}"
+            return f"{json_input['src_id']},{json_input['edge_type']},{json_input['dst_id']},{json_input['weight']},{features}"
 
     for i, p in enumerate(partitions):
         decoder = EdgeListDecoder()
@@ -289,6 +282,7 @@ def write_multi_binary(output_dir, partitions):
         },
         "node_count_per_type": [1, 1, 1],
         "edge_count_per_type": [1, 2],
+        "watermark": -1,
     }
     with open(os.path.join(output_dir, "meta.json"), "w+") as f:
         f.write(json.dumps(content))
@@ -363,6 +357,9 @@ def test_memory_graph_neighbors(multi_partition_graph_data, storage_type):
     npt.assert_almost_equal(weights, np.array([0.5, 1.0], dtype=np.float32))
     npt.assert_equal(edge_types, np.array([0, 1], dtype=np.int32))
     npt.assert_equal(result_counts, np.array([1, 1], dtype=np.int64))
+
+
+# counter = 1
 
 
 @pytest.mark.parametrize(
@@ -1647,6 +1644,7 @@ def test_partitions_from_separate_folders():
         },
         "node_count_per_type": [2, 2],
         "edge_count_per_type": [],
+        "watermark": -1,
     }
     with open(os.path.join(meta_folder, "meta.json"), "w+") as f:
         f.write(json.dumps(content))

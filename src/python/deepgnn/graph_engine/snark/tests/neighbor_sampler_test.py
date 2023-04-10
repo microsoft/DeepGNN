@@ -559,6 +559,7 @@ def karate_club_graph(request):
             skip_edge_sampler=True,
             skip_node_sampler=True,
         ).convert()
+
         if request.param == "memory":
             yield client.MemoryGraph(workdir, [(workdir, 0), (workdir, 1)])
         else:
@@ -638,6 +639,7 @@ def test_karate_club_ppr_sampling(
             [0.05358997, 0.08245811, 0.1060928, 0.11746016, 0.12044134],
             [0.05639789, 0.06037995, 0.10675042, 0.11910437, 0.1498548],
         ],
+        verbose=True,
     )
 
 

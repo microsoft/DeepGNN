@@ -85,11 +85,11 @@ index 0 and 2 but skip index 1.
     ...         # Args can be added to init and added before passing to MultiWorkersConverter
     ...         pass
     ...
-    ...     def decode(self, line: dict) -> Iterator[Tuple[int, int, int, float, list]]:
-    ...         # For a node we will yield: (node_id, -1, node_type, node_weight, [feature_0, ...])
-    ...         # For an edge: (src_id, dst_id, edge_type, edge_weight, [feature_0, ...])
+    ...     def decode(self, line: dict) -> Iterator[Tuple[int, int, int, float, int, int, list]]:
+    ...         # For a node we will yield: (node_id, -1, node_type, node_weight, None, None, [feature_0, ...])
+    ...         # For an edge: (src_id, dst_id, edge_type, edge_weight, None, None, [feature_0, ...])
     ...         # We can return multiple items per line, but the order of the file, described above, must be maintained.
-    ...         yield int(line["src"]), int(line["dst"]), int(line["type"]), float(line["weight"]), [np.array(line["float_feature"], dtype=np.float32), (np.array(line["sparse_int16_coords"], dtype=np.int64), np.array(line["sparse_int16_feature"], dtype=np.int16))]
+    ...         yield int(line["src"]), int(line["dst"]), int(line["type"]), float(line["weight"]), None, None, [np.array(line["float_feature"], dtype=np.float32), (np.array(line["sparse_int16_coords"], dtype=np.int64), np.array(line["sparse_int16_feature"], dtype=np.int16))]
 
 Finally, we convert our input file to binaries using an Avro reader, a BinaryWriter and the AvroDecoder.
 Here we only have one partition and therefore one binary writer, it is okay to have multiple binary writers
@@ -123,9 +123,10 @@ Here we manually write a meta.json file for our graph engine to load.
     ...         "partitions": {"0": {"node_weight": writer.node_weight, "edge_weight": writer.edge_weight}},
     ...         "node_count_per_type": writer.node_type_count,
     ...         "edge_count_per_type": writer.edge_type_count,
+    ...         "watermark": -1,
     ...     }
     ...     f.write(json.dumps(content))
-    280
+    297
 
 We load the generated binaries into a graph engine and demonstrate it working.
 

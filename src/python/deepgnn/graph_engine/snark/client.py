@@ -379,7 +379,9 @@ class MemoryGraph:
             POINTER(c_uint64),
         ]
         self.lib.NeighborCount.restype = c_int32
-        self.lib.NeighborCount.errcheck = _ErrCallback("get neighbor counts")  # type: ignore
+        self.lib.NeighborCount.errcheck = _ErrCallback(
+            "get neighbor counts"
+        )  # type: ignore
 
         self.lib.GetNeighbors.argtypes = [
             POINTER(_DEEP_GRAPH),
@@ -460,6 +462,7 @@ class MemoryGraph:
             POINTER(_DEEP_GRAPH),
             POINTER(c_int64),
             c_size_t,
+            POINTER(c_int64),
             POINTER(c_int32),
             c_size_t,
             c_size_t,
@@ -520,7 +523,7 @@ class MemoryGraph:
             if timestamps is None or len(timestamps) == 0
             else np.array(timestamps, dtype=np.int64).ctypes.data_as(POINTER(c_int64)),
             features_in_bytes.ctypes.data_as(POINTER(c_int32)),
-            c_size_t(len(features_in_bytes)),
+            c_size_t(len(features)),
             result.ctypes.data_as(POINTER(c_uint8)),
             c_size_t(result.nbytes),
         )
@@ -546,7 +549,6 @@ class MemoryGraph:
             List[np.ndarray]: List of coordinates for sparse features, with node index as first coordinate. Each list element represents coordinates of a corresponding feature.
             List[np.ndarray]: List of numpy arrays of sparse features values. List items ordered by feature ids passed as input.
             np.array: dimensions of returned sparse features.
-
         """
         nodes = np.array(nodes, dtype=np.int64)
         features = np.array(features, dtype=np.int32)
@@ -580,7 +582,6 @@ class MemoryGraph:
 
         Args:
             nodes (np.array): list of nodes
-            features (np.array): list of feature ids
             dtype (np.dtype): feature types to extract
             timestamps (np.array): list of timestamps corresponding to each node
 
@@ -888,11 +889,11 @@ class MemoryGraph:
             c_int64(seed if seed is not None else random.getrandbits(64)),
             nodes.ctypes.data_as(POINTER(c_int64)),
             c_size_t(nodes.size),
+            etypes_arr,
+            c_size_t(len(edge_types)),
             None
             if timestamps is None or len(timestamps) == 0
             else np.array(timestamps, dtype=np.int64).ctypes.data_as(POINTER(c_int64)),
-            etypes_arr,
-            c_size_t(len(edge_types)),
             c_size_t(count),
             result_nodes.ctypes.data_as(POINTER(c_int64)),
             result_types.ctypes.data_as(POINTER(c_int32)),
@@ -988,7 +989,6 @@ class MemoryGraph:
         """
         nodes = np.array(nodes, dtype=np.int64)
         edge_types = _make_sorted_list(edge_types)
-
         TypeArray = c_int32 * len(edge_types)
         etypes_arr = TypeArray(*edge_types)
         result_nodes = np.full((len(nodes), count), default_node, dtype=np.int64)
@@ -997,11 +997,11 @@ class MemoryGraph:
             self.g_,
             nodes.ctypes.data_as(POINTER(c_int64)),
             c_size_t(nodes.size),
-            etypes_arr,
-            c_size_t(len(edge_types)),
             None
             if timestamps is None or len(timestamps) == 0
             else np.array(timestamps, dtype=np.int64).ctypes.data_as(POINTER(c_int64)),
+            etypes_arr,
+            c_size_t(len(edge_types)),
             c_size_t(count),
             c_float(alpha),
             c_float(eps),
@@ -1088,7 +1088,11 @@ class MemoryGraph:
 
         return result_nodes
 
-    def node_types(self, nodes: np.ndarray, default_type: int) -> np.ndarray:
+    def node_types(
+        self,
+        nodes: np.ndarray,
+        default_type: int,
+    ) -> np.ndarray:
         """Retrieve node types.
 
         Args:

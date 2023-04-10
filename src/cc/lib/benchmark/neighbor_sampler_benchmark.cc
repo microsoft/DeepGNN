@@ -152,6 +152,7 @@ snark::Graph create_graph(size_t num_types, size_t num_nodes_per_partition, size
             {"node_count_per_type", {num_nodes}},
             {"edge_count_per_type", {num_edges}},
             {"partitions", {{"0", {{"node_weight", {0}}}}}},
+            {"watermark", -1},
         };
 
         for (size_t partition_id = 0; partition_id < num_partitions; ++partition_id)

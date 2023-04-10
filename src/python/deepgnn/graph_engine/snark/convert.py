@@ -40,6 +40,7 @@ class MultiWorkersConverter:
         skip_edge_sampler: bool = False,
         file_iterator: Optional[TextFileIterator] = None,
         debug: bool = False,
+        watermark: Optional[int] = None,
     ):
         """Run multi worker converter in multi process.
 
@@ -62,6 +63,7 @@ class MultiWorkersConverter:
             skip_edge_sampler(bool): skip generation of edge alias tables.
             file_iterator(TextFileIterator): Iterator to yield lines of the input text file.
             debug(bool, False): Enable debug mode to disable multiprocessing and see error messages, forces worker_count=1, paritition_count=1.
+            watermark(Optional[int]): for temporal graphs is latest known timestamp in the graph.
         """
         if decoder is None:
             decoder = JsonDecoder()  # type: ignore
@@ -77,6 +79,7 @@ class MultiWorkersConverter:
         self.thread_count = thread_count
         self.dispatcher = dispatcher
         self.file_iterator = file_iterator
+        self.watermark = watermark
 
         self.fs, _ = get_fs(graph_path)
 
@@ -103,6 +106,7 @@ class MultiWorkersConverter:
                 use_threads=use_threads,
                 skip_node_sampler=skip_node_sampler,
                 skip_edge_sampler=skip_edge_sampler,
+                watermark=watermark,
             )
 
     def convert(self):
@@ -143,9 +147,14 @@ class MultiWorkersConverter:
             ), "Debug mode does not support multiple partitions."
             if isinstance(self.decoder, type):
                 self.decoder = self.decoder()
-            writer = BinaryWriter(self.output_dir, 0)
+            writer = BinaryWriter(
+                self.output_dir,
+                0,
+                watermark=self.watermark,
+            )
             for _, data in enumerate(self.file_iterator):
                 for line in data:
+                    print(f"lise is {line}")
                     writer.add(self.decoder.decode(line))
             writer.close()
             gettr = lambda key: getattr(writer, key)  # noqa: E731
@@ -184,6 +193,7 @@ class MultiWorkersConverter:
 
         mjson["node_count_per_type"] = node_count_per_type
         mjson["edge_count_per_type"] = edge_count_per_type
+        mjson["watermark"] = -1 if self.watermark is None else self.watermark
 
         with fs.open(
             "{}/meta{}.json".format(
@@ -235,6 +245,12 @@ if __name__ == "__main__":
         default=False,
         help="Skip generation of edge alias tables for edge sampling",
     )
+    parser.add_argument(
+        "--watermark",
+        type=int,
+        default=-1,
+        help="Watermark(latest timestamp) to use for temporal graphs. -1 for other graphs",
+    )
     args = parser.parse_args()
 
     decoder = getattr(decoders, f"{args.type.capitalize()}Decoder")()
@@ -250,5 +266,6 @@ if __name__ == "__main__":
         decoder=decoder,
         skip_node_sampler=args.skip_node_sampler,
         skip_edge_sampler=args.skip_edge_sampler,
+        watermark=args.watermark,
     )
     c.convert()
