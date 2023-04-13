@@ -113,7 +113,8 @@ class EmptyGraphEngine final : public snark::GraphEngine::Service
 GRPCServer::GRPCServer(std::shared_ptr<snark::GraphEngineServiceImpl> engine_service_impl,
                        std::shared_ptr<snark::GraphSamplerServiceImpl> sampler_service_impl, std::string host_name,
                        std::string ssl_key, std::string ssl_cert, std::string ssl_root)
-    : m_engine_service_impl(std::move(engine_service_impl)), m_sampler_service_impl(std::move(sampler_service_impl))
+    : m_engine_service_impl(std::move(engine_service_impl)), m_sampler_service_impl(std::move(sampler_service_impl)),
+      m_shutdown(false), m_latch(std::thread::hardware_concurrency())
 {
     if (!m_engine_service_impl && !m_sampler_service_impl)
     {
@@ -161,6 +162,7 @@ GRPCServer::GRPCServer(std::shared_ptr<snark::GraphEngineServiceImpl> engine_ser
 
 GRPCServer::~GRPCServer()
 {
+    m_shutdown.store(true);
     m_server->Shutdown();
     for (auto &queue : m_cqs)
     {
@@ -203,8 +205,15 @@ void GRPCServer::HandleRpcs(size_t index)
 
     void *tag;
     bool ok;
-    while (queue.Next(&tag, &ok))
+    m_latch.arrive_and_wait();
+    while (true)
     {
+        bool has_next = queue.Next(&tag, &ok);
+        if (m_shutdown.load() && !has_next)
+        {
+            break;
+        }
+
         if (!ok)
         {
             // Keep draining queue for all call data types.
