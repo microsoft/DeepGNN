@@ -187,7 +187,7 @@ void BM_DISTRIBUTED_SAMPLER_MULTIPLE_SERVERS(benchmark::State &state)
                 {"partitions", {{"0", {{"node_weight", {1}}, {"edge_weight", {1}}}}}},
                 {"node_count_per_type", {num_nodes_in_server}},
                 {"edge_count_per_type", {0}},
-                {"watermark" : -1},
+                {"watermark", -1},
             };
             std::ofstream meta(path / "meta.json");
             meta.close();
