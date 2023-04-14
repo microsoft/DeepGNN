@@ -64,7 +64,7 @@ void BM_DISTRIBUTED_GRAPH_SINGLE_NODE(benchmark::State &state)
     for (auto _ : state)
     {
         const size_t batch_size = state.range(0);
-        c.GetNodeFeature(std::span(std::begin(input_nodes) + distrib(gen), batch_size), std::span(feature),
+        c.GetNodeFeature(std::span(std::begin(input_nodes) + distrib(gen), batch_size), {}, std::span(feature),
                          std::span(std::begin(output), batch_size));
     }
 }
@@ -112,7 +112,7 @@ void BM_DISTRIBUTED_GRAPH_MULTIPLE_NODES(benchmark::State &state)
     for (auto _ : state)
     {
         const size_t batch_size = state.range(0);
-        c.GetNodeFeature(std::span(std::begin(input_nodes) + distrib(gen), batch_size), std::span(feature),
+        c.GetNodeFeature(std::span(std::begin(input_nodes) + distrib(gen), batch_size), {}, std::span(feature),
                          std::span(std::begin(output), 4 * fv_size * batch_size));
     }
 }
@@ -144,7 +144,7 @@ static void BM_REGULAR_GRAPH(benchmark::State &state)
     {
         const size_t batch_size = state.range(0);
 
-        g.GetNodeFeature(std::span(std::begin(input_nodes) + distrib(gen), batch_size), std::span(feature),
+        g.GetNodeFeature(std::span(std::begin(input_nodes) + distrib(gen), batch_size), {}, std::span(feature),
                          std::span(std::begin(output), 4 * fv_size * batch_size));
     }
 }
@@ -187,9 +187,9 @@ void BM_DISTRIBUTED_SAMPLER_MULTIPLE_SERVERS(benchmark::State &state)
                 {"partitions", {{"0", {{"node_weight", {1}}, {"edge_weight", {1}}}}}},
                 {"node_count_per_type", {num_nodes_in_server}},
                 {"edge_count_per_type", {0}},
+                {"watermark" : -1},
             };
             std::ofstream meta(path / "meta.json");
-            meta << json_meta << std::endl;
             meta.close();
         }
         snark::Metadata metadata(path.string());

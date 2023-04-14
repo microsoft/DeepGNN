@@ -17,6 +17,7 @@
         WeightedSampleNeighbor;
         UniformSampleNeighbor;
         PPRSampleNeighbor;
+        LastNCreatedNeighbor;
         CreateWeightedNodeSampler;
         CreateUniformNodeSampler;
         CreateUniformNodeSamplerWithoutReplacement;

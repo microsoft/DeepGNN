@@ -79,6 +79,7 @@ increment relevant counters for each node and edge for each processed node. When
     ...         self.edge_weights = [0, 0, 0]
     ...         self.node_count_per_type = [0, 0, 0]
     ...         self.edge_count_per_type = [0, 0, 0]
+    ...         self.watermark = "-1"
     ...
     ...     def add(self, node):
     ...         self.node_count += 1
@@ -101,6 +102,7 @@ increment relevant counters for each node and edge for each processed node. When
     ...             "partitions": {"0": {"node_weight": self.node_weights, "edge_weight": self.edge_weights}},
     ...             "node_count_per_type": self.node_count_per_type,
     ...             "edge_count_per_type": self.edge_count_per_type,
+    ...             "watermark": -1,
     ...         }
     ...         with open(os.path.join(binary_dir, "meta_0.json"), "w+") as f:
     ...             f.write(json.dumps(content))

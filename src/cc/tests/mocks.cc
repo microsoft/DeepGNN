@@ -11,6 +11,17 @@ using json = nlohmann::json;
 
 namespace TestGraph
 {
+void save_edge_timestamps(std::ofstream &out,
+                          const std::vector<std::pair<snark::Timestamp, snark::Timestamp>> &timestamps,
+                          snark::Timestamp watermark)
+{
+    out.write(reinterpret_cast<const char *>(&watermark), sizeof(snark::Timestamp));
+    for (const auto &ts : timestamps)
+    {
+        out.write(reinterpret_cast<const char *>(&ts.first), sizeof(snark::Timestamp));
+        out.write(reinterpret_cast<const char *>(&ts.second), sizeof(snark::Timestamp));
+    }
+}
 snark::Partition convert(std::filesystem::path path, std::string suffix, MemoryGraph t, size_t node_types)
 {
     std::vector<NeighborRecord> edge_index;
@@ -96,6 +107,14 @@ snark::Partition convert(std::filesystem::path path, std::string suffix, MemoryG
         edge_feature_index_out.close();
         edge_index_out.close();
     }
+
+    if (!t.m_edge_timestamps.empty())
+    {
+        std::ofstream edge_timestamps_out(path / ("edge_" + suffix + ".timestamp"),
+                                          std::ios_base::binary | std::ios_base::out);
+        save_edge_timestamps(edge_timestamps_out, t.m_edge_timestamps, t.m_watermark);
+    }
+
     {
         std::string version_str = "v";
         version_str += std::to_string(snark::MINIMUM_SUPPORTED_VERSION);
@@ -108,9 +127,10 @@ snark::Partition convert(std::filesystem::path path, std::string suffix, MemoryG
             {"edge_type_count", 1},
             {"node_feature_count", 1},
             {"edge_feature_count", (edge_features.empty() ? 0 : 1)},
+            {"watermark", t.m_watermark},
         };
-        json_meta["partitions"] = {{"0", {{"node_weight", node_type_weights}, {"edge_weight", {1}}}}};
 
+        json_meta["partitions"] = {{"0", {{"node_weight", node_type_weights}, {"edge_weight", {1}}}}};
         json_meta["node_count_per_type"] = node_type_counts;
         json_meta["edge_count_per_type"] = {edge_index.size()};
 
@@ -179,5 +199,39 @@ snark::Partition convert(std::filesystem::path path, std::string suffix, MemoryG
 
     return snark::Partition(snark::Metadata(path.string(), path.string()), path, suffix,
                             snark::PartitionStorageType::memory);
+}
+
+std::vector<float> serialize_temporal_features(std::vector<snark::Timestamp> timestamps,
+                                               std::vector<std::vector<float>> features)
+{
+    assert(timestamps.size() == features.size());
+    size_t total_size = std::accumulate(std::begin(features), std::end(features), size_t(0),
+                                        [](size_t curr, const std::vector<float> &fv) { return curr + fv.size() * 4; });
+    size_t metadata_size = timestamps.size() * 2 + 1;
+    total_size += 2 * metadata_size + 1; // floats are 32 bits, ts is 64.
+    std::vector<float> output(total_size);
+    auto interval_count = reinterpret_cast<uint32_t *>(output.data());
+    *interval_count = uint32_t(timestamps.size());
+    auto metadata = std::span<int64_t>(reinterpret_cast<int64_t *>(output.data() + 1), metadata_size);
+    size_t curr_pos = 0;
+    for (auto ts : timestamps)
+    {
+        metadata[curr_pos] = int64_t(ts);
+        ++curr_pos;
+    }
+
+    // Final offset to simplify distance calculation.
+    size_t data_offset = (4 + 8 * (2 * timestamps.size() + 1)) / 4;
+    auto data_start = std::begin(output) + data_offset;
+    for (const auto &fv : features)
+    {
+        metadata[curr_pos] = int64_t(data_offset * sizeof(float));
+        data_start = std::copy(std::begin(fv), std::end(fv), data_start);
+        ++curr_pos;
+        data_offset += fv.size();
+    }
+
+    metadata[curr_pos] = int64_t(data_offset * sizeof(float));
+    return output;
 }
 } // namespace TestGraph

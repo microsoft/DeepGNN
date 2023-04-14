@@ -559,6 +559,7 @@ def karate_club_graph(request):
             skip_edge_sampler=True,
             skip_node_sampler=True,
         ).convert()
+
         if request.param == "memory":
             yield client.MemoryGraph(workdir, [(workdir, 0), (workdir, 1)])
         else:
@@ -638,6 +639,7 @@ def test_karate_club_ppr_sampling(
             [0.05358997, 0.08245811, 0.1060928, 0.11746016, 0.12044134],
             [0.05639789, 0.06037995, 0.10675042, 0.11910437, 0.1498548],
         ],
+        verbose=True,
     )
 
 
@@ -686,6 +688,112 @@ def test_karate_club_ppr_sampling_missing_nodes(
             [0.1, 0],
             [0.1, 0],
         ],
+    )
+
+
+def lastn_json(folder):
+    data = open(os.path.join(folder, "graph.json"), "w+")
+    graph: List[Any] = []
+    node_count = 10
+    nb_per_node = 10
+    edge_type_count = 5
+    edge_duration = 10
+    for node_id in range(node_count):
+        node = {
+            "node_id": node_id,
+            "node_type": 0,
+            "node_weight": 1,
+            "edge": [],
+            "created_at": 0,
+            "removed_at": -1,
+        }
+        for nb in range(nb_per_node):
+            nb_id = node_id * nb_per_node + nb
+            node["edge"].append(
+                {
+                    "src_id": node_id,
+                    "dst_id": nb_id,
+                    "edge_type": (nb_id % edge_type_count),
+                    "weight": 1,
+                    "created_at": (nb_id % edge_duration),
+                    "removed_at": nb_id + edge_duration,
+                }
+            )
+        graph.append(node)
+
+    for el in graph:
+        json.dump(el, data)
+        data.write("\n")
+    data.flush()
+    data.close()
+    return data.name
+
+
+@pytest.fixture(scope="module", params=["memory", "distributed"])
+def lastn_graph(request):
+    with tempfile.TemporaryDirectory() as workdir:
+        data_name = lastn_json(workdir)
+        d = dispatcher.QueueDispatcher(
+            Path(workdir), 2, Counter(), JsonDecoder(), watermark=0
+        )
+        convert.MultiWorkersConverter(
+            graph_path=data_name,
+            partition_count=2,
+            output_dir=workdir,
+            decoder=JsonDecoder(),
+            dispatcher=d,
+            skip_edge_sampler=True,
+            skip_node_sampler=True,
+            watermark=0,
+            # debug=True,
+        ).convert()
+
+        if request.param == "memory":
+            yield client.MemoryGraph(workdir, [(workdir, 0), (workdir, 1)])
+        else:
+            s1 = server.Server(workdir, [(workdir, 0)], "localhost:12379")
+            s2 = server.Server(workdir, [(workdir, 1)], "localhost:12389")
+            yield client.DistributedGraph(["localhost:12379", "localhost:12389"])
+            s1.reset()
+            s2.reset()
+
+
+def test_lastn_neighbor_sampling(
+    lastn_graph,
+):
+    nodes, weights, types, timestamps = lastn_graph.lastn_neighbors(
+        nodes=np.array([1, 7, 15], dtype=np.int64),
+        edge_types=[0, 1, 2, 3, 4, 5],
+        count=2,
+        timestamps=np.array([5, 7, 15], dtype=np.int64),
+        default_weight=2,
+        default_edge_type=42,
+    )
+
+    assert np.array_equal(nodes, [[14, 15], [76, 77], [-1, -1]])
+    assert np.array_equal(weights, [[1, 1], [1, 1], [2, 2]])
+    assert np.array_equal(types, [[4, 0], [1, 2], [42, 42]])
+    assert np.array_equal(timestamps, [[4, 5], [6, 7], [-1, -1]])
+
+
+def test_lastn_neighbor_sampling_edge_cases(
+    lastn_graph,
+):
+    nodes, weights, types, timestamps = lastn_graph.lastn_neighbors(
+        nodes=np.array([1, 7, 8], dtype=np.int64),
+        edge_types=[0, 1, 2, 3, 4, 5],
+        count=4,
+        timestamps=np.array([1, -5, 1000], dtype=np.int64),
+        default_weight=3,
+        default_edge_type=13,
+        default_timestamp=23,
+    )
+
+    assert np.array_equal(nodes, [[10, 11, -1, -1], [-1, -1, -1, -1], [-1, -1, -1, -1]])
+    assert np.array_equal(weights, [[1, 1, 3, 3], [3, 3, 3, 3], [3, 3, 3, 3]])
+    assert np.array_equal(types, [[0, 1, 13, 13], [13, 13, 13, 13], [13, 13, 13, 13]])
+    assert np.array_equal(
+        timestamps, [[0, 1, 23, 23], [23, 23, 23, 23], [23, 23, 23, 23]]
     )
 
 

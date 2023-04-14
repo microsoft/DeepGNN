@@ -443,6 +443,8 @@ def linearize(value):
             -1,
             value["node_type"],
             value["node_weight"],
+            None,
+            None,
             get_features(value),
         )
     else:
@@ -451,6 +453,8 @@ def linearize(value):
             value["dst_id"],
             value["edge_type"],
             value["weight"],
+            None,
+            None,
             get_features(value),
         )
 
@@ -474,6 +478,7 @@ def write_multi_binary(output_dir, partitions):
         },
         "node_count_per_type": [1, 1, 1],
         "edge_count_per_type": [1, 2],
+        "watermark": -1,
     }
     with open(os.path.join(output_dir, "meta.json"), "w+") as f:
         f.write(json.dumps(content))

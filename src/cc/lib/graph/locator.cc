@@ -51,6 +51,11 @@ FILE *open_neighbor_index(std::filesystem::path path, std::string suffix)
     return open_file(path / ("neighbors_" + suffix + ".index"), "rb");
 }
 
+FILE *open_edge_timestamps(std::filesystem::path path, std::string suffix)
+{
+    return open_file(path / ("edge_" + suffix + ".timestamp"), "rb");
+}
+
 FILE *open_edge_index(std::filesystem::path path, std::string suffix)
 {
     return open_file(path / ("edge_" + suffix + ".index"), "rb");
