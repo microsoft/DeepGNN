@@ -4,7 +4,6 @@
 #ifndef SNARK_SERVER_H
 #define SNARK_SERVER_H
 
-#include <latch>
 #include <memory>
 #include <thread>
 
@@ -46,7 +45,6 @@ class GRPCServer final
     std::unique_ptr<grpc::Server> m_server;
     std::vector<std::thread> m_runner_threads;
     std::atomic<bool> m_shutdown;
-    std::latch m_latch;
 };
 } // namespace snark
 #endif // SNARK_SERVER_H
