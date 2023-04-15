@@ -65,6 +65,7 @@ class Meta:
 
         self.node_count_per_type = meta["node_count_per_type"]
         self.edge_count_per_type = meta["edge_count_per_type"]
+        self.watermark = meta["watermark"]
 
     def get_partition(self, offset):
         """Return the sub content of meta info."""
@@ -90,6 +91,7 @@ def merge(fs, output_dir: str, meta_list: List[Meta]):
         "edge_type_count": meta_list[0].edge_type_count,
         "node_feature_count": int(meta_list[0].node_feature_count),
         "edge_feature_count": int(meta_list[0].edge_feature_count),
+        "watermark": int(meta_list[0].watermark),
     }
     offset = 0
     content["partitions"] = {}

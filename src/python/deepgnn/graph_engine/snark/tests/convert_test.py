@@ -131,7 +131,6 @@ def test_converter_0_workers(triangle_graph):
         decoder=decoder(),
         debug=True,
     ).convert()
-
     with open("{}/node_{}_{}.map".format(output.name, 0, 0), "rb") as nm:
         expected_size = 3 * (2 * 8 + 4)
         result = nm.read(expected_size + 8)
@@ -360,6 +359,9 @@ def test_sanity_metadata(triangle_graph):
         # type counts
         assert result["node_count_per_type"] == [1, 1, 1]
         assert result["edge_count_per_type"] == [1, 2]
+
+        # watermark
+        assert result["watermark"] == -1
 
 
 @pytest.mark.parametrize("triangle_graph", param, indirect=True)
@@ -979,7 +981,7 @@ def test_edge_list_header_multiple_partitions():
     _gen_edge_list(output, data_data, meta_data, partitions=2)
     with open("{}/node_{}_{}.map".format(output.name, 0, 0), "rb") as nm:
         expected_size = 2 * (2 * 8 + 4)
-        result = nm.read(expected_size + 8)
+        result = nm.read(expected_size + 18)
         assert len(result) == expected_size
         assert result[0:8] == (0).to_bytes(8, byteorder=sys.byteorder)
         assert result[8:16] == (0).to_bytes(8, byteorder=sys.byteorder)
@@ -1024,180 +1026,284 @@ def test_edge_list_error_checking():
     next(gen)
 
 
-def test_edge_list_binary_escape():
-    decoder = EdgeListDecoder()
-    src, dst, typ, weight, features = next(decoder.decode("0,-1,0,1.0,binary,1,test"))
+def test_temporal_edge_list_error_checking():
+    decoder = EdgeListDecoder(is_temporal=True)
+    with pytest.raises(ValueError):
+        next(decoder.decode("0,-1,4,1,bad_key"))
+    with pytest.raises(ValueError):
+        next(decoder.decode("0,-1,4,1,-1,bad_key"))
+    with pytest.raises(RuntimeError):
+        next(decoder.decode("0,-1,4,1,-1,-1,bad_key"))
+    with pytest.raises(ValueError):
+        next(decoder.decode("0,-1,4,1,2,3,float32,2,1"))
+    with pytest.raises(ValueError):
+        next(decoder.decode("0,-1,4,1,2,3,float32,2,1,x"))
+    next(decoder.decode("0,-1,4,1,4,5,float32,2,1,1"))
+
+
+def test_temporal_edge_with_defaults_list_error_checking():
+    with pytest.raises(RuntimeError):
+        decoder = EdgeListDecoder(is_temporal=True, default_created_at=1)
+        next(decoder.decode("0,-1,4,1,-1,bad_key"))
+    with pytest.raises(RuntimeError):
+        decoder = EdgeListDecoder(is_temporal=True, default_removed_at=1)
+        next(decoder.decode("0,-1,4,1,-1,bad_key"))
+    with pytest.raises(RuntimeError):
+        decoder = EdgeListDecoder(
+            is_temporal=True, default_created_at=1, default_removed_at=1
+        )
+        next(decoder.decode("0,-1,4,1,bad_key"))
+    with pytest.raises(ValueError):
+        next(decoder.decode("0,-1,4,1,float32,2,1"))
+    decoder = EdgeListDecoder(
+        is_temporal=True, default_created_at=1, default_removed_at=2
+    )
+    next(decoder.decode("0,-1,4,1,float32,2,1,1"))
+
+
+@pytest.fixture(
+    params=[
+        "regular",
+        "temporal",
+        "temporal_with_defaults",
+        "temporal_with_default_created_at",
+        "temporal_with_default_removed_at",
+    ]
+)
+def temporal_edge_list_decoder(request):
+    if request.param == "regular":
+        yield EdgeListDecoder(), "0,-1,0,1.0,"
+    elif request.param == "temporal_with_defaults":
+        yield EdgeListDecoder(
+            is_temporal=True, default_created_at=2, default_removed_at=3
+        ), "0,-1,0,1.0,"
+    elif request.param == "temporal_with_default_created_at":
+        yield EdgeListDecoder(is_temporal=True, default_created_at=2), "0,-1,0,1.0,3,"
+    elif request.param == "temporal_with_default_removed_at":
+        yield EdgeListDecoder(is_temporal=True, default_removed_at=3), "0,-1,0,1.0,2,"
+    elif request.param == "temporal":
+        yield EdgeListDecoder(is_temporal=True), "0,-1,0,1.0,2,3,"
+
+
+def test_edge_list_binary_escape(temporal_edge_list_decoder):
+    decoder, prefix = temporal_edge_list_decoder
+    _, _, _, _, _, _, features = next(decoder.decode(prefix + "binary,1,test"))
     assert features[0] == "test"
     with pytest.raises(RuntimeError):
-        src, dst, typ, weight, features = next(
-            decoder.decode("0,-1,0,1.0,binary,1,test,feature")
+        _, _, _, _, _, _, features = next(
+            decoder.decode(prefix + "binary,1,test,feature")
         )
-    src, dst, typ, weight, features = next(
-        decoder.decode("0,-1,0,1.0,binary,1,test\,feature")
-    )
+    _, _, _, _, _, _, features = next(decoder.decode(prefix + "binary,1,test\,feature"))
     assert features[0] == "test,feature"
     with pytest.raises(RuntimeError):
-        src, dst, typ, weight, features = next(
-            decoder.decode(r"0,-1,0,1.0,binary,1,test\\,feature")
+        _, _, _, _, _, _, features = next(
+            decoder.decode(prefix + r"binary,1,test\\,feature")
         )
-    src, dst, typ, weight, features = next(
-        decoder.decode(r"0,-1,0,1.0,binary,1,test\\\,feature")
+    _, _, _, _, _, _, features = next(
+        decoder.decode(prefix + r"binary,1,test\\\,feature")
     )
     assert features[0] == r"test\\,feature"
-    src, dst, typ, weight, features = next(
-        decoder.decode(r"0,-1,0,1.0,binary,1,test\,feature\\")
+    _, _, _, _, _, _, features = next(
+        decoder.decode(prefix + r"binary,1,test\,feature\\")
     )
     assert features[0] == r"test,feature\\"
-    src, dst, typ, weight, features = next(
-        decoder.decode("0,-1,0,1.0,binary,1,test,,feature")
-    )
+    _, _, _, _, _, _, features = next(decoder.decode(prefix + "binary,1,test,,feature"))
     assert len(features) == 1
     assert features[0] == r"test"
     with pytest.raises(RuntimeError):
-        src, dst, typ, weight, features = next(
-            decoder.decode("0,-1,0,1.0,binary,1,\test,\feature")
+        _, _, _, _, _, _, features = next(
+            decoder.decode(prefix + "binary,1,\test,\feature")
         )
     with pytest.raises(RuntimeError):
-        src, dst, typ, weight, features = next(
-            decoder.decode("0,-1,0,1.0,binary,1,\test,\\feature")
+        _, _, _, _, _, _, features = next(
+            decoder.decode(prefix + "binary,1,\test,\\feature")
         )
-    src, dst, typ, weight, features = next(
-        decoder.decode("0,-1,0,1.0,binary,1,\,feature")
-    )
+    _, _, _, _, _, _, features = next(decoder.decode(prefix + "binary,1,\,feature"))
     assert features[0] == ",feature"
     with pytest.raises(RuntimeError):
-        src, dst, typ, weight, features = next(
-            decoder.decode("0,-1,0,1.0,binary,1,,feature")
-        )
+        _, _, _, _, _, _, features = next(decoder.decode(prefix + "binary,1,,feature"))
     with pytest.raises(ValueError):
-        src, dst, typ, weight, features = next(
-            decoder.decode("0,-1,0,1.0,binary,1,test,feature,")
+        _, _, _, _, _, _, features = next(
+            decoder.decode(prefix + "binary,1,test,feature,")
         )
-    src, dst, typ, weight, features = next(
-        decoder.decode("0,-1,0,1.0,binary,1,test\,feature,")
+    _, _, _, _, _, _, features = next(
+        decoder.decode(prefix + "binary,1,test\,feature,")
     )
     assert features[0] == "test,feature"
-    src, dst, typ, weight, features = next(
-        decoder.decode("0,-1,0,1.0,binary,1,test\,feature\,")
+    _, _, _, _, _, _, features = next(
+        decoder.decode(prefix + "binary,1,test\,feature\,")
     )
     assert features[0] == "test,feature,"
-    src, dst, typ, weight, features = next(
-        decoder.decode("0,-1,0,1.0,binary,1,test\,\,feature\,")
+    _, _, _, _, _, _, features = next(
+        decoder.decode(prefix + "binary,1,test\,\,feature\,")
     )
     assert features[0] == "test,,feature,"
 
-    src, dst, typ, weight, features = next(
-        decoder.decode("0,-1,0,1.0,binary,1,test,binary,1,feature")
+    _, _, _, _, _, _, features = next(
+        decoder.decode(prefix + "binary,1,test,binary,1,feature")
     )
     assert features[0] == "test"
     assert features[1] == "feature"
     with pytest.raises(ValueError):
-        src, dst, typ, weight, features = next(
-            decoder.decode("0,-1,0,1.0,binary,1,test,feature,binary,1,feature")
+        _, _, _, _, _, _, features = next(
+            decoder.decode(prefix + "binary,1,test,feature,binary,1,feature")
         )
-    src, dst, typ, weight, features = next(
-        decoder.decode("0,-1,0,1.0,binary,1,test\,feature,binary,1,feature")
+    _, _, _, _, _, _, features = next(
+        decoder.decode(prefix + "binary,1,test\,feature,binary,1,feature")
     )
     assert features[0] == "test,feature"
     assert features[1] == "feature"
     with pytest.raises(ValueError):
-        src, dst, typ, weight, features = next(
-            decoder.decode(r"0,-1,0,1.0,binary,1,test\\,feature,binary,1,feature")
+        _, _, _, _, _, _, features = next(
+            decoder.decode(prefix + r"binary,1,test\\,feature,binary,1,feature")
         )
-    src, dst, typ, weight, features = next(
-        decoder.decode(r"0,-1,0,1.0,binary,1,test\\\,feature,binary,1,feature")
+    _, _, _, _, _, _, features = next(
+        decoder.decode(prefix + r"binary,1,test\\\,feature,binary,1,feature")
     )
     assert features[0] == r"test\\,feature"
     assert features[1] == "feature"
-    src, dst, typ, weight, features = next(
-        decoder.decode(r"0,-1,0,1.0,binary,1,test\,feature\\,binary,1,feature")
+    _, _, _, _, _, _, features = next(
+        decoder.decode(prefix + r"binary,1,test\,feature\\,binary,1,feature")
     )
     assert features[0] == r"test,feature\\"
     assert features[1] == "feature"
     with pytest.raises(ValueError):
-        src, dst, typ, weight, features = next(
-            decoder.decode("0,-1,0,1.0,binary,1,\test,\feature,binary,1,feature")
+        _, _, _, _, _, _, features = next(
+            decoder.decode(prefix + "binary,1,\test,\feature,binary,1,feature")
         )
     with pytest.raises(ValueError):
-        src, dst, typ, weight, features = next(
-            decoder.decode("0,-1,0,1.0,binary,1,\test,\\feature,binary,1,feature")
+        _, _, _, _, _, _, features = next(
+            decoder.decode(prefix + "binary,1,\test,\\feature,binary,1,feature")
         )
-    src, dst, typ, weight, features = next(
-        decoder.decode("0,-1,0,1.0,binary,1,\,feature,binary,1,feature")
+    _, _, _, _, _, _, features = next(
+        decoder.decode(prefix + "binary,1,\,feature,binary,1,feature")
     )
     assert features[0] == ",feature"
     assert features[1] == "feature"
     with pytest.raises(ValueError):
-        src, dst, typ, weight, features = next(
-            decoder.decode("0,-1,0,1.0,binary,1,,feature,binary,1,feature")
+        _, _, _, _, _, _, features = next(
+            decoder.decode(prefix + "binary,1,,feature,binary,1,feature")
         )
     with pytest.raises(ValueError):
-        src, dst, typ, weight, features = next(
-            decoder.decode("0,-1,0,1.0,binary,1,test,feature,binary,1,feature,")
+        _, _, _, _, _, _, features = next(
+            decoder.decode(prefix + "binary,1,test,feature,binary,1,feature,")
         )
-    src, dst, typ, weight, features = next(
-        decoder.decode("0,-1,0,1.0,binary,1,test\,feature\,,binary,1,feature")
+    _, _, _, _, _, _, features = next(
+        decoder.decode(prefix + "binary,1,test\,feature\,,binary,1,feature")
     )
     assert features[0] == "test,feature,"
     assert features[1] == "feature"
-    src, dst, typ, weight, features = next(
-        decoder.decode("0,-1,0,1.0,binary,1,test\,\,feature\,,binary,1,feature")
+    _, _, _, _, _, _, features = next(
+        decoder.decode(prefix + "binary,1,test\,\,feature\,,binary,1,feature")
     )
     assert features[0] == "test,,feature,"
     assert features[1] == "feature"
-    src, dst, typ, weight, features = next(
-        decoder.decode(r"0,-1,0,1.0,binary,1,test\,\,feature\,,binary,1,\\")
+    _, _, _, _, _, _, features = next(
+        decoder.decode(prefix + r"binary,1,test\,\,feature\,,binary,1,\\")
     )
     assert features[1] == r"\\"
+
+
+def test_edge_list_binary_escape_temporal():
+    decoder = EdgeListDecoder(is_temporal=True)
+    _, _, _, _, created_at, removed_at, features = next(
+        decoder.decode("0,-1,0,1.0,2,3,binary,1,test")
+    )
+    assert features[0] == "test"
+    assert created_at == 2
+    assert removed_at == 3
+
+    with pytest.raises(ValueError):
+        _, _, _, _, created_at, removed_at, features = next(
+            decoder.decode("0,-1,0,1.0,binary,1,test,feature")
+        )
+
+    with pytest.raises(ValueError):
+        _, _, _, _, created_at, removed_at, features = next(
+            decoder.decode("0,-1,0,1.0,2,binary,1,test,feature")
+        )
+
+    with pytest.raises(RuntimeError):
+        _, _, _, _, created_at, removed_at, features = next(
+            decoder.decode("0,-1,0,1.0,2,3,binary,1,test,feature")
+        )
+
+    _, _, _, _, created_at, removed_at, features = next(
+        decoder.decode("0,-1,0,1.0,-1,10,binary,1,test\,feature")
+    )
+    assert features[0] == "test,feature"
+    assert created_at == -1
+    assert removed_at == 10
+
+    with pytest.raises(RuntimeError):
+        _, _, _, _, created_at, removed_at, features = next(
+            decoder.decode(r"0,-1,0,1.0,5,10,binary,1,test\\,feature")
+        )
+    _, _, _, _, created_at, removed_at, features = next(
+        decoder.decode(r"0,-1,0,1.0,2,3,binary,1,test\\\,feature")
+    )
+    assert features[0] == r"test\\,feature"
+    assert created_at == 2
+    assert removed_at == 3
+    with pytest.raises(ValueError):
+        _, _, _, _, created_at, removed_at, features = next(
+            decoder.decode("0,-1,0,1.0,binary,1,2,test,feature,binary,1,feature")
+        )
 
 
 def test_edge_list_sparse_parse():
     decoder = EdgeListDecoder()
 
-    src, dst, typ, weight, ((coords, values),) = next(
+    src, dst, typ, weight, created_at, removed_at, ((coords, values),) = next(
         decoder.decode("0,-1,0,1.0,int64,2/0,1,1,2,2")
     )
     npt.assert_equal(coords, np.array([1, 1]))
     npt.assert_equal(values, np.array([2, 2]))
 
-    src, dst, typ, weight, features = next(decoder.decode("0,-1,0,1.0,int64,0/0,"))
+    src, dst, typ, weight, created_at, removed_at, features = next(
+        decoder.decode("0,-1,0,1.0,int64,0/0,")
+    )
     assert features == [None]
-    src, dst, typ, weight, features = next(decoder.decode("0,-1,0,1.0,int64,0/1,"))
+    src, dst, typ, weight, created_at, removed_at, features = next(
+        decoder.decode("0,-1,0,1.0,int64,0/1,")
+    )
     assert features == [None]
-    src, dst, typ, weight, features = next(decoder.decode("0,-1,0,1.0,int64,0/2,"))
+    src, dst, typ, weight, created_at, removed_at, features = next(
+        decoder.decode("0,-1,0,1.0,int64,0/2,")
+    )
     assert features == [None]
 
-    src, dst, typ, weight, ((coords, values),) = next(
+    src, dst, typ, weight, created_at, removed_at, ((coords, values),) = next(
         decoder.decode("0,-1,0,1.0,int64,2/1,1,1,2,2")
     )
     npt.assert_equal(coords, np.array([[1], [1]]))
     npt.assert_equal(values, np.array([2, 2]))
 
-    src, dst, typ, weight, ((coords, values),) = next(
+    src, dst, typ, weight, created_at, removed_at, ((coords, values),) = next(
         decoder.decode("0,-1,0,1.0,int64,2/2,1,1,2,2,3,3")
     )
     npt.assert_equal(coords, np.array([[1, 1], [2, 2]]))
     npt.assert_equal(values, np.array([3, 3]))
 
-    src, dst, typ, weight, ((coords, values),) = next(
+    src, dst, typ, weight, created_at, removed_at, ((coords, values),) = next(
         decoder.decode("0,-1,0,1.0,int64,1/3,1,1,1,2")
     )
     npt.assert_equal(coords, np.array([[1, 1, 1]]))
     npt.assert_equal(values, np.array([2]))
 
     with pytest.raises(ValueError):
-        src, dst, typ, weight, ((coords, values),) = next(
+        src, dst, typ, weight, created_at, removed_at, ((coords, values),) = next(
             decoder.decode("0,-1,0,1.0,int64,2/0,1.5,1.0,2,2")
         )
 
-    src, dst, typ, weight, ((coords, values),) = next(
+    src, dst, typ, weight, created_at, removed_at, ((coords, values),) = next(
         decoder.decode("0,-1,0,1.0,float32,2/0,1,1,2.2,2.2")
     )
     npt.assert_equal(coords, np.array([1, 1]))
     npt.assert_almost_equal(values, np.array([2.2, 2.2]))
     assert values.dtype == np.float32
 
-    src, dst, typ, weight, ((coords, values),) = next(
+    src, dst, typ, weight, created_at, removed_at, ((coords, values),) = next(
         decoder.decode("0,-1,0,1.0,uint8,2/0,1,1,2,2")
     )
     npt.assert_equal(coords, np.array([1, 1]))
@@ -1207,7 +1313,7 @@ def test_edge_list_sparse_parse():
 
 def test_edge_list_binary_spaces():
     decoder = EdgeListDecoder()
-    src, dst, typ, weight, features = next(
+    src, dst, typ, weight, created_at, removed_at, features = next(
         decoder.decode("0, -1, 0, 1.0, binary, 1, test, int32, 2, 1, 2")
     )
     assert features[0] == " test"
@@ -1216,8 +1322,12 @@ def test_edge_list_binary_spaces():
 
 def test_binary_writer_error_checking():
     output = tempfile.TemporaryDirectory()
-    node = [(0, -1, 0, 0.1, [])]
-    edges = [(0, 1, 0, 0.1, []), (0, 2, 1, 0.1, []), (0, 3, 0, 0.1, [])]
+    node = [(0, -1, 0, 0.1, None, None, [])]
+    edges = [
+        (0, 1, 0, 0.1, None, None, []),
+        (0, 2, 1, 0.1, None, None, []),
+        (0, 3, 0, 0.1, None, None, []),
+    ]
     writer = BinaryWriter(output.name, "0_0")
     with pytest.raises(AssertionError):
         writer.add(edges)

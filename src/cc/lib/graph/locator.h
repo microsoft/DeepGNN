@@ -19,6 +19,7 @@ FILE *open_node_index(std::filesystem::path path, std::string suffix);
 FILE *open_node_features_index(std::filesystem::path path, std::string suffix);
 FILE *open_node_features_data(std::filesystem::path path, std::string suffix);
 FILE *open_neighbor_index(std::filesystem::path path, std::string suffix);
+FILE *open_edge_timestamps(std::filesystem::path path, std::string suffix);
 FILE *open_edge_index(std::filesystem::path path, std::string suffix);
 FILE *open_edge_features_index(std::filesystem::path path, std::string suffix);
 FILE *open_edge_features_data(std::filesystem::path path, std::string suffix);

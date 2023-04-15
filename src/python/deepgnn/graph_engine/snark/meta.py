@@ -31,6 +31,15 @@ class _Element(enum.Enum):
     EDGE = "edge"
 
 
+def _get_element_timestamps_path(
+    element: _Element, path: str, partition: int, iteration: int, sep=os.path.sep
+) -> str:
+    suffix = "*" if iteration < 0 else str(iteration)
+    return sep.join(
+        [path, "{}_{}_{}.timestamp".format(element.value, partition, suffix)]
+    )
+
+
 def _get_element_index_path(
     element: _Element, path: str, partition: int, iteration: int, sep=os.path.sep
 ) -> str:
@@ -187,3 +196,4 @@ class Meta:
 
         self.node_count_per_type = meta["node_count_per_type"]
         self.edge_count_per_type = meta["edge_count_per_type"]
+        self.watermark = meta["watermark"]

@@ -109,8 +109,6 @@ py_test(
     ],
 )
 
-
-
 py_test(
     name = "neighbor_sampler_tests",
     srcs = ["neighbor_sampler_test.py"],
@@ -147,6 +145,29 @@ py_test(
         requirement("numpy"),
         requirement("py-cpuinfo"),
         requirement("pytest-benchmark"),
+        requirement("pytest"),
+        requirement("networkx"),
+        requirement("opencensus"),
+        requirement("opencensus-context"),
+        requirement("opencensus-ext-azure"),
+        requirement("fsspec"),
+        requirement("azure-datalake-store"),
+        requirement("tenacity"),
+    ],
+)
+
+py_test(
+    name = "temporal_tests",
+    srcs = ["temporal_test.py"],
+    imports = ["../../../../"],
+    main = "temporal_test.py",
+    python_version = "PY3",
+    srcs_version = "PY3",
+    deps = [
+        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
+        "//src/python/deepgnn/graph_engine:graph_engine",
+        "//src/python/deepgnn/graph_engine/snark/tests:snark_test_utils",
+        requirement("numpy"),
         requirement("pytest"),
         requirement("networkx"),
         requirement("opencensus"),

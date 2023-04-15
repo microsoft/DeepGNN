@@ -6,6 +6,7 @@ import abc
 import json
 import csv
 from typing import TypeVar, Iterator, Tuple, Optional, List, Union
+
 import numpy as np
 
 
@@ -30,12 +31,14 @@ class Decoder(abc.ABC):
     }
 
     @abc.abstractmethod
-    def decode(self, line: str) -> Iterator[Tuple[int, int, int, float, list]]:
+    def decode(
+        self, line: str
+    ) -> Iterator[Tuple[int, int, int, float, Optional[int], Optional[int], list]]:
         """Decode the line of text.
 
         This is a generator that yields a node then its outgoing edges in order.
         A node and its outgoing edges can be on different partitions.
-        Yield format is (node_id/src, -1/dst, type, weight, features).
+        Yield format is (node_id/src, -1/dst, type, weight, features, created_at, removed_at).
         Features being a list of dense features as ndarrays and sparse features as 2 tuples, coordinates and values.
         """
 
@@ -145,6 +148,9 @@ class EdgeListDecoder(Decoder):
         delimiter: str = ",",
         length_delimiter: str = "/",
         binary_escape: str = r"\\"[0],
+        default_created_at: Optional[int] = None,
+        default_removed_at: Optional[int] = None,
+        is_temporal: bool = False,
     ):
         """Initialize the Decoder."""
         super().__init__()
@@ -171,6 +177,9 @@ class EdgeListDecoder(Decoder):
         self.delimiter = delimiter
         self.length_delimiter = length_delimiter
         self.escape = binary_escape
+        self.default_created_at = default_created_at
+        self.default_removed_at = default_removed_at
+        self.is_temporal = is_temporal
         assert len(self.delimiter) and len(self.length_delimiter) and len(self.escape)
         assert self.delimiter != self.length_delimiter
         assert self.length_delimiter != self.escape
@@ -216,14 +225,17 @@ class EdgeListDecoder(Decoder):
                     break
             return output
         else:
-            return np.fromiter(data, count=length_single, dtype=key)  # type: ignore
+            # type: ignore
+            return np.fromiter(data, count=length_single, dtype=key)
 
-    def decode(self, line: str) -> Iterator[Tuple[int, int, int, float, list]]:
+    def decode(
+        self, line: str
+    ) -> Iterator[Tuple[int, int, int, float, Optional[int], Optional[int], list]]:
         """Convert text line into a node and edge iterator.
 
         This is a generator that yields a node then its outgoing edges in order.
         A node and its outgoing edges can be on different partitions.
-        Yield format is (node_id/src, -1/dst, type, weight, features).
+        Yield format is (node_id/src, -1/dst, type, weight, created_at, removed_at, features).
         Features being a list of dense features as ndarrays and sparse features as 2 tuples, coordinates and values.
         """
         if line == "":
@@ -231,6 +243,7 @@ class EdgeListDecoder(Decoder):
 
         data = iter(line.split(self.delimiter))
 
+        created_at, removed_at = self.default_created_at, self.default_removed_at
         src, dst = int(next(data)), int(next(data))
         if dst == -1:
             typ, weight = self.node_type, self.node_weight
@@ -254,6 +267,11 @@ class EdgeListDecoder(Decoder):
 
         if weight is None:
             weight = float(next(data))
+        if self.is_temporal:
+            if created_at is None:
+                created_at = int(next(data))
+            if removed_at is None:
+                removed_at = int(next(data))
 
         features: List[Union[np.ndarray, Tuple[np.ndarray, np.ndarray], None]] = []
         while True:
@@ -275,7 +293,7 @@ class EdgeListDecoder(Decoder):
 
             features.append(self._get_feature(key, length, data))
 
-        yield src, dst, typ, weight, features
+        yield src, dst, typ, weight, created_at, removed_at, features
 
 
 class JsonDecoder(Decoder):
@@ -299,15 +317,43 @@ class JsonDecoder(Decoder):
                     "float_feature": {"1": [3, 4]},
                     "binary_feature": {},
                 }
-            ]
+            ],
+            "created_at": 0,
+            "removed_at": -1,
         }
     """
 
-    def __init__(self):
+    def __init__(self, is_temporal: bool = False):
         """Initialize the JsonDecoder."""
         super().__init__()
+        self.is_temporal = is_temporal
 
-    def _pull_features(self, item: dict) -> list:
+    def _serialize_temporal_features(
+        self, item: list, created_at: int, removed_at: int, key: str
+    ) -> np.ndarray:
+        interval_count = len(item)
+        metadata_size = 2 * interval_count + 1
+        data = np.zeros(4 * (2 * metadata_size + 1), dtype=np.byte)
+        original_len = data.size
+        count = data[0:4].view(dtype=np.int32)
+        count[0] = interval_count
+        temporal_metadata = data[4:].view(dtype=np.int64)
+        for idx, it in enumerate(sorted(item, key=lambda x: x["created_at"])):
+            temporal_metadata[idx] = int(it["created_at"])
+            temporal_metadata[idx + interval_count] = data.size
+            vals = np.array(it["values"], dtype=self.convert_map[key]).view(
+                dtype=np.byte
+            )
+            data = np.concatenate((data, vals))
+            temporal_metadata = data[4:original_len].view(dtype=np.int64)
+            if "removed_at" in it:
+                removed_at = max(removed_at, int(it["removed_at"]))
+
+        temporal_metadata[metadata_size - 1] = data.size
+        data = np.concatenate((data, np.zeros(8, dtype=np.byte)))
+        return data
+
+    def _pull_features(self, item: dict, created_at: int, removed_at: int) -> list:
         """From item, pull all value dicts {idx: value} and order the values by idx."""
         ret_list = []  # type: ignore
         curr = 0
@@ -320,7 +366,12 @@ class JsonDecoder(Decoder):
                 while curr <= idx:
                     ret_list.append(None)
                     curr += 1
-                if key.startswith("sparse"):
+
+                if isinstance(value, list) and isinstance(value[0], dict):
+                    value = self._serialize_temporal_features(
+                        value, created_at, removed_at, key
+                    )
+                elif key.startswith("sparse"):
                     value = (
                         np.array(value["coordinates"], dtype=np.int64),
                         np.array(
@@ -334,22 +385,53 @@ class JsonDecoder(Decoder):
 
         return ret_list
 
-    def decode(self, line: str) -> Iterator[Tuple[int, int, int, float, list]]:
+    def decode(
+        self, line: str
+    ) -> Iterator[Tuple[int, int, int, float, Optional[int], Optional[int], list]]:
         """Use json package to convert the json text line into a node and edge iterator.
 
         This is a generator that yields a node then its outgoing edges in order.
         A node and its outgoing edges can be on different partitions.
-        Yield format is (node_id/src, -1/dst, type, weight, features).
+        Yield format is (node_id/src, -1/dst, type, weight, features, created_at, removed_at).
         Features being a list of dense features as ndarrays and sparse features as 2 tuples, coordinates and values.
         """
         data = json.loads(line)
+        node_created_at = 0
+        node_removed_at = -1
+        if "created_at" in data:
+            node_created_at = data["created_at"]
+        if "removed_at" in data:
+            node_removed_at = data["removed_at"]
         yield data["node_id"], -1, data["node_type"], data[
             "node_weight"
-        ], self._pull_features(data)
-        for edge in sorted(data["edge"], key=lambda x: x["edge_type"]):
+        ], node_created_at, node_removed_at, self._pull_features(
+            data, node_created_at, node_removed_at
+        )
+
+        def sort_edges(edge_list):
+            return sorted(
+                edge_list,
+                key=lambda edge: (
+                    edge["edge_type"],
+                    edge.get("created_at", 0),
+                    edge.get("removed_at", 0)
+                    if edge.get("removed_at") != -1
+                    else float("inf"),
+                ),
+            )
+
+        for edge in sort_edges(data["edge"]):
+            removed_at = (
+                node_removed_at if "removed_at" not in edge else edge["removed_at"]
+            )
+            created_at = (
+                node_created_at if "created_at" not in edge else edge["created_at"]
+            )
             yield edge["src_id"], edge["dst_id"], edge["edge_type"], edge[
                 "weight"
-            ], self._pull_features(edge)
+            ], created_at, removed_at, self._pull_features(
+                edge, node_created_at, node_removed_at
+            )
 
 
 class TsvDecoder(Decoder):
@@ -412,7 +494,9 @@ class TsvDecoder(Decoder):
 
         return feature_map
 
-    def decode(self, line: str) -> Iterator[Tuple[int, int, int, float, list]]:
+    def decode(
+        self, line: str
+    ) -> Iterator[Tuple[int, int, int, float, Optional[int], Optional[int], list]]:
         """Decode tsv based text line into a node and edge iterator.
 
         This is a generator that yields a node then its outgoing edges in order.
@@ -434,7 +518,7 @@ class TsvDecoder(Decoder):
         node_id = int(columns[0])
         node_type = int(columns[1]) if columns[1] else 0
         node_weight = float(columns[2]) if columns[2] else 0.0
-        yield node_id, -1, node_type, node_weight, self._parse_feature_string(
+        yield node_id, -1, node_type, node_weight, None, None, self._parse_feature_string(
             columns[3]
         )
 
@@ -453,6 +537,6 @@ class TsvDecoder(Decoder):
 
             dst_type = int(neighbor_columns[1]) if neighbor_columns[1] else 0
             dst_weight = float(neighbor_columns[2]) if neighbor_columns[2] else 0.0
-            yield node_id, dst_id, dst_type, dst_weight, self._parse_feature_string(
+            yield node_id, dst_id, dst_type, dst_weight, None, None, self._parse_feature_string(
                 neighbor_columns[3]
             )

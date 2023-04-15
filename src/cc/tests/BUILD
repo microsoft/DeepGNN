@@ -30,6 +30,24 @@ cc_test(
 )
 
 cc_test(
+    name = "temporal_tests",
+    srcs = [
+        "temporal_test.cc",
+        "mocks.cc",
+        "mocks.h",
+    ],
+    copts = CXX_OPTS,
+    defines = PLATFORM_DEFINES,
+    linkopts = ["-lm"],
+    deps = [
+        ":mocks",
+        "@googletest//:gtest_main",
+        "//src/cc/lib/distributed:grpc",
+        "//src/cc/lib/graph",
+    ],
+)
+
+cc_test(
     name = "distributed_tests",
     srcs = [
         "distributed_test.cc",

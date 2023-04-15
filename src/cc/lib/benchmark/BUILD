@@ -81,6 +81,7 @@ cc_binary(
     deps = [
         "//src/cc/lib/graph",
         "//src/cc/tests:mocks",
+        "@boost//:random",
         "@com_google_benchmark//:benchmark",
     ],
 )

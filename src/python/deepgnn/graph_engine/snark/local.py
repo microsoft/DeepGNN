@@ -17,6 +17,7 @@ _sampling_map: Dict[SamplingStrategy, str] = {
     SamplingStrategy.RandomWithoutReplacement: "withoutreplacement",
     SamplingStrategy.TopK: "topk",
     SamplingStrategy.PPRGo: "ppr-go",
+    SamplingStrategy.LastN: "lastn",
 }
 
 
@@ -105,6 +106,7 @@ class Client(Graph):
         default_edge_type: int = -1,
         alpha: float = 0.5,
         eps: float = 0.0001,
+        timestamps: Union[List[int], np.ndarray] = None,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Sample node neighbors."""
         if strategy == "byweight":
@@ -115,6 +117,7 @@ class Client(Graph):
                 default_node,
                 default_weight,
                 seed=int(random.getrandbits(64)),
+                timestamps=timestamps,
             )
             return result[0], result[1], result[2], np.empty((1), dtype=np.int32)
         without_replacement = strategy == "randomwithoutreplacement"
@@ -127,6 +130,7 @@ class Client(Graph):
                 default_node,
                 default_edge_type,
                 seed=int(random.getrandbits(64)),
+                timestamps=timestamps,
             )
             return (
                 result[0],
@@ -143,6 +147,7 @@ class Client(Graph):
                 eps,
                 default_node,
                 default_weight,
+                timestamps=timestamps,
             )
             return (
                 result[0],
@@ -151,10 +156,25 @@ class Client(Graph):
                 np.empty(0, dtype=np.int32),
             )
 
+        if strategy == "lastn":
+            return self.graph.lastn_neighbors(  # type: ignore
+                nodes,
+                self.__check_types(edge_types),
+                timestamps=timestamps,
+                count=count,
+                default_node=default_node,
+                default_weight=default_weight,
+                default_edge_type=default_edge_type,
+            )
+
         raise NotImplementedError(f"Unknown strategy type {strategy}")
 
     def node_features(
-        self, nodes: np.ndarray, features: np.ndarray, feature_type: np.dtype
+        self,
+        nodes: np.ndarray,
+        features: np.ndarray,
+        feature_type: np.dtype,
+        timestamps: Union[List[int], np.ndarray] = None,
     ) -> np.ndarray:
         """Fetch node features."""
         assert len(features.shape) == 2
@@ -165,7 +185,9 @@ class Client(Graph):
                     f"Requesting feature with id #{feature[0]} that is larger than number of the node features {self.graph.meta._node_feature_count} in the graph"
                 )
 
-        return self.graph.node_features(nodes, features, feature_type)
+        return self.graph.node_features(
+            nodes, features, feature_type, timestamps=timestamps
+        )
 
     def random_walk(
         self,
@@ -175,6 +197,7 @@ class Client(Graph):
         p: float,
         q: float,
         default_node: int = -1,
+        timestamps: Union[List[int], np.ndarray] = None,
     ) -> np.ndarray:
         """
         Sample nodes via random walk.
@@ -194,26 +217,41 @@ class Client(Graph):
             q,
             default_node,
             seed=random.getrandbits(64),
+            timestamps=timestamps,
         )
 
     def neighbors(
-        self, nodes: np.ndarray, edge_types: Union[int, np.ndarray]
+        self,
+        nodes: np.ndarray,
+        edge_types: Union[int, np.ndarray],
+        timestamps: Union[List[int], np.ndarray] = None,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Fetch full information about node neighbors."""
-        return self.graph.neighbors(nodes, self.__check_types(edge_types))
+        return self.graph.neighbors(
+            nodes, self.__check_types(edge_types), timestamps=timestamps
+        )
 
     def neighbor_count(
-        self, nodes: np.ndarray, edge_types: Union[int, np.ndarray]
+        self,
+        nodes: np.ndarray,
+        edge_types: Union[int, np.ndarray],
+        timestamps: Union[List[int], np.ndarray] = None,
     ) -> np.ndarray:
         """Fetch node degrees."""
-        return self.graph.neighbor_counts(nodes, self.__check_types(edge_types))
+        return self.graph.neighbor_counts(
+            nodes, self.__check_types(edge_types), timestamps=timestamps
+        )
 
     def node_types(self, nodes: np.ndarray) -> np.ndarray:
         """Fetch node types."""
         return self.graph.node_types(nodes, -1)
 
     def edge_features(
-        self, edges: np.ndarray, features: np.ndarray, feature_type: np.dtype
+        self,
+        edges: np.ndarray,
+        features: np.ndarray,
+        feature_type: np.dtype,
+        timestamps: Union[List[int], np.ndarray] = None,
     ) -> np.ndarray:
         """Fetch edge features."""
         edges = np.array(edges, dtype=np.int64)
@@ -232,6 +270,7 @@ class Client(Graph):
             np.copy(edges[:, 2]),
             features,
             feature_type,
+            timestamps=timestamps,
         )
 
     def node_count(self, types: Union[int, np.ndarray]) -> int:

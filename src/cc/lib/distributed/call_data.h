@@ -103,6 +103,22 @@ class GetNeighborsCallData final : public CallData
     GraphEngine::AsyncService &m_service;
 };
 
+class GetLastNCreatedNeighborCallData final : public CallData
+{
+  public:
+    GetLastNCreatedNeighborCallData(GraphEngine::AsyncService &service, grpc::ServerCompletionQueue &cq,
+                                    snark::GraphEngine::Service &service_impl);
+
+    void Proceed() override;
+
+  private:
+    GetLastNCreatedNeighborsRequest m_request;
+    GetNeighborsReply m_reply;
+    grpc::ServerAsyncResponseWriter<GetNeighborsReply> m_responder;
+    snark::GraphEngine::Service &m_service_impl;
+    GraphEngine::AsyncService &m_service;
+};
+
 class SampleNeighborsCallData final : public CallData
 {
   public:

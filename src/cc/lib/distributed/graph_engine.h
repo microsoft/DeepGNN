@@ -41,6 +41,9 @@ class GraphEngineServiceImpl final : public snark::GraphEngine::Service
                                    snark::GetNeighborCountsReply *response) override;
     grpc::Status GetNeighbors(::grpc::ServerContext *context, const snark::GetNeighborsRequest *request,
                               snark::GetNeighborsReply *response) override;
+    grpc::Status GetLastNCreatedNeighbors(::grpc::ServerContext *context,
+                                          const snark::GetLastNCreatedNeighborsRequest *request,
+                                          snark::GetNeighborsReply *response) override;
     grpc::Status WeightedSampleNeighbors(::grpc::ServerContext *context,
                                          const snark::WeightedSampleNeighborsRequest *request,
                                          snark::WeightedSampleNeighborsReply *response) override;

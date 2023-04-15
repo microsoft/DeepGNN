@@ -152,6 +152,7 @@ snark::Graph create_graph(size_t num_types, size_t num_nodes_per_partition, size
             {"node_count_per_type", {num_nodes}},
             {"edge_count_per_type", {num_edges}},
             {"partitions", {{"0", {{"node_weight", {0}}}}}},
+            {"watermark", -1},
         };
 
         for (size_t partition_id = 0; partition_id < num_partitions; ++partition_id)
@@ -190,7 +191,7 @@ static void BM_ONE_NODE_TYPE_WEIGHTED(benchmark::State &state)
     {
         const size_t batch_size = state.range(0);
         std::vector<float> total_neighbor_weight(batch_size);
-        s.SampleNeighbor(++seed, std::span(input_nodes).subspan(offset, batch_size), std::span(edge_types),
+        s.SampleNeighbor(++seed, std::span(input_nodes).subspan(offset, batch_size), std::span(edge_types), {},
                          num_neighbors_to_sample,
                          std::span(node_holder).subspan(0, num_neighbors_to_sample * batch_size),
                          std::span(type_holder).subspan(0, num_neighbors_to_sample * batch_size),

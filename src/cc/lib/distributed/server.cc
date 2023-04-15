@@ -89,6 +89,13 @@ class EmptyGraphEngine final : public snark::GraphEngine::Service
         return grpc::Status::OK;
     }
 
+    grpc::Status GetLastNCreatedNeighbors(::grpc::ServerContext *context,
+                                          const snark::GetLastNCreatedNeighborsRequest *request,
+                                          snark::GetNeighborsReply *response) override
+    {
+        return grpc::Status::OK;
+    }
+
     grpc::Status GetNeighbors(::grpc::ServerContext *context, const snark::GetNeighborsRequest *request,
                               snark::GetNeighborsReply *response) override
     {
@@ -114,7 +121,7 @@ GRPCServer::GRPCServer(std::shared_ptr<snark::GraphEngineServiceImpl> engine_ser
                        std::shared_ptr<snark::GraphSamplerServiceImpl> sampler_service_impl, std::string host_name,
                        std::string ssl_key, std::string ssl_cert, std::string ssl_root)
     : m_engine_service_impl(std::move(engine_service_impl)), m_sampler_service_impl(std::move(sampler_service_impl)),
-      m_shutdown(false), m_latch(std::thread::hardware_concurrency())
+      m_shutdown(false)
 {
     if (!m_engine_service_impl && !m_sampler_service_impl)
     {
@@ -154,6 +161,31 @@ GRPCServer::GRPCServer(std::shared_ptr<snark::GraphEngineServiceImpl> engine_ser
     }
 
     m_server = builder.BuildAndStart();
+    for (auto &queue : m_cqs)
+    {
+        if (m_engine_service_impl)
+        {
+            new GetNeighborsCallData(m_engine_service, *queue, *m_engine_service_impl);
+            new GetNeighborCountCallData(m_engine_service, *queue, *m_engine_service_impl);
+            new GetLastNCreatedNeighborCallData(m_engine_service, *queue, *m_engine_service_impl);
+            new SampleNeighborsCallData(m_engine_service, *queue, *m_engine_service_impl);
+            new UniformSampleNeighborsCallData(m_engine_service, *queue, *m_engine_service_impl);
+            new NodeFeaturesCallData(m_engine_service, *queue, *m_engine_service_impl);
+            new EdgeFeaturesCallData(m_engine_service, *queue, *m_engine_service_impl);
+            new NodeSparseFeaturesCallData(m_engine_service, *queue, *m_engine_service_impl);
+            new EdgeSparseFeaturesCallData(m_engine_service, *queue, *m_engine_service_impl);
+            new NodeStringFeaturesCallData(m_engine_service, *queue, *m_engine_service_impl);
+            new EdgeStringFeaturesCallData(m_engine_service, *queue, *m_engine_service_impl);
+            new GetMetadataCallData(m_engine_service, *queue, *m_engine_service_impl);
+            new NodeTypesCallData(m_engine_service, *queue, *m_engine_service_impl);
+        }
+        if (m_sampler_service_impl)
+        {
+            new CreateSamplerCallData(m_sampler_service, *queue, *m_sampler_service_impl);
+            new SampleElementsCallData(m_sampler_service, *queue, *m_sampler_service_impl);
+        }
+    }
+
     for (size_t thread_num = 0; thread_num < std::thread::hardware_concurrency(); ++thread_num)
     {
         m_runner_threads.emplace_back(&GRPCServer::HandleRpcs, this, thread_num);
@@ -182,30 +214,8 @@ std::shared_ptr<grpc::Channel> GRPCServer::InProcessChannel()
 void GRPCServer::HandleRpcs(size_t index)
 {
     auto &queue = *m_cqs[index];
-    if (m_engine_service_impl)
-    {
-        new GetNeighborsCallData(m_engine_service, queue, *m_engine_service_impl);
-        new GetNeighborCountCallData(m_engine_service, queue, *m_engine_service_impl);
-        new SampleNeighborsCallData(m_engine_service, queue, *m_engine_service_impl);
-        new UniformSampleNeighborsCallData(m_engine_service, queue, *m_engine_service_impl);
-        new NodeFeaturesCallData(m_engine_service, queue, *m_engine_service_impl);
-        new EdgeFeaturesCallData(m_engine_service, queue, *m_engine_service_impl);
-        new NodeSparseFeaturesCallData(m_engine_service, queue, *m_engine_service_impl);
-        new EdgeSparseFeaturesCallData(m_engine_service, queue, *m_engine_service_impl);
-        new NodeStringFeaturesCallData(m_engine_service, queue, *m_engine_service_impl);
-        new EdgeStringFeaturesCallData(m_engine_service, queue, *m_engine_service_impl);
-        new GetMetadataCallData(m_engine_service, queue, *m_engine_service_impl);
-        new NodeTypesCallData(m_engine_service, queue, *m_engine_service_impl);
-    }
-    if (m_sampler_service_impl)
-    {
-        new CreateSamplerCallData(m_sampler_service, queue, *m_sampler_service_impl);
-        new SampleElementsCallData(m_sampler_service, queue, *m_sampler_service_impl);
-    }
-
     void *tag;
     bool ok;
-    m_latch.arrive_and_wait();
     while (true)
     {
         bool has_next = queue.Next(&tag, &ok);

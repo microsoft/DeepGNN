@@ -57,13 +57,13 @@ In this example we'll use sqlite3 module to connect to a database and fetch feat
     ...                feature_values += values[0][0]
     ...
     ...        return service_pb2.NodeFeaturesReply(
-    ...            feature_values=feature_values, offsets=offsets
+    ...            feature_values=feature_values, offsets=offsets, timestamps=[0] * len(request.node_ids)
     ...        )
     ...
     ...    def GetMetadata(self, request, context):
     ...        """Global information about graph. Needed to initialize client."""
     ...        return service_pb2.MetadataReply(
-    ...            version=1,
+    ...            version=2,
     ...            nodes=1,
     ...            edges=0,
     ...            node_types=1,
@@ -74,6 +74,7 @@ In this example we'll use sqlite3 module to connect to a database and fetch feat
     ...            edge_partition_weights=[1.0],
     ...            node_count_per_type=[1],
     ...            edge_count_per_type=[1],
+    ...            watermark=-1,
     ...        )
 
 

@@ -15,9 +15,15 @@
 #include <glog/logging.h>
 #include <glog/raw_logging.h>
 
+namespace
+{
 typedef FILE *(*open_file_ptr)(std::filesystem::path, std::string);
 typedef FILE *(*open_alias_file_ptr)(std::filesystem::path, size_t, snark::Type);
 
+} // namespace
+
+namespace snark
+{
 struct FilePtr
 {
   public:
@@ -323,3 +329,5 @@ template <typename T> struct DiskStorage final : BaseStorage<T>
 };
 
 #endif
+
+} // namespace snark
