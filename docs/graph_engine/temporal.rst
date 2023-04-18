@@ -6,7 +6,7 @@ DeepGNN supports temporal graphs, which are graphs with timestamps assigned to e
 Temporal Nodes
 --------------
 
-Temporal nodes are nodes that can be added or removed from a graph at different times. The JSON schema for temporal nodes extends the schema for `regular<data_spec.html>`_ nodes with two new fields: created_at and removed_at, with values recorded in `Unix time <https://en.wikipedia.org/wiki/Unix_time>`_ format. The following example demonstrates a temporal node in JSON format:
+Temporal nodes are nodes that can be added or removed from a graph at different times. The JSON schema for temporal nodes extends [the schema for regular nodes]((../../../docs/graph_engine/data_spec.rst) with two new fields: created_at and removed_at, with values recorded in `Unix time <https://en.wikipedia.org/wiki/Unix_time>`_ format. The following example demonstrates a temporal node in JSON format:
 
 .. code-block:: json
 
@@ -130,6 +130,7 @@ Every graph engine method (except for fetching node types and node/edge counts) 
 For example, to fetch node neighbors from the sample above, you can use the following code:
 
 .. code-block:: python
+
 	graph.neighbors(nodes=np.array([42], dtype=np.int64), edge_types=np.array([0, 1], dtype=np.int32), timestamps=np.array([16], dtype=np.int64))
 
 The code above will return just one node, 101, because node 99 was deleted at time 15 and added back only at time 17.
@@ -137,6 +138,7 @@ The code above will return just one node, 101, because node 99 was deleted at ti
 Similarly, features can be fetched at different timestamps as well:
 
 .. code-block:: python
+
 	graph.node_string_features(
 		nodes=np.array([42, 42], dtype=np.int64),
 		features=np.array([[0, 1]], dtype=np.int32),

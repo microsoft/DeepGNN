@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.60] - 2022-04-18
+
 ### Added
 - Breaking. Temporal graph support. Custom decoders must add 2 optional integers in returned tuple in  `decode` method, representing `created_at` and `removed_at` fields. Metadata file must have a `watermark` field.
 

@@ -73,6 +73,7 @@ def graph_engine(version: str):
             "": [
                 "*.so",
                 "*.dll",
+                "*.dylib",
             ]
         },
         install_requires=[
