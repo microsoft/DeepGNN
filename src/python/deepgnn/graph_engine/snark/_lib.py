@@ -16,7 +16,7 @@ if platform.system() == "Windows":
 elif platform.system() == "Darwin":
     _LIB_FILE_NAME = "libwrapper.dylib"
 
-_LIB_PATH = os.path.join(os.path.dirname(__file__), _LIB_FILE_NAME)
+_LIB_PATH = "/home/alsamylk/src/microsoft/DeepGNN/bazel-bin/src/cc/lib/libwrapper.so" # os.path.join(os.path.dirname(__file__), _LIB_FILE_NAME)
 
 # Use environment variables to load library with multiprocessing module
 _SNARK_LIB_PATH_ENV_KEY = "SNARK_LIB_PATH"

@@ -1,126 +1,223 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+from typing import List, Any
+from dataclasses import dataclass
+
 import numpy as np
-import argparse
+
+import ray
+import ray.train as train
+from ray.train.torch import TorchTrainer
+from ray.air import session
+from ray.air.config import ScalingConfig
+
 import torch
+from torch import nn
+import torch.nn.functional as F
+from torch_geometric.nn import GATConv
 
-from deepgnn import str2list_int, setup_default_logging_config
-from deepgnn import get_logger
-from deepgnn.pytorch.common.utils import set_seed
-from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
-from deepgnn.pytorch.modeling import BaseModel
-from deepgnn.pytorch.training import run_dist
-from deepgnn.graph_engine import FileNodeSampler, GraphEngineBackend
-from model import GAT, GATQueryParameter  # type: ignore
-from typing import Optional
+from deepgnn.pytorch.common import Accuracy
+from deepgnn.graph_engine import Graph, graph_ops
+from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
+from deepgnn.graph_engine.data.citation import Cora
 
 
-# fmt: off
-def init_args(parser):
-    # GAT Model Parameters.
-    parser.add_argument("--head_num", type=str2list_int, default="8,1", help="the number of attention headers.")
-    parser.add_argument("--hidden_dim", type=int, default=8, help="hidden layer dimension.")
-    parser.add_argument("--num_classes", type=int, default=-1, help="number of classes for category")
-    parser.add_argument("--ffd_drop", type=float, default=0.0, help="feature dropout rate.")
-    parser.add_argument("--attn_drop", type=float, default=0.0, help="attention layer dropout rate.")
-    parser.add_argument("--l2_coef", type=float, default=0.0005, help="l2 loss")
+@dataclass
+class GATQueryParameter:
+    """Configuration for graph query."""
 
-    # GAT Query part
-    parser.add_argument("--neighbor_edge_types", type=str2list_int, default="0", help="Graph Edge for attention encoder.",)
-
-    # evaluate node file.
-    parser.add_argument("--eval_file", default="", type=str, help="")
-# fmt: on
+    neighbor_edge_types: np.ndarray
+    feature_idx: int
+    feature_dim: int
+    label_idx: int
+    label_dim: int
+    feature_type: np.dtype = np.float32
+    label_type: np.dtype = np.float32
+    num_hops: int = 2
 
 
-def create_model(args: argparse.Namespace):
-    get_logger().info(f"Creating GAT model with seed:{args.seed}.")
-    # set seed before instantiating the model
-    if args.seed:
-        set_seed(args.seed)
+class GATQuery:
+    """Query to fetch graph data for the model."""
 
+    def __init__(self, p: GATQueryParameter):
+        """Initialize graph query."""
+        self.p = p
+        self.label_meta = np.array([[p.label_idx, p.label_dim]], np.int32)
+        self.feat_meta = np.array([[p.feature_idx, p.feature_dim]], np.int32)
+
+    def __call__(self, graph: Graph, inputs: np.ndarray) -> tuple:
+        """Fetch training data."""
+        nodes, edges, src_idx = graph_ops.sub_graph(
+            graph,
+            inputs,
+            edge_types=self.p.neighbor_edge_types,
+            num_hops=self.p.num_hops,
+            self_loop=True,
+            undirected=True,
+            return_edges=True,
+        )
+        input_mask = np.zeros(nodes.size, np.bool_)
+        input_mask[src_idx] = True
+        feat = graph.node_features(nodes, self.feat_meta, self.p.feature_type)
+        label = graph.node_features(nodes, self.label_meta, self.p.label_type)
+        label = label.astype(np.int32)
+        edges = np.transpose(edges)
+
+        graph_tensor: List[Any] = [nodes, feat, edges, input_mask, label]
+        return graph_tensor
+
+
+class GAT(nn.Module):
+    """GAT model."""
+
+    def __init__(
+        self,
+        in_dim: int,
+        q_param: GATQueryParameter,
+        head_num: List = [8, 1],
+        hidden_dim: int = 8,
+        num_classes: int = -1,
+    ):
+        """Initialize model."""
+        super(GAT, self).__init__()
+        self.query = GATQuery(q_param)
+        self.num_classes = num_classes
+        self.out_dim = num_classes
+        self.metric = Accuracy()
+        self.xent = nn.CrossEntropyLoss()
+        self.conv1 = GATConv(
+            in_channels=in_dim,
+            out_channels=hidden_dim,
+            heads=head_num[0],
+            dropout=0.6,
+            concat=True,
+        )
+        layer0_output_dim = head_num[0] * hidden_dim
+        self.conv2 = GATConv(
+            in_channels=layer0_output_dim,
+            out_channels=self.out_dim,
+            heads=1,
+            dropout=0.6,
+            concat=False,
+        )
+
+    def forward(self, inputs):
+        """Calculate loss, make predictions and fetch labels."""
+        nodes, feat, edge_index, mask, label = inputs
+        nodes = torch.squeeze(nodes.to(torch.int32))  # [N]
+        feat = torch.squeeze(feat.to(torch.float32))  # [N, F]
+        edge_index = torch.squeeze(edge_index.to(torch.int32))  # [2, X]
+        mask = torch.squeeze(mask.to(torch.bool))  # [N]
+        labels = torch.squeeze(label.to(torch.int32))  # [N]
+
+        x = feat
+        x = F.dropout(x, p=0.6, training=self.training)
+        x = F.elu(self.conv1(x, edge_index))
+        x = F.dropout(x, p=0.6, training=self.training)
+        scores = self.conv2(x, edge_index)
+        labels = labels.type(torch.int64)
+        labels = labels[mask]  # [batch_size]
+        scores = scores[mask]  # [batch_size]
+        pred = scores.argmax(dim=1)
+        loss = self.xent(scores, labels)
+
+        return loss, pred, labels
+
+
+def train_func(config: dict):
+    """Training loop for ray trainer."""
+
+    train.torch.enable_reproducibility(seed=session.get_world_rank())
     p = GATQueryParameter(
-        neighbor_edge_types=np.array([args.neighbor_edge_types], np.int32),
-        feature_idx=args.feature_idx,
-        feature_dim=args.feature_dim,
-        label_idx=args.label_idx,
-        label_dim=args.label_dim,
+        neighbor_edge_types=np.array([0], np.int32),
+        feature_idx=config["feature_idx"],
+        feature_dim=config["feature_dim"],
+        label_idx=config["label_idx"],
+        label_dim=config["label_dim"],
     )
-
-    return GAT(
-        in_dim=args.feature_dim,
-        head_num=args.head_num,
-        hidden_dim=args.hidden_dim,
-        num_classes=args.num_classes,
-        ffd_drop=args.ffd_drop,
-        attn_drop=args.attn_drop,
+    model = GAT(
+        in_dim=config["feature_dim"],
+        head_num=[8, 1],
+        hidden_dim=8,
+        num_classes=config["num_classes"],
         q_param=p,
     )
+    model = train.torch.prepare_model(model)
 
-
-def create_dataset(
-    args: argparse.Namespace,
-    model: BaseModel,
-    rank: int = 0,
-    world_size: int = 1,
-    backend: Optional[GraphEngineBackend] = None,
-):
-    return TorchDeepGNNDataset(
-        sampler_class=FileNodeSampler,
-        backend=backend,
-        query_fn=model.q.query_training,
-        prefetch_queue_size=2,
-        prefetch_worker_size=2,
-        sample_files=args.sample_file,
-        batch_size=args.batch_size,
-        shuffle=True,
-        drop_last=True,
-        worker_index=rank,
-        num_workers=world_size,
-    )
-
-
-def create_eval_dataset(
-    args: argparse.Namespace,
-    model: BaseModel,
-    rank: int = 0,
-    world_size: int = 1,
-    backend: Optional[GraphEngineBackend] = None,
-):
-    return TorchDeepGNNDataset(
-        sampler_class=FileNodeSampler,
-        backend=backend,
-        query_fn=model.q.query_training,
-        prefetch_queue_size=2,
-        prefetch_worker_size=2,
-        sample_files=args.eval_file,
-        batch_size=1000,
-        shuffle=False,
-        drop_last=True,
-        worker_index=rank,
-        num_workers=world_size,
-    )
-
-
-def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):
-    return torch.optim.Adam(
+    optimizer = torch.optim.Adam(
         filter(lambda p: p.requires_grad, model.parameters()),
-        lr=args.learning_rate * world_size,
+        lr=0.005 * session.get_world_size(),
         weight_decay=0.0005,
     )
 
+    g = config["get_graph"]()
+    batch_size = 140
+    train_dataset = ray.data.from_numpy(
+        np.loadtxt(f"{config['data_dir']}/train.nodes", dtype=np.int64)
+    )
+
+    train_pipe = train_dataset.repeat(config["num_epochs"])
+    test_dataset = ray.data.from_numpy(
+        np.loadtxt(f"{config['data_dir']}/test.nodes", dtype=np.int64)
+    )
+    eval_batch = next(test_dataset.iter_torch_batches(batch_size=1000))
+
+    train_batches = [
+        batch for batch in train_pipe.iter_torch_batches(batch_size=batch_size)
+    ]
+
+    for batch in train_batches:
+        model.train()
+        train_tensor = model.query(g, batch.detach().numpy())
+        loss, score, label = model([torch.from_numpy(a) for a in train_tensor])
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        model.eval()
+
+        eval_tensor = model.query(g, eval_batch.detach().numpy())
+        loss, score, label = model([torch.from_numpy(a) for a in eval_tensor])
+
+        session.report(
+            {
+                model.metric.name(): model.metric.compute(score, label).item(),
+                "loss": loss.detach().numpy(),
+            },
+        )
+
+import os
 
 def _main():
-    # setup default logging component.
-    setup_default_logging_config(enable_telemetry=True)
+    os.environ["RAY_PROFILING"] = "1"
+    ray.init(num_cpus=4, log_to_driver=False)
+    # cora = Cora()
 
-    run_dist(
-        init_model_fn=create_model,
-        init_dataset_fn=create_dataset,
-        init_optimizer_fn=create_optimizer,
-        init_args_fn=init_args,
+    address = "localhost:9999"
+    # s = Server(address, cora.data_dir(), 0, 1)
+    s = Server(address, "/tmp/citation/cora", 0, 1)
+
+    def get_graph():
+        return DistributedClient([address])
+
+    trainer = TorchTrainer(
+        train_func,
+        train_loop_config={
+            "get_graph": get_graph,
+            # "data_dir": cora.data_dir(),
+            "data_dir": "/tmp/citation/cora",
+            "num_epochs": 200,
+            "feature_idx": 0,
+            "feature_dim": 1433,
+            "label_idx": 1,
+            "label_dim": 1,
+            "num_classes": 7,
+        },
+        scaling_config=ScalingConfig(num_workers=1),
     )
+    result = trainer.fit()
+    ray.timeline(filename="/tmp/timeline.json")
+    assert result.metrics["Accuracy"] == 0.746
 
 
 if __name__ == "__main__":
