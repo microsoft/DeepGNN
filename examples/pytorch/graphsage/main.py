@@ -1,13 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+from typing import Optional, Tuple, Union, IO
 
 import numpy as np
-
-import ray
-import ray.train as train
-from ray.train.torch import TorchTrainer
-from ray.air import session
-from ray.air.config import ScalingConfig
 
 import torch
 from torch import nn
@@ -15,9 +10,15 @@ import torch.nn.functional as F
 import torch_geometric.nn as pyg_nn
 
 from deepgnn.graph_engine import Graph
-from deepgnn.graph_engine.snark.client import MemoryGraph
+from deepgnn.graph_engine.snark.local import Client as MemoryGraph
 from deepgnn.graph_engine.data.citation import Cora
 from deepgnn.pytorch.common import BaseMetric, MRR, F1Score
+
+from torch.autograd import Variable
+from deepgnn.graph_engine import Graph, SamplingStrategy, QueryOutput
+from deepgnn.pytorch.encoding.feature_encoder import FeatureEncoder
+from deepgnn.graph_engine.samplers import BaseSampler
+from deepgnn import get_logger
 
 
 class PTGSupervisedGraphSage(nn.Module):
@@ -28,6 +29,7 @@ class PTGSupervisedGraphSage(nn.Module):
         num_classes: int,
         label_idx: int,
         label_dim: int,
+        feature_idx: int,
         feature_dim: int,
         edge_type: int,
         fanouts: list,
@@ -52,6 +54,8 @@ class PTGSupervisedGraphSage(nn.Module):
         self.convs.append(conv_model(embed_dim, embed_dim))
         self.label_idx = label_idx
         self.label_dim = label_dim
+        self.feature_idx = feature_idx
+        self.feature_dim = feature_dim
 
         self.weight = nn.Parameter(
             torch.empty(embed_dim, num_classes, dtype=torch.float32)
@@ -92,7 +96,7 @@ class PTGSupervisedGraphSage(nn.Module):
         # Nodes for which we need features (layer 0)
         n0_out = np.concatenate([n1_out, n1_in])
         x0 = graph.node_features(
-            n0_out, np.array([[self.feature_idx, self.feature_dim]]), self.feature_type
+            n0_out, np.array([[self.feature_idx, self.feature_dim]]), np.float32
         )
 
         context["x0"] = x0.reshape((context["inputs"].shape[0], -1, self.feature_dim))
@@ -104,9 +108,36 @@ class PTGSupervisedGraphSage(nn.Module):
         )  # Number of output nodes of layer 2
         return context
 
-    def get_score(self, context: dict) -> torch.Tensor:  # type: ignore[override]
+    def _loss_inner(
+        self, context: QueryOutput
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Cross entropy loss for a list of nodes."""
+        if isinstance(context, dict):
+            labels = context["label"].squeeze()
+        elif isinstance(context, torch.Tensor):
+            labels = context.squeeze()  # type: ignore
+        else:
+            raise TypeError("Invalid input type.")
+        scores = self.get_score(context)
+        labels = labels.to(torch.int64)
+        return (
+            self.xent(
+                scores,
+                labels,
+            ),
+            scores.argmax(dim=1),
+            labels,
+        )
+
+    def forward(
+        self, context: QueryOutput
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Return cross entropy loss."""
+        return self._loss_inner(context)
+
+    # type: ignore[override]
+    def get_score(self, context: dict) -> torch.Tensor:
         """Generate scores for a list of nodes."""
-        self.encode_feature(context)
         embeds = self.get_embedding(context)
         scores = torch.matmul(embeds, self.weight)
         return scores
@@ -115,7 +146,8 @@ class PTGSupervisedGraphSage(nn.Module):
         """Metric used for training."""
         return self.metric.name()
 
-    def get_embedding(self, context: dict) -> torch.Tensor:  # type: ignore[override]
+    # type: ignore[override]
+    def get_embedding(self, context: dict) -> torch.Tensor:
         """Generate embedding."""
         out_1 = context["out_1"][0]
         out_2 = context["out_2"][0]
@@ -142,72 +174,75 @@ class PTGSupervisedGraphSage(nn.Module):
 def train_func(config: dict):
     """Training loop for ray trainer."""
 
-    train.torch.accelerate()
-    train.torch.enable_reproducibility(seed=session.get_world_rank())
-
     model = PTGSupervisedGraphSage(
-        num_classes=config["label_dim"],
+        num_classes=config["num_classes"],
         metric=F1Score(),
         label_idx=config["label_idx"],
         label_dim=config["label_dim"],
         feature_dim=config["feature_dim"],
         feature_idx=config["feature_idx"],
-        feature_type=np.float32,
         edge_type=0,
-        fanouts=[5, 5],
-        feature_enc=None,
+        fanouts=[25, 10],
     )
-    model = train.torch.prepare_model(model)
     model.train()
 
     optimizer = torch.optim.SGD(
-        filter(lambda p: p.requires_grad, model.parameters()),
-        lr=config["learning_rate"] * session.get_world_size(),
+        model.parameters(),
+        lr=0.05,
+        momentum=0.9,
     )
-    optimizer = train.torch.prepare_optimizer(optimizer)
 
-    g = MemoryGraph(config["data_dir"])
-    max_id = g.node_count(0)
-    dataset = ray.data.range(max_id).repartition(max_id // config["batch_size"])
-    pipe = dataset.window(blocks_per_window=4).repeat(config["num_epochs"])
-    dataset = pipe.map_batches(lambda idx: model.query(g, np.array(idx)))
+    g = MemoryGraph(config["data_dir"], partitions=[0])
+    train_dataset = np.loadtxt(f"{config['data_dir']}/train.nodes", dtype=np.int64)
+    eval_batch = np.loadtxt(f"{config['data_dir']}/test.nodes", dtype=np.int64)
 
-    for i, epoch in enumerate(dataset.iter_epochs()):
+    for epoch in range(config["num_epochs"]):
         scores = []
         labels = []
         losses = []
-        for batch in epoch.iter_torch_batches(batch_size=config["batch_size"]):
-            loss, score, label = model(batch)
+        np.random.shuffle(train_dataset)
+        for batch in np.split(
+            train_dataset, train_dataset.size // config["batch_size"]
+        ):
+            train_tuple = model.query(g, batch)
+            loss, score, label = model(
+                {k: torch.from_numpy(train_tuple[k]) for k in train_tuple}
+            )
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            scores.append(score)
-            labels.append(label)
-            losses.append(loss.item())
+            scores = score
+            labels = label
+            losses = loss.item()
 
-        if i % 10 == 0:
-            print(
-                f"Epoch {i:0>3d} {model.metric_name()}: {model.compute_metric(scores, labels).item():.4f} Loss: {np.mean(losses):.4f}"
+        if epoch % 10 == 0:
+            model.eval()
+            eval_tuple = model.query(g, eval_batch)
+            loss, score, label = model(
+                {k: torch.from_numpy(eval_tuple[k]) for k in eval_tuple}
             )
+            print(
+                f"Epoch {epoch:0>3d} {model.metric.name()}: {model.metric.compute(score, label).item():.4f} Loss: {losses:.4f}"
+            )
+            model.train()
+
 
 def _main():
-    trainer = TorchTrainer(
-        train_func,
-        train_loop_config={
+    result = train_func(
+        {
             # "data_dir": cora.data_dir(),
-            "data_dir": "/tmp/citation/cora",
-            "num_epochs": 200,
+            "data_dir": "/tmp/cora",
+            "num_epochs": 500,
             "feature_idx": 0,
             "feature_dim": 1433,
             "label_idx": 1,
             "label_dim": 1,
             "num_classes": 7,
+            "batch_size": 140,
         },
-        scaling_config=ScalingConfig(num_workers=1),
     )
-    result = trainer.fit()
-    assert result.metrics["MRR"] == 0.746
+    assert result.metrics["F1Score"] == 0.746
 
 
 if __name__ == "__main__":
