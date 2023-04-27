@@ -158,10 +158,7 @@ def train_func(config: dict):
     )
 
     train_pipe = train_dataset.repeat(config["num_epochs"])
-    test_dataset = ray.data.from_numpy(
-        np.loadtxt(f"{config['data_dir']}/test.nodes", dtype=np.int64)
-    )
-    eval_batch = next(test_dataset.iter_torch_batches(batch_size=1000))
+    eval_batch = np.loadtxt(f"{config['data_dir']}/test.nodes", dtype=np.int64)
 
     train_batches = [
         batch for batch in train_pipe.iter_torch_batches(batch_size=batch_size)
@@ -176,7 +173,7 @@ def train_func(config: dict):
         optimizer.step()
         model.eval()
 
-        eval_tensor = model.query(g, eval_batch.detach().numpy())
+        eval_tensor = model.query(g, eval_batch)
         loss, score, label = model([torch.from_numpy(a) for a in eval_tensor])
 
         session.report(
@@ -190,12 +187,12 @@ import os
 
 def _main():
     os.environ["RAY_PROFILING"] = "1"
-    ray.init(num_cpus=4, log_to_driver=False)
+    ray.init(num_cpus=3) #, log_to_driver=False)
     # cora = Cora()
 
     address = "localhost:9999"
     # s = Server(address, cora.data_dir(), 0, 1)
-    s = Server(address, "/tmp/citation/cora", 0, 1)
+    s = Server(address, "/tmp/cora", 0, 1)
 
     def get_graph():
         return DistributedClient([address])
@@ -205,7 +202,7 @@ def _main():
         train_loop_config={
             "get_graph": get_graph,
             # "data_dir": cora.data_dir(),
-            "data_dir": "/tmp/citation/cora",
+            "data_dir": "/tmp/cora",
             "num_epochs": 200,
             "feature_idx": 0,
             "feature_dim": 1433,
