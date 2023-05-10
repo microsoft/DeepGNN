@@ -90,7 +90,7 @@ grpcio-health-checking==1.49.1
 grpcio-tools==1.49.1
 h5py==3.7.0
 heapdict==1.0.1
-horovod==0.25.0;sys_platform != 'win32'
+horovod==0.26.0;sys_platform != 'win32'
 huggingface-hub==0.10.1
 idna==3.4
 idna-ssl==1.1.0
@@ -112,7 +112,7 @@ jsonpickle==2.2.0
 jsonschema==4.16.0
 jupyter_client==7.4.2
 jupyter_core==4.11.1
-keras==2.10.0
+keras==2.11.0
 keras-preprocessing==1.1.2
 keras_preprocessing==1.1.2
 keyring==23.9.3
@@ -225,9 +225,10 @@ tensorboard==2.10.1
 tensorboard-data-server==0.6.1
 tensorboard-plugin-wit==1.8.1
 tensorboardX==2.5.1
-tensorflow==2.10.1
+tensorflow==2.11.1
 tensorflow-addons==0.18.0
 tensorflow-estimator==2.10.0
+tensorflow-intel==2.11.1
 tensorflow-io-gcs-filesystem==0.27.0
 termcolor==2.0.1
 terminado==0.16.0
@@ -236,7 +237,6 @@ threadpoolctl==3.1.0
 thrift==0.16.0
 tokenizers==0.13.1
 toml==0.10.2
-tomli==2.0.1
 tomli==2.0.1
 toolz==0.12.0
 torch==1.12.1

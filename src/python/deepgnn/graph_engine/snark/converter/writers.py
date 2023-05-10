@@ -31,6 +31,7 @@ class BinaryWriter:
         suffix: int,
         skip_node_sampler: bool = False,
         skip_edge_sampler: bool = False,
+        watermark: typing.Optional[int] = None,
     ):
         """Initialize writer and create binary files.
 
@@ -39,24 +40,23 @@ class BinaryWriter:
             suffix (int): file suffix in the name of binary files
             skip_node_sampler(bool): skip generation of node alias tables
             skip_edge_sampler(bool): skip generation of edge alias tables
+            watermark (typing.Optionsl[int]): latest known timestamp in a temporal graph.
         """
         self.folder = folder
         self.suffix = suffix
         self.skip_node_sampler = skip_node_sampler
         self.skip_edge_sampler = skip_edge_sampler
+        self.watermark = watermark
+        self.is_temporal = watermark is not None
 
-        self.node_writer = NodeWriter(self.folder, self.suffix)
-        self.edge_writer = EdgeWriter(self.folder, self.suffix)
+        self.node_writer = NodeWriter(folder, suffix, watermark)
+        self.edge_writer = EdgeWriter(folder, suffix, watermark)
 
         self.node_alias: typing.Union[NodeAliasWriter, _NoOpWriter] = (
-            _NoOpWriter()
-            if skip_node_sampler
-            else NodeAliasWriter(self.folder, self.suffix)
+            _NoOpWriter() if skip_node_sampler else NodeAliasWriter(folder, suffix)
         )
         self.edge_alias: typing.Union[EdgeAliasWriter, _NoOpWriter] = (
-            _NoOpWriter()
-            if skip_edge_sampler
-            else EdgeAliasWriter(self.folder, self.suffix)
+            _NoOpWriter() if skip_edge_sampler else EdgeAliasWriter(folder, suffix)
         )
 
         self.node_count: int = 0
@@ -70,17 +70,27 @@ class BinaryWriter:
         self.prev_node_id: typing.Optional[int] = None
         self.prev_edge_type: typing.Optional[int] = None
 
-    def add(self, data: typing.Iterator[typing.Tuple[int, int, int, float, list]]):
+    def add(
+        self,
+        data: typing.Iterator[
+            typing.Tuple[
+                int, int, int, float, typing.Optional[int], typing.Optional[int], list
+            ]
+        ],
+    ):
         """
         Write binary for a node and all of its edges.
 
         args:
-            data: Iterable[(int, int, int, float, list)] Data for a node first, then all of
+            data: Iterable[(int, int, int, float, int, int list)] Data for a node first, then all of
                 its edges in order of type then dst. All of the node's outgoing edges do not need to go to the same writer.
                 Each entry for a node/edge is,
-                (node_id/src, -1/dst, type, weight, [ndarray for each feature vector or None in order of feature index]).
+                (node_id/src, -1/dst, type, weight, created_at, removed_at, [ndarray for each feature vector or None in order of feature index]).
         """
-        for src, dst, typ, weight, features in data:
+        # Default values for timestamps: node existed since the very beginning and towards the very end.
+        node_created_at = 0
+        node_removed_at = -1
+        for src, dst, typ, weight, created_at, removed_at, features in data:
             type_num_value = typ + 1
             if dst == -1:
                 self.prev_node_id = src
@@ -91,7 +101,16 @@ class BinaryWriter:
                         self.node_weight.append(0)
                         self.node_type_count.append(0)
                     self.node_type_num = type_num_value
-                self.node_writer.add(src, typ, features)
+                # Fill defaults for a new node
+                node_created_at = created_at or 0
+                node_removed_at = removed_at or -1
+                self.node_writer.add(
+                    src,
+                    typ,
+                    features,
+                    None if not self.is_temporal else node_created_at,
+                    None if not self.is_temporal else node_removed_at,
+                )
                 self.edge_writer.add_node()
                 self.node_alias.add(src, typ, weight)
                 self.node_weight[typ] += float(weight)
@@ -100,7 +119,13 @@ class BinaryWriter:
             else:
                 if src != self.prev_node_id or self.prev_node_id is None:
                     self.prev_edge_type = None
-                    self.node_writer.add(src, -1, [])
+                    self.node_writer.add(
+                        src,
+                        -1,
+                        [],
+                        None if not self.is_temporal else node_created_at,
+                        None if not self.is_temporal else node_removed_at,
+                    )
                     self.edge_writer.add_node()
                     self.prev_node_id = src
                 assert (
@@ -113,7 +138,24 @@ class BinaryWriter:
                         self.edge_weight.append(0)
                         self.edge_type_count.append(0)
                     self.edge_type_num = type_num_value
-                self.edge_writer.add(dst, typ, weight, features)
+                assert (
+                    created_at is None or created_at >= node_created_at
+                ), f"Edge ({src}, {dst}, {typ}) was created[{created_at}] before source node[{node_created_at}]."
+                assert (
+                    removed_at is None
+                    or node_removed_at == -1
+                    or removed_at <= node_removed_at
+                ), f"Edge ({src}, {dst}, {typ}) was deleted[{removed_at}] after source node[{node_removed_at}]."
+                created_at = created_at or node_created_at
+                removed_at = removed_at or node_removed_at
+                self.edge_writer.add(
+                    dst,
+                    typ,
+                    weight,
+                    features,
+                    None if not self.is_temporal else created_at,
+                    None if not self.is_temporal else removed_at,
+                )
                 self.edge_alias.add(src, dst, typ, weight)
                 self.edge_weight[typ] += weight
                 self.edge_type_count[typ] += 1
@@ -121,8 +163,8 @@ class BinaryWriter:
 
     def close(self):
         """Close output binary files."""
-        self.node_feature_num = self.node_writer.feature_writer.node_feature_num
-        self.edge_feature_num = self.edge_writer.feature_writer.edge_feature_num
+        self.node_feature_count = self.node_writer.feature_writer.node_feature_count
+        self.edge_feature_count = self.edge_writer.feature_writer.edge_feature_count
         self.node_writer.close()
         self.edge_writer.close()
         self.node_alias.close()
@@ -132,12 +174,15 @@ class BinaryWriter:
 class NodeWriter:
     """NodeWriter records information about nodes and adds node features to a NodeFeatureWriter."""
 
-    def __init__(self, folder: str, partition: int):
+    def __init__(
+        self, folder: str, partition: int, watermark: typing.Optional[int] = None
+    ):
         """Initialize writer and create binary files.
 
         Args:
             folder (str): location to write output
             partition (int): first part of the suffix to identify files from this writer.
+            watermark (int): for temporal graphs is latest known timestamp in the graph.
         """
         self.fs, _ = get_fs(folder)
         self.folder = folder
@@ -147,15 +192,24 @@ class NodeWriter:
             meta._get_node_map_path(folder, partition, self.iteration), "wb"
         )
         self.count = 0
-        self.feature_writer = NodeFeatureWriter(folder, partition)
+        self.feature_writer = NodeFeatureWriter(folder, partition, watermark)
 
-    def add(self, node_id: int, node_type: int, features: list):
+    def add(
+        self,
+        node_id: int,
+        node_type: int,
+        features: list,
+        created_at: typing.Optional[int] = None,
+        removed_at: typing.Optional[int] = None,
+    ):
         """Write node features and data about edges from this node to binary.
 
         Args:
-            node_id: int
-            node_type: int
-            features: list[ndarray]
+            node_id(int): node identifier.
+            node_type(int): node type.
+            features(list[ndarray]): node features.
+            created_at(optional[int]): node creation time.
+            removed_at(optional[int]): node deletion time, -1 if it still exists.
         """
         self.nm.write(
             struct.pack(
@@ -165,7 +219,7 @@ class NodeWriter:
                 node_type,
             )
         )
-        self.feature_writer.add(features)
+        self.feature_writer.add(features, created_at, removed_at)
         self.count += 1
 
     def close(self):
@@ -177,17 +231,21 @@ class NodeWriter:
 class NodeFeatureWriter:
     """NodeFeatureWriter records node feature data in binary format."""
 
-    def __init__(self, folder: str, partition: int):
+    def __init__(
+        self, folder: str, partition: int, watermark: typing.Optional[int] = None
+    ):
         """Construct writer.
 
         Args:
             folder (str): path to output save output
             partition (int): first part of the suffix for binary files
+            watermark (typing.Optional[int]): for temporal graphs is latest known timestamp in the graph.
         """
         self.fs, _ = get_fs(folder)
         self.folder = folder
         self.partition = partition
         self.iteration = 0
+        self.watermark = watermark
         self.ni = self.fs.open(
             meta._get_element_index_path(
                 _Element.NODE, folder, partition, self.iteration
@@ -208,9 +266,14 @@ class NodeFeatureWriter:
         )
         self.nfd_pos = self.nfd.tell()
 
-        self.node_feature_num = 0
+        self.node_feature_count = 0
 
-    def add(self, features: list):
+    def add(
+        self,
+        features: list,
+        created_at: typing.Optional[int] = None,
+        removed_at: typing.Optional[int] = None,
+    ):
         """Add node to binary output.
 
         Args:
@@ -218,13 +281,13 @@ class NodeFeatureWriter:
         """
         self.ni.write(ctypes.c_uint64(self.nfi.tell() // 8))  # type: ignore
         i = -1
-        for i, k in enumerate(convert_features(features)):
+        for i, k in enumerate(convert_features(features, created_at, removed_at)):
             # Fill the gaps between features
             self.nfi.write(ctypes.c_uint64(self.nfd_pos))  # type: ignore
             if k is not None:
                 self.nfd_pos += self.nfd.write(k)
-        if i + 1 > self.node_feature_num:
-            self.node_feature_num = i + 1
+        if i + 1 > self.node_feature_count:
+            self.node_feature_count = i + 1
 
     def close(self):
         """Close output binary files."""
@@ -238,7 +301,12 @@ class NodeFeatureWriter:
 class EdgeWriter:
     """EdgeWriter records information about neighbors and adds edge features to a EdgeFeatureWriter."""
 
-    def __init__(self, folder: str, partition: int):
+    def __init__(
+        self,
+        folder: str,
+        partition: int,
+        watermark: typing.Optional[int] = None,
+    ):
         """Initialize writer.
 
         Args:
@@ -249,6 +317,7 @@ class EdgeWriter:
         self.folder = folder
         self.partition = partition
         self.iteration = 0
+        self.watermark = watermark
         self.nbi = self.fs.open(
             meta._get_neighbors_index_path(folder, partition, self.iteration), "wb"
         )
@@ -265,6 +334,14 @@ class EdgeWriter:
             ),
             "wb",
         )
+        if watermark is not None:
+            self.eti = self.fs.open(
+                meta._get_element_timestamps_path(
+                    _Element.EDGE, folder, partition, self.iteration
+                ),
+                "wb",
+            )
+            self.eti.write(ctypes.c_uint64(watermark))
         self.efi_pos = self.efi.tell()
 
         self.feature_writer = EdgeFeatureWriter(folder, partition, self.efi)
@@ -275,7 +352,15 @@ class EdgeWriter:
             ctypes.c_uint64(self.ei.tell() // (4 + 8 + 8 + 4))
         )  # 4 bytes type, 8 bytes destination, 8 bytes offset, 4 bytes weight
 
-    def add(self, dst: int, tp: int, weight: float, features: list):
+    def add(
+        self,
+        dst: int,
+        tp: int,
+        weight: float,
+        features: list,
+        created_at: typing.Optional[int],
+        removed_at: typing.Optional[int],
+    ):
         """Append edges starting at node to the output.
 
         Args:
@@ -295,7 +380,16 @@ class EdgeWriter:
                 weight,
             )
         )
-        self.efi_pos += self.feature_writer.add(features)
+        self.efi_pos += self.feature_writer.add(features, created_at, removed_at)
+
+        if self.watermark is not None:
+            assert (
+                created_at is not None
+            ), "Missing created timestamp for a temporal graph"
+            assert (
+                removed_at is not None
+            ), "Missing deleted timestamp for a temporal graph"
+            self.eti.write(struct.pack("=qq", created_at, removed_at))
 
     def close(self):
         """Close output binary files."""
@@ -316,6 +410,8 @@ class EdgeWriter:
         self.efi.write(ctypes.c_uint64(self.feature_writer.tell()))  # type: ignore
         self.efi.close()
         self.feature_writer.close()
+        if self.watermark is not None:
+            self.eti.close()
 
 
 class EdgeFeatureWriter:
@@ -341,9 +437,14 @@ class EdgeFeatureWriter:
             "wb",
         )
         self.efd_pos = self.efd.tell()
-        self.edge_feature_num = 0
+        self.edge_feature_count = 0
 
-    def add(self, features: list):
+    def add(
+        self,
+        features: list,
+        created_at: typing.Optional[int] = None,
+        removed_at: typing.Optional[int] = None,
+    ):
         """Add edge features the binary output.
 
         Args:
@@ -351,12 +452,12 @@ class EdgeFeatureWriter:
         """
         features_written = 0
         i = -1
-        for i, k in enumerate(convert_features(features)):
+        for i, k in enumerate(convert_features(features, created_at, removed_at)):
             features_written += self.efi.write(ctypes.c_uint64(self.efd_pos))  # type: ignore
             if k is not None:
                 self.efd_pos += self.efd.write(k)
-        if i + 1 > self.edge_feature_num:
-            self.edge_feature_num = i + 1
+        if i + 1 > self.edge_feature_count:
+            self.edge_feature_count = i + 1
         return features_written
 
     def tell(self) -> int:
@@ -576,7 +677,11 @@ class EdgeAliasWriter:
         self.meta_tmp_folder.cleanup()
 
 
-def convert_features(features: list):
+def convert_features(
+    features: list,
+    created_at: typing.Optional[int] = None,
+    removed_at: typing.Optional[int] = None,
+):
     """Convert the node's feature into bytes sorted by index."""
     # Use a single container for all node features to make sure there are unique feature_ids
     # and gaps between feature ids are processed correctly.
@@ -597,19 +702,22 @@ def convert_features(features: list):
             assert (
                 coordinates.shape[0] == len(values)
                 if len(values) > 1
-                else len(coordinates.shape) == 1
-                or coordinates.shape[0]
-                == 1  # relax input requirements for single values, both [[a,b]] and [a,b] are ok.
+                else len(coordinates.shape) == 1 or coordinates.shape[0]
+                # relax input requirements for single values, both [[a,b]] and [a,b] are ok.
+                == 1
             ), f"Coordinates {coordinates} and values {values} dimensions don't match"
 
             coordinates_meta = bytes(
-                ctypes.c_uint32(coordinates.shape[-1] if coordinates.ndim > 1 else 1)  # type: ignore
+                # type: ignore
+                ctypes.c_uint32(coordinates.shape[-1] if coordinates.ndim > 1 else 1)
             )
 
             if values.dtype == np.float16:
                 values_buf = np.array(values, dtype=np.float16).tobytes()
             else:
-                values_buf = (np.ctypeslib.as_ctypes_type(values.dtype) * len(values))()  # type: ignore
+                values_buf = (
+                    np.ctypeslib.as_ctypes_type(values.dtype) * len(values)
+                )()  # type: ignore
                 values_buf[:] = values  # type: ignore
 
             # For matrices the number of values might be different than number of coordinates

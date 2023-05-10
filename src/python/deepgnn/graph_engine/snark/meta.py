@@ -4,18 +4,19 @@
 """Meta module provides functionality to work with binary graph files."""
 import enum
 import os
+import json
 import tempfile
 from ctypes import c_char_p
 from deepgnn.graph_engine.snark._lib import _get_c_lib
 import platform
 
 """Version of binary files produced by converters to communicate breaking changes requiring regeneration of binary files."""
-BINARY_DATA_VERSION = "v1"
+BINARY_DATA_VERSION = "v2"
 
 
 # Use custom separators in case we want to download data from remote filesystems.
 def _get_meta_path(path: str, sep=os.path.sep) -> str:
-    return sep.join([path, "meta.txt"])
+    return sep.join([path, "meta.json"])
 
 
 def _get_node_map_path(
@@ -28,6 +29,15 @@ def _get_node_map_path(
 class _Element(enum.Enum):
     NODE = "node"
     EDGE = "edge"
+
+
+def _get_element_timestamps_path(
+    element: _Element, path: str, partition: int, iteration: int, sep=os.path.sep
+) -> str:
+    suffix = "*" if iteration < 0 else str(iteration)
+    return sep.join(
+        [path, "{}_{}_{}.timestamp".format(element.value, partition, suffix)]
+    )
 
 
 def _get_element_index_path(
@@ -107,7 +117,7 @@ def download_meta(
     dest_path: str,
     config_path: str,
 ) -> str:
-    """Get meta.txt path based on the local or remote path."""
+    """Get meta.json path based on the local or remote path."""
     path = src_path
 
     if (
@@ -155,35 +165,35 @@ class Meta:
         temp_path = temp_dir.name
         meta_path = download_meta(path, temp_path, config_path)
 
-        meta = open(meta_path, "r")  # type: ignore
-
-        self.version = str(meta.readline().strip())
-        if self.version[0] != "v":
-            raise RuntimeError(
-                "First line in meta file should be version, please regenerate binary data"
+        try:
+            with open(meta_path, "r") as file:
+                meta = json.load(file)  # type: ignore
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                "Failed to find meta.json file. Please use latest deepgnn package to convert data."
             )
 
-        self.node_count = int(meta.readline())
-        self.edge_count = int(meta.readline())
-        self.node_type_count = int(meta.readline())
-        self.edge_type_count = int(meta.readline())
-        self._node_feature_count = int(meta.readline())
-        self._edge_feature_count = int(meta.readline())
-        self._partition_count = int(meta.readline())
-        self._node_weights = [float(0)] * self.node_type_count
-        self._edge_weights = [float(0)] * self.edge_type_count
-        for _ in range(self._partition_count):
-            meta.readline()  # Partition id
+        self.version = meta["binary_data_version"]
+        if self.version[0] != "v":
+            raise RuntimeError(
+                "Meta file should contain binary_data_version, please regenerate binary data"
+            )
+
+        self.node_count = meta["node_count"]
+        self.edge_count = meta["edge_count"]
+        self.node_type_count = meta["node_type_count"]
+        self.edge_type_count = meta["edge_type_count"]
+        self._node_feature_count = meta["node_feature_count"]
+        self._edge_feature_count = meta["edge_feature_count"]
+        self.partition_count = len(meta["partitions"])
+        self._node_weights = [0.0] * self.node_type_count
+        self._edge_weights = [0.0] * self.edge_type_count
+        for id in meta["partitions"]:
             for i in range(self.node_type_count):
-                self._node_weights[i] += float(meta.readline())
+                self._node_weights[i] += meta["partitions"][id]["node_weight"][i]
             for i in range(self.edge_type_count):
-                self._edge_weights[i] += float(meta.readline())
-        self.node_count_per_type = []
-        self.edge_count_per_type = []
+                self._edge_weights[i] += meta["partitions"][id]["edge_weight"][i]
 
-        for _ in range(self.node_type_count):
-            self.node_count_per_type.append(int(meta.readline()))
-        for _ in range(self.edge_type_count):
-            self.edge_count_per_type.append(int(meta.readline()))
-
-        meta.close()
+        self.node_count_per_type = meta["node_count_per_type"]
+        self.edge_count_per_type = meta["edge_count_per_type"]
+        self.watermark = meta["watermark"]

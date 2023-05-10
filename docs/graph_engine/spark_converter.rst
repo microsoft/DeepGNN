@@ -75,11 +75,11 @@ increment relevant counters for each node and edge for each processed node. When
     ...         self.node_feature_count = 2
     ...         self.edge_feature_count = 0
     ...         self.partition_count = 1
-    ...         self.partition_ids = [partition_id]
     ...         self.node_weights = [0, 0, 0]
     ...         self.edge_weights = [0, 0, 0]
     ...         self.node_count_per_type = [0, 0, 0]
     ...         self.edge_count_per_type = [0, 0, 0]
+    ...         self.watermark = "-1"
     ...
     ...     def add(self, node):
     ...         self.node_count += 1
@@ -91,22 +91,22 @@ increment relevant counters for each node and edge for each processed node. When
     ...             self.edge_count_per_type[edge["edge_type"]] += 1
     ...
     ...     def close(self, binary_dir: str):
-    ...         with open(os.path.join(binary_dir, "meta_%d.txt" % self.partition_ids[0]), "w+") as f:
-    ...             contents = "\n".join(list(map(str, itertools.chain(
-    ...                 [BINARY_DATA_VERSION,
-    ...                 self.node_count,
-    ...                 self.edge_count,
-    ...                 self.node_type_count,
-    ...                 self.edge_type_count,
-    ...                 self.node_feature_count,
-    ...                 self.edge_feature_count,
-    ...                 self.partition_count,
-    ...                 self.partition_ids[0]],
-    ...                 self.node_weights,
-    ...                 self.edge_weights,
-    ...                 self.node_count_per_type,
-    ...                 self.edge_count_per_type))))
-    ...             f.write(contents)
+    ...         content = {
+    ...             "binary_data_version": BINARY_DATA_VERSION,  # converter version
+    ...             "node_count": self.node_count,
+    ...             "edge_count": self.edge_count,
+    ...             "node_type_count": self.node_type_count,
+    ...             "edge_type_count": self.edge_type_count,
+    ...             "node_feature_count": self.node_feature_count,
+    ...             "edge_feature_count": self.edge_feature_count,
+    ...             "partitions": {"0": {"node_weight": self.node_weights, "edge_weight": self.edge_weights}},
+    ...             "node_count_per_type": self.node_count_per_type,
+    ...             "edge_count_per_type": self.edge_count_per_type,
+    ...             "watermark": -1,
+    ...         }
+    ...         with open(os.path.join(binary_dir, "meta_0.json"), "w+") as f:
+    ...             f.write(json.dumps(content))
+
 
 Spark task is very straitforward: deserialize node from json and pass it to both `BinaryWriter` to generate binary data and `PartitionMeta` to update metadata.
 

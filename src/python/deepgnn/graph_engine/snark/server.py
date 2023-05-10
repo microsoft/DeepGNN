@@ -43,7 +43,7 @@ class Server:
         """Create server and start it.
 
         Args:
-            meta_path: location of meta.txt file with global graph information. If given hdfs:// or adl:// path
+            meta_path: location of meta.json file with global graph information. If given hdfs:// or adl:// path
                 use config_path and stream parameters, for additional configuration.
             partitions (Sequence[Union[int,Tuple[str, int]]]): Partition ids to load from meta_path folder.
                 List can contain a tuple of path and partition ids to load to override location of a binary file for given partition.

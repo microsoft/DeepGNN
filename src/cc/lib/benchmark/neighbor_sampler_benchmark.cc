@@ -17,6 +17,9 @@
 #ifdef SNARK_PLATFORM_LINUX
 #include <mimalloc-override.h>
 #endif
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 using NeighborRecord = std::tuple<snark::NodeId, snark::Type, float>;
 struct Node
@@ -135,24 +138,32 @@ snark::Graph create_graph(size_t num_types, size_t num_nodes_per_partition, size
     }
 
     {
-        std::ofstream meta(path / "meta.txt");
-        meta << "v" << snark::MINIMUM_SUPPORTED_VERSION << "\n";
-        meta << num_nodes << "\n";
-        meta << num_edges << "\n";
+        std::string version_str = "v";
+        version_str += std::to_string(snark::MINIMUM_SUPPORTED_VERSION);
 
-        meta << 1 << "\n";              // node_types_count
-        meta << 1 << "\n";              // edge_types_count
-        meta << 0 << "\n";              // node_features_count
-        meta << 0 << "\n";              // edge_features_count
-        meta << num_partitions << "\n"; // partition_count
+        json json_meta = {
+            {"binary_data_version", version_str},
+            {"node_count", num_nodes},
+            {"edge_count", num_edges},
+            {"node_type_count", 1},
+            {"edge_type_count", 1},
+            {"node_feature_count", 0},
+            {"edge_feature_count", 0},
+            {"node_count_per_type", {num_nodes}},
+            {"edge_count_per_type", {num_edges}},
+            {"partitions", {{"0", {{"node_weight", {0}}}}}},
+            {"watermark", -1},
+        };
+
         for (size_t partition_id = 0; partition_id < num_partitions; ++partition_id)
         {
-            meta << partition_id << "\n";                      // partition id
-            meta << partition_num_nodes[partition_id] << "\n"; // partition node weight
-            meta << 1 << "\n";                                 // partition edge weight
+            json_meta["partitions"][std::to_string(partition_id)] = {{"node_weight", {0}}};
+            json_meta["partitions"][std::to_string(partition_id)]["node_weight"] = {partition_num_nodes[partition_id]};
+            json_meta["partitions"][std::to_string(partition_id)]["edge_weight"] = {1};
         }
-        meta << num_nodes << "\n";
-        meta << num_edges << "\n";
+
+        std::ofstream meta(path / "meta.json");
+        meta << json_meta << std::endl;
         meta.close();
     };
     return snark::Graph(snark::Metadata{path.string()}, std::move(partition_paths), std::move(partition_indices),
@@ -180,7 +191,7 @@ static void BM_ONE_NODE_TYPE_WEIGHTED(benchmark::State &state)
     {
         const size_t batch_size = state.range(0);
         std::vector<float> total_neighbor_weight(batch_size);
-        s.SampleNeighbor(++seed, std::span(input_nodes).subspan(offset, batch_size), std::span(edge_types),
+        s.SampleNeighbor(++seed, std::span(input_nodes).subspan(offset, batch_size), std::span(edge_types), {},
                          num_neighbors_to_sample,
                          std::span(node_holder).subspan(0, num_neighbors_to_sample * batch_size),
                          std::span(type_holder).subspan(0, num_neighbors_to_sample * batch_size),

@@ -21,6 +21,9 @@
 #ifdef SNARK_PLATFORM_LINUX
 #include <mimalloc-override.h>
 #endif
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 namespace
 {
@@ -61,8 +64,8 @@ void BM_DISTRIBUTED_GRAPH_SINGLE_NODE(benchmark::State &state)
     for (auto _ : state)
     {
         const size_t batch_size = state.range(0);
-        c.GetNodeFeature(std::span(std::begin(input_nodes) + distrib(gen), batch_size), std::span(feature),
-                         std::span(std::begin(output), batch_size));
+        auto out = std::span(output).subspan(0, feature[0].second * batch_size);
+        c.GetNodeFeature(std::span(input_nodes).subspan(distrib(gen), batch_size), {}, std::span(feature), out);
     }
 }
 
@@ -109,8 +112,8 @@ void BM_DISTRIBUTED_GRAPH_MULTIPLE_NODES(benchmark::State &state)
     for (auto _ : state)
     {
         const size_t batch_size = state.range(0);
-        c.GetNodeFeature(std::span(std::begin(input_nodes) + distrib(gen), batch_size), std::span(feature),
-                         std::span(std::begin(output), 4 * fv_size * batch_size));
+        c.GetNodeFeature(std::span(input_nodes).subspan(distrib(gen), batch_size), {}, std::span(feature),
+                         std::span(output).subspan(0, feature[0].second * batch_size));
     }
 }
 
@@ -141,8 +144,8 @@ static void BM_REGULAR_GRAPH(benchmark::State &state)
     {
         const size_t batch_size = state.range(0);
 
-        g.GetNodeFeature(std::span(std::begin(input_nodes) + distrib(gen), batch_size), std::span(feature),
-                         std::span(std::begin(output), 4 * fv_size * batch_size));
+        g.GetNodeFeature(std::span(input_nodes).subspan(distrib(gen), batch_size), {}, std::span(feature),
+                         std::span(output).subspan(0, feature[0].second * batch_size));
     }
 }
 
@@ -170,20 +173,24 @@ void BM_DISTRIBUTED_SAMPLER_MULTIPLE_SERVERS(benchmark::State &state)
             alias.close();
         }
         {
-            std::ofstream meta(path / "meta.txt");
-            meta << "v" << snark::MINIMUM_SUPPORTED_VERSION << "\n";
-            meta << num_nodes_in_server << "\n";
-            meta << 0 << "\n";                   // num edges
-            meta << 1 << "\n";                   // node_types_count
-            meta << 1 << "\n";                   // edge_types_count
-            meta << 0 << "\n";                   // node_features_count
-            meta << 0 << "\n";                   // edge_features_count
-            meta << 1 << "\n";                   // partition_count
-            meta << 0 << "\n";                   // partition id
-            meta << 1 << "\n";                   // partition node weight
-            meta << 1 << "\n";                   // partition edge weight
-            meta << num_nodes_in_server << "\n"; // num nodes for type 0
-            meta << 0 << "\n";                   // num edges for type 0
+            std::string version_str = "v";
+            version_str += std::to_string(snark::MINIMUM_SUPPORTED_VERSION);
+
+            json json_meta = {
+                {"binary_data_version", version_str},
+                {"node_count", num_nodes_in_server},
+                {"edge_count", 0},
+                {"node_type_count", 1},
+                {"edge_type_count", 1},
+                {"node_feature_count", 0},
+                {"edge_feature_count", 0},
+                {"partitions", {{"0", {{"node_weight", {1}}, {"edge_weight", {1}}}}}},
+                {"node_count_per_type", {num_nodes_in_server}},
+                {"edge_count_per_type", {0}},
+                {"watermark", -1},
+            };
+            std::ofstream meta(path / "meta.json");
+            meta << json_meta << std::endl;
             meta.close();
         }
         snark::Metadata metadata(path.string());

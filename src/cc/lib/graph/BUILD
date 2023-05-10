@@ -36,8 +36,10 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "@boost//:random",
+        "@json//:json",
         "@com_github_google_glog//:glog",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/container:inlined_vector",
     ],
 )

@@ -11,8 +11,6 @@ import time
 from pathlib import Path
 import platform
 from typing import List, Tuple
-import socket
-from contextlib import closing
 
 import numpy as np
 import numpy.testing as npt
@@ -27,7 +25,7 @@ import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.dispatcher as dispatcher
 import deepgnn.graph_engine.snark._lib as lib
 from deepgnn.graph_engine.snark.converter.writers import BinaryWriter
-from util_test import json_to_edge_list_feature
+from util_test import json_to_edge_list_feature, find_free_port
 
 
 nodes = [
@@ -106,13 +104,6 @@ edges = [
         "float16_feature": {"13": [95, 96, 97], "14": [105, 106, 107]},
     },
 ]
-
-
-def find_free_port():
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind(("", 0))
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        return s.getsockname()[1]
 
 
 def triangle_graph_json(folder):
@@ -263,30 +254,38 @@ class Counter:
 
 def write_multi_binary(output_dir, partitions):
     def json_to_edge_list_helper(json_input):
-        features = json_to_edge_list_feature(JsonDecoder()._pull_features(json_input))
+        features = json_to_edge_list_feature(
+            JsonDecoder()._pull_features(json_input, -1, -1)
+        )
         if "node_id" in json_input:
             return f"{json_input['node_id']},-1,{json_input['node_type']},{json_input['node_weight']},{features}"
         else:
-            return f"{json_input['src_id']},{json_input['dst_id']},{json_input['edge_type']},{json_input['weight']},{features}"
+            return f"{json_input['src_id']},{json_input['edge_type']},{json_input['dst_id']},{json_input['weight']},{features}"
 
-    partition_meta = ""
     for i, p in enumerate(partitions):
         decoder = EdgeListDecoder()
         writer = BinaryWriter(output_dir, i)
         for v in p:
             writer.add(decoder.decode(json_to_edge_list_helper(v)))
         writer.close()
-        nf = "\n".join(map(str, writer.node_type_count))
-        ef = "\n".join(map(str, writer.edge_type_count))
-        if nf == "":
-            nf = "0\n0\n0"
-        if ef == "":
-            ef = "0\n0"
-        partition_meta += f"{i}\n3\n3\n3\n2\n2\n{nf}\n{ef}\n"
-    meta = open(os.path.join(output_dir, "meta.txt"), "w+")
-    meta.write(f"v3\n3\n3\n2\n15\n15\n2\n")
-    meta.write(partition_meta)
-    meta.close()
+    content = {
+        "binary_data_version": "v2",  # converter version
+        "node_count": 3,
+        "edge_count": 3,
+        "node_type_count": 3,
+        "edge_type_count": 2,
+        "node_feature_count": 15,
+        "edge_feature_count": 15,
+        "partitions": {
+            "0": {"node_weight": [3, 3, 3], "edge_weight": [2, 2]},
+            "1": {"node_weight": [3, 3, 3], "edge_weight": [2, 2]},
+        },
+        "node_count_per_type": [1, 1, 1],
+        "edge_count_per_type": [1, 2],
+        "watermark": -1,
+    }
+    with open(os.path.join(output_dir, "meta.json"), "w+") as f:
+        f.write(json.dumps(content))
 
 
 @pytest.fixture(scope="module")
@@ -358,6 +357,9 @@ def test_memory_graph_neighbors(multi_partition_graph_data, storage_type):
     npt.assert_almost_equal(weights, np.array([0.5, 1.0], dtype=np.float32))
     npt.assert_equal(edge_types, np.array([0, 1], dtype=np.int32))
     npt.assert_equal(result_counts, np.array([1, 1], dtype=np.int64))
+
+
+# counter = 1
 
 
 @pytest.mark.parametrize(
@@ -1628,14 +1630,25 @@ def test_partitions_from_separate_folders():
         ).convert()
     meta_folder = os.path.join(folder.name, "p_meta")
     os.makedirs(name=meta_folder, exist_ok=True)
-    with open(os.path.join(meta_folder, "meta.txt"), "w+") as meta:
-        meta.write(f"v2\n4\n0\n2\n0\n2\n0\n4\n")
-        meta.write(f"0\n")
-        meta.write(f"0\n1\n1\n0\n0\n")  # p1
-        meta.write(f"1\n1\n1\n0\n0\n")  # p2
-        meta.write(f"2\n1\n1\n0\n0\n")  # p3
-        meta.write(f"3\n1\n1\n0\n0\n")  # p4
-        meta.write(f"2\n2\n")
+
+    content = {
+        "binary_data_version": "v2",  # converter version
+        "node_count": 4,
+        "edge_count": 0,
+        "node_type_count": 2,
+        "edge_type_count": 0,
+        "node_feature_count": 2,
+        "edge_feature_count": 0,
+        "partitions": {
+            f"{i}": {"node_weight": [1, 1, 0, 0], "edge_weight": []} for i in range(4)
+        },
+        "node_count_per_type": [2, 2],
+        "edge_count_per_type": [],
+        "watermark": -1,
+    }
+    with open(os.path.join(meta_folder, "meta.json"), "w+") as f:
+        f.write(json.dumps(content))
+
     cl = client.MemoryGraph(
         meta_folder,
         [(partition_paths[0], 0), (partition_paths[1], 1)],
