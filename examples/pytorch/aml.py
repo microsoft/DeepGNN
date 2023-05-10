@@ -32,7 +32,7 @@ import socket
 
 
 @ray.remote
-class Cache:
+class ServerLock:
     def __init__(self, size):
         self.cache = {}
         self.locks = [False for _ in range(size)]
@@ -56,18 +56,29 @@ class Cache:
         return self.cache.get(x)
 
 
+def set_lock(server_lock, rank, address):
+    server_lock.put.remote(rank, address)
+    server_lock.set_lock.remote(rank)
+    while not ray.get(server_lock.wait_set.remote()):
+        sleep(1)
+
+
+def release_lock(server_lock, rank):
+    server_lock.release_lock.remote(session.get_world_rank())
+    while not ray.get(server_lock.wait_released.remote()):
+        sleep(1)
+
+
 def train_func(config: dict):
     """Training loop for ray trainer."""
     ppi = PPI(num_partitions=session.get_world_size())
 
     address = f"{ray._private.services.get_node_ip_address()}:999{session.get_world_rank()}"
-    global_cache.put.remote(session.get_world_rank(), address)
 
-    global_cache.set_lock.remote(session.get_world_rank())
-    while not ray.get(global_cache.wait_set.remote()):
-        sleep(1)
+    set_lock(server_lock, session.get_world_rank(), address)
+
     address = ray.get(
-        [global_cache.get.remote(i) for i in range(session.get_world_size())]
+        [server_lock.get.remote(i) for i in range(session.get_world_size())]
     )
 
     _ = Server(
@@ -79,9 +90,7 @@ def train_func(config: dict):
     # TODO GAT
     sleep(10)
 
-    global_cache.release_lock.remote(session.get_world_rank())
-    while not ray.get(global_cache.wait_released.remote()):
-        sleep(1)
+    release_lock(server_lock, session.get_world_rank())
 
 
 if __name__ == "__main__":
@@ -125,7 +134,7 @@ if __name__ == "__main__":
             ],
         )
         num_workers = 2
-        global_cache = Cache.remote(num_workers)
+        server_lock = ServerLock.remote(num_workers)
 
         trainer = TorchTrainer(
             train_func,
