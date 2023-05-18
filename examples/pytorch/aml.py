@@ -9,54 +9,54 @@ Multi-node users need to follow these steps,
 2. Create a network security group.
 3. Manually include pip packages shown in ray_on_aml + others required
 """
-from typing import List, Any
-from dataclasses import dataclass
 import os
-import numpy as np
-import torch
-import torch.nn.functional as F
-from azureml.core import Dataset
+from time import sleep
 
 import ray
-import ray.train as train
 from ray.train.torch import TorchTrainer
 from ray.air import session
 from ray.air.config import ScalingConfig, RunConfig
 
-from deepgnn.graph_engine import Graph, graph_ops
-from deepgnn.pytorch.modeling import BaseModel
 from deepgnn.graph_engine.data.ppi import PPI
 from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
-from time import sleep
-import socket
 
 
 @ray.remote
 class ServerLock:
+    """Lock for server."""
+
     def __init__(self, size):
+        """Initialize server lock."""
         self.cache = {}
         self.locks = [False for _ in range(size)]
 
     def set_lock(self, i):
+        """Set lock i."""
         self.locks[i] = True
-    
+
     def release_lock(self, i):
+        """Release lock i."""
         self.locks[i] = False
-    
+
     def wait_set(self):
+        """See if all locks set."""
         return all(self.locks)
-    
+
     def wait_released(self):
+        """See if all locks released."""
         return all([not lock for lock in self.locks])
 
     def put(self, x, y):
+        """Put value y at x."""
         self.cache[x] = y
 
     def get(self, x):
+        """Get value x."""
         return self.cache.get(x)
 
 
 def set_lock(server_lock, rank, address):
+    """Set lock at rank, then halt until all servers locked."""
     server_lock.put.remote(rank, address)
     server_lock.set_lock.remote(rank)
     while not ray.get(server_lock.wait_set.remote()):
@@ -64,6 +64,7 @@ def set_lock(server_lock, rank, address):
 
 
 def release_lock(server_lock, rank):
+    """Release lock at rank, then halt until all servers released."""
     server_lock.release_lock.remote(session.get_world_rank())
     while not ray.get(server_lock.wait_released.remote()):
         sleep(1)
@@ -73,7 +74,9 @@ def train_func(config: dict):
     """Training loop for ray trainer."""
     ppi = PPI(num_partitions=session.get_world_size())
 
-    address = f"{ray._private.services.get_node_ip_address()}:999{session.get_world_rank()}"
+    address = (
+        f"{ray._private.services.get_node_ip_address()}:999{session.get_world_rank()}"
+    )
 
     set_lock(server_lock, session.get_world_rank(), address)
 
@@ -81,13 +84,14 @@ def train_func(config: dict):
         [server_lock.get.remote(i) for i in range(session.get_world_size())]
     )
 
-    _ = Server(
+    Server(
         address[session.get_world_rank()], ppi.data_dir(), session.get_world_size(), 1
     )
 
     cl = DistributedClient(address)
 
     # TODO GAT
+    print(cl)
     sleep(10)
 
     release_lock(server_lock, session.get_world_rank())
@@ -126,15 +130,15 @@ if __name__ == "__main__":
             ci_is_head=True,
             num_node=3,
             pip_packages=[
-                "ray[air]==2.4.0",
-                "ray[data]==2.4.0",
+                "ray[air]",
+                "ray[data]",
                 "azureml-mlflow==1.48.0",
-                "torch==1.13.0",
+                "torch",
                 "deepgnn-torch",
             ],
         )
         num_workers = 2
-        server_lock = ServerLock.remote(num_workers)
+        server_lock = ServerLock.remote(num_workers)  # type: ignore
 
         trainer = TorchTrainer(
             train_func,
