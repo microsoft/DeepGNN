@@ -13,6 +13,8 @@
 #include <glog/raw_logging.h>
 
 #include "src/cc/lib/graph/locator.h"
+#include "src/cc/lib/graph/reservoir.h"
+#include "src/cc/lib/graph/xoroshiro.h"
 
 namespace
 {
@@ -458,6 +460,7 @@ grpc::Status GraphEngineServiceImpl::GetNeighbors(::grpc::ServerContext *context
     std::vector<NodeId> output_neighbor_ids;
     std::vector<Type> output_neighbor_types;
     std::vector<float> output_neighbors_weights;
+    std::vector<Timestamp> output_edge_created_ts;
     for (int node_index = 0; node_index < node_count; ++node_index)
     {
         auto internal_id = m_node_map.find(request->node_ids()[node_index]);
@@ -477,14 +480,18 @@ grpc::Status GraphEngineServiceImpl::GetNeighbors(::grpc::ServerContext *context
                         request->timestamps().empty()
                             ? std::nullopt
                             : std::optional<snark::Timestamp>(request->timestamps(node_index)),
-                        input_edge_types, output_neighbor_ids, output_neighbor_types, output_neighbors_weights);
+                        input_edge_types, output_neighbor_ids, output_neighbor_types, output_neighbors_weights,
+                        output_edge_created_ts);
                 response->mutable_node_ids()->Add(std::begin(output_neighbor_ids), std::end(output_neighbor_ids));
                 response->mutable_edge_types()->Add(std::begin(output_neighbor_types), std::end(output_neighbor_types));
                 response->mutable_edge_weights()->Add(std::begin(output_neighbors_weights),
                                                       std::end(output_neighbors_weights));
+                response->mutable_timestamps()->Add(std::begin(output_edge_created_ts),
+                                                    std::end(output_edge_created_ts));
                 output_neighbor_ids.resize(0);
                 output_neighbor_types.resize(0);
                 output_neighbors_weights.resize(0);
+                output_edge_created_ts.resize(0);
             }
         }
     }
@@ -567,6 +574,7 @@ grpc::Status GraphEngineServiceImpl::WeightedSampleNeighbors(::grpc::ServerConte
         response->mutable_neighbor_ids()->Resize(nodes_found * count, request->default_node_id());
         response->mutable_neighbor_types()->Resize(nodes_found * count, request->default_edge_type());
         response->mutable_neighbor_weights()->Resize(nodes_found * count, request->default_node_weight());
+        response->mutable_timestamps()->Resize(nodes_found * count, PLACEHOLDER_TIMESTAMP);
         for (size_t partition = 0; partition < partition_count; ++partition)
         {
             m_partitions[m_partitions_indices[index + partition]].SampleNeighbor(
@@ -575,7 +583,8 @@ grpc::Status GraphEngineServiceImpl::WeightedSampleNeighbors(::grpc::ServerConte
                                               : std::optional<snark::Timestamp>(request->timestamps(node_index)),
                 input_edge_types, count, std::span(response->mutable_neighbor_ids()->mutable_data() + offset, count),
                 std::span(response->mutable_neighbor_types()->mutable_data() + offset, count),
-                std::span(response->mutable_neighbor_weights()->mutable_data() + offset, count), last_shard_weight,
+                std::span(response->mutable_neighbor_weights()->mutable_data() + offset, count),
+                std::span(response->mutable_timestamps()->mutable_data() + offset, count), last_shard_weight,
                 request->default_node_id(), request->default_node_weight(), request->default_edge_type());
         }
     }
@@ -593,6 +602,7 @@ grpc::Status GraphEngineServiceImpl::UniformSampleNeighbors(::grpc::ServerContex
     bool without_replacement = request->without_replacement();
     auto input_edge_types = std::span(request->edge_types().data(), request->edge_types().size());
     auto seed = request->seed();
+    snark::Xoroshiro128PlusGenerator gen(seed);
 
     for (int node_index = 0; node_index < request->node_ids().size(); ++node_index)
     {
@@ -602,6 +612,9 @@ grpc::Status GraphEngineServiceImpl::UniformSampleNeighbors(::grpc::ServerContex
         {
             continue;
         }
+
+        snark::AlgorithmL reservoir(count, gen);
+        snark::WithReplacement replacement_sampler(count, gen);
         size_t offset = nodes_found * count;
         ++nodes_found;
         const auto index = internal_id->second;
@@ -611,15 +624,17 @@ grpc::Status GraphEngineServiceImpl::UniformSampleNeighbors(::grpc::ServerContex
         auto &last_shard_weight = response->mutable_shard_counts()->at(nodes_found - 1);
         response->mutable_neighbor_ids()->Resize(nodes_found * count, request->default_node_id());
         response->mutable_neighbor_types()->Resize(nodes_found * count, request->default_edge_type());
+        response->mutable_timestamps()->Resize(nodes_found * count, PLACEHOLDER_TIMESTAMP);
         for (size_t partition = 0; partition < partition_count; ++partition)
         {
             m_partitions[m_partitions_indices[index + partition]].UniformSampleNeighbor(
-                without_replacement, seed++, m_internal_indices[index + partition],
+                without_replacement, m_internal_indices[index + partition],
                 request->timestamps().empty() ? std::nullopt
                                               : std::optional<snark::Timestamp>(request->timestamps(node_index)),
                 input_edge_types, count, std::span(response->mutable_neighbor_ids()->mutable_data() + offset, count),
-                std::span(response->mutable_neighbor_types()->mutable_data() + offset, count), last_shard_weight,
-                request->default_node_id(), request->default_edge_type());
+                std::span(response->mutable_neighbor_types()->mutable_data() + offset, count),
+                std::span(response->mutable_timestamps()->mutable_data() + offset, count), last_shard_weight,
+                request->default_node_id(), request->default_edge_type(), reservoir, replacement_sampler);
         }
     }
     return grpc::Status::OK;

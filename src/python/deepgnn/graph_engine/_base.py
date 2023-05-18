@@ -96,7 +96,7 @@ class Graph(abc.ABC):
         eps -- stopping threshold for ppr sampling.
         timestamps -- timestamps to specify graph snapshot to sample neighbors for every node in a temporal graph.
 
-        Returns a tuple of arrays nodes(np.uint64), weights(np.float) and types(np.int) with shape [len(nodes), count]
+        Returns a tuple of arrays nodes(np.uint64), weights(np.float), types(np.int32) and timestamps(np.int64)(for temporal graphs) with shape [len(nodes), count]
         """
         raise NotImplementedError
 

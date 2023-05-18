@@ -156,7 +156,7 @@ def graph_dataset(multi_partition_graph_data, request):
 
 
 def test_neighbor_sampling_graph_multiple_partitions(graph_dataset):
-    ns, ws, ts = graph_dataset.weighted_sample_neighbors(
+    ns, ws, tp, ts = graph_dataset.weighted_sample_neighbors(
         nodes=np.array([0, 1], dtype=np.int64),
         edge_types=1,
         count=2,
@@ -167,7 +167,8 @@ def test_neighbor_sampling_graph_multiple_partitions(graph_dataset):
 
     npt.assert_array_equal(ns, [[5, 5], [13, 13]])
     npt.assert_array_equal(ws, [[1, 1], [-1, -1]])
-    npt.assert_array_equal(ts, [[1, 1], [-1, -1]])
+    npt.assert_array_equal(tp, [[1, 1], [-1, -1]])
+    npt.assert_array_equal(ts, [[-1, -1], [-1, -1]])
 
 
 def test_neighbor_count_graph_nonmatching_edge_type(graph_dataset):

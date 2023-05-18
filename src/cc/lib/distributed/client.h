@@ -59,18 +59,18 @@ class GRPCClient final
     void FullNeighbor(std::span<const NodeId> node_ids, std::span<const Type> edge_types,
                       std::span<const snark::Timestamp> timestamps, std::vector<NodeId> &output_nodes,
                       std::vector<Type> &output_types, std::vector<float> &output_weights,
-                      std::span<uint64_t> output_neighbor_counts);
+                      std::vector<Timestamp> &out_edge_created_ts, std::span<uint64_t> output_neighbor_counts);
 
     void WeightedSampleNeighbor(int64_t seed, std::span<const NodeId> node_ids, std::span<const Type> edge_types,
                                 std::span<const snark::Timestamp> timestamps, size_t count,
                                 std::span<NodeId> output_nodes, std::span<Type> output_types,
-                                std::span<float> output_weights, NodeId default_node_id, float default_weight,
-                                Type default_edge_type);
+                                std::span<float> output_weights, std::span<Timestamp> output_edge_created_ts,
+                                NodeId default_node_id, float default_weight, Type default_edge_type);
 
     void UniformSampleNeighbor(bool without_replacement, int64_t seed, std::span<const NodeId> node_ids,
                                std::span<const Type> edge_types, std::span<const snark::Timestamp> timestamps,
                                size_t count, std::span<NodeId> output_nodes, std::span<Type> output_types,
-                               NodeId default_node_id, Type default_type);
+                               std::span<Timestamp> output_edge_created_ts, NodeId default_node_id, Type default_type);
 
     void LastNCreated(std::span<const NodeId> input_node_ids, std::span<Type> input_edge_types,
                       std::span<const Timestamp> input_timestamps, size_t count, std::span<NodeId> output_neighbor_ids,

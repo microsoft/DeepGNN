@@ -119,7 +119,7 @@ class Client(Graph):
                 seed=int(random.getrandbits(64)),
                 timestamps=timestamps,
             )
-            return result[0], result[1], result[2], np.empty((1), dtype=np.int32)
+            return result[0], result[1], result[2], result[3]
         without_replacement = strategy == "randomwithoutreplacement"
         if strategy in ["random", "randomwithoutreplacement"]:
             result = self.graph.uniform_sample_neighbors(  # type: ignore
@@ -136,7 +136,7 @@ class Client(Graph):
                 result[0],
                 np.empty(result[0].shape, dtype=np.float32),
                 result[1],
-                np.empty((1), dtype=np.int32),
+                result[2],
             )
         if strategy == "ppr-go":
             result = self.graph.ppr_neighbors(  # type: ignore
@@ -153,7 +153,7 @@ class Client(Graph):
                 result[0],
                 result[1],
                 np.empty(0, dtype=np.int32),
-                np.empty(0, dtype=np.int32),
+                result[2],
             )
 
         if strategy == "lastn":

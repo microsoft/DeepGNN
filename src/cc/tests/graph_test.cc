@@ -92,7 +92,7 @@ TEST(GraphTest, UniformNodeSamplingSingleType)
     std::span input_nodes(nodes);
     std::span input_types(types);
     s.Sample(13, input_types, input_nodes);
-    EXPECT_EQ(nodes, std::vector<snark::NodeId>({0, 1, 2, 3, 10}));
+    EXPECT_EQ(nodes, std::vector<snark::NodeId>({0, 1, 2, 3, 5}));
     EXPECT_EQ(types, std::vector<snark::Type>(count, 0));
 }
 
@@ -172,7 +172,7 @@ void RandomNodeSamplingStatisticalProperties(std::pair<size_t, size_t> minmax_0,
         }
     }
     std::vector<snark::Type> types;
-    std::generate_n(std::back_inserter(types), num_types, [&types]() { return types.size(); });
+    std::generate_n(std::back_inserter(types), num_types, [&types]() { return snark::Type(types.size()); });
     std::vector<std::shared_ptr<UniformNodePartitionList<with_replacement>>> partitions;
     for (auto t : records)
     {
@@ -214,7 +214,7 @@ TEST(GraphTest, RandomNodeSamplingWithReplacementStatisticalProperties)
 
 TEST(GraphTest, RandomNodeSamplingWithoutReplacementStatisticalProperties)
 {
-    RandomNodeSamplingStatisticalProperties<false>({735, 863}, {740, 875});
+    RandomNodeSamplingStatisticalProperties<false>({745, 851}, {704, 874});
 }
 
 TEST(GraphTest, EdgeSamplingSingleType)
@@ -813,13 +813,15 @@ TEST_P(StorageTypeGraphTest, NeighborSamplesWithSingleNodeNoNeighbors)
     std::vector<snark::Type> neighbor_types(count * nodes.size(), -1);
     std::vector<float> neighbor_weights(count * nodes.size(), -1);
     std::vector<float> total_neighbor_weights(nodes.size());
+    std::vector<snark::Timestamp> edge_created_ts(count * nodes.size(), -2);
 
     g.SampleNeighbor(42, std::span(nodes), std::span(types), {}, count, std::span(neighbor_nodes),
-                     std::span(neighbor_types), std::span(neighbor_weights), std::span(total_neighbor_weights), 13, 2,
-                     -1);
+                     std::span(neighbor_types), std::span(neighbor_weights), std::span(total_neighbor_weights),
+                     std::span(edge_created_ts), 13, 2, -1);
     EXPECT_EQ(std::vector<snark::NodeId>(10, 13), neighbor_nodes);
     EXPECT_EQ(std::vector<snark::Type>(10, -1), neighbor_types);
     EXPECT_EQ(std::vector<float>(10, 2.0f), neighbor_weights);
+    EXPECT_EQ(std::vector<snark::Timestamp>(count * nodes.size(), snark::PLACEHOLDER_TIMESTAMP), edge_created_ts);
 }
 
 TEST(GraphTest, NeighborSampleSimple)
@@ -849,14 +851,16 @@ TEST(GraphTest, NeighborSampleSimple)
     std::vector<snark::Type> neighbor_types(count * nodes.size(), -1);
     std::vector<float> neighbor_weights(count * nodes.size(), -1);
     std::vector<float> total_neighbor_weights(nodes.size());
+    std::vector<snark::Timestamp> edge_created_ts(count * nodes.size(), -2);
 
     g.SampleNeighbor(42, std::span(nodes), std::span(types), {}, count, std::span(neighbor_nodes),
-                     std::span(neighbor_types), std::span(neighbor_weights), std::span(total_neighbor_weights), 0, 0,
-                     -1);
+                     std::span(neighbor_types), std::span(neighbor_weights), std::span(total_neighbor_weights),
+                     std::span(edge_created_ts), 0, 0, -1);
 
     EXPECT_EQ(std::vector<snark::NodeId>({4, 1, 3, 6, 6, 8}), neighbor_nodes);
     EXPECT_EQ(std::vector<snark::Type>(6, 0), neighbor_types);
     EXPECT_EQ(std::vector<float>(6, 1), neighbor_weights);
+    EXPECT_EQ(std::vector<snark::Timestamp>(count * nodes.size(), snark::PLACEHOLDER_TIMESTAMP), edge_created_ts);
 }
 
 TEST_P(StorageTypeGraphTest, NeighborSampleMultipleTypesSinglePartition)
@@ -885,14 +889,16 @@ TEST_P(StorageTypeGraphTest, NeighborSampleMultipleTypesSinglePartition)
     std::vector<snark::Type> neighbor_types(count * nodes.size(), -1);
     std::vector<float> neighbor_weights(count * nodes.size(), -1);
     std::vector<float> total_neighbor_weights(nodes.size());
+    std::vector<snark::Timestamp> edge_created_ts(count * nodes.size(), -2);
 
     g.SampleNeighbor(42, std::span(nodes), std::span(types), {}, count, std::span(neighbor_nodes),
-                     std::span(neighbor_types), std::span(neighbor_weights), std::span(total_neighbor_weights), 0, 0,
-                     -1);
+                     std::span(neighbor_types), std::span(neighbor_weights), std::span(total_neighbor_weights),
+                     std::span(edge_created_ts), 0, 0, -1);
 
     EXPECT_EQ(std::vector<snark::NodeId>({5, 1, 3, 7, 7, 8}), neighbor_nodes);
     EXPECT_EQ(std::vector<snark::Type>(6, 0), neighbor_types);
     EXPECT_EQ(std::vector<float>(6, 1.f), neighbor_weights);
+    EXPECT_EQ(std::vector<snark::Timestamp>(count * nodes.size(), snark::PLACEHOLDER_TIMESTAMP), edge_created_ts);
 }
 
 TEST(GraphTest, NeighborSampleMultipleTypesMultiplePartitions)
@@ -925,13 +931,15 @@ TEST(GraphTest, NeighborSampleMultipleTypesMultiplePartitions)
     std::vector<snark::Type> neighbor_types(count * nodes.size(), -1);
     std::vector<float> neighbor_weights(count * nodes.size(), -1);
     std::vector<float> total_neighbor_weights(nodes.size());
+    std::vector<snark::Timestamp> edge_created_ts(count * nodes.size(), -2);
 
     g.SampleNeighbor(8, std::span(nodes), std::span(types), {}, count, std::span(neighbor_nodes),
-                     std::span(neighbor_types), std::span(neighbor_weights), std::span(total_neighbor_weights), 0, 0,
-                     0);
+                     std::span(neighbor_types), std::span(neighbor_weights), std::span(total_neighbor_weights),
+                     std::span(edge_created_ts), 0, 0, 0);
     EXPECT_EQ(std::vector<snark::NodeId>({1, 1, 4, 6}), neighbor_nodes);
     EXPECT_EQ(std::vector<snark::Type>({0, 0, 0, 1}), neighbor_types);
     EXPECT_EQ(std::vector<float>({1.f, 1.f, 3.f, 2.0f}), neighbor_weights);
+    EXPECT_EQ(std::vector<snark::Timestamp>(count * nodes.size(), snark::PLACEHOLDER_TIMESTAMP), edge_created_ts);
 }
 
 TEST(GraphTest, NeighborSampleMultipleTypesNeighborsSpreadAcrossPartitions)
@@ -964,14 +972,16 @@ TEST(GraphTest, NeighborSampleMultipleTypesNeighborsSpreadAcrossPartitions)
     std::vector<snark::Type> neighbor_types(count * nodes.size(), -1);
     std::vector<float> neighbor_weights(count * nodes.size(), -1);
     std::vector<float> total_neighbor_weights(nodes.size());
+    std::vector<snark::Timestamp> edge_created_ts(count * nodes.size(), -2);
 
     g.SampleNeighbor(13, std::span(nodes), std::span(types), {}, count, std::span(neighbor_nodes),
-                     std::span(neighbor_types), std::span(neighbor_weights), std::span(total_neighbor_weights), 0, 0,
-                     0);
+                     std::span(neighbor_types), std::span(neighbor_weights), std::span(total_neighbor_weights),
+                     std::span(edge_created_ts), 0, 0, 0);
 
     EXPECT_EQ(std::vector<snark::NodeId>({7, 7, 7, 7, 3, 5}), neighbor_nodes);
     EXPECT_EQ(std::vector<snark::Type>({1, 1, 1, 1, 0, 1}), neighbor_types);
     EXPECT_EQ(std::vector<float>({3.f, 3.f, 3.f, 3.f, 1.f, 1.f}), neighbor_weights);
+    EXPECT_EQ(std::vector<snark::Timestamp>(count * nodes.size(), snark::PLACEHOLDER_TIMESTAMP), edge_created_ts);
 }
 
 TEST(GraphTest, StatisticalNeighborSampleMultipleTypesNeighborsSpreadAcrossPartitions)
@@ -1003,6 +1013,7 @@ TEST(GraphTest, StatisticalNeighborSampleMultipleTypesNeighborsSpreadAcrossParti
     std::vector<snark::NodeId> neighbor_nodes(count * nodes.size(), -1);
     std::vector<snark::Type> neighbor_types(count, -1);
     std::vector<float> neighbor_weights(count * nodes.size(), -1);
+    std::vector<snark::Timestamp> edge_created_ts(count * nodes.size(), -2);
     snark::Xoroshiro128PlusGenerator gen(42);
     const size_t repetitions = 10000;
     boost::random::uniform_int_distribution<int64_t> seeds;
@@ -1011,8 +1022,8 @@ TEST(GraphTest, StatisticalNeighborSampleMultipleTypesNeighborsSpreadAcrossParti
     {
         std::fill(std::begin(total_neighbor_weights), std::end(total_neighbor_weights), 0);
         g.SampleNeighbor(seeds(gen), std::span(nodes), std::span(types), {}, count, std::span(neighbor_nodes),
-                         std::span(neighbor_types), std::span(neighbor_weights), std::span(total_neighbor_weights), 0,
-                         0, 0);
+                         std::span(neighbor_types), std::span(neighbor_weights), std::span(total_neighbor_weights),
+                         std::span(edge_created_ts), 0, 0, 0);
         for (auto n : neighbor_nodes)
         {
             if (n < 0)
@@ -1022,6 +1033,7 @@ TEST(GraphTest, StatisticalNeighborSampleMultipleTypesNeighborsSpreadAcrossParti
     }
 
     EXPECT_EQ(std::vector<size_t>({0, 0, 0, 0, 0, 9965, 9908, 10127, 0}), sample_counts);
+    EXPECT_EQ(std::vector<snark::Timestamp>(count * nodes.size(), snark::PLACEHOLDER_TIMESTAMP), edge_created_ts);
 }
 
 TEST(GraphTest, UniformNeighborSampleMultipleTypesNeighborsSpreadAcrossPartitions)
@@ -1052,11 +1064,14 @@ TEST(GraphTest, UniformNeighborSampleMultipleTypesNeighborsSpreadAcrossPartition
     std::vector<snark::NodeId> neighbor_nodes(count * nodes.size(), -1);
     std::vector<snark::Type> neighbor_types(count * nodes.size(), -1);
     std::vector<uint64_t> total_neighbor_counts(nodes.size());
+    std::vector<snark::Timestamp> edge_created_ts(count * nodes.size(), -2);
 
     g.UniformSampleNeighbor(true, 17, std::span(nodes), std::span(types), {}, count, std::span(neighbor_nodes),
-                            std::span(neighbor_types), std::span(total_neighbor_counts), 0, 2);
-    EXPECT_EQ(std::vector<snark::NodeId>({6, 5, 4, 7, 3, 0}), neighbor_nodes);
-    EXPECT_EQ(std::vector<snark::Type>({1, 1, 0, 1, 0, 2}), neighbor_types);
+                            std::span(neighbor_types), std::span(total_neighbor_counts), std::span(edge_created_ts), 0,
+                            2);
+    EXPECT_EQ(std::vector<snark::NodeId>({3, 4, 5, 6, 7, 0}), neighbor_nodes);
+    EXPECT_EQ(std::vector<snark::Type>({0, 0, 1, 1, 1, 2}), neighbor_types);
+    EXPECT_EQ(std::vector<snark::Timestamp>(count * nodes.size(), snark::PLACEHOLDER_TIMESTAMP), edge_created_ts);
 }
 
 TEST(GraphTest, NodeTypesMultipleTypesNeighborsSpreadAcrossPartitions)
@@ -1303,11 +1318,14 @@ TEST(GraphTest, UniformNeighborSampleMultipleTypesTriggerConditionalProbabilitie
     std::vector<snark::NodeId> neighbor_nodes(count * nodes.size(), -1);
     std::vector<snark::Type> neighbor_types(count * nodes.size(), -1);
     std::vector<uint64_t> total_neighbor_counts(nodes.size());
+    std::vector<snark::Timestamp> edge_created_ts(count * nodes.size(), -2);
 
     g.UniformSampleNeighbor(false, 3, std::span(nodes), std::span(types), {}, count, std::span(neighbor_nodes),
-                            std::span(neighbor_types), std::span(total_neighbor_counts), 0, 0);
+                            std::span(neighbor_types), std::span(total_neighbor_counts), std::span(edge_created_ts), 0,
+                            0);
     EXPECT_EQ(std::vector<snark::NodeId>({2, 3, 3, 7, 4, 2}), neighbor_nodes);
     EXPECT_EQ(std::vector<snark::Type>({0, 1, 1, 3, 1, 0}), neighbor_types);
+    EXPECT_EQ(std::vector<snark::Timestamp>(count * nodes.size(), snark::PLACEHOLDER_TIMESTAMP), edge_created_ts);
 }
 
 TEST(GraphTest, StatisticalUniformNeighborSampleSingleTypeNeighborSpreadAcrossPartitions)
@@ -1340,6 +1358,7 @@ TEST(GraphTest, StatisticalUniformNeighborSampleSingleTypeNeighborSpreadAcrossPa
     int count = 3;
     std::vector<snark::NodeId> neighbor_nodes(count * nodes.size(), -1);
     std::vector<snark::Type> neighbor_types(count * nodes.size(), -1);
+    std::vector<snark::Timestamp> edge_created_ts(count * nodes.size(), -2);
     snark::Xoroshiro128PlusGenerator gen(42);
     const size_t repetitions = 40000;
     boost::random::uniform_int_distribution<int64_t> seeds;
@@ -1349,7 +1368,8 @@ TEST(GraphTest, StatisticalUniformNeighborSampleSingleTypeNeighborSpreadAcrossPa
         std::fill(std::begin(total_neighbor_counts), std::end(total_neighbor_counts), 0);
         g.UniformSampleNeighbor(false, seeds(gen), std::span(nodes), std::span(types), {}, count,
                                 std::span(neighbor_nodes), std::span(neighbor_types), std::span(total_neighbor_counts),
-                                0, 0);
+                                std::span(edge_created_ts), 0, 0);
+        EXPECT_EQ(std::vector<snark::Timestamp>(count * nodes.size(), snark::PLACEHOLDER_TIMESTAMP), edge_created_ts);
         for (auto n : neighbor_nodes)
         {
             assert(n < 10 && n >= 0);
@@ -1357,21 +1377,23 @@ TEST(GraphTest, StatisticalUniformNeighborSampleSingleTypeNeighborSpreadAcrossPa
         }
     }
 
-    EXPECT_EQ(std::vector<size_t>({0, 0, 0, 0, 0, 30063, 29904, 30085, 29948, 0}), sample_counts);
+    EXPECT_EQ(std::vector<size_t>({0, 0, 0, 0, 0, 30064, 29993, 29985, 29958, 0}), sample_counts);
     std::fill(std::begin(sample_counts), std::end(sample_counts), 0);
     for (size_t i = 0; i < repetitions; ++i)
     {
         std::fill(std::begin(total_neighbor_counts), std::end(total_neighbor_counts), 0);
         g.UniformSampleNeighbor(true, seeds(gen), std::span(nodes), std::span(types), {}, count,
                                 std::span(neighbor_nodes), std::span(neighbor_types), std::span(total_neighbor_counts),
-                                0, 0);
+                                std::span(edge_created_ts), 0, 0);
         for (auto n : neighbor_nodes)
         {
             ++sample_counts[n];
         }
+
+        EXPECT_EQ(std::vector<snark::Timestamp>(count * nodes.size(), snark::PLACEHOLDER_TIMESTAMP), edge_created_ts);
     }
 
-    EXPECT_EQ(std::vector<size_t>({0, 0, 0, 0, 0, 30011, 30107, 29858, 30024, 0}), sample_counts);
+    EXPECT_EQ(std::vector<size_t>({0, 0, 0, 0, 0, 30031, 30073, 29965, 29931, 0}), sample_counts);
 }
 
 TEST(GraphTest, StatisticalUniformNeighborSampleMultipleTypesNeighborsSpreadAcrossPartitions)
@@ -1392,7 +1414,7 @@ TEST(GraphTest, StatisticalUniformNeighborSampleMultipleTypesNeighborsSpreadAcro
         .m_id = 1,
         .m_type = 1,
         .m_neighbors{std::vector<TestGraph::NeighborRecord>{{7, 1, 1.0f}, {8, 1, 1.0f}, {9, 1, 1.0f}}}});
-    auto path = std::filesystem::path(::testing::UnitTest::GetInstance()->current_test_info()->name());
+    auto path = std::filesystem::path(testing::UnitTest::GetInstance()->current_test_info()->name());
     assert(std::filesystem::create_directories(path));
     TestGraph::convert(path, "0_0", std::move(m1), 2);
     TestGraph::convert(path, "1_0", std::move(m2), 2);
@@ -1404,6 +1426,7 @@ TEST(GraphTest, StatisticalUniformNeighborSampleMultipleTypesNeighborsSpreadAcro
     int count = 2;
     std::vector<snark::NodeId> neighbor_nodes(count * nodes.size(), -1);
     std::vector<snark::Type> neighbor_types(count * nodes.size(), -1);
+    std::vector<snark::Timestamp> edge_created_ts(count * nodes.size(), -2);
     snark::Xoroshiro128PlusGenerator gen(23);
     const size_t repetitions = 40000;
     boost::random::uniform_int_distribution<int64_t> seeds;
@@ -1413,28 +1436,31 @@ TEST(GraphTest, StatisticalUniformNeighborSampleMultipleTypesNeighborsSpreadAcro
         std::fill(std::begin(total_neighbor_counts), std::end(total_neighbor_counts), 0);
         g.UniformSampleNeighbor(false, seeds(gen), std::span(nodes), std::span(types), {}, count,
                                 std::span(neighbor_nodes), std::span(neighbor_types), std::span(total_neighbor_counts),
-                                0, 0);
+                                std::span(edge_created_ts), 0, 0);
+        EXPECT_EQ(std::vector<snark::Timestamp>(count * nodes.size(), snark::PLACEHOLDER_TIMESTAMP), edge_created_ts);
         for (auto n : neighbor_nodes)
         {
             ++sample_counts[n];
         }
     }
 
-    EXPECT_EQ(std::vector<size_t>({0, 0, 0, 11684, 11256, 11449, 11355, 11404, 11328, 11524}), sample_counts);
+    EXPECT_EQ(std::vector<size_t>({0, 0, 0, 11582, 11334, 11389, 11404, 11320, 11414, 11557}), sample_counts);
+    std::fill(std::begin(neighbor_types), std::end(neighbor_types), -2);
     std::fill(std::begin(sample_counts), std::end(sample_counts), 0);
     for (size_t i = 0; i < repetitions; ++i)
     {
         std::fill(std::begin(total_neighbor_counts), std::end(total_neighbor_counts), 0);
         g.UniformSampleNeighbor(true, seeds(gen), std::span(nodes), std::span(types), {}, count,
                                 std::span(neighbor_nodes), std::span(neighbor_types), std::span(total_neighbor_counts),
-                                0, 0);
+                                std::span(edge_created_ts), 0, 0);
+        EXPECT_EQ(std::vector<snark::Timestamp>(count * nodes.size(), snark::PLACEHOLDER_TIMESTAMP), edge_created_ts);
         for (auto n : neighbor_nodes)
         {
             ++sample_counts[n];
         }
     }
 
-    EXPECT_EQ(std::vector<size_t>({0, 0, 0, 11311, 11501, 11408, 11423, 11477, 11358, 11522}), sample_counts);
+    EXPECT_EQ(std::vector<size_t>({0, 0, 0, 11370, 11456, 11391, 11654, 11195, 11435, 11499}), sample_counts);
 }
 
 TEST(GraphTest, GetNeighborsMultipleTypesNeighborsSpreadAcrossPartitions)
@@ -1464,14 +1490,16 @@ TEST(GraphTest, GetNeighborsMultipleTypesNeighborsSpreadAcrossPartitions)
     std::vector<snark::NodeId> neighbor_nodes;
     std::vector<snark::Type> neighbor_types;
     std::vector<float> neighbor_weights;
+    std::vector<snark::Timestamp> edge_created_ts;
     std::vector<uint64_t> neighbor_counts(nodes.size());
 
     g.FullNeighbor(std::span(nodes), std::span(types), {}, neighbor_nodes, neighbor_types, neighbor_weights,
-                   std::span(neighbor_counts));
+                   edge_created_ts, std::span(neighbor_counts));
     EXPECT_EQ(std::vector<snark::NodeId>({1, 2, 3, 4, 5, 6, 7}), neighbor_nodes);
     EXPECT_EQ(std::vector<snark::Type>({0, 0, 0, 0, 1, 1, 1}), neighbor_types);
     EXPECT_EQ(std::vector<uint64_t>({2, 5, 0}), neighbor_counts);
     EXPECT_EQ(std::vector<float>({1.f, 1.f, 1.f, 1.f, 1.f, 1.5f, 3.f}), neighbor_weights);
+    EXPECT_EQ(std::vector<snark::Timestamp>(7, snark::PLACEHOLDER_TIMESTAMP), edge_created_ts);
 }
 
 TEST(GraphTest, GetNodeTypesAcrossPartitions)

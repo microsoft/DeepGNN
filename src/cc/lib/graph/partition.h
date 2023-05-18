@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "metadata.h"
+#include "reservoir.h"
 #include "storage.h"
 #include "types.h"
 #include "xoroshiro.h"
@@ -67,7 +68,7 @@ struct Partition
     // with id equal to node_id and returns total number of such neighbors.
     size_t FullNeighbor(uint64_t internal_node_id, std::optional<Timestamp> timestamp, std::span<const Type> edge_types,
                         std::vector<NodeId> &out_neighbors_ids, std::vector<Type> &out_edge_types,
-                        std::vector<float> &out_edge_weights) const;
+                        std::vector<float> &out_edge_weights, std::vector<Timestamp> &out_edge_created_ts) const;
 
     // in_edge_types has to have types in strictly increasing order.
     // out_partition contains information about neighbor weights for a
@@ -75,14 +76,16 @@ struct Partition
     // are distributed accross multiple partitions.
     void SampleNeighbor(int64_t seed, uint64_t internal_node_id, std::optional<Timestamp> timestamp,
                         std::span<const Type> in_edge_types, uint64_t count, std::span<NodeId> out_nodes,
-                        std::span<Type> out_types, std::span<float> out_weights, float &out_partition,
-                        NodeId default_node_id, float default_weight, Type default_type) const;
+                        std::span<Type> out_types, std::span<float> out_weights,
+                        std::span<Timestamp> out_edge_created_ts, float &out_partition, NodeId default_node_id,
+                        float default_weight, Type default_type) const;
 
     // in_edge_types has to have types in strictly increasing order.
-    void UniformSampleNeighbor(bool without_replacement, int64_t seed, uint64_t internal_node_id,
-                               std::optional<Timestamp> timestamp, std::span<const Type> in_edge_types, uint64_t count,
-                               std::span<NodeId> out_nodes, std::span<Type> out_types, uint64_t &out_partition_count,
-                               NodeId default_node_id, Type default_edge_type) const;
+    void UniformSampleNeighbor(bool without_replacement, uint64_t internal_node_id, std::optional<Timestamp> timestamp,
+                               std::span<const Type> in_edge_types, uint64_t count, std::span<NodeId> out_nodes,
+                               std::span<Type> out_types, std::span<Timestamp> out_edge_created_ts,
+                               uint64_t &out_partition_count, NodeId default_node_id, Type default_edge_type,
+                               AlgorithmL &sampler, WithReplacement &replacement_sampler) const;
 
     // Same as above, in_edge_types has to have types in strictly increasing order.
     size_t LastNCreatedNeighbors(uint64_t internal_node_id, Timestamp timestamp, std::span<const Type> in_edge_types,
@@ -108,23 +111,18 @@ struct Partition
     void ReadEdgeFeaturesData(std::filesystem::path path, std::string suffix);
     void ReadEdgeTimestamps(std::filesystem::path path, std::string suffix);
 
-    void UniformSampleNeighborWithoutReplacement(int64_t seed, uint64_t internal_node_ids,
-                                                 std::optional<Timestamp> timestamp,
+    void UniformSampleNeighborWithoutReplacement(uint64_t internal_node_ids, std::optional<Timestamp> timestamp,
                                                  std::span<const Type> in_edge_types, uint64_t count,
                                                  std::span<NodeId> out_nodes, std::span<Type> out_types,
+                                                 std::span<Timestamp> out_edge_created_ts,
                                                  uint64_t &out_partition_count, NodeId default_node_id,
-                                                 Type default_edge_type) const;
-    void UniformSampleNeighborWithReplacement(int64_t seed, uint64_t internal_node_ids,
-                                              std::optional<Timestamp> timestamp, std::span<const Type> in_edge_types,
-                                              uint64_t count, std::span<NodeId> out_nodes, std::span<Type> out_types,
-                                              uint64_t &out_partition_count, NodeId default_node_id,
-                                              Type default_edge_type) const;
-    void UniformSampleMergeWithoutReplacement(
-        uint64_t count, std::vector<NodeId> &left_neighbors, std::vector<Type> &left_types, uint64_t left_weight,
-        std::vector<size_t> &interim_neighbors, std::vector<size_t> &type_counts, std::vector<Type> &type_values,
-        std::vector<size_t> &destination_offsets, uint64_t right_weight, std::span<NodeId> out_neighbors,
-        std::span<Type> out_edge_types, NodeId default_node_id, Type default_edge_type,
-        boost::random::uniform_real_distribution<double> &toss, snark::Xoroshiro128PlusGenerator &gen) const;
+                                                 Type default_edge_type, AlgorithmL &sampler) const;
+    void UniformSampleNeighborWithReplacement(uint64_t internal_node_ids, std::optional<Timestamp> timestamp,
+                                              std::span<const Type> in_edge_types, uint64_t count,
+                                              std::span<NodeId> out_nodes, std::span<Type> out_types,
+                                              std::span<Timestamp> out_edge_created_ts, uint64_t &out_partition_count,
+                                              NodeId default_node_id, Type default_edge_type,
+                                              WithReplacement &replacement_sampler) const;
 
     // Node features
     std::shared_ptr<BaseStorage<uint8_t>> m_node_features;

@@ -389,6 +389,7 @@ void Graph::NeighborCount(std::span<const NodeId> input_node_ids, std::span<cons
 void Graph::FullNeighbor(std::span<const NodeId> input_node_ids, std::span<const Type> input_edge_types,
                          std::span<const Timestamp> timestamps, std::vector<NodeId> &output_neighbor_ids,
                          std::vector<Type> &output_neighbor_types, std::vector<float> &output_neighbors_weights,
+                         std::vector<Timestamp> &output_edge_created_ts,
                          std::span<uint64_t> output_neighbors_counts) const
 {
     std::fill(std::begin(output_neighbors_counts), std::end(output_neighbors_counts), 0);
@@ -408,7 +409,8 @@ void Graph::FullNeighbor(std::span<const NodeId> input_node_ids, std::span<const
                 output_neighbors_counts[node_index] += m_partitions[m_partitions_indices[index]].FullNeighbor(
                     m_internal_indices[index],
                     timestamps.empty() ? std::nullopt : std::optional<snark::Timestamp>{timestamps[node_index]},
-                    input_edge_types, output_neighbor_ids, output_neighbor_types, output_neighbors_weights);
+                    input_edge_types, output_neighbor_ids, output_neighbor_types, output_neighbors_weights,
+                    output_edge_created_ts);
             }
         }
     }
@@ -417,8 +419,8 @@ void Graph::FullNeighbor(std::span<const NodeId> input_node_ids, std::span<const
 void Graph::SampleNeighbor(int64_t seed, std::span<const NodeId> input_node_ids, std::span<Type> input_edge_types,
                            std::span<const Timestamp> timestamps, size_t count, std::span<NodeId> output_neighbor_ids,
                            std::span<Type> output_neighbor_types, std::span<float> neighbors_weights,
-                           std::span<float> neighbors_total_weights, NodeId default_node_id, float default_weight,
-                           Type default_edge_type) const
+                           std::span<float> neighbors_total_weights, std::span<Timestamp> output_edge_created_ts,
+                           NodeId default_node_id, float default_weight, Type default_edge_type) const
 {
     if (!check_sorted_unique_types(input_edge_types.data(), input_edge_types.size()))
     {
@@ -435,6 +437,7 @@ void Graph::SampleNeighbor(int64_t seed, std::span<const NodeId> input_node_ids,
             std::fill_n(std::begin(output_neighbor_ids) + count * node_index, count, default_node_id);
             std::fill_n(std::begin(output_neighbor_types) + count * node_index, count, default_edge_type);
             std::fill_n(std::begin(neighbors_weights) + count * node_index, count, default_weight);
+            std::fill_n(std::begin(output_edge_created_ts) + count * node_index, count, PLACEHOLDER_TIMESTAMP);
         }
         else
         {
@@ -447,7 +450,8 @@ void Graph::SampleNeighbor(int64_t seed, std::span<const NodeId> input_node_ids,
                     timestamps.empty() ? std::nullopt : std::optional<snark::Timestamp>{timestamps[node_index]},
                     input_edge_types, count, output_neighbor_ids.subspan(count * node_index, count),
                     output_neighbor_types.subspan(count * node_index, count),
-                    neighbors_weights.subspan(count * node_index, count), neighbors_total_weights[node_index],
+                    neighbors_weights.subspan(count * node_index, count),
+                    output_edge_created_ts.subspan(count * node_index, count), neighbors_total_weights[node_index],
                     default_node_id, default_weight, default_edge_type);
             }
         }
@@ -457,9 +461,11 @@ void Graph::SampleNeighbor(int64_t seed, std::span<const NodeId> input_node_ids,
 void Graph::UniformSampleNeighbor(bool without_replacement, int64_t seed, std::span<const NodeId> input_node_ids,
                                   std::span<Type> input_edge_types, std::span<const Timestamp> timestamps, size_t count,
                                   std::span<NodeId> output_neighbor_ids, std::span<Type> output_neighbor_types,
-                                  std::span<uint64_t> neighbors_total_count, NodeId default_node_id,
+                                  std::span<uint64_t> neighbors_total_count,
+                                  std::span<Timestamp> output_edge_created_ts, NodeId default_node_id,
                                   Type default_edge_type) const
 {
+    snark::Xoroshiro128PlusGenerator gen(seed);
     if (!check_sorted_unique_types(input_edge_types.data(), input_edge_types.size()))
     {
         std::sort(std::begin(input_edge_types), std::end(input_edge_types));
@@ -470,23 +476,45 @@ void Graph::UniformSampleNeighbor(bool without_replacement, int64_t seed, std::s
     for (size_t node_index = 0; node_index < input_node_ids.size(); ++node_index)
     {
         auto internal_id = m_node_map.find(input_node_ids[node_index]);
+        auto out_nb_ids = output_neighbor_ids.subspan(count * node_index, count);
+        auto out_nb_types = output_neighbor_types.subspan(count * node_index, count);
+        auto out_nb_ts = output_edge_created_ts.subspan(count * node_index, count);
         if (internal_id == std::end(m_node_map))
         {
-            std::fill_n(std::begin(output_neighbor_ids) + count * node_index, count, default_node_id);
-            std::fill_n(std::begin(output_neighbor_types) + count * node_index, count, default_edge_type);
+            std::fill_n(std::begin(out_nb_ids), count, default_node_id);
+            std::fill_n(std::begin(out_nb_types), count, default_edge_type);
+            std::fill_n(std::begin(out_nb_ts), count, PLACEHOLDER_TIMESTAMP);
         }
         else
         {
             const auto index = internal_id->second;
+            AlgorithmL sampler(count, gen);
+            WithReplacement replacement_sampler(count, gen);
             for (size_t partition = 0; partition < m_counts[index]; ++partition)
             {
                 m_partitions[m_partitions_indices[index + partition]].UniformSampleNeighbor(
-                    without_replacement, seed++, m_internal_indices[index + partition],
+                    without_replacement, m_internal_indices[index + partition],
                     timestamps.empty() ? std::nullopt : std::optional<snark::Timestamp>{timestamps[node_index]},
-                    input_edge_types, count, output_neighbor_ids.subspan(count * node_index, count),
-                    output_neighbor_types.subspan(count * node_index, count), neighbors_total_count[node_index],
-                    default_node_id, default_edge_type);
+                    input_edge_types, count, out_nb_ids, out_nb_types, out_nb_ts, neighbors_total_count[node_index],
+                    default_node_id, default_edge_type, sampler, replacement_sampler);
             }
+
+            // We'll duplicate data if replacement is allowed and can ommit defaults.
+            if (!without_replacement && neighbors_total_count[node_index] > 0)
+            {
+                continue;
+            }
+
+            if (neighbors_total_count[node_index] < count)
+            {
+                std::fill(std::begin(out_nb_ids) + neighbors_total_count[node_index], std::end(out_nb_ids),
+                          default_node_id);
+                std::fill(std::begin(out_nb_types) + neighbors_total_count[node_index], std::end(out_nb_types),
+                          default_edge_type);
+            }
+
+            std::fill(std::begin(out_nb_ts) + (timestamps.empty() ? 0 : neighbors_total_count[node_index]),
+                      std::end(out_nb_ts), snark::PLACEHOLDER_TIMESTAMP);
         }
     }
 }
@@ -515,7 +543,6 @@ void Graph::LastNCreated(std::span<const NodeId> input_node_ids, std::span<Type>
             std::fill_n(std::begin(output_neighbor_ids) + count * node_index, count, default_node_id);
             std::fill_n(std::begin(output_neighbor_types) + count * node_index, count, default_edge_type);
             std::fill_n(std::begin(output_weights) + count * node_index, count, default_weight);
-            std::fill_n(std::begin(output_timestamps) + count * node_index, count, default_timestamp);
         }
         else
         {
