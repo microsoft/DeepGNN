@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 """Useful functions to work with graph that are not part of it's API."""
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 import numpy as np
 from deepgnn.graph_engine import Graph
 
@@ -177,3 +177,20 @@ def sub_graph(
             adj += np.eye(n)
 
         return unique_nodes, adj, src_nodes_idx
+
+
+def edge_sub_graph(graph: Graph, edges: np.ndarray, num_neighbors: List[int]):
+    """
+    Sub graph of edges sampled from starting edges.
+    """
+    edges = np.array(edges)
+    subgraph = edges
+    for n in num_neighbors:
+        src, dst, types = edges[:, 0], edges[:, 1], edges[:, 2]
+        dst_new = graph.sample_neighbors(dst, types, count=n)[0]
+        edges_new = np.stack((dst.repeat(n), dst_new.flatten(), types.repeat(n))).T
+        subgraph = np.concatenate((subgraph, edges_new))	
+    
+    subgraph = np.unique(subgraph, axis=0)
+    subgraph = subgraph[np.any(subgraph != -1, axis=1)]
+    return subgraph
