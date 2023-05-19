@@ -42,6 +42,32 @@ py_test(
 )
 
 py_test(
+    name = "graph_ops_test",
+    srcs = ["graph_ops_test.py"],
+    imports = ["../../../../"],
+    main = "graph_ops_test.py",
+    python_version = "PY3",
+    srcs_version = "PY3",
+    deps = [
+        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
+        "//src/python/deepgnn/graph_engine/backends/snark:graph_engine_backends_snark",
+        "//src/python/deepgnn/graph_engine:graph_engine",
+        "//src/python/deepgnn/graph_engine:graph_engine_exports",
+        "//src/python/deepgnn/graph_engine/snark/tests:snark_test_utils",
+        "//src/python/deepgnn/graph_engine/data:graph_engine_data",
+        requirement("numpy"),
+        requirement("pytest"),
+        requirement("networkx"),
+        requirement("opencensus"),
+        requirement("grpcio"),
+        requirement("fsspec"),
+        requirement("opencensus-context"),
+        requirement("opencensus-ext-azure"),
+        requirement("azure-datalake-store"),
+    ],
+)
+
+py_test(
     name = "e2e_tests",
     srcs = ["e2e_test.py"],
     imports = ["../../../../"],
