@@ -179,15 +179,17 @@ def sub_graph(
         return unique_nodes, adj, src_nodes_idx
 
 
-def edge_sub_graph(graph: Graph, edges: np.ndarray, num_neighbors: List[int]) -> np.ndarray:
+def edge_sub_graph(
+    graph: Graph, edges: np.ndarray, num_neighbors: List[int]
+) -> np.ndarray:
     """
     Sub graph of edges sampled from starting edges.
-    
+
     Args:
         * graph: graph client.
         * edges: np.ndarray of edges [[src, dst, type], ...].
         * num_neighbors: list[int] Number of neighbors for each hop.
-    
+
     Returns:
         * np.ndarray of edges in subgraph [[src, dst, type], ...].
     """
