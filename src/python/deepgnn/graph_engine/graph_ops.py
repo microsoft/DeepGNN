@@ -193,7 +193,7 @@ def edge_sub_graph(graph: Graph, edges: np.ndarray, num_neighbors: List[int]) ->
     """
     subgraph = edges
     for n in num_neighbors:
-        _, dst, types = edges[:, 0], edges[:, 1], edges[:, 2]
+        dst, types = edges[:, 1], edges[:, 2]
         dst_new = graph.sample_neighbors(dst, types, count=n)[0]
         edges = np.stack((dst.repeat(n), dst_new.flatten(), types.repeat(n))).T
         subgraph = np.concatenate((subgraph, edges))

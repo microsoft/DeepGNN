@@ -4,6 +4,7 @@
 import os
 import sys
 import random
+import tempfile
 import pytest
 import numpy as np
 import numpy.testing as npt
@@ -15,9 +16,8 @@ from deepgnn.graph_engine.snark.local import Client
 def test_edge_sub_graph():
     random.seed(0)
 
-    # TODO tempfile
-    cora = Cora()
-    cl = Client(cora.data_dir(), [0])
+    data_dir = tempfile.TemporaryDirectory()
+    cl = Cora(data_dir.name)
 
     edges = np.array([
         [0, 1, 0],
@@ -25,7 +25,6 @@ def test_edge_sub_graph():
     ])
 
     subgraph = graph_ops.edge_sub_graph(cl, edges, [5, 5])
-    print(subgraph)
     npt.assert_equal(subgraph, np.array([
         [0, 1, 0],
         [1, 2, 0],
