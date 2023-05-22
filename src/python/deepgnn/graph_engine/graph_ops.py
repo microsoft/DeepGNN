@@ -180,7 +180,10 @@ def sub_graph(
 
 
 def edge_sub_graph(
-    graph: Graph, edges: np.ndarray, num_neighbors: List[int]
+    graph: Graph,
+    edges: np.ndarray,
+    num_neighbors: List[int],
+    strategy: str = "byweight",
 ) -> np.ndarray:
     """
     Sub graph of edges sampled from starting edges.
@@ -196,7 +199,7 @@ def edge_sub_graph(
     subgraph = edges
     for n in num_neighbors:
         dst, types = edges[:, 1], edges[:, 2]
-        dst_new = graph.sample_neighbors(dst, types, count=n)[0]
+        dst_new = graph.sample_neighbors(dst, types, count=n, strategy=strategy)[0]
         edges = np.stack((dst.repeat(n), dst_new.flatten(), types.repeat(n))).T
         subgraph = np.concatenate((subgraph, edges))
 

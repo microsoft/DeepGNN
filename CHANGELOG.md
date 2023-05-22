@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Add graph_ops.edge_sub_graph for generating a subgraph of edges.
+
 ## [0.1.60] - 2022-04-18
 
 ### Added
