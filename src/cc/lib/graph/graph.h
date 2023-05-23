@@ -58,29 +58,32 @@ class Graph
     void NeighborCount(std::span<const NodeId> input_node_ids, std::span<const Type> input_edge_types,
                        std::span<const Timestamp> timestamps, std::span<uint64_t> output_neighbors_counts) const;
 
-    void FullNeighbor(std::span<const NodeId> input_node_ids, std::span<const Type> input_edge_types,
-                      std::span<const Timestamp> timestamps, std::vector<NodeId> &output_neighbor_ids,
-                      std::vector<Type> &output_neighbor_types, std::vector<float> &output_neighbors_weights,
-                      std::vector<Timestamp> &output_edge_created_ts,
+    void FullNeighbor(bool return_edge_created_ts, std::span<const NodeId> input_node_ids,
+                      std::span<const Type> input_edge_types, std::span<const Timestamp> timestamps,
+                      std::vector<NodeId> &output_neighbor_ids, std::vector<Type> &output_neighbor_types,
+                      std::vector<float> &output_neighbors_weights, std::vector<Timestamp> &output_edge_created_ts,
                       std::span<uint64_t> output_neighbors_counts) const;
 
-    void SampleNeighbor(int64_t seed, std::span<const NodeId> input_node_ids, std::span<Type> input_edge_types,
-                        std::span<const Timestamp> timestamps, size_t count, std::span<NodeId> output_neighbor_ids,
-                        std::span<Type> output_neighbor_types, std::span<float> neighbors_weights,
-                        std::span<float> neighbors_total_weights, std::span<Timestamp> output_edge_created_ts,
-                        NodeId default_node_id, float default_weight, Type default_edge_type) const;
+    void SampleNeighbor(bool return_edge_created_ts, int64_t seed, std::span<const NodeId> input_node_ids,
+                        std::span<Type> input_edge_types, std::span<const Timestamp> timestamps, size_t count,
+                        std::span<NodeId> output_neighbor_ids, std::span<Type> output_neighbor_types,
+                        std::span<float> neighbors_weights, std::span<float> neighbors_total_weights,
+                        std::span<Timestamp> output_edge_created_ts, NodeId default_node_id, float default_weight,
+                        Type default_edge_type) const;
 
-    void UniformSampleNeighbor(bool without_replacement, int64_t seed, std::span<const NodeId> input_node_ids,
-                               std::span<Type> input_edge_types, std::span<const Timestamp> timestamps, size_t count,
+    void UniformSampleNeighbor(bool without_replacement, bool return_edge_created_ts, int64_t seed,
+                               std::span<const NodeId> input_node_ids, std::span<Type> input_edge_types,
+                               std::span<const Timestamp> timestamps, size_t count,
                                std::span<NodeId> output_neighbor_ids, std::span<Type> output_neighbor_types,
                                std::span<uint64_t> neighbors_total_count, std::span<Timestamp> output_edge_created_ts,
                                NodeId default_node_id, Type default_edge_type) const;
 
-    void LastNCreated(std::span<const NodeId> input_node_ids, std::span<Type> input_edge_types,
-                      std::span<const Timestamp> input_timestamps, size_t count, std::span<NodeId> output_neighbor_ids,
-                      std::span<Type> output_neighbor_types, std::span<float> neighbors_weights,
-                      std::span<Timestamp> output_timestamps, NodeId default_node_id, float default_weight,
-                      Type default_edge_type, Timestamp default_timestamp) const;
+    void LastNCreated(bool return_edge_created_ts, std::span<const NodeId> input_node_ids,
+                      std::span<Type> input_edge_types, std::span<const Timestamp> input_timestamps, size_t count,
+                      std::span<NodeId> output_neighbor_ids, std::span<Type> output_neighbor_types,
+                      std::span<float> neighbors_weights, std::span<Timestamp> output_timestamps,
+                      NodeId default_node_id, float default_weight, Type default_edge_type,
+                      Timestamp default_timestamp) const;
 
     Metadata GetMetadata() const;
 

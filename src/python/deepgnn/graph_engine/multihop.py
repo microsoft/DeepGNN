@@ -7,21 +7,6 @@ from typing import Tuple
 from deepgnn.graph_engine._base import Graph
 
 
-def _sample_neighbors(
-    graph: Graph,
-    nodes: np.ndarray,
-    edge_types: np.ndarray,
-    count: int,
-    sampling_strategy: str,
-    default_node: int,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    nbs, weights, types, _ = graph.sample_neighbors(
-        nodes, edge_types, count, strategy=sampling_strategy, default_node=default_node
-    )
-
-    return nbs, weights, types
-
-
 def sample_fanout(
     graph: Graph,
     nodes: np.ndarray,
@@ -53,18 +38,16 @@ def sample_fanout(
     weights_list = []
     types_list = []
     for hop_edge_types, count in zip(metapath, fanouts):
-        neighbors, weights, types = _sample_neighbors(
-            graph=graph,
+        res = graph.sample_neighbors(
             nodes=neighbors_list[-1],
             edge_types=np.array(hop_edge_types, dtype=np.int32),
             count=count,
-            sampling_strategy=sampling_strategy,
+            strategy=sampling_strategy,
             default_node=default_node,
         )
-
-        neighbors_list.append(np.reshape(neighbors, [-1]))
-        weights_list.append(np.reshape(weights, [-1]))
-        types_list.append(np.reshape(types, [-1]))
+        neighbors_list.append(np.reshape(res[0], [-1]))
+        weights_list.append(np.reshape(res[1], [-1]))
+        types_list.append(np.reshape(res[2], [-1]))
     return neighbors_list, weights_list, types_list
 
 
@@ -78,17 +61,19 @@ def _full_neighbor(
             np.array([], dtype=np.int64).reshape(0, 2),
         )
 
-    nbs, weights, _, counts = graph.neighbors(nodes, hop_edge_types)
+    full_nbs = graph.neighbors(
+        nodes, hop_edge_types
+    )  # Tuple of (neighbors, weights, types, counts)
     blocks: list = []
 
     # Create neighbors indices in the form [node_idx, neighbor_idx]
-    for x, i in np.nditer([counts, np.arange(len(counts))]):
+    for x, i in np.nditer([full_nbs[3], np.arange(len(full_nbs[3]))]):
         blocks.append(
             np.block([np.full([x], i).reshape(-1, 1), np.arange(x).reshape(-1, 1)])  # type: ignore
         )
     return (
-        nbs.astype(np.int64, copy=False),
-        weights,
+        full_nbs[0].astype(np.int64, copy=False),
+        full_nbs[1],
         np.concatenate(blocks).astype(np.int64, copy=False),
     )
 

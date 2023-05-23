@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <optional>
+#include <queue>
 #include <random>
 #include <span>
 #include <string>
@@ -24,6 +25,8 @@
 
 namespace snark
 {
+using ts_position = std::pair<Timestamp, size_t>;
+using lastn_queue = std::priority_queue<ts_position, std::vector<ts_position>, std::greater<ts_position>>;
 struct Partition
 {
     Partition() = default;
@@ -66,33 +69,35 @@ struct Partition
 
     // Backfill out_* vectors with information about neighbors of the node
     // with id equal to node_id and returns total number of such neighbors.
-    size_t FullNeighbor(uint64_t internal_node_id, std::optional<Timestamp> timestamp, std::span<const Type> edge_types,
-                        std::vector<NodeId> &out_neighbors_ids, std::vector<Type> &out_edge_types,
-                        std::vector<float> &out_edge_weights, std::vector<Timestamp> &out_edge_created_ts) const;
+    size_t FullNeighbor(bool return_edge_created_ts, uint64_t internal_node_id, std::optional<Timestamp> timestamp,
+                        std::span<const Type> edge_types, std::vector<NodeId> &out_neighbors_ids,
+                        std::vector<Type> &out_edge_types, std::vector<float> &out_edge_weights,
+                        std::vector<Timestamp> &out_edge_created_ts) const;
 
     // in_edge_types has to have types in strictly increasing order.
     // out_partition contains information about neighbor weights for a
     // particular node in that partition. This is useful in case node neighbors
     // are distributed accross multiple partitions.
-    void SampleNeighbor(int64_t seed, uint64_t internal_node_id, std::optional<Timestamp> timestamp,
-                        std::span<const Type> in_edge_types, uint64_t count, std::span<NodeId> out_nodes,
-                        std::span<Type> out_types, std::span<float> out_weights,
+    void SampleNeighbor(bool return_edge_created_ts, int64_t seed, uint64_t internal_node_id,
+                        std::optional<Timestamp> timestamp, std::span<const Type> in_edge_types, uint64_t count,
+                        std::span<NodeId> out_nodes, std::span<Type> out_types, std::span<float> out_weights,
                         std::span<Timestamp> out_edge_created_ts, float &out_partition, NodeId default_node_id,
                         float default_weight, Type default_type) const;
 
     // in_edge_types has to have types in strictly increasing order.
-    void UniformSampleNeighbor(bool without_replacement, uint64_t internal_node_id, std::optional<Timestamp> timestamp,
-                               std::span<const Type> in_edge_types, uint64_t count, std::span<NodeId> out_nodes,
-                               std::span<Type> out_types, std::span<Timestamp> out_edge_created_ts,
-                               uint64_t &out_partition_count, NodeId default_node_id, Type default_edge_type,
-                               AlgorithmL &sampler, WithReplacement &replacement_sampler) const;
+    void UniformSampleNeighbor(bool without_replacement, bool return_edge_created_ts, uint64_t internal_node_id,
+                               std::optional<Timestamp> timestamp, std::span<const Type> in_edge_types, uint64_t count,
+                               std::span<NodeId> out_nodes, std::span<Type> out_types,
+                               std::span<Timestamp> out_edge_created_ts, uint64_t &out_partition_count,
+                               NodeId default_node_id, Type default_edge_type, AlgorithmL &sampler,
+                               WithReplacement &replacement_sampler) const;
 
     // Same as above, in_edge_types has to have types in strictly increasing order.
-    size_t LastNCreatedNeighbors(uint64_t internal_node_id, Timestamp timestamp, std::span<const Type> in_edge_types,
-                                 uint64_t count, std::span<NodeId> out_nodes, std::span<Type> out_types,
-                                 std::span<float> out_edge_weights, std::span<Timestamp> out_timestamps,
-                                 NodeId default_node_id, Type default_edge_type, float default_weight,
-                                 Timestamp default_timestamp) const;
+    size_t LastNCreatedNeighbors(bool return_edge_created_ts, uint64_t internal_node_id, Timestamp timestamp,
+                                 std::span<const Type> in_edge_types, uint64_t count, std::span<NodeId> out_nodes,
+                                 std::span<Type> out_types, std::span<float> out_edge_weights,
+                                 std::span<Timestamp> out_timestamps, lastn_queue &lastn, NodeId default_node_id,
+                                 Type default_edge_type, float default_weight, Timestamp default_timestamp) const;
 
     Metadata GetMetadata() const;
 
@@ -111,15 +116,16 @@ struct Partition
     void ReadEdgeFeaturesData(std::filesystem::path path, std::string suffix);
     void ReadEdgeTimestamps(std::filesystem::path path, std::string suffix);
 
-    void UniformSampleNeighborWithoutReplacement(uint64_t internal_node_ids, std::optional<Timestamp> timestamp,
+    void UniformSampleNeighborWithoutReplacement(bool return_edge_created_ts, uint64_t internal_node_ids,
+                                                 std::optional<Timestamp> timestamp,
                                                  std::span<const Type> in_edge_types, uint64_t count,
                                                  std::span<NodeId> out_nodes, std::span<Type> out_types,
                                                  std::span<Timestamp> out_edge_created_ts,
                                                  uint64_t &out_partition_count, NodeId default_node_id,
                                                  Type default_edge_type, AlgorithmL &sampler) const;
-    void UniformSampleNeighborWithReplacement(uint64_t internal_node_ids, std::optional<Timestamp> timestamp,
-                                              std::span<const Type> in_edge_types, uint64_t count,
-                                              std::span<NodeId> out_nodes, std::span<Type> out_types,
+    void UniformSampleNeighborWithReplacement(bool return_edge_created_ts, uint64_t internal_node_ids,
+                                              std::optional<Timestamp> timestamp, std::span<const Type> in_edge_types,
+                                              uint64_t count, std::span<NodeId> out_nodes, std::span<Type> out_types,
                                               std::span<Timestamp> out_edge_created_ts, uint64_t &out_partition_count,
                                               NodeId default_node_id, Type default_edge_type,
                                               WithReplacement &replacement_sampler) const;

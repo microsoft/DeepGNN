@@ -193,7 +193,7 @@ static void BM_ONE_NODE_TYPE_WEIGHTED(benchmark::State &state)
         const size_t batch_size = state.range(0);
         std::vector<float> total_neighbor_weight(batch_size);
         s.SampleNeighbor(
-            ++seed, std::span(input_nodes).subspan(offset, batch_size), std::span(edge_types), {},
+            false, ++seed, std::span(input_nodes).subspan(offset, batch_size), std::span(edge_types), {},
             num_neighbors_to_sample, std::span(node_holder).subspan(0, num_neighbors_to_sample * batch_size),
             std::span(type_holder).subspan(0, num_neighbors_to_sample * batch_size),
             std::span(weight_holder).subspan(0, num_neighbors_to_sample * batch_size), std::span(total_neighbor_weight),

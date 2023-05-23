@@ -172,7 +172,7 @@ def test_neighbor_sampling_graph_multiple_partitions(multi_partition_graph_data)
     g = client.MemoryGraph(
         multi_partition_graph_data, [(multi_partition_graph_data, 0)]
     )
-    ns, ws, tp, ts = g.weighted_sample_neighbors(
+    ns, ws, tp = g.weighted_sample_neighbors(
         nodes=np.array([0, 1], dtype=np.int64),
         edge_types=1,
         count=2,
@@ -183,7 +183,6 @@ def test_neighbor_sampling_graph_multiple_partitions(multi_partition_graph_data)
     npt.assert_array_equal(ns, [[5, 5], [13, 13]])
     npt.assert_array_equal(ws, [[1, 1], [-1, -1]])
     npt.assert_array_equal(tp, [[1, 1], [-1, -1]])
-    npt.assert_array_equal(ts, [[-1, -1], [-1, -1]])
 
 
 def test_full_neighbor_graph_multiple_partitions(multi_partition_graph_data):
@@ -394,7 +393,7 @@ def test_uniform_neighbor_sampling_graph_multiple_partitions(
         multi_partition_graph_data, [(multi_partition_graph_data, 0)]
     )
     for replacement in [True, False]:
-        ns, tp, ts = g.uniform_sample_neighbors(
+        res = g.uniform_sample_neighbors(
             replacement,
             nodes=np.array([0, 1], dtype=np.int64),
             edge_types=1,
@@ -404,13 +403,11 @@ def test_uniform_neighbor_sampling_graph_multiple_partitions(
             default_type=-1,
         )
         if replacement:
-            npt.assert_array_equal(ns, [[5, 13], [13, 13]])
-            npt.assert_array_equal(tp, [[1, -1], [-1, -1]])
-            npt.assert_array_equal(ts, [[-1, -1], [-1, -1]])
+            npt.assert_array_equal(res[0], [[5, 13], [13, 13]])  # nodes
+            npt.assert_array_equal(res[1], [[1, -1], [-1, -1]])  # types
         else:
-            npt.assert_array_equal(ns, [[5, 5], [13, 13]])
-            npt.assert_array_equal(tp, [[1, 1], [-1, -1]])
-            npt.assert_array_equal(ts, [[-1, -1], [-1, -1]])
+            npt.assert_array_equal(res[0], [[5, 5], [13, 13]])
+            npt.assert_array_equal(res[1], [[1, 1], [-1, -1]])
 
 
 def test_uniform_neighbor_sampling_after_reset(multi_partition_graph_data):
@@ -435,7 +432,7 @@ def test_remote_client_uniform_sampling_from_unsorted_types(multi_partition_grap
     )
 
     cl = client.DistributedGraph(["localhost:12349", "localhost:12359"])
-    neighbors, types, _ = cl.uniform_sample_neighbors(
+    neighbors, types = cl.uniform_sample_neighbors(
         False, nodes=np.array([1, 0], dtype=np.int64), edge_types=[0, 1], count=2
     )
 
@@ -456,14 +453,13 @@ def test_remote_client_weighted_sampling_from_unsorted_types(
     )
 
     cl = client.DistributedGraph(["localhost:12359", "localhost:12369"])
-    neighbors, weights, types, timestamps = cl.weighted_sample_neighbors(
+    neighbors, weights, types = cl.weighted_sample_neighbors(
         nodes=np.array([1, 0], dtype=np.int64), edge_types=[1, 0], count=2
     )
 
     npt.assert_array_equal(neighbors, [[-1, -1], [5, 5]])
     npt.assert_array_equal(types, [[-1, -1], [1, 1]])
     npt.assert_array_equal(weights, [[0, 0], [1.0, 1.0]])
-    npt.assert_array_equal(timestamps, [[-1, -1], [-1, -1]])
     s1.reset()
     s2.reset()
 
@@ -479,7 +475,7 @@ def test_remote_client_weighted_sampling_with_missing_neighbors(
     )
 
     cl = client.DistributedGraph(["localhost:12378", "localhost:12379"])
-    neighbors, weights, types, timestamps = cl.weighted_sample_neighbors(
+    neighbors, weights, types = cl.weighted_sample_neighbors(
         # Cover two cases: missing node(node_id=1) and missing neighbors(node_id=0)
         nodes=np.array([1, 0], dtype=np.int64),
         edge_types=[0],
@@ -490,7 +486,6 @@ def test_remote_client_weighted_sampling_with_missing_neighbors(
     npt.assert_array_equal(neighbors, [[-1, -1], [-1, -1]])
     npt.assert_array_equal(types, [[-1, -1], [-1, -1]])
     npt.assert_array_equal(weights, [[0, 0], [0.0, 0.0]])
-    npt.assert_array_equal(timestamps, [[-1, -1], [-1, -1]])
     s1.reset()
     s2.reset()
 
@@ -507,7 +502,7 @@ def test_remote_client_uniform_sampling_with_missing_neighbors(
     cl = client.DistributedGraph(["localhost:12358", "localhost:12368"])
 
     for replacement in [True, False]:
-        neighbors, types, timestamps = cl.uniform_sample_neighbors(
+        neighbors, types = cl.uniform_sample_neighbors(
             without_replacement=replacement,
             # Cover two cases: missing node(node_id=1) and missing neighbors(node_id=0)
             nodes=np.array([1, 0], dtype=np.int64),
@@ -518,7 +513,6 @@ def test_remote_client_uniform_sampling_with_missing_neighbors(
         )
         npt.assert_array_equal(neighbors, [[-1, -1], [-1, -1]])
         npt.assert_array_equal(types, [[-1, -1], [-1, -1]])
-        npt.assert_array_equal(timestamps, [[-1, -1], [-1, -1]])
 
     s1.reset()
     s2.reset()
@@ -612,7 +606,7 @@ def test_karate_club_weighted_neighbor_sampling_different_result(
 def test_karate_club_ppr_sampling(
     karate_club_graph,
 ):
-    nodes, weights, timestamps = karate_club_graph.ppr_neighbors(
+    nodes, weights = karate_club_graph.ppr_neighbors(
         nodes=np.array([2, 4, 6, 8, 11, 13, 20, 22], dtype=np.int64),
         edge_types=0,
         count=5,
@@ -647,13 +641,12 @@ def test_karate_club_ppr_sampling(
         ],
         verbose=True,
     )
-    npt.assert_array_equal(timestamps, np.full((8, 5), -1, dtype=np.int64))
 
 
 def test_karate_club_ppr_sampling_empty_nb_list(
     karate_club_graph,
 ):
-    nodes, weights, _ = karate_club_graph.ppr_neighbors(
+    nodes, weights = karate_club_graph.ppr_neighbors(
         nodes=np.array([1, 2, 6], dtype=np.int64),
         edge_types=12,
         count=2,
@@ -677,7 +670,7 @@ def test_karate_club_ppr_sampling_empty_nb_list(
 def test_karate_club_ppr_sampling_missing_nodes(
     karate_club_graph,
 ):
-    nodes, weights, _ = karate_club_graph.ppr_neighbors(
+    nodes, weights = karate_club_graph.ppr_neighbors(
         nodes=np.array([35, 36, 37], dtype=np.int64),
         edge_types=0,
         count=2,
@@ -752,7 +745,6 @@ def lastn_graph(request):
             skip_edge_sampler=True,
             skip_node_sampler=True,
             watermark=0,
-            # debug=True,
         ).convert()
 
         if request.param == "memory":
@@ -769,6 +761,7 @@ def test_lastn_neighbor_sampling(
     lastn_graph,
 ):
     nodes, weights, types, timestamps = lastn_graph.lastn_neighbors(
+        return_edge_created_ts=True,
         nodes=np.array([1, 7, 15], dtype=np.int64),
         edge_types=[0, 1, 2, 3, 4, 5],
         count=2,
@@ -787,6 +780,7 @@ def test_lastn_neighbor_sampling_edge_cases(
     lastn_graph,
 ):
     nodes, weights, types, timestamps = lastn_graph.lastn_neighbors(
+        return_edge_created_ts=True,
         nodes=np.array([1, 7, 8], dtype=np.int64),
         edge_types=[0, 1, 2, 3, 4, 5],
         count=4,
@@ -802,6 +796,20 @@ def test_lastn_neighbor_sampling_edge_cases(
     assert np.array_equal(
         timestamps, [[0, 1, 23, 23], [23, 23, 23, 23], [23, 23, 23, 23]]
     )
+    nodes, weights, types = lastn_graph.lastn_neighbors(
+        return_edge_created_ts=False,
+        nodes=np.array([1, 8], dtype=np.int64),
+        edge_types=[0, 4, 5],
+        count=3,
+        timestamps=np.array([1, 1000], dtype=np.int64),
+        default_weight=3,
+        default_edge_type=13,
+        default_timestamp=23,
+    )
+
+    assert np.array_equal(nodes, [[10, -1, -1], [-1, -1, -1]])
+    assert np.array_equal(weights, [[1, 3, 3], [3, 3, 3]])
+    assert np.array_equal(types, [[0, 13, 13], [13, 13, 13]])
 
 
 if __name__ == "__main__":

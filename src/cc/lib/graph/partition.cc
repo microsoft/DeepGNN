@@ -768,15 +768,17 @@ size_t Partition::NeighborCount(uint64_t internal_id, std::optional<Timestamp> n
     return count;
 }
 
-size_t Partition::FullNeighbor(uint64_t internal_id, std::optional<Timestamp> node_ts, std::span<const Type> edge_types,
-                               std::vector<NodeId> &out_neighbors_ids, std::vector<Type> &out_edge_types,
-                               std::vector<float> &out_edge_weights, std::vector<Timestamp> &out_edge_created_ts) const
+size_t Partition::FullNeighbor(bool return_edge_created_ts, uint64_t internal_id, std::optional<Timestamp> node_ts,
+                               std::span<const Type> edge_types, std::vector<NodeId> &out_neighbors_ids,
+                               std::vector<Type> &out_edge_types, std::vector<float> &out_edge_weights,
+                               std::vector<Timestamp> &out_edge_created_ts) const
 {
     if (node_ts)
     {
         size_t count = 0;
         auto lambda = [&count, node_ts = node_ts.value(), &ts = m_edge_timestamps, &out_neighbors_ids, &out_edge_types,
-                       &out_edge_weights, &out_edge_created_ts, this](const auto start, const auto last, const auto i) {
+                       &out_edge_weights, &out_edge_created_ts, this,
+                       return_edge_created_ts](const auto start, const auto last, const auto i) {
             for (size_t curr_ts = start; curr_ts < last; ++curr_ts)
             {
                 if (ts[curr_ts].first <= node_ts && (ts[curr_ts].second > node_ts || ts[curr_ts].second == -1))
@@ -786,8 +788,11 @@ size_t Partition::FullNeighbor(uint64_t internal_id, std::optional<Timestamp> no
                                                       ? m_edge_weights[curr_ts] - m_edge_weights[curr_ts - 1]
                                                       : m_edge_weights[start]);
                     out_edge_types.emplace_back(m_edge_types[i]);
-                    out_edge_created_ts.emplace_back(ts[curr_ts].first);
                     ++count;
+                    if (return_edge_created_ts)
+                    {
+                        out_edge_created_ts.emplace_back(ts[curr_ts].first);
+                    }
                 }
             }
         };
@@ -797,16 +802,19 @@ size_t Partition::FullNeighbor(uint64_t internal_id, std::optional<Timestamp> no
         return count;
     }
 
-    auto lambda = [&out_neighbors_ids, &out_edge_types, &out_edge_weights, &out_edge_created_ts,
-                   this](auto start, auto last, int i) {
+    auto lambda = [&out_neighbors_ids, &out_edge_types, &out_edge_weights, &out_edge_created_ts, this,
+                   return_edge_created_ts](auto start, auto last, int i) {
         // m_edge_destination[last-1]+1 - take the last element and then advance the pointer
         // to imitate std::end, otherwise we'll have an out of range exception.
         out_neighbors_ids.insert(std::end(out_neighbors_ids), &m_edge_destination[start],
                                  &m_edge_destination[last - 1] + 1);
         auto original_type_size = out_edge_types.size();
         out_edge_types.resize(original_type_size + last - start, m_edge_types[i]);
-        out_edge_created_ts.resize(original_type_size + last - start, snark::PLACEHOLDER_TIMESTAMP);
         out_edge_weights.reserve(out_edge_weights.size() + last - start);
+        if (return_edge_created_ts)
+        {
+            out_edge_created_ts.resize(original_type_size + last - start, snark::PLACEHOLDER_TIMESTAMP);
+        }
         for (size_t index = start; index < last; ++index)
         {
             out_edge_weights.emplace_back(index > start ? m_edge_weights[index] - m_edge_weights[index - 1]
@@ -818,26 +826,15 @@ size_t Partition::FullNeighbor(uint64_t internal_id, std::optional<Timestamp> no
                                  m_edge_types, m_edge_type_offset);
 }
 
-size_t Partition::LastNCreatedNeighbors(uint64_t internal_node_id, Timestamp timestamp,
+size_t Partition::LastNCreatedNeighbors(bool return_edge_created_ts, uint64_t internal_node_id, Timestamp timestamp,
                                         std::span<const Type> in_edge_types, uint64_t count,
                                         std::span<NodeId> out_nodes, std::span<Type> out_types,
                                         std::span<float> out_edge_weights, std::span<Timestamp> out_timestamps,
-                                        NodeId default_node_id, Type default_edge_type, float default_weight,
-                                        Timestamp default_timestamp) const
+                                        lastn_queue &lastn, NodeId default_node_id, Type default_edge_type,
+                                        float default_weight, Timestamp default_timestamp) const
 {
-    using ts_position = std::pair<Timestamp, size_t>;
-    std::priority_queue<ts_position, std::vector<ts_position>, std::greater<ts_position>> lastn;
-    for (size_t i = 0; i < size_t(count); ++i)
-    {
-        const auto ts = out_timestamps[i];
-        if (ts < 0)
-        {
-            break;
-        }
-        lastn.emplace(ts, i);
-    }
-    auto lambda = [&out_nodes, &out_types, &out_edge_weights, &out_timestamps, &lastn, timestamp, count,
-                   this](auto start, auto last, int i) {
+    auto lambda = [&out_nodes, &out_types, &out_edge_weights, &out_timestamps, &lastn, timestamp, count, this,
+                   return_edge_created_ts](auto start, auto last, int i) {
         for (size_t index = start; index < last; ++index)
         {
             auto &ts = m_edge_timestamps[index];
@@ -865,7 +862,10 @@ size_t Partition::LastNCreatedNeighbors(uint64_t internal_node_id, Timestamp tim
             lastn.emplace(ts.first, pos);
             out_nodes[pos] = m_edge_destination[index];
             out_types[pos] = m_edge_types[i];
-            out_timestamps[pos] = ts.first;
+            if (return_edge_created_ts)
+            {
+                out_timestamps[pos] = ts.first;
+            }
             out_edge_weights[pos] = m_edge_weights[index];
             if (index > start)
             {
@@ -1082,9 +1082,9 @@ void Partition::GetEdgeStringFeature(uint64_t internal_src_node_id, NodeId input
     }
 }
 
-void Partition::SampleNeighbor(int64_t seed, uint64_t internal_node_id, std::optional<Timestamp> node_ts,
-                               std::span<const Type> in_edge_types, uint64_t count, std::span<NodeId> out_nodes,
-                               std::span<Type> out_types, std::span<float> out_weights,
+void Partition::SampleNeighbor(bool return_edge_created_ts, int64_t seed, uint64_t internal_node_id,
+                               std::optional<Timestamp> node_ts, std::span<const Type> in_edge_types, uint64_t count,
+                               std::span<NodeId> out_nodes, std::span<Type> out_types, std::span<float> out_weights,
                                std::span<Timestamp> out_edge_created_ts, float &out_partition, NodeId default_node_id,
                                float default_weight, Type default_edge_type) const
 {
@@ -1103,10 +1103,13 @@ void Partition::SampleNeighbor(int64_t seed, uint64_t internal_node_id, std::opt
             std::fill_n(std::begin(out_nodes) + pos, count, default_node_id);
             std::fill_n(std::begin(out_types) + pos, count, default_edge_type);
             std::fill_n(std::begin(out_weights) + pos, count, default_weight);
-            std::fill_n(std::begin(out_edge_created_ts) + pos, count, PLACEHOLDER_TIMESTAMP);
-        }
+            if (return_edge_created_ts)
+            {
+                std::fill_n(std::begin(out_edge_created_ts) + pos, count, PLACEHOLDER_TIMESTAMP);
+            }
 
-        return;
+            return;
+        }
     }
 
     float total_weight = 0;
@@ -1174,7 +1177,10 @@ void Partition::SampleNeighbor(int64_t seed, uint64_t internal_node_id, std::opt
             std::fill_n(std::begin(out_nodes) + pos, count, default_node_id);
             std::fill_n(std::begin(out_types) + pos, count, default_edge_type);
             std::fill_n(std::begin(out_weights) + pos, count, default_weight);
-            std::fill_n(std::begin(out_edge_created_ts) + pos, count, PLACEHOLDER_TIMESTAMP);
+            if (return_edge_created_ts)
+            {
+                std::fill_n(std::begin(out_edge_created_ts) + pos, count, PLACEHOLDER_TIMESTAMP);
+            }
         }
 
         pos += count;
@@ -1257,11 +1263,14 @@ void Partition::SampleNeighbor(int64_t seed, uint64_t internal_node_id, std::opt
                         size_t nb_offset = std::distance(fst_nb, nb_pos);
                         out_nodes[pos] = m_edge_destination[local_offset + nb_offset];
                         out_types[pos] = m_edge_types[i];
-                        out_edge_created_ts[pos] = m_edge_timestamps[local_offset + nb_offset].first;
                         out_weights[pos] = (nb_offset == 0 && local_offset == first)
                                                ? m_edge_weights[local_offset]
                                                : m_edge_weights[local_offset + nb_offset] -
                                                      m_edge_weights[local_offset + nb_offset - 1];
+                        if (return_edge_created_ts)
+                        {
+                            out_edge_created_ts[pos] = m_edge_timestamps[local_offset + nb_offset].first;
+                        }
                         ++pos;
                     }
 
@@ -1299,7 +1308,6 @@ void Partition::SampleNeighbor(int64_t seed, uint64_t internal_node_id, std::opt
                     size_t nb_offset = std::distance(fst_nb, nb_pos);
                     out_nodes[pos] = m_edge_destination[first + nb_offset];
                     out_types[pos] = m_edge_types[i];
-                    out_edge_created_ts[pos] = PLACEHOLDER_TIMESTAMP;
                     out_weights[pos] = nb_offset == 0
                                            ? m_edge_weights[first]
                                            : m_edge_weights[first + nb_offset] - m_edge_weights[first + nb_offset - 1];
@@ -1313,7 +1321,7 @@ void Partition::SampleNeighbor(int64_t seed, uint64_t internal_node_id, std::opt
 }
 
 // in_edge_types has to have types in strictly increasing order.
-void Partition::UniformSampleNeighbor(bool without_replacement, uint64_t internal_node_id,
+void Partition::UniformSampleNeighbor(bool without_replacement, bool return_edge_created_ts, uint64_t internal_node_id,
                                       std::optional<Timestamp> node_ts, std::span<const Type> in_edge_types,
                                       uint64_t count, std::span<NodeId> out_nodes, std::span<Type> out_types,
                                       std::span<Timestamp> out_edge_created_ts, uint64_t &out_partition_count,
@@ -1322,15 +1330,15 @@ void Partition::UniformSampleNeighbor(bool without_replacement, uint64_t interna
 {
     if (without_replacement)
     {
-        UniformSampleNeighborWithoutReplacement(internal_node_id, node_ts, in_edge_types, count, out_nodes, out_types,
-                                                out_edge_created_ts, out_partition_count, default_node_id,
-                                                default_edge_type, sampler);
+        UniformSampleNeighborWithoutReplacement(return_edge_created_ts, internal_node_id, node_ts, in_edge_types, count,
+                                                out_nodes, out_types, out_edge_created_ts, out_partition_count,
+                                                default_node_id, default_edge_type, sampler);
     }
     else
     {
-        UniformSampleNeighborWithReplacement(internal_node_id, node_ts, in_edge_types, count, out_nodes, out_types,
-                                             out_edge_created_ts, out_partition_count, default_node_id,
-                                             default_edge_type, replacement_sampler);
+        UniformSampleNeighborWithReplacement(return_edge_created_ts, internal_node_id, node_ts, in_edge_types, count,
+                                             out_nodes, out_types, out_edge_created_ts, out_partition_count,
+                                             default_node_id, default_edge_type, replacement_sampler);
     }
 }
 
@@ -1361,7 +1369,8 @@ bool advance_edge_types(size_t &in_edge_type_index, size_t &neighbor_type_index,
     return neighbor_types[neighbor_type_index] == in_edge_types[in_edge_type_index];
 }
 
-void Partition::UniformSampleNeighborWithReplacement(uint64_t internal_id, std::optional<Timestamp> node_ts,
+void Partition::UniformSampleNeighborWithReplacement(bool return_edge_created_ts, uint64_t internal_id,
+                                                     std::optional<Timestamp> node_ts,
                                                      std::span<const Type> in_edge_types, uint64_t count,
                                                      std::span<NodeId> out_nodes, std::span<Type> out_types,
                                                      std::span<Timestamp> out_edge_created_ts,
@@ -1402,12 +1411,15 @@ void Partition::UniformSampleNeighborWithReplacement(uint64_t internal_id, std::
                 auto ts_span = std::span(m_edge_timestamps).subspan(local_offset, curr_weight);
                 auto dst_span = std::span(m_edge_destination).subspan(local_offset, curr_weight);
                 replacement_sampler.add(curr_weight, [out_nodes, out_types, out_edge_created_ts,
-                                                      tp = m_edge_types[neighbor_type_index], ts_span, dst_span,
-                                                      this](size_t pick, size_t offset) {
+                                                      tp = m_edge_types[neighbor_type_index], ts_span, dst_span, this,
+                                                      return_edge_created_ts](size_t pick, size_t offset) {
                     out_nodes[pick] = dst_span[offset];
                     out_types[pick] = tp;
-                    out_edge_created_ts[pick] =
-                        m_edge_timestamps.empty() ? PLACEHOLDER_TIMESTAMP : ts_span[offset].first;
+                    if (return_edge_created_ts)
+                    {
+                        out_edge_created_ts[pick] =
+                            m_edge_timestamps.empty() ? PLACEHOLDER_TIMESTAMP : ts_span[offset].first;
+                    }
                 });
 
                 if (lst ==
@@ -1428,18 +1440,17 @@ void Partition::UniformSampleNeighborWithReplacement(uint64_t internal_id, std::
             out_partition_count += curr_weight;
             const size_t local_offset = m_edge_type_offset[neighbor_type_index];
             auto dst_span = std::span(m_edge_destination).subspan(local_offset, curr_weight);
-            replacement_sampler.add(curr_weight,
-                                    [out_nodes, out_types, out_edge_created_ts, tp = m_edge_types[neighbor_type_index],
-                                     dst_span, this](size_t pick, size_t offset) {
-                                        out_nodes[pick] = dst_span[offset];
-                                        out_types[pick] = tp;
-                                        out_edge_created_ts[pick] = PLACEHOLDER_TIMESTAMP;
-                                    });
+            replacement_sampler.add(curr_weight, [out_nodes, out_types, tp = m_edge_types[neighbor_type_index],
+                                                  dst_span](size_t pick, size_t offset) {
+                out_nodes[pick] = dst_span[offset];
+                out_types[pick] = tp;
+            });
         }
     }
 }
 
-void Partition::UniformSampleNeighborWithoutReplacement(uint64_t internal_id, std::optional<Timestamp> node_ts,
+void Partition::UniformSampleNeighborWithoutReplacement(bool return_edge_created_ts, uint64_t internal_id,
+                                                        std::optional<Timestamp> node_ts,
                                                         std::span<const Type> in_edge_types, uint64_t count,
                                                         std::span<NodeId> out_nodes, std::span<Type> out_types,
                                                         std::span<Timestamp> out_edge_created_ts,
@@ -1478,12 +1489,16 @@ void Partition::UniformSampleNeighborWithoutReplacement(uint64_t internal_id, st
                 out_partition_count += stream_size;
                 auto dest_span = std::span(m_edge_destination).subspan(first + it_dist, stream_size);
                 auto ts_span = std::span(m_edge_timestamps).subspan(first + it_dist, stream_size);
-                sampler.add(stream_size, [&dest_span, &out_nodes, &out_types, &out_edge_created_ts, ts_span,
-                                          tp = in_edge_types[curr_type]](size_t pick, size_t offset) {
-                    out_nodes[pick] = dest_span[offset];
-                    out_types[pick] = tp;
-                    out_edge_created_ts[pick] = ts_span[offset].first;
-                });
+                sampler.add(stream_size,
+                            [&dest_span, &out_nodes, &out_types, &out_edge_created_ts, ts_span,
+                             tp = in_edge_types[curr_type], return_edge_created_ts](size_t pick, size_t offset) {
+                                out_nodes[pick] = dest_span[offset];
+                                out_types[pick] = tp;
+                                if (return_edge_created_ts)
+                                {
+                                    out_edge_created_ts[pick] = ts_span[offset].first;
+                                }
+                            });
 
                 if (lst ==
                     std::begin(it_subspan)) // cheking if positions are the same (lst == it) for different iterators.

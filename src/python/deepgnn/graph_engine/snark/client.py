@@ -98,7 +98,8 @@ class PartitionStorageType(IntEnum):
 
 # Define our own classes to copy data from C to Python runtime.
 class _NeighborsCallback:
-    def __init__(self):
+    def __init__(self, return_edge_created_ts):
+        self.return_edge_created_ts = return_edge_created_ts
         self.node_ids = np.empty(0, dtype=np.int64)
         self.weights = np.empty(0, dtype=np.float32)
         self.edge_types = np.empty(0, dtype=np.int32)
@@ -111,7 +112,8 @@ class _NeighborsCallback:
         self.node_ids = np.copy(np.ctypeslib.as_array(nodes, [count]))
         self.weights = np.copy(np.ctypeslib.as_array(weights, [count]))
         self.edge_types = np.copy(np.ctypeslib.as_array(types, [count]))
-        self.timestamps = np.copy(np.ctypeslib.as_array(timestamps, [count]))
+        if self.return_edge_created_ts:
+            self.timestamps = np.copy(np.ctypeslib.as_array(timestamps, [count]))
 
 
 _NEIGHBORS_CALLBACKFUNC = CFUNCTYPE(
@@ -392,6 +394,7 @@ class MemoryGraph:
 
         self.lib.GetNeighbors.argtypes = [
             POINTER(_DEEP_GRAPH),
+            c_bool,
             POINTER(c_int64),
             c_size_t,
             POINTER(c_int64),
@@ -405,6 +408,7 @@ class MemoryGraph:
 
         self.lib.WeightedSampleNeighbor.argtypes = [
             POINTER(_DEEP_GRAPH),
+            c_bool,
             c_int64,
             POINTER(c_int64),
             c_size_t,
@@ -427,6 +431,7 @@ class MemoryGraph:
 
         self.lib.UniformSampleNeighbor.argtypes = [
             POINTER(_DEEP_GRAPH),
+            c_bool,
             c_bool,
             c_int64,
             POINTER(c_int64),
@@ -481,13 +486,13 @@ class MemoryGraph:
             c_float,
             POINTER(c_int64),
             POINTER(c_float),
-            POINTER(c_int64),
         ]
         self.lib.PPRSampleNeighbor.restype = c_int32
         self.lib.PPRSampleNeighbor.errcheck = _ErrCallback("ppr sample")  # type: ignore
 
         self.lib.LastNCreatedNeighbor.argtypes = [
             POINTER(_DEEP_GRAPH),
+            c_bool,
             POINTER(c_int64),
             c_size_t,
             POINTER(c_int32),
@@ -842,7 +847,11 @@ class MemoryGraph:
         nodes: np.ndarray,
         edge_types: Union[List[int], int],
         timestamps: Union[List[int], np.ndarray] = None,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        return_edge_created_ts: bool = False,
+    ) -> Union[
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+    ]:
         """
         Full list of node neighbors.
 
@@ -856,7 +865,8 @@ class MemoryGraph:
         -- weights for every neighbor, a one dimensional array
            of neighbor weights concatenated in the same order as input nodes.
         -- types of every neighbor.
-        -- neighbor counts per node, with the shape [len(nodes)]
+        -- neighbor counts per node, with the shape [len(nodes)].
+        -- timestamp when edge was created if return_edge_created_ts is set to True.
         """
         nodes = np.array(nodes, dtype=np.int64)
         edge_types = _make_sorted_list(edge_types)
@@ -864,11 +874,12 @@ class MemoryGraph:
         etypes_arr = TypeArray(*edge_types)
         result_counts = np.empty(len(nodes), dtype=np.uint64)
 
-        py_cb = _NeighborsCallback()
+        py_cb = _NeighborsCallback(return_edge_created_ts)
 
         self._retryer(
             self.lib.GetNeighbors,
             self.g_,
+            c_bool(return_edge_created_ts),
             nodes.ctypes.data_as(POINTER(c_int64)),
             nodes.size,
             None
@@ -880,6 +891,14 @@ class MemoryGraph:
             _NEIGHBORS_CALLBACKFUNC(py_cb),
         )
 
+        if return_edge_created_ts:
+            return (
+                py_cb.node_ids,
+                py_cb.weights,
+                py_cb.edge_types,
+                result_counts,
+                py_cb.timestamps,
+            )
         return py_cb.node_ids, py_cb.weights, py_cb.edge_types, result_counts
 
     def weighted_sample_neighbors(
@@ -892,7 +911,11 @@ class MemoryGraph:
         default_edge_type: int = -1,
         seed: Optional[int] = None,
         timestamps: Optional[np.ndarray] = None,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        return_edge_created_ts: bool = False,
+    ) -> Union[
+        Tuple[np.ndarray, np.ndarray, np.ndarray],
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+    ]:
         """Randomly sample neighbor nodes based on their weights(edge connecting 2 nodes).
 
         Args:
@@ -903,9 +926,11 @@ class MemoryGraph:
             default_weight (float, optional): Weight to use for missing neighbors. Defaults to 0.0.
             seed (int, optional): Seed value for random samplers. Defaults to random.getrandbits(64).
             timestamps (Optional[np.ndarray], optional): Timestamps for nodes. Defaults to None.
+            return_edge_created_ts (Optional[bool], optional): Return timestamps when edges connecting nodes were created,
 
         Returns:
-            Tuple[np.ndarray, np.ndarray, np.ndarray]: a tuple of neighbor nodes, edge weights, types and created_at timestamps(for temporal graphs) connecting them.
+            Tuple[np.ndarray, np.ndarray, np.ndarray]: a tuple of neighbor nodes, edge types and weights. If return_edge_created_ts specified,
+            then this tuple will have a fourth element, list of timestamps when edges were created.
         """
         nodes = np.array(nodes, dtype=np.int64)
         edge_types = _make_sorted_list(edge_types)
@@ -914,11 +939,17 @@ class MemoryGraph:
         result_nodes = np.full((len(nodes), count), default_node, dtype=np.int64)
         result_types = np.full((len(nodes), count), default_edge_type, dtype=np.int32)
         result_weights = np.full((len(nodes), count), default_weight, dtype=np.float32)
-        result_ts = np.full((len(nodes), count), -1, dtype=np.int64)
+        result_ts = np.empty(0)
+        if return_edge_created_ts:
+            assert (
+                self.meta.watermark >= 0
+            )  # return timestamps only for temporal graphs
+            result_ts = np.full((len(nodes), count), -1, dtype=np.int64)
 
         self._retryer(
             self.lib.WeightedSampleNeighbor,
             self.g_,
+            c_bool(return_edge_created_ts),
             c_int64(seed if seed is not None else random.getrandbits(64)),
             nodes.ctypes.data_as(POINTER(c_int64)),
             c_size_t(nodes.size),
@@ -931,13 +962,17 @@ class MemoryGraph:
             result_nodes.ctypes.data_as(POINTER(c_int64)),
             result_types.ctypes.data_as(POINTER(c_int32)),
             result_weights.ctypes.data_as(POINTER(c_float)),
-            result_ts.ctypes.data_as(POINTER(c_int64)),
+            result_ts.ctypes.data_as(POINTER(c_int64))
+            if return_edge_created_ts
+            else None,
             c_int64(default_node),
             c_float(default_weight),
             c_int32(default_edge_type),
         )
 
-        return result_nodes, result_weights, result_types, result_ts
+        if return_edge_created_ts:
+            return result_nodes, result_weights, result_types, result_ts
+        return result_nodes, result_weights, result_types
 
     def uniform_sample_neighbors(
         self,
@@ -949,7 +984,10 @@ class MemoryGraph:
         default_type: int = -1,
         seed: Optional[int] = None,
         timestamps: Optional[np.ndarray] = None,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        return_edge_created_ts: bool = False,
+    ) -> Union[
+        Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray, np.ndarray]
+    ]:
         """Randomly sample neighbor nodes irrespectively of their weights.
 
         Args:
@@ -961,9 +999,11 @@ class MemoryGraph:
             default_type (int, optional): Edge type to use for missing neighbors. Defaults to 0.
             seed (int, optional): Seed value for random samplers. Defaults to random.getrandbits(64).
             timestamps (Optional[np.ndarray], optional): Timestamps for each node. Defaults to None.
+            return_edge_created_ts (Optional[bool], optional): Return timestamps when edges connecting nodes were created,
 
         Returns:
-            Tuple[np.ndarray, np.ndarray]: a tuple of neighbor nodes and types connecting them.
+            Tuple[np.ndarray, np.ndarray, np.ndarray]: a tuple of neighbor nodes, edge types. If return_edge_created_ts specified,
+            then this tuple will have a third element list of timestamps when edges were created.
         """
         nodes = np.array(nodes, dtype=np.int64)
         edge_types = _make_sorted_list(edge_types)
@@ -972,12 +1012,18 @@ class MemoryGraph:
         etypes_arr = TypeArray(*edge_types)
         result_nodes = np.full((len(nodes), count), default_node, dtype=np.int64)
         result_types = np.full((len(nodes), count), default_type, dtype=np.int32)
-        result_ts = np.full((len(nodes), count), -1, dtype=np.int64)
+        result_ts = np.empty(0)
+        if return_edge_created_ts:
+            assert (
+                self.meta.watermark >= 0
+            )  # return timestamps only for temporal graphs
+            result_ts = np.full((len(nodes), count), -1, dtype=np.int64)
 
         self._retryer(
             self.lib.UniformSampleNeighbor,
             self.g_,
             c_bool(without_replacement),
+            c_bool(return_edge_created_ts),
             c_int64(seed if seed is not None else random.getrandbits(64)),
             nodes.ctypes.data_as(POINTER(c_int64)),
             c_size_t(nodes.size),
@@ -989,12 +1035,18 @@ class MemoryGraph:
             c_size_t(count),
             result_nodes.ctypes.data_as(POINTER(c_int64)),
             result_types.ctypes.data_as(POINTER(c_int32)),
-            result_ts.ctypes.data_as(POINTER(c_int64)),
+            None
+            if timestamps is None
+            or len(timestamps) == 0
+            or (not return_edge_created_ts)
+            else result_ts.ctypes.data_as(POINTER(c_int64)),
             c_int64(default_node),
             c_int32(default_type),
         )
 
-        return result_nodes, result_types, result_ts
+        if return_edge_created_ts:
+            return result_nodes, result_types, result_ts
+        return result_nodes, result_types
 
     def ppr_neighbors(
         self,
@@ -1006,10 +1058,12 @@ class MemoryGraph:
         default_node: int = -1,
         default_weight: float = 0.0,
         timestamps: Union[List[int], np.ndarray] = None,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Personalized PageRank (PPR) sampling of neighbor nodes.
 
         Implementation is based on PPR-Go algorithm: https://github.com/TUM-DAML/pprgo_pytorch
+        We don't return timestamps for this sampling method, because ppr-sampling involves multiple hops
+        and timestamps for edges will be ambiguous.
         Args:
             nodes (np.array): list of nodes to sample neighbors from.
             edge_types (Union[List[int], int]): types of edges for neighbors selection.
@@ -1018,10 +1072,9 @@ class MemoryGraph:
             eps (float, optional): Stopping threshold for ACL's ApproximatePR. Defaults to 0.0001.
             default_node (int, optional): Value to use if a node doesn't have neighbors. Defaults to -1.
             default_weight (float, optional): Weight to use if a node doesn't have neighbors. Defaults to 0.
-            timestamps (Optional[np.ndarray], optional): Timestamps for each node. Defaults to None.
 
         Returns:
-            Tuple[np.ndarray, np.ndarray, np.ndarray]: a tuple of neighbor nodes, corresponding PR weights and timestamps edges were created(for temporal graphs).
+            Tuple[np.ndarray, np.ndarray]: a tuple of neighbor nodes, corresponding PR weights.
         """
         nodes = np.array(nodes, dtype=np.int64)
         edge_types = _make_sorted_list(edge_types)
@@ -1029,7 +1082,6 @@ class MemoryGraph:
         etypes_arr = TypeArray(*edge_types)
         result_nodes = np.full((len(nodes), count), default_node, dtype=np.int64)
         result_weights = np.full((len(nodes), count), default_weight, dtype=np.float32)
-        result_ts = np.full((len(nodes), count), -1, dtype=np.int64)
         self.lib.PPRSampleNeighbor(
             self.g_,
             nodes.ctypes.data_as(POINTER(c_int64)),
@@ -1046,10 +1098,9 @@ class MemoryGraph:
             c_float(default_weight),
             result_nodes.ctypes.data_as(POINTER(c_int64)),
             result_weights.ctypes.data_as(POINTER(c_float)),
-            result_ts.ctypes.data_as(POINTER(c_int64)),
         )
 
-        return result_nodes, result_weights, result_ts
+        return result_nodes, result_weights
 
     def lastn_neighbors(
         self,
@@ -1061,7 +1112,11 @@ class MemoryGraph:
         default_weight: float = 0.0,
         default_edge_type: int = -1,
         default_timestamp: int = -1,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        return_edge_created_ts: bool = False,
+    ) -> Union[
+        Tuple[np.ndarray, np.ndarray, np.ndarray],
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+    ]:
         """Select last N neighbor nodes in temporal graphs.
 
         Args:
@@ -1075,7 +1130,9 @@ class MemoryGraph:
             default_ts (int, optional): Timestamp to use for missing neighbors. Defaults to -1.
 
         Returns:
-            Tuple[np.ndarray, np.ndarray, np.ndarray]: a tuple of neighbor nodes, edge weights, types and timestamps of creation.
+            Tuple[np.ndarray, np.ndarray, np.ndarray]: a tuple of neighbor nodes, edge weights and types.
+            If return_edge_created_ts argument is set to true, then the returned tuple contains an extra
+            array with timestamps when corresponding edge was created.
         """
         assert self.meta.watermark >= 0
         nodes = np.array(nodes, dtype=np.int64)
@@ -1087,11 +1144,14 @@ class MemoryGraph:
         result_nodes = np.full((len(nodes), count), default_node, dtype=np.int64)
         result_types = np.full((len(nodes), count), default_edge_type, dtype=np.int32)
         result_weights = np.full((len(nodes), count), default_weight, dtype=np.float32)
-        result_ts = np.full((len(nodes), count), default_timestamp, dtype=np.int64)
+        result_ts = np.empty(0)
+        if return_edge_created_ts:
+            result_ts = np.full((len(nodes), count), default_timestamp, dtype=np.int64)
 
         self._retryer(
             self.lib.LastNCreatedNeighbor,
             self.g_,
+            c_bool(return_edge_created_ts),
             nodes.ctypes.data_as(POINTER(c_int64)),
             c_size_t(nodes.size),
             etypes_arr,
@@ -1101,14 +1161,18 @@ class MemoryGraph:
             result_nodes.ctypes.data_as(POINTER(c_int64)),
             result_types.ctypes.data_as(POINTER(c_int32)),
             result_weights.ctypes.data_as(POINTER(c_float)),
-            result_ts.ctypes.data_as(POINTER(c_int64)),
+            result_ts.ctypes.data_as(POINTER(c_int64))
+            if return_edge_created_ts
+            else None,
             c_int64(default_node),
             c_float(default_weight),
             c_int32(default_edge_type),
             c_int64(default_timestamp),
         )
 
-        return result_nodes, result_weights, result_types, result_ts
+        if return_edge_created_ts:
+            return result_nodes, result_weights, result_types, result_ts
+        return result_nodes, result_weights, result_types
 
     def reset(self):
         """Reset graph and unload it from memory."""

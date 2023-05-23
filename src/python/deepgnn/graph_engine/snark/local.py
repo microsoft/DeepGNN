@@ -107,7 +107,11 @@ class Client(Graph):
         alpha: float = 0.5,
         eps: float = 0.0001,
         timestamps: Union[List[int], np.ndarray] = None,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        return_edge_created_ts: bool = False,
+    ) -> Union[
+        Tuple[np.ndarray, np.ndarray, np.ndarray],
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+    ]:
         """Sample node neighbors."""
         if strategy == "byweight":
             result = self.graph.weighted_sample_neighbors(  # type: ignore
@@ -118,8 +122,16 @@ class Client(Graph):
                 default_weight,
                 seed=int(random.getrandbits(64)),
                 timestamps=timestamps,
+                return_edge_created_ts=return_edge_created_ts,
             )
-            return result[0], result[1], result[2], result[3]
+            if return_edge_created_ts:
+                return result
+            return (
+                result[0],
+                result[1],
+                result[2],
+                np.empty(result[0].shape, dtype=np.int64),
+            )
         without_replacement = strategy == "randomwithoutreplacement"
         if strategy in ["random", "randomwithoutreplacement"]:
             result = self.graph.uniform_sample_neighbors(  # type: ignore
@@ -131,6 +143,7 @@ class Client(Graph):
                 default_edge_type,
                 seed=int(random.getrandbits(64)),
                 timestamps=timestamps,
+                return_edge_created_ts=return_edge_created_ts,
             )
             return (
                 result[0],
@@ -153,7 +166,7 @@ class Client(Graph):
                 result[0],
                 result[1],
                 np.empty(0, dtype=np.int32),
-                result[2],
+                np.empty(result[0].shape, dtype=np.int64),
             )
 
         if strategy == "lastn":
@@ -165,6 +178,7 @@ class Client(Graph):
                 default_node=default_node,
                 default_weight=default_weight,
                 default_edge_type=default_edge_type,
+                return_edge_created_ts=return_edge_created_ts,
             )
 
         raise NotImplementedError(f"Unknown strategy type {strategy}")
@@ -225,10 +239,17 @@ class Client(Graph):
         nodes: np.ndarray,
         edge_types: Union[int, np.ndarray],
         timestamps: Union[List[int], np.ndarray] = None,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        return_edge_created_ts: bool = False,
+    ) -> Union[
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+    ]:
         """Fetch full information about node neighbors."""
         return self.graph.neighbors(
-            nodes, self.__check_types(edge_types), timestamps=timestamps
+            nodes,
+            self.__check_types(edge_types),
+            timestamps=timestamps,
+            return_edge_created_ts=return_edge_created_ts,
         )
 
     def neighbor_count(

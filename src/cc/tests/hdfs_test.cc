@@ -119,7 +119,7 @@ TEST(HDFSTest, NeighborSample)
     std::vector<float> total_neighbor_weights(nodes.size());
     std::vector<snark::Timestamp> neighbor_ts(count * nodes.size(), -2);
 
-    g.SampleNeighbor(42, std::span(nodes), std::span(types), {}, count, std::span(neighbor_nodes),
+    g.SampleNeighbor(true, 42, std::span(nodes), std::span(types), {}, count, std::span(neighbor_nodes),
                      std::span(neighbor_types), std::span(neighbor_weights), std::span(total_neighbor_weights),
                      std::span(neighbor_ts), 0, 0, -1);
     EXPECT_EQ(std::vector<snark::NodeId>({5, 1, 3, 7, 7, 8}), neighbor_nodes);

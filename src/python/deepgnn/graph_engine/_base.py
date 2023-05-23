@@ -80,7 +80,11 @@ class Graph(abc.ABC):
         alpha: float = 0.5,
         eps: float = 0.0001,
         timestamps: Union[List[int], np.ndarray] = None,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        return_edge_created_ts: bool = False,
+    ) -> Union[
+        Tuple[np.ndarray, np.ndarray, np.ndarray],
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+    ]:
         """
         Sample node neighbors.
 
@@ -95,8 +99,9 @@ class Graph(abc.ABC):
         alpha -- ppr sampling teleport probability.
         eps -- stopping threshold for ppr sampling.
         timestamps -- timestamps to specify graph snapshot to sample neighbors for every node in a temporal graph.
+        return_edge_created_ts -- if specified, timestamps will be added to the end of returned tuple.
 
-        Returns a tuple of arrays nodes(np.uint64), weights(np.float), types(np.int32) and timestamps(np.int64)(for temporal graphs) with shape [len(nodes), count]
+        Returns a tuple of arrays nodes(np.uint64), weights(np.float), types(np.int32) and timestamps(np.int64)(if return_edge_created_ts is set) with shape [len(nodes), count]
         """
         raise NotImplementedError
 
@@ -131,7 +136,11 @@ class Graph(abc.ABC):
         nodes: np.ndarray,
         edge_types: Union[int, np.ndarray],
         timestamps: Optional[np.ndarray] = None,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        return_edge_created_ts: bool = False,
+    ) -> Union[
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+    ]:
         """
         Full list of node neighbors.
 
@@ -140,12 +149,13 @@ class Graph(abc.ABC):
         timestamps -- timestamps to specify graph snapshot to retrieve neighbors for every node in a temporal graph.
 
         Returns a tuple of numpy arrays:
-        -- neighbor counts per node, with the shape [len(nodes)]
         -- neighbor ids per node, a one dimensional list of node ids
            concatenated in the same order as input nodes.
         -- weights for every neighbor, a one dimensional array
            of neighbor weights concatenated in the same order as input nodes.
         -- types of every neighbor.
+        -- number of neighbors for every input node.
+        -- timestamps of when edge connecting nodes was created (if return_edge_created_ts is set).
         """
         raise NotImplementedError
 

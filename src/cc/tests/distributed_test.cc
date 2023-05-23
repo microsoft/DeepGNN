@@ -529,7 +529,7 @@ TEST(DistributedTest, SampleNeighborsSingleServer)
     std::vector<float> output_weights(nb_count * input_nodes.size());
     std::vector<snark::Type> output_types(nb_count * input_nodes.size(), -1);
     std::vector<snark::Timestamp> output_edge_ts(nb_count * input_nodes.size(), -6);
-    client.WeightedSampleNeighbor(21, std::span(input_nodes), std::span(input_types), {}, nb_count,
+    client.WeightedSampleNeighbor(true, 21, std::span(input_nodes), std::span(input_types), {}, nb_count,
                                   std::span(output_nodes), std::span(output_types), std::span(output_weights),
                                   std::span(output_edge_ts), -1, 0.0f, -1);
     EXPECT_EQ(output_types, std::vector<snark::Type>(6, 0));
@@ -548,7 +548,7 @@ TEST(DistributedTest, UniformSampleNeighborsSingleServer)
     std::vector<snark::NodeId> output_nodes(nb_count * input_nodes.size());
     std::vector<snark::Type> output_types(nb_count * input_nodes.size(), -1);
     std::vector<snark::Timestamp> output_edge_ts(nb_count * input_nodes.size(), -5);
-    client.UniformSampleNeighbor(false, 21, std::span(input_nodes), std::span(input_types), {}, nb_count,
+    client.UniformSampleNeighbor(false, true, 21, std::span(input_nodes), std::span(input_types), {}, nb_count,
                                  std::span(output_nodes), std::span(output_types), std::span(output_edge_ts), -1, -1);
     EXPECT_EQ(output_types, std::vector<snark::Type>({0, 0, 0, 0, 0, 0}));
     EXPECT_EQ(output_nodes, std::vector<snark::NodeId>({3, 3, 5, 2, 4, 4}));
@@ -565,7 +565,7 @@ TEST(DistributedTest, UniformSampleNeighborsWithoutReplacementSingleServer)
     std::vector<snark::NodeId> output_nodes(nb_count * input_nodes.size());
     std::vector<snark::Type> output_types(nb_count * input_nodes.size(), -1);
     std::vector<snark::Timestamp> output_edge_ts(nb_count * input_nodes.size(), -2);
-    client.UniformSampleNeighbor(true, 21, std::span(input_nodes), std::span(input_types), {}, nb_count,
+    client.UniformSampleNeighbor(true, true, 21, std::span(input_nodes), std::span(input_types), {}, nb_count,
                                  std::span(output_nodes), std::span(output_types), std::span(output_edge_ts), -1, -1);
     EXPECT_EQ(output_types, std::vector<snark::Type>({0, 0, 0, 0, 0, 0}));
     EXPECT_EQ(output_nodes, std::vector<snark::NodeId>({1, 4, 5, 4, 3, 5}));
@@ -620,9 +620,9 @@ TEST(DistributedTest, SampleNeighborsMultipleServers)
     std::vector<float> output_weights(nb_count * input_nodes.size());
     std::vector<snark::Type> output_types(nb_count * input_nodes.size(), -1);
     std::vector<snark::Timestamp> output_edge_ts(nb_count * input_nodes.size(), -4);
-    c.WeightedSampleNeighbor(23, std::span(input_nodes), std::span(input_types), {}, nb_count, std::span(output_nodes),
-                             std::span(output_types), std::span(output_weights), std::span(output_edge_ts), -1, 0.0f,
-                             -1);
+    c.WeightedSampleNeighbor(true, 23, std::span(input_nodes), std::span(input_types), {}, nb_count,
+                             std::span(output_nodes), std::span(output_types), std::span(output_weights),
+                             std::span(output_edge_ts), -1, 0.0f, -1);
     EXPECT_EQ(output_types, std::vector<snark::Type>(6, 0));
     EXPECT_EQ(output_nodes, std::vector<snark::NodeId>({2, 2, 57, 56, 80, 81}));
     EXPECT_EQ(output_weights, std::vector<float>({2, 2, 2, 1, 1, 2}));
@@ -641,9 +641,9 @@ TEST(DistributedTest, SampleNeighborsMultipleServersMissingNeighbors)
     std::vector<float> output_weights(nb_count * input_nodes.size());
     std::vector<snark::Type> output_types(nb_count * input_nodes.size(), -1);
     std::vector<snark::Timestamp> output_edge_ts(nb_count * input_nodes.size(), -2);
-    c.WeightedSampleNeighbor(23, std::span(input_nodes), std::span(input_types), {}, nb_count, std::span(output_nodes),
-                             std::span(output_types), std::span(output_weights), std::span(output_edge_ts), -1, 0.0f,
-                             -1);
+    c.WeightedSampleNeighbor(true, 23, std::span(input_nodes), std::span(input_types), {}, nb_count,
+                             std::span(output_nodes), std::span(output_types), std::span(output_weights),
+                             std::span(output_edge_ts), -1, 0.0f, -1);
     EXPECT_EQ(output_types, std::vector<snark::Type>(6, -1));
     EXPECT_EQ(output_nodes, std::vector<snark::NodeId>(6, -1));
     EXPECT_EQ(output_weights, std::vector<float>(6, 0));
@@ -661,7 +661,7 @@ TEST(DistributedTest, UniformSampleNeighborsMultipleServers)
     std::vector<snark::NodeId> output_nodes(nb_count * input_nodes.size());
     std::vector<snark::Type> output_types(nb_count * input_nodes.size(), -1);
     std::vector<snark::Timestamp> output_edge_ts(nb_count * input_nodes.size(), -3);
-    c.UniformSampleNeighbor(false, 23, std::span(input_nodes), std::span(input_types), {}, nb_count,
+    c.UniformSampleNeighbor(false, true, 23, std::span(input_nodes), std::span(input_types), {}, nb_count,
                             std::span(output_nodes), std::span(output_types), std::span(output_edge_ts), -1, -1);
     EXPECT_EQ(output_types, std::vector<snark::Type>({0, 0, 0, 0, 0, 0}));
     EXPECT_EQ(output_nodes, std::vector<snark::NodeId>({2, 2, 57, 56, 80, 81}));
@@ -679,7 +679,7 @@ TEST(DistributedTest, UniformSampleNeighborsWithoutReplacementMultipleServers)
     std::vector<snark::NodeId> output_nodes(nb_count * input_nodes.size());
     std::vector<snark::Type> output_types(nb_count * input_nodes.size(), -1);
     std::vector<snark::Timestamp> output_edge_ts(nb_count * input_nodes.size(), -2);
-    c.UniformSampleNeighbor(true, 23, std::span(input_nodes), std::span(input_types), {}, nb_count,
+    c.UniformSampleNeighbor(true, true, 23, std::span(input_nodes), std::span(input_types), {}, nb_count,
                             std::span(output_nodes), std::span(output_types), std::span(output_edge_ts), -1, -1);
     EXPECT_EQ(output_types, std::vector<snark::Type>({0, 0, 0, 0, 0, 0}));
     EXPECT_EQ(output_nodes, std::vector<snark::NodeId>({3, 2, 58, 57, 80, 79}));
@@ -881,7 +881,7 @@ TEST(DistributedTest, FullNeighborsMultipleTypesMultipleServers)
     std::vector<float> output_weights;
     std::vector<uint64_t> output_counts(input_nodes.size());
     std::vector<snark::Timestamp> output_edge_ts;
-    c.FullNeighbor(std::span(input_nodes), std::span(input_types), {}, output_nodes, output_types, output_weights,
+    c.FullNeighbor(true, std::span(input_nodes), std::span(input_types), {}, output_nodes, output_types, output_weights,
                    output_edge_ts, std::span(output_counts));
     EXPECT_EQ(output_types, std::vector<snark::Type>({0, 1, 1}));
     EXPECT_EQ(output_nodes, std::vector<snark::NodeId>({1, 2, 3}));
@@ -902,7 +902,7 @@ TEST(DistributedTest, FullNeighborsMultipleServers)
     std::vector<float> output_weights;
     std::vector<uint64_t> output_counts(input_nodes.size());
     std::vector<snark::Timestamp> output_edge_ts;
-    c.FullNeighbor(std::span(input_nodes), std::span(input_types), {}, output_nodes, output_types, output_weights,
+    c.FullNeighbor(true, std::span(input_nodes), std::span(input_types), {}, output_nodes, output_types, output_weights,
                    output_edge_ts, std::span(output_counts));
     EXPECT_EQ(output_types, std::vector<snark::Type>({0, 0, 0, 0, 0, 0, 0, 0}));
     EXPECT_EQ(output_nodes, std::vector<snark::NodeId>({1, 2, 3, 4, 56, 57, 58, 59}));

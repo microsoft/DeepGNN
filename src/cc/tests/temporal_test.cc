@@ -192,7 +192,7 @@ TEST_F(TemporalTest, GetFullNeighborSinglePartition)
     std::vector<snark::Type> output_neighbor_types;
     std::vector<float> output_neighbors_weights;
     std::vector<snark::Timestamp> output_edge_created_ts;
-    m_single_partition_graph->FullNeighbor(std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
+    m_single_partition_graph->FullNeighbor(true, std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
                                            output_neighbor_types, output_neighbors_weights, output_edge_created_ts,
                                            std::span(output_neighbors_count));
     EXPECT_TRUE(output_neighbor_ids.empty());
@@ -202,7 +202,7 @@ TEST_F(TemporalTest, GetFullNeighborSinglePartition)
     EXPECT_EQ(std::vector<uint64_t>({0, 0}), output_neighbors_count);
 
     ts = {0, 0};
-    m_single_partition_graph->FullNeighbor(std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
+    m_single_partition_graph->FullNeighbor(true, std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
                                            output_neighbor_types, output_neighbors_weights, output_edge_created_ts,
                                            std::span(output_neighbors_count));
     EXPECT_EQ(std::vector<snark::NodeId>({1, 2, 3}), output_neighbor_ids);
@@ -219,7 +219,7 @@ TEST_F(TemporalTest, GetFullNeighborSinglePartition)
     // Check for different singe edge type filter
     types = {1};
     ts = {2, 2};
-    m_single_partition_graph->FullNeighbor(std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
+    m_single_partition_graph->FullNeighbor(true, std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
                                            output_neighbor_types, output_neighbors_weights, output_edge_created_ts,
                                            std::span(output_neighbors_count));
     EXPECT_EQ(std::vector<snark::NodeId>({5}), output_neighbor_ids);
@@ -235,7 +235,7 @@ TEST_F(TemporalTest, GetFullNeighborSinglePartition)
 
     // Check for both edge types
     types = {0, 1};
-    m_single_partition_graph->FullNeighbor(std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
+    m_single_partition_graph->FullNeighbor(true, std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
                                            output_neighbor_types, output_neighbors_weights, output_edge_created_ts,
                                            std::span(output_neighbors_count));
     EXPECT_EQ(std::vector<snark::NodeId>({5}), output_neighbor_ids);
@@ -253,7 +253,7 @@ TEST_F(TemporalTest, GetFullNeighborSinglePartition)
     types = {-1, 100};
     std::fill_n(output_neighbors_count.begin(), 2, -1);
 
-    m_single_partition_graph->FullNeighbor(std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
+    m_single_partition_graph->FullNeighbor(true, std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
                                            output_neighbor_types, output_neighbors_weights, output_edge_created_ts,
                                            std::span(output_neighbors_count));
     EXPECT_TRUE(output_neighbor_ids.empty());
@@ -267,7 +267,7 @@ TEST_F(TemporalTest, GetFullNeighborSinglePartition)
     types = {0, 1};
     std::fill_n(output_neighbors_count.begin(), 2, -1);
 
-    m_single_partition_graph->FullNeighbor(std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
+    m_single_partition_graph->FullNeighbor(true, std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
                                            output_neighbor_types, output_neighbors_weights, output_edge_created_ts,
                                            std::span(output_neighbors_count));
     EXPECT_TRUE(output_neighbor_ids.empty());
@@ -323,7 +323,7 @@ TEST_F(TemporalTest, GetFullNeighborMultiplePartitions)
     std::vector<snark::Type> output_neighbor_types;
     std::vector<float> output_neighbors_weights;
     std::vector<snark::Timestamp> output_edge_created_ts;
-    m_multi_partition_graph->FullNeighbor(std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
+    m_multi_partition_graph->FullNeighbor(true, std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
                                           output_neighbor_types, output_neighbors_weights, output_edge_created_ts,
                                           std::span(output_neighbors_count));
     EXPECT_EQ(std::vector<snark::NodeId>({5, 7}), output_neighbor_ids);
@@ -339,7 +339,7 @@ TEST_F(TemporalTest, GetFullNeighborMultiplePartitions)
 
     // Check for multiple edge types
     types = {0, 1};
-    m_multi_partition_graph->FullNeighbor(std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
+    m_multi_partition_graph->FullNeighbor(true, std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
                                           output_neighbor_types, output_neighbors_weights, output_edge_created_ts,
                                           std::span(output_neighbors_count));
     EXPECT_EQ(std::vector<snark::NodeId>({4, 5, 7}), output_neighbor_ids);
@@ -356,7 +356,7 @@ TEST_F(TemporalTest, GetFullNeighborMultiplePartitions)
     // Check for different singe edge type filter
     types = {0};
     ts = {2, 2};
-    m_multi_partition_graph->FullNeighbor(std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
+    m_multi_partition_graph->FullNeighbor(true, std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
                                           output_neighbor_types, output_neighbors_weights, output_edge_created_ts,
                                           std::span(output_neighbors_count));
     EXPECT_EQ(std::vector<snark::NodeId>({4}), output_neighbor_ids);
@@ -374,7 +374,7 @@ TEST_F(TemporalTest, GetFullNeighborMultiplePartitions)
     types = {-1, 100};
     std::fill_n(output_neighbors_count.begin(), 2, -1);
 
-    m_multi_partition_graph->FullNeighbor(std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
+    m_multi_partition_graph->FullNeighbor(true, std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
                                           output_neighbor_types, output_neighbors_weights, output_edge_created_ts,
                                           std::span(output_neighbors_count));
     EXPECT_TRUE(output_neighbor_ids.empty());
@@ -388,7 +388,7 @@ TEST_F(TemporalTest, GetFullNeighborMultiplePartitions)
     types = {0, 1};
     std::fill_n(output_neighbors_count.begin(), 2, -1);
 
-    m_multi_partition_graph->FullNeighbor(std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
+    m_multi_partition_graph->FullNeighbor(true, std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
                                           output_neighbor_types, output_neighbors_weights, output_edge_created_ts,
                                           std::span(output_neighbors_count));
     EXPECT_TRUE(output_neighbor_ids.empty());
@@ -412,7 +412,7 @@ TEST_F(TemporalTest, GetSampleNeighborsMultiplePartitions)
     std::vector<float> output_neighbors_total_weights(nodes.size());
     std::vector<snark::Timestamp> output_edge_created_ts(sample_count * nodes.size(), -2);
     m_multi_partition_graph->SampleNeighbor(
-        33, std::span(nodes), std::span(types), std::span(ts), sample_count, std::span(output_neighbor_ids),
+        true, 33, std::span(nodes), std::span(types), std::span(ts), sample_count, std::span(output_neighbor_ids),
         std::span(output_neighbor_types), std::span(output_neighbors_weights),
         std::span(output_neighbors_total_weights), std::span(output_edge_created_ts), 42, 0.5f, 13);
 
@@ -432,7 +432,7 @@ TEST_F(TemporalTest, GetSampleNeighborsMultiplePartitions)
     // Check for multiple edge types
     types = {0, 1};
     m_multi_partition_graph->SampleNeighbor(
-        36, std::span(nodes), std::span(types), std::span(ts), sample_count, std::span(output_neighbor_ids),
+        true, 36, std::span(nodes), std::span(types), std::span(ts), sample_count, std::span(output_neighbor_ids),
         std::span(output_neighbor_types), std::span(output_neighbors_weights),
         std::span(output_neighbors_total_weights), std::span(output_edge_created_ts), 42, 0.5f, 13);
     EXPECT_EQ(std::vector<snark::NodeId>({42, 42, 7, 5}), output_neighbor_ids);
@@ -451,7 +451,7 @@ TEST_F(TemporalTest, GetSampleNeighborsMultiplePartitions)
     types = {1};
     ts = {0, 0};
     m_multi_partition_graph->SampleNeighbor(
-        37, std::span(nodes), std::span(types), std::span(ts), sample_count, std::span(output_neighbor_ids),
+        true, 37, std::span(nodes), std::span(types), std::span(ts), sample_count, std::span(output_neighbor_ids),
         std::span(output_neighbor_types), std::span(output_neighbors_weights),
         std::span(output_neighbors_total_weights), std::span(output_edge_created_ts), 42, 0.5f, 13);
     EXPECT_EQ(std::vector<snark::NodeId>({42, 42, 6, 6}), output_neighbor_ids);
@@ -470,7 +470,7 @@ TEST_F(TemporalTest, GetSampleNeighborsMultiplePartitions)
     types = {-1, 100};
 
     m_multi_partition_graph->SampleNeighbor(
-        33, std::span(nodes), std::span(types), std::span(ts), sample_count, std::span(output_neighbor_ids),
+        true, 33, std::span(nodes), std::span(types), std::span(ts), sample_count, std::span(output_neighbor_ids),
         std::span(output_neighbor_types), std::span(output_neighbors_weights),
         std::span(output_neighbors_total_weights), std::span(output_edge_created_ts), 42, 0.5f, 13);
     EXPECT_EQ(std::vector<snark::NodeId>({42, 42, 42, 42}), output_neighbor_ids);
@@ -489,7 +489,7 @@ TEST_F(TemporalTest, GetSampleNeighborsMultiplePartitions)
     types = {0, 1};
 
     m_multi_partition_graph->SampleNeighbor(
-        33, std::span(nodes), std::span(types), std::span(ts), sample_count, std::span(output_neighbor_ids),
+        true, 33, std::span(nodes), std::span(types), std::span(ts), sample_count, std::span(output_neighbor_ids),
         std::span(output_neighbor_types), std::span(output_neighbors_weights),
         std::span(output_neighbors_total_weights), std::span(output_edge_created_ts), 42, 0.5f, 13);
 
@@ -513,9 +513,9 @@ TEST_F(TemporalTest, GetUniformSampleNeighborMultiplePartitions)
     std::vector<uint64_t> output_neighbors_total_counts(nodes.size());
     std::vector<snark::Timestamp> output_edge_created_ts(sample_count * nodes.size(), -2);
     m_multi_partition_graph->UniformSampleNeighbor(
-        false, 33, std::span(nodes), std::span(types), std::span(ts), sample_count, std::span(output_neighbor_ids),
-        std::span(output_neighbor_types), std::span(output_neighbors_total_counts), std::span(output_edge_created_ts),
-        42, 13);
+        false, true, 33, std::span(nodes), std::span(types), std::span(ts), sample_count,
+        std::span(output_neighbor_ids), std::span(output_neighbor_types), std::span(output_neighbors_total_counts),
+        std::span(output_edge_created_ts), 42, 13);
 
     // Only available neighbors based on time/type are 5 and 7
     EXPECT_EQ(std::vector<snark::NodeId>({42, 42, 7, 5}), output_neighbor_ids);
@@ -528,7 +528,7 @@ TEST_F(TemporalTest, GetUniformSampleNeighborMultiplePartitions)
     std::fill(std::begin(output_edge_created_ts), std::end(output_edge_created_ts), -2);
 
     m_multi_partition_graph->UniformSampleNeighbor(
-        true, 33, std::span(nodes), std::span(types), std::span(ts), sample_count, std::span(output_neighbor_ids),
+        true, true, 33, std::span(nodes), std::span(types), std::span(ts), sample_count, std::span(output_neighbor_ids),
         std::span(output_neighbor_types), std::span(output_neighbors_total_counts), std::span(output_edge_created_ts),
         42, 13);
 
@@ -544,9 +544,9 @@ TEST_F(TemporalTest, GetUniformSampleNeighborMultiplePartitions)
 
     ts = {1, 1};
     m_multi_partition_graph->UniformSampleNeighbor(
-        false, 33, std::span(nodes), std::span(types), std::span(ts), sample_count, std::span(output_neighbor_ids),
-        std::span(output_neighbor_types), std::span(output_neighbors_total_counts), std::span(output_edge_created_ts),
-        42, 13);
+        false, true, 33, std::span(nodes), std::span(types), std::span(ts), sample_count,
+        std::span(output_neighbor_ids), std::span(output_neighbor_types), std::span(output_neighbors_total_counts),
+        std::span(output_edge_created_ts), 42, 13);
     // Only available neighbors based on time/type is 5
     EXPECT_EQ(std::vector<snark::NodeId>({42, 42, 5, 5}), output_neighbor_ids);
     std::fill(std::begin(output_neighbor_ids), std::end(output_neighbor_ids), -1);
@@ -559,7 +559,7 @@ TEST_F(TemporalTest, GetUniformSampleNeighborMultiplePartitions)
     std::fill(std::begin(output_edge_created_ts), std::end(output_edge_created_ts), -2);
 
     m_multi_partition_graph->UniformSampleNeighbor(
-        true, 33, std::span(nodes), std::span(types), std::span(ts), sample_count, std::span(output_neighbor_ids),
+        true, true, 33, std::span(nodes), std::span(types), std::span(ts), sample_count, std::span(output_neighbor_ids),
         std::span(output_neighbor_types), std::span(output_neighbors_total_counts), std::span(output_edge_created_ts),
         42, 13);
 
@@ -578,9 +578,9 @@ TEST_F(TemporalTest, GetUniformSampleNeighborMultiplePartitions)
     types = {0, 1};
     ts = {0, 0};
     m_multi_partition_graph->UniformSampleNeighbor(
-        false, 36, std::span(nodes), std::span(types), std::span(ts), sample_count, std::span(output_neighbor_ids),
-        std::span(output_neighbor_types), std::span(output_neighbors_total_counts), std::span(output_edge_created_ts),
-        42, 13);
+        false, true, 36, std::span(nodes), std::span(types), std::span(ts), sample_count,
+        std::span(output_neighbor_ids), std::span(output_neighbor_types), std::span(output_neighbors_total_counts),
+        std::span(output_edge_created_ts), 42, 13);
     EXPECT_EQ(std::vector<snark::NodeId>({1, 2, 6, 3}), output_neighbor_ids);
     EXPECT_EQ(std::vector<snark::Type>({0, 0, 1, 0}), output_neighbor_types);
     EXPECT_EQ(std::vector<uint64_t>({2, 2}), output_neighbors_total_counts);
@@ -599,7 +599,7 @@ TEST_F(TemporalTest, GetFullNeighborDistributed)
     std::vector<snark::Type> output_neighbor_types;
     std::vector<float> output_neighbors_weights;
     std::vector<snark::Timestamp> output_edge_created_ts;
-    m_distributed_graph->FullNeighbor(std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
+    m_distributed_graph->FullNeighbor(true, std::span(nodes), std::span(types), std::span(ts), output_neighbor_ids,
                                       output_neighbor_types, output_neighbors_weights, output_edge_created_ts,
                                       std::span(output_neighbors_count));
     EXPECT_EQ(std::vector<snark::NodeId>({5, 7}), output_neighbor_ids);
@@ -637,10 +637,10 @@ TEST_F(TemporalTest, GetSampleNeighborsDistributed)
     std::vector<snark::Type> output_neighbor_types(sample_count * nodes.size());
     std::vector<float> output_neighbors_weights(sample_count * nodes.size());
     std::vector<snark::Timestamp> output_edge_created_ts(sample_count * nodes.size(), -2);
-    m_distributed_graph->WeightedSampleNeighbor(37, std::span(nodes), std::span(types), std::span(ts), sample_count,
-                                                std::span(output_neighbor_ids), std::span(output_neighbor_types),
-                                                std::span(output_neighbors_weights), std::span(output_edge_created_ts),
-                                                42, 0.5f, 13);
+    m_distributed_graph->WeightedSampleNeighbor(true, 37, std::span(nodes), std::span(types), std::span(ts),
+                                                sample_count, std::span(output_neighbor_ids),
+                                                std::span(output_neighbor_types), std::span(output_neighbors_weights),
+                                                std::span(output_edge_created_ts), 42, 0.5f, 13);
     EXPECT_EQ(std::vector<snark::NodeId>({42, 42, 4, 4}), output_neighbor_ids);
     EXPECT_EQ(std::vector<snark::Type>({13, 13, 0, 0}), output_neighbor_types);
     EXPECT_EQ(std::vector<float>({0.5f, 0.5f, 1.f, 1.f}), output_neighbors_weights);
@@ -660,7 +660,7 @@ TEST_F(TemporalTest, GetUniformSampleNeighborsDistributed)
     std::vector<snark::Type> output_neighbor_types(sample_count * nodes.size());
     std::vector<snark::Timestamp> output_edge_created_ts(sample_count * nodes.size(), -2);
     m_distributed_graph->UniformSampleNeighbor(
-        true, 37, std::span(nodes), std::span(types), std::span(ts), sample_count, std::span(output_neighbor_ids),
+        true, true, 37, std::span(nodes), std::span(types), std::span(ts), sample_count, std::span(output_neighbor_ids),
         std::span(output_neighbor_types), std::span(output_edge_created_ts), 42, 13);
     EXPECT_EQ(std::vector<snark::NodeId>({42, 42, 4, 42}), output_neighbor_ids);
     EXPECT_EQ(std::vector<snark::Type>({13, 13, 0, 13}), output_neighbor_types);
@@ -672,8 +672,8 @@ TEST_F(TemporalTest, GetUniformSampleNeighborsDistributed)
     std::fill(std::begin(output_neighbor_types), std::end(output_neighbor_types), -2);
     std::fill(std::begin(output_edge_created_ts), std::end(output_edge_created_ts), -2);
     m_distributed_graph->UniformSampleNeighbor(
-        false, 37, std::span(nodes), std::span(types), std::span(ts), sample_count, std::span(output_neighbor_ids),
-        std::span(output_neighbor_types), std::span(output_edge_created_ts), 42, 13);
+        false, true, 37, std::span(nodes), std::span(types), std::span(ts), sample_count,
+        std::span(output_neighbor_ids), std::span(output_neighbor_types), std::span(output_edge_created_ts), 42, 13);
     EXPECT_EQ(std::vector<snark::NodeId>({42, 42, 4, 4}), output_neighbor_ids);
     EXPECT_EQ(std::vector<snark::Type>({13, 13, 0, 0}), output_neighbor_types);
     EXPECT_EQ(std::vector<snark::Timestamp>({snark::PLACEHOLDER_TIMESTAMP, snark::PLACEHOLDER_TIMESTAMP, 1, 1}),
@@ -693,9 +693,9 @@ template <typename Graph> void GetLastNCreatedNeighbors(Graph &g)
     std::vector<snark::Type> output_neighbor_types(sample_count * nodes.size());
     std::vector<float> output_neighbors_weights(sample_count * nodes.size());
     std::vector<snark::Timestamp> output_timestamps(sample_count * nodes.size());
-    g->LastNCreated(std::span(nodes), std::span(types), std::span(ts), sample_count, std::span(output_neighbor_ids),
-                    std::span(output_neighbor_types), std::span(output_neighbors_weights), std::span(output_timestamps),
-                    42, 0.5f, 13, 99);
+    g->LastNCreated(true, std::span(nodes), std::span(types), std::span(ts), sample_count,
+                    std::span(output_neighbor_ids), std::span(output_neighbor_types),
+                    std::span(output_neighbors_weights), std::span(output_timestamps), 42, 0.5f, 13, 99);
     EXPECT_EQ(std::vector<snark::NodeId>({42, 42, 4, 42}), output_neighbor_ids);
     EXPECT_EQ(std::vector<snark::Type>({13, 13, 0, 13}), output_neighbor_types);
     EXPECT_EQ(std::vector<float>({0.5f, 0.5f, 1.f, 0.5f}), output_neighbors_weights);
