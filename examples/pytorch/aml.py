@@ -8,8 +8,8 @@ Multi-node users need to follow these steps,
 1. Create a virtual network and add your compute to it.
 2. Create a network security group.
 3. Manually include pip packages shown in ray_on_aml + others required
+4. For multi-node, this script needs to be run in azure ml terminal not local.
 """
-import os
 from time import sleep
 
 import ray
@@ -90,7 +90,7 @@ def train_func(config: dict):
 
     cl = DistributedClient(address)
 
-    # TODO GAT
+    # TODO Replace these 2 lines with a model
     print(cl)
     sleep(10)
 
@@ -98,9 +98,11 @@ def train_func(config: dict):
 
 
 if __name__ == "__main__":
+    import azureml
     from azureml.core import Workspace
     from ray_on_aml.core import Ray_On_AML
 
+    aml = True
     try:
         ws = Workspace.from_config()
         print(
@@ -109,23 +111,8 @@ if __name__ == "__main__":
             "Resource group: " + ws.resource_group,
             sep="\n",
         )
-    except Exception:
-        from azureml.core.authentication import ServicePrincipalAuthentication
 
-        svc_pr = ServicePrincipalAuthentication(
-            tenant_id=os.environ["TENANT_ID"],
-            service_principal_id=os.environ["SERVICE_ID"],
-            service_principal_password=os.environ["SERVICE_PASSWORD"],
-        )
-        ws = Workspace(
-            subscription_id=os.environ["SUBSCRIPTION_ID"],
-            resource_group=os.environ["RESOURCE_GROUP"],
-            workspace_name=os.environ["WORKSPACE_NAME"],
-            auth=svc_pr,
-        )
-    ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="ray-cluster")
-
-    try:
+        ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="ray-cluster")
         ray = ray_on_aml.getRay(
             ci_is_head=True,
             num_node=3,
@@ -137,15 +124,18 @@ if __name__ == "__main__":
                 "deepgnn-torch",
             ],
         )
+    except azureml.exceptions._azureml_exception.UserErrorException:
+        aml = False
+        ray.init()
+        ray_on_aml = type("Ray_On_AML", (object,), {"shutdown": (lambda: None)})
+
+    try:
         num_workers = 2
         server_lock = ServerLock.remote(num_workers)  # type: ignore
 
         trainer = TorchTrainer(
             train_func,
             train_loop_config={
-                "ws_name": ws.name,
-                "ws_subscription_id": ws.subscription_id,
-                "ws_resource_group": ws.resource_group,
                 "num_epochs": 10,
                 "feature_idx": 0,
                 "feature_dim": 1433,
@@ -155,7 +145,8 @@ if __name__ == "__main__":
             },
             run_config=RunConfig(),
             scaling_config=ScalingConfig(
-                num_workers=num_workers, placement_strategy="STRICT_SPREAD"
+                num_workers=num_workers,
+                placement_strategy="STRICT_SPREAD" if aml else "PACK",
             ),
         )
         result = trainer.fit()
