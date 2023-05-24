@@ -22,10 +22,6 @@ jobs:
       HOROVOD_WITH_PYTORCH: 1
       HOROVOD_WITHOUT_MXNET: 1
     steps:
-      - name: Download wheels
-        uses: actions/download-artifact@v3.0.2
-        with:
-          name: deepgnn
       - name: Download examples
         uses: actions/download-artifact@v3.0.2
         with:
