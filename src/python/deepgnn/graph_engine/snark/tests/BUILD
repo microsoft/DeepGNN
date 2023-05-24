@@ -61,6 +61,7 @@ py_test(
         requirement("opencensus"),
         requirement("grpcio"),
         requirement("fsspec"),
+        requirement("tenacity")
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
         requirement("azure-datalake-store"),
