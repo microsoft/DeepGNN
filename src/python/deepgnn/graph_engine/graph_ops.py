@@ -192,6 +192,7 @@ def edge_sub_graph(
         * graph: graph client.
         * edges: np.ndarray of edges [[src, dst, type], ...].
         * num_neighbors: list[int] Number of neighbors for each hop.
+        * strategy: str Sampling strategy for neighbors.
 
     Returns:
         * np.ndarray of edges in subgraph [[src, dst, type], ...].
