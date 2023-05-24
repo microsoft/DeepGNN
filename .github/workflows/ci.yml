@@ -27,7 +27,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install torch
-        run: pip install --timeout 300 torch && HOROVOD_WITH_PYTORCH=1 pip install --timeout 300 --no-cache-dir horovod[torch]==0.25.0
+        run: pip install --timeout 300 torch==1.13.1 && HOROVOD_WITH_PYTORCH=1 pip install --timeout 300 --no-cache-dir horovod[torch]==0.25.0
       - name: Uninstall cached deepgnn packages
         run: pip uninstall deepgnn-ge deepgnn-torch
       - name: Install wheels
