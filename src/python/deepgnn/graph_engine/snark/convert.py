@@ -7,6 +7,7 @@ import multiprocessing as mp
 import math
 from operator import add
 import fsspec
+import json
 from deepgnn import get_logger
 from deepgnn.graph_engine._adl_reader import TextFileIterator
 from deepgnn.graph_engine._base import get_fs
@@ -39,6 +40,7 @@ class MultiWorkersConverter:
         skip_edge_sampler: bool = False,
         file_iterator: Optional[TextFileIterator] = None,
         debug: bool = False,
+        watermark: Optional[int] = None,
     ):
         """Run multi worker converter in multi process.
 
@@ -61,6 +63,7 @@ class MultiWorkersConverter:
             skip_edge_sampler(bool): skip generation of edge alias tables.
             file_iterator(TextFileIterator): Iterator to yield lines of the input text file.
             debug(bool, False): Enable debug mode to disable multiprocessing and see error messages, forces worker_count=1, paritition_count=1.
+            watermark(Optional[int]): for temporal graphs is latest known timestamp in the graph.
         """
         if decoder is None:
             decoder = JsonDecoder()  # type: ignore
@@ -76,6 +79,7 @@ class MultiWorkersConverter:
         self.thread_count = thread_count
         self.dispatcher = dispatcher
         self.file_iterator = file_iterator
+        self.watermark = watermark
 
         self.fs, _ = get_fs(graph_path)
 
@@ -102,6 +106,7 @@ class MultiWorkersConverter:
                 use_threads=use_threads,
                 skip_node_sampler=skip_node_sampler,
                 skip_edge_sampler=skip_edge_sampler,
+                watermark=watermark,
             )
 
     def convert(self):
@@ -142,9 +147,14 @@ class MultiWorkersConverter:
             ), "Debug mode does not support multiple partitions."
             if isinstance(self.decoder, type):
                 self.decoder = self.decoder()
-            writer = BinaryWriter(self.output_dir, 0)
+            writer = BinaryWriter(
+                self.output_dir,
+                0,
+                watermark=self.watermark,
+            )
             for _, data in enumerate(self.file_iterator):
                 for line in data:
+                    print(f"lise is {line}")
                     writer.add(self.decoder.decode(line))
             writer.close()
             gettr = lambda key: getattr(writer, key)  # noqa: E731
@@ -152,55 +162,47 @@ class MultiWorkersConverter:
             partition_gettr = lambda p, key: getattr(p, key)  # noqa: E731
 
         fs, _ = get_fs(self.output_dir)
+
+        mjson = {
+            "binary_data_version": BINARY_DATA_VERSION,
+            "node_count": gettr("node_count"),
+            "edge_count": gettr("edge_count"),
+            "node_type_count": gettr("node_type_num"),
+            "edge_type_count": gettr("edge_type_num"),
+            "node_feature_count": gettr("node_feature_count"),
+            "edge_feature_count": gettr("edge_feature_count"),
+        }
+
+        edge_count_per_type = [0] * int(gettr("edge_type_num"))
+        node_count_per_type = [0] * int(gettr("node_type_num"))
+        mjson["partitions"] = {}
+        for p in partitions:
+            edge_count_per_type = list(
+                map(add, edge_count_per_type, partition_gettr(p, "edge_type_count"))
+            )
+            node_count_per_type = list(
+                map(add, node_count_per_type, partition_gettr(p, "node_type_count"))
+            )
+
+            i = p["id"] if isinstance(p, dict) else 0
+
+            mjson["partitions"][f"{i}"] = {
+                "node_weight": partition_gettr(p, "node_weight"),
+                "edge_weight": partition_gettr(p, "edge_weight"),
+            }
+
+        mjson["node_count_per_type"] = node_count_per_type
+        mjson["edge_count_per_type"] = edge_count_per_type
+        mjson["watermark"] = -1 if self.watermark is None else self.watermark
+
         with fs.open(
-            "{}/meta{}.txt".format(
+            "{}/meta{}.json".format(
                 self.output_dir,
                 "" if self.worker_count == 1 else f"_{self.worker_index}",
             ),
             "w",
-        ) as mtxt:
-
-            mtxt.writelines(
-                [
-                    str(BINARY_DATA_VERSION),
-                    "\n",
-                    str(gettr("node_count")),
-                    "\n",
-                    str(gettr("edge_count")),
-                    "\n",
-                    str(gettr("node_type_num")),
-                    "\n",
-                    str(gettr("edge_type_num")),
-                    "\n",
-                    str(gettr("node_feature_num")),
-                    "\n",
-                    str(gettr("edge_feature_num")),
-                    "\n",
-                    str(len(partitions)),
-                    "\n",
-                ]
-            )
-
-            edge_count_per_type = [0] * int(gettr("edge_type_num"))
-            node_count_per_type = [0] * int(gettr("node_type_num"))
-            for p in partitions:
-                edge_count_per_type = list(
-                    map(add, edge_count_per_type, partition_gettr(p, "edge_type_count"))
-                )
-                node_count_per_type = list(
-                    map(add, node_count_per_type, partition_gettr(p, "node_type_count"))
-                )
-
-                mtxt.writelines([str(p["id"] if isinstance(p, dict) else 0), "\n"])
-                for nw in partition_gettr(p, "node_weight"):
-                    mtxt.writelines([str(nw), "\n"])
-
-                for ew in partition_gettr(p, "edge_weight"):
-                    mtxt.writelines([str(ew), "\n"])
-            for count in node_count_per_type:
-                mtxt.writelines([str(count), "\n"])
-            for count in edge_count_per_type:
-                mtxt.writelines([str(count), "\n"])
+        ) as file:
+            file.write(json.dumps(mjson))
 
 
 if __name__ == "__main__":
@@ -243,6 +245,12 @@ if __name__ == "__main__":
         default=False,
         help="Skip generation of edge alias tables for edge sampling",
     )
+    parser.add_argument(
+        "--watermark",
+        type=int,
+        default=-1,
+        help="Watermark(latest timestamp) to use for temporal graphs. -1 for other graphs",
+    )
     args = parser.parse_args()
 
     decoder = getattr(decoders, f"{args.type.capitalize()}Decoder")()
@@ -258,5 +266,6 @@ if __name__ == "__main__":
         decoder=decoder,
         skip_node_sampler=args.skip_node_sampler,
         skip_edge_sampler=args.skip_edge_sampler,
+        watermark=args.watermark,
     )
     c.convert()

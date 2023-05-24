@@ -72,6 +72,7 @@ class PipeDispatcher(Dispatcher):
                     DecoderType,
                     bool,
                     bool,
+                    typing.Optional[int],
                 ],
                 None,
             ]
@@ -80,6 +81,7 @@ class PipeDispatcher(Dispatcher):
         use_threads: bool = False,
         skip_node_sampler: bool = False,
         skip_edge_sampler: bool = False,
+        watermark: typing.Optional[int] = None,
     ):
         """Create dispatcher.
 
@@ -88,10 +90,11 @@ class PipeDispatcher(Dispatcher):
             parallel (int): Number of parallel process to use for conversion.
             decoder (Decoder): Decoder object which is used to parse the raw graph data file.
             process (typing.Callable[ [typing.Union[mp.Queue, Connection], mp.Queue, str, int, int, int, Decoder], None ]): Function to call for processing lines in a file.
-            partition_offset(int): offset in a text file, where to start reading for a new partition.
-            use_threads(bool): use threads instead of processes for parallel processing.
-            skip_node_sampler(bool): skip generation of node alias tables.
-            skip_edge_sampler(bool): skip generation of edge alias tables.
+            partition_offset (int): offset in a text file, where to start reading for a new partition.
+            use_threads (bool): use threads instead of processes for parallel processing.
+            skip_node_sampler (bool): skip generation of node alias tables.
+            skip_edge_sampler (bool): skip generation of edge alias tables.
+            watermark (typing.Optional[int]): latest timestamp for temporal graphs.
         """
         super().__init__()
 
@@ -118,6 +121,7 @@ class PipeDispatcher(Dispatcher):
                     decoder,
                     self.skip_node_sampler,
                     self.skip_edge_sampler,
+                    watermark,
                 ),
             )
             for i in range(parallel)
@@ -129,8 +133,8 @@ class PipeDispatcher(Dispatcher):
         self.edge_count = 0
         self.node_type_num = 0
         self.edge_type_num = 0
-        self.node_feature_num = 0
-        self.edge_feature_num = 0
+        self.node_feature_count = 0
+        self.edge_feature_count = 0
         self.partitions: typing.List[typing.Dict] = []
 
     def dispatch(self, line: str):
@@ -154,13 +158,13 @@ class PipeDispatcher(Dispatcher):
             flag, output = self.q_out.get()
             self.node_count += output["node_count"]
             self.edge_count += output["edge_count"]
-            self.node_type_num = max(self.node_type_num, output["node_type_num"])
-            self.edge_type_num = max(self.edge_type_num, output["edge_type_num"])
-            self.node_feature_num = max(
-                self.node_feature_num, output["node_feature_num"]
+            self.node_type_num = max(self.node_type_num, output["node_type_count"])
+            self.edge_type_num = max(self.edge_type_num, output["edge_type_count"])
+            self.node_feature_count = max(
+                self.node_feature_count, output["node_feature_count"]
             )
-            self.edge_feature_num = max(
-                self.edge_feature_num, output["edge_feature_num"]
+            self.edge_feature_count = max(
+                self.edge_feature_count, output["edge_feature_count"]
             )
             self.partitions.append(output["partition"])
 
@@ -238,6 +242,7 @@ class QueueDispatcher(Dispatcher):
                     DecoderType,
                     bool,
                     bool,
+                    typing.Optional[int],
                 ],
                 None,
             ]
@@ -246,6 +251,7 @@ class QueueDispatcher(Dispatcher):
         use_threads: bool = False,
         skip_node_sampler: bool = False,
         skip_edge_sampler: bool = False,
+        watermark: typing.Optional[int] = None,
     ):
         """Create dispatcher based on the queue.
 
@@ -259,6 +265,7 @@ class QueueDispatcher(Dispatcher):
             use_threads(bool): use threads instead of processes for parallel processing.
             skip_node_sampler(bool): skip generation of node alias tables.
             skip_edge_sampler(bool): skip generation of edge alias tables.
+            watermark(typing.Options[int]): latest timestamp for temporal graphs.
         """
         super().__init__()
 
@@ -289,6 +296,7 @@ class QueueDispatcher(Dispatcher):
                     decoder,
                     self.skip_node_sampler,
                     self.skip_edge_sampler,
+                    watermark,
                 ),
             )
             for i in range(num_partitions)
@@ -301,8 +309,8 @@ class QueueDispatcher(Dispatcher):
         self.edge_count = 0
         self.node_type_num = 0
         self.edge_type_num = 0
-        self.node_feature_num = 0
-        self.edge_feature_num = 0
+        self.node_feature_count = 0
+        self.edge_feature_count = 0
         self.partitions: typing.List[typing.Dict] = []
 
     def dispatch(self, line: str):
@@ -329,13 +337,13 @@ class QueueDispatcher(Dispatcher):
             flag, output = self.q_out.get()
             self.node_count += output["node_count"]
             self.edge_count += output["edge_count"]
-            self.node_type_num = max(self.node_type_num, output["node_type_num"])
-            self.edge_type_num = max(self.edge_type_num, output["edge_type_num"])
-            self.node_feature_num = max(
-                self.node_feature_num, output["node_feature_num"]
+            self.node_type_num = max(self.node_type_num, output["node_type_count"])
+            self.edge_type_num = max(self.edge_type_num, output["edge_type_count"])
+            self.node_feature_count = max(
+                self.node_feature_count, output["node_feature_count"]
             )
-            self.edge_feature_num = max(
-                self.edge_feature_num, output["edge_feature_num"]
+            self.edge_feature_count = max(
+                self.edge_feature_count, output["edge_feature_count"]
             )
             self.partitions.append(output["partition"])
 

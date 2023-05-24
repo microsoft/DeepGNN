@@ -26,7 +26,14 @@ struct Node
 struct MemoryGraph
 {
     std::vector<Node> m_nodes;
+
+    // Temporal information.
+    snark::Timestamp m_watermark = -1; // use -1 to flag a non-temporal graph.
+    std::vector<std::pair<snark::Timestamp, snark::Timestamp>> m_edge_timestamps;
 };
 
 snark::Partition convert(std::filesystem::path path, std::string suffix, MemoryGraph t, size_t node_types);
+
+std::vector<float> serialize_temporal_features(std::vector<snark::Timestamp> timestamps,
+                                               std::vector<std::vector<float>> features);
 } // namespace TestGraph

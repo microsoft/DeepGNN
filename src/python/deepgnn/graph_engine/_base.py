@@ -6,7 +6,7 @@
 import abc
 import fsspec
 import numpy as np
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional, List
 from enum import IntEnum
 from fsspec.utils import infer_storage_options
 
@@ -22,6 +22,7 @@ class SamplingStrategy(IntEnum):
     RandomWithoutReplacement = 3
     TopK = 4
     PPRGo = 5
+    LastN = 6
 
 
 class Graph(abc.ABC):
@@ -75,7 +76,10 @@ class Graph(abc.ABC):
         strategy: str = "byweight",
         default_node: int = -1,
         default_weight: float = 0.0,
-        default_node_type: int = -1,
+        default_edge_type: int = -1,
+        alpha: float = 0.5,
+        eps: float = 0.0001,
+        timestamps: Union[List[int], np.ndarray] = None,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Sample node neighbors.
@@ -87,7 +91,10 @@ class Graph(abc.ABC):
         strategy -- sampling strategy for neighbors.
         default_node -- default node id if the neighbor cannot be retrieved.
         default_weight -- default weight of the node's neighbor.
-        default_node_type -- default node type of the node's neighbor.
+        default_edge_type -- default node edge of the node's neighbor.
+        alpha -- ppr sampling teleport probability.
+        eps -- stopping threshold for ppr sampling.
+        timestamps -- timestamps to specify graph snapshot to sample neighbors for every node in a temporal graph.
 
         Returns a tuple of arrays nodes(np.uint64), weights(np.float) and types(np.int) with shape [len(nodes), count]
         """
@@ -102,6 +109,7 @@ class Graph(abc.ABC):
         p: float,
         q: float,
         default_node: int = -1,
+        timestamps: Optional[np.ndarray] = None,
     ) -> np.ndarray:
         """
         Sample nodes via random walk.
@@ -112,19 +120,24 @@ class Graph(abc.ABC):
         p -- return parameter
         q -- in-out parameter
         default_node -- default node id if the neighbor cannot be retrieved
+        timestamps -- timestamps to specify graph snapshot to sample neighbors for every node in a temporal graph.
         Returns starting and nodes visited during the walk
         """
         raise NotImplementedError
 
     @abc.abstractmethod
     def neighbors(
-        self, nodes: np.ndarray, edge_types: Union[int, np.ndarray]
+        self,
+        nodes: np.ndarray,
+        edge_types: Union[int, np.ndarray],
+        timestamps: Optional[np.ndarray] = None,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Full list of node neighbors.
 
         nodes -- array of nodes to select neighbors
         edge_types -- type of edges to use for selection.
+        timestamps -- timestamps to specify graph snapshot to retrieve neighbors for every node in a temporal graph.
 
         Returns a tuple of numpy arrays:
         -- neighbor counts per node, with the shape [len(nodes)]
@@ -138,13 +151,18 @@ class Graph(abc.ABC):
 
     @abc.abstractmethod
     def node_features(
-        self, nodes: np.ndarray, features: np.ndarray, feature_type: np.dtype
+        self,
+        nodes: np.ndarray,
+        features: np.ndarray,
+        feature_type: np.dtype,
+        timestamps: Optional[np.ndarray] = None,
     ) -> np.ndarray:
         """Fetch node features.
 
         nodes -- array of nodes to fetch features from.
         features -- two dimensional int array where each row is [feature_id, feature_dim].
         feature_type -- type of the features to extract.
+        timestamps -- timestamps to specify graph snapshot to fetch node features for every node in a temporal graph.
 
         Returns a blob array with feature values per node. The shape of the array is
         [len(nodes), sum(map(lambda f: f[1], features)))].
@@ -153,13 +171,18 @@ class Graph(abc.ABC):
 
     @abc.abstractmethod
     def edge_features(
-        self, edges: np.ndarray, features: np.ndarray, feature_type: np.dtype
+        self,
+        edges: np.ndarray,
+        features: np.ndarray,
+        feature_type: np.dtype,
+        timestamps: Optional[np.ndarray] = None,
     ) -> np.ndarray:
         """Fetch edge features.
 
         edges -- array of triples [src, dst, type].
         features -- array of pairs describing features: [feature_id, feature_dim].
         feature_type -- type of features to extract.
+        timestamps -- timestamps to specify graph snapshot to fetch edge features for every node in a temporal graph.
         """
         raise NotImplementedError
 

@@ -1,5 +1,5 @@
 # for different TF version, we need different addon version,
 # please follow the instruction here: https://github.com/tensorflow/addons
 # to find which addon version is correct.
-horovod[tensorflow]==0.25.0;sys_platform != 'win32'
+horovod[tensorflow]==0.26.0;sys_platform != 'win32'
 tensorflow-addons==0.18.0

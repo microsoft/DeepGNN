@@ -115,51 +115,75 @@ void Graph::GetNodeType(std::span<const NodeId> node_ids, std::span<Type> output
             size_t partition_count = m_counts[index];
             for (size_t partition = 0; partition < partition_count; ++partition, ++index)
             {
+
                 *curr_type = m_partitions[m_partitions_indices[index]].GetNodeType(m_internal_indices[index]);
                 if (*curr_type != snark::PLACEHOLDER_NODE_TYPE)
+                {
                     break;
+                }
             }
         }
         ++curr_type;
     }
 }
 
-void Graph::GetNodeFeature(std::span<const NodeId> node_ids, std::span<snark::FeatureMeta> features,
-                           std::span<uint8_t> output) const
+void Graph::GetNodeFeature(std::span<const NodeId> node_ids, std::span<const Timestamp> timestamps,
+                           std::span<snark::FeatureMeta> features, std::span<uint8_t> output) const
 {
     assert(std::accumulate(std::begin(features), std::end(features), size_t(0),
                            [](size_t val, const auto &f) { return val + f.second; }) *
                node_ids.size() ==
            output.size());
 
-    const size_t feature_size = output.size() / node_ids.size();
+    const size_t features_size = output.size() / node_ids.size();
     size_t feature_offset = 0;
-    for (auto node : node_ids)
+    absl::InlinedVector<Timestamp, 1024> feature_flags(features.size());
+    for (size_t node_index = 0; node_index < node_ids.size(); ++node_index)
     {
-        auto internal_id = m_node_map.find(node);
+        auto internal_id = m_node_map.find(node_ids[node_index]);
         if (internal_id == std::end(m_node_map))
         {
-            std::fill_n(std::begin(output) + feature_offset, feature_size, 0);
+            std::fill_n(std::begin(output) + feature_offset, features_size, 0);
         }
         else
         {
-            auto output_span = output.subspan(feature_offset, feature_size);
+            auto output_span = output.subspan(feature_offset, features_size);
 
+            // We use feature_flags variable to flag features found in a partition.
+            // Flags are stored as bitsets to avoid allocations.
             auto index = internal_id->second;
             size_t partition_count = m_counts[index];
-            bool found = false;
-            for (size_t partition = 0; partition < partition_count && !found; ++partition, ++index)
+            std::fill(std::begin(feature_flags), std::end(feature_flags), -1);
+            for (size_t partition = 0; partition < partition_count; ++partition, ++index)
             {
-                found = m_partitions[m_partitions_indices[index]].GetNodeFeature(m_internal_indices[index], features,
-                                                                                 output_span);
+                m_partitions[m_partitions_indices[index]].GetNodeFeature(
+                    m_internal_indices[index],
+                    timestamps.empty() ? std::nullopt : std::optional<snark::Timestamp>{timestamps[node_index]},
+                    features, std::span(feature_flags), output_span);
+            }
+
+            size_t out_offset = 0;
+            for (size_t feature_index = 0; feature_index < features.size(); ++feature_index)
+            {
+                const auto feature_size = features[feature_index].second;
+                if (feature_flags[feature_index] >= 0)
+                {
+                    out_offset += feature_size;
+                    continue;
+                }
+
+                std::fill_n(std::begin(output_span) + out_offset, feature_size, 0);
+                out_offset += feature_size;
             }
         }
-        feature_offset += feature_size;
+
+        feature_offset += features_size;
     }
 }
 
-void Graph::GetNodeSparseFeature(std::span<const NodeId> node_ids, std::span<const snark::FeatureId> features,
-                                 std::span<int64_t> out_dimensions, std::vector<std::vector<int64_t>> &out_indices,
+void Graph::GetNodeSparseFeature(std::span<const NodeId> node_ids, std::span<const Timestamp> timestamps,
+                                 std::span<const snark::FeatureId> features, std::span<int64_t> out_dimensions,
+                                 std::vector<std::vector<int64_t>> &out_indices,
                                  std::vector<std::vector<uint8_t>> &out_data) const
 {
     assert(features.size() == out_dimensions.size());
@@ -169,6 +193,9 @@ void Graph::GetNodeSparseFeature(std::span<const NodeId> node_ids, std::span<con
     // Fill out_dimensions in case nodes don't have some features.
     std::fill(std::begin(out_dimensions), std::end(out_dimensions), 0);
     const int64_t len = node_ids.size();
+    std::vector<uint64_t> values_sizes(features.size());
+
+    absl::InlinedVector<Timestamp, 1024> feature_flags(features.size());
     for (int64_t node_index = 0; node_index < len; ++node_index)
     {
         auto internal_id = m_node_map.find(node_ids[node_index]);
@@ -179,22 +206,26 @@ void Graph::GetNodeSparseFeature(std::span<const NodeId> node_ids, std::span<con
 
         auto index = internal_id->second;
         size_t partition_count = m_counts[index];
-        bool found = false;
-        for (size_t partition = 0; partition < partition_count && !found; ++partition, ++index)
+        std::fill(std::begin(feature_flags), std::end(feature_flags), -1);
+        for (size_t partition = 0; partition < partition_count; ++partition, ++index)
         {
-            found = m_partitions[m_partitions_indices[index]].GetNodeSparseFeature(
-                m_internal_indices[index], features, node_index, out_dimensions, out_indices, out_data);
+            m_partitions[m_partitions_indices[index]].GetNodeSparseFeature(
+                m_internal_indices[index],
+                timestamps.empty() ? std::nullopt : std::optional<snark::Timestamp>{timestamps[node_index]}, features,
+                std::span(feature_flags), node_index, out_dimensions, out_indices, out_data, values_sizes);
         }
     }
 }
 
-void Graph::GetNodeStringFeature(std::span<const NodeId> node_ids, std::span<const snark::FeatureId> features,
-                                 std::span<int64_t> out_dimensions, std::vector<uint8_t> &out_data) const
+void Graph::GetNodeStringFeature(std::span<const NodeId> node_ids, std::span<const Timestamp> timestamps,
+                                 std::span<const snark::FeatureId> features, std::span<int64_t> out_dimensions,
+                                 std::vector<uint8_t> &out_data) const
 {
     const auto features_size = features.size();
     assert(out_dimensions.size() == features_size * node_ids.size());
 
     const int64_t len = node_ids.size();
+    absl::InlinedVector<Timestamp, 1024> feature_flags(features.size());
     for (int64_t node_index = 0; node_index < len; ++node_index)
     {
         auto internal_id = m_node_map.find(node_ids[node_index]);
@@ -207,18 +238,20 @@ void Graph::GetNodeStringFeature(std::span<const NodeId> node_ids, std::span<con
 
         auto index = internal_id->second;
         size_t partition_count = m_counts[index];
-        bool found = false;
-        for (size_t partition = 0; partition < partition_count && !found; ++partition, ++index)
+        std::fill(std::begin(feature_flags), std::end(feature_flags), -1);
+        for (size_t partition = 0; partition < partition_count; ++partition, ++index)
         {
-            found = m_partitions[m_partitions_indices[index]].GetNodeStringFeature(m_internal_indices[index], features,
-                                                                                   dims_span, out_data);
+            m_partitions[m_partitions_indices[index]].GetNodeStringFeature(
+                m_internal_indices[index],
+                timestamps.empty() ? std::nullopt : std::optional<snark::Timestamp>{timestamps[node_index]}, features,
+                std::span(feature_flags), dims_span, out_data);
         }
     }
 }
 
 void Graph::GetEdgeFeature(std::span<const NodeId> input_edge_src, std::span<const NodeId> input_edge_dst,
-                           std::span<const Type> input_edge_type, std::span<snark::FeatureMeta> features,
-                           std::span<uint8_t> output) const
+                           std::span<const Type> input_edge_type, std::span<const Timestamp> timestamps,
+                           std::span<snark::FeatureMeta> features, std::span<uint8_t> output) const
 {
     assert(std::accumulate(std::begin(features), std::end(features), size_t(0),
                            [](size_t val, const auto &f) { return val + f.second; }) *
@@ -228,6 +261,7 @@ void Graph::GetEdgeFeature(std::span<const NodeId> input_edge_src, std::span<con
     const size_t feature_size = output.size() / input_edge_src.size();
     size_t feature_offset = 0;
     size_t edge_offset = 0;
+    absl::InlinedVector<Timestamp, 1024> feature_flags(features.size());
     for (auto src_node : input_edge_src)
     {
         auto internal_id = m_node_map.find(src_node);
@@ -239,15 +273,13 @@ void Graph::GetEdgeFeature(std::span<const NodeId> input_edge_src, std::span<con
         {
             auto index = internal_id->second;
             size_t partition_count = m_counts[index];
+            std::fill(std::begin(feature_flags), std::end(feature_flags), -1);
             for (size_t partition = 0; partition < partition_count; ++partition, ++index)
             {
-                auto found = m_partitions[m_partitions_indices[index]].GetEdgeFeature(
-                    m_internal_indices[index], input_edge_dst[edge_offset], input_edge_type[edge_offset], features,
-                    output.subspan(feature_offset, feature_size));
-                if (found)
-                {
-                    break;
-                }
+                m_partitions[m_partitions_indices[index]].GetEdgeFeature(
+                    m_internal_indices[index], input_edge_dst[edge_offset], input_edge_type[edge_offset],
+                    timestamps.empty() ? std::nullopt : std::optional<snark::Timestamp>{timestamps[edge_offset]},
+                    features, std::span(feature_flags), output.subspan(feature_offset, feature_size));
             }
         }
 
@@ -257,8 +289,9 @@ void Graph::GetEdgeFeature(std::span<const NodeId> input_edge_src, std::span<con
 }
 
 void Graph::GetEdgeSparseFeature(std::span<const NodeId> input_edge_src, std::span<const NodeId> input_edge_dst,
-                                 std::span<const Type> input_edge_type, std::span<const snark::FeatureId> features,
-                                 std::span<int64_t> out_dimensions, std::vector<std::vector<int64_t>> &out_indices,
+                                 std::span<const Type> input_edge_type, std::span<const Timestamp> timestamps,
+                                 std::span<const snark::FeatureId> features, std::span<int64_t> out_dimensions,
+                                 std::vector<std::vector<int64_t>> &out_indices,
                                  std::vector<std::vector<uint8_t>> &out_values) const
 {
     assert(features.size() == out_dimensions.size());
@@ -266,6 +299,8 @@ void Graph::GetEdgeSparseFeature(std::span<const NodeId> input_edge_src, std::sp
     assert(features.size() == out_values.size());
 
     int64_t edge_offset = 0;
+    absl::InlinedVector<Timestamp, 1024> feature_flags(features.size());
+    std::vector<uint64_t> values_sizes(features.size());
     for (auto src_node : input_edge_src)
     {
         auto internal_id = m_node_map.find(src_node);
@@ -273,15 +308,14 @@ void Graph::GetEdgeSparseFeature(std::span<const NodeId> input_edge_src, std::sp
         {
             auto index = internal_id->second;
             size_t partition_count = m_counts[index];
+            std::fill(std::begin(feature_flags), std::end(feature_flags), -1);
             for (size_t partition = 0; partition < partition_count; ++partition, ++index)
             {
-                auto found = m_partitions[m_partitions_indices[index]].GetEdgeSparseFeature(
-                    m_internal_indices[index], input_edge_dst[edge_offset], input_edge_type[edge_offset], features,
-                    edge_offset, out_dimensions, out_indices, out_values);
-                if (found)
-                {
-                    break;
-                }
+                m_partitions[m_partitions_indices[index]].GetEdgeSparseFeature(
+                    m_internal_indices[index], input_edge_dst[edge_offset], input_edge_type[edge_offset],
+                    timestamps.empty() ? std::nullopt : std::optional<snark::Timestamp>{timestamps[edge_offset]},
+                    features, std::span(feature_flags), edge_offset, out_dimensions, out_indices, out_values,
+                    values_sizes);
             }
         }
 
@@ -290,13 +324,15 @@ void Graph::GetEdgeSparseFeature(std::span<const NodeId> input_edge_src, std::sp
 }
 
 void Graph::GetEdgeStringFeature(std::span<const NodeId> input_edge_src, std::span<const NodeId> input_edge_dst,
-                                 std::span<const Type> input_edge_type, std::span<const snark::FeatureId> features,
-                                 std::span<int64_t> out_dimensions, std::vector<uint8_t> &out_values) const
+                                 std::span<const Type> input_edge_type, std::span<const Timestamp> timestamps,
+                                 std::span<const snark::FeatureId> features, std::span<int64_t> out_dimensions,
+                                 std::vector<uint8_t> &out_values) const
 {
     const auto features_size = features.size();
     assert(features_size * input_edge_src.size() == out_dimensions.size());
 
     int64_t edge_offset = 0;
+    absl::InlinedVector<Timestamp, 1024> feature_flags(features.size());
     for (auto src_node : input_edge_src)
     {
         auto internal_id = m_node_map.find(src_node);
@@ -304,15 +340,14 @@ void Graph::GetEdgeStringFeature(std::span<const NodeId> input_edge_src, std::sp
         {
             auto index = internal_id->second;
             size_t partition_count = m_counts[index];
+            std::fill(std::begin(feature_flags), std::end(feature_flags), -1);
             for (size_t partition = 0; partition < partition_count; ++partition, ++index)
             {
-                auto found = m_partitions[m_partitions_indices[index]].GetEdgeStringFeature(
-                    m_internal_indices[index], input_edge_dst[edge_offset], input_edge_type[edge_offset], features,
+                m_partitions[m_partitions_indices[index]].GetEdgeStringFeature(
+                    m_internal_indices[index], input_edge_dst[edge_offset], input_edge_type[edge_offset],
+                    timestamps.empty() ? std::nullopt : std::optional<snark::Timestamp>{timestamps[edge_offset]},
+                    features, std::span(feature_flags),
                     out_dimensions.subspan(edge_offset * features_size, features_size), out_values);
-                if (found)
-                {
-                    break;
-                }
             }
         }
 
@@ -321,7 +356,7 @@ void Graph::GetEdgeStringFeature(std::span<const NodeId> input_edge_src, std::sp
 }
 
 void Graph::NeighborCount(std::span<const NodeId> input_node_ids, std::span<const Type> input_edge_types,
-                          std::span<uint64_t> output_neighbors_counts) const
+                          std::span<const Timestamp> timestamps, std::span<uint64_t> output_neighbors_counts) const
 
 {
     size_t num_nodes = input_node_ids.size();
@@ -343,17 +378,20 @@ void Graph::NeighborCount(std::span<const NodeId> input_node_ids, std::span<cons
             for (size_t partition = 0; partition < partition_count; ++partition, ++index)
             {
                 output_neighbors_counts[idx] += m_partitions[m_partitions_indices[index]].NeighborCount(
-                    m_internal_indices[index], input_edge_types);
+                    m_internal_indices[index],
+                    timestamps.empty() ? std::nullopt : std::optional<snark::Timestamp>{timestamps[idx]},
+                    input_edge_types);
             }
         }
     }
 }
 
 void Graph::FullNeighbor(std::span<const NodeId> input_node_ids, std::span<const Type> input_edge_types,
-                         std::vector<NodeId> &output_neighbor_ids, std::vector<Type> &output_neighbor_types,
-                         std::vector<float> &output_neighbors_weights,
+                         std::span<const Timestamp> timestamps, std::vector<NodeId> &output_neighbor_ids,
+                         std::vector<Type> &output_neighbor_types, std::vector<float> &output_neighbors_weights,
                          std::span<uint64_t> output_neighbors_counts) const
 {
+    std::fill(std::begin(output_neighbors_counts), std::end(output_neighbors_counts), 0);
     for (size_t node_index = 0; node_index < input_node_ids.size(); ++node_index)
     {
         auto internal_id = m_node_map.find(input_node_ids[node_index]);
@@ -368,17 +406,19 @@ void Graph::FullNeighbor(std::span<const NodeId> input_node_ids, std::span<const
             for (size_t partition = 0; partition < partition_count; ++partition, ++index)
             {
                 output_neighbors_counts[node_index] += m_partitions[m_partitions_indices[index]].FullNeighbor(
-                    m_internal_indices[index], input_edge_types, output_neighbor_ids, output_neighbor_types,
-                    output_neighbors_weights);
+                    m_internal_indices[index],
+                    timestamps.empty() ? std::nullopt : std::optional<snark::Timestamp>{timestamps[node_index]},
+                    input_edge_types, output_neighbor_ids, output_neighbor_types, output_neighbors_weights);
             }
         }
     }
 }
 
 void Graph::SampleNeighbor(int64_t seed, std::span<const NodeId> input_node_ids, std::span<Type> input_edge_types,
-                           size_t count, std::span<NodeId> output_neighbor_ids, std::span<Type> output_neighbor_types,
-                           std::span<float> neighbors_weights, std::span<float> neighbors_total_weights,
-                           NodeId default_node_id, float default_weight, Type default_edge_type) const
+                           std::span<const Timestamp> timestamps, size_t count, std::span<NodeId> output_neighbor_ids,
+                           std::span<Type> output_neighbor_types, std::span<float> neighbors_weights,
+                           std::span<float> neighbors_total_weights, NodeId default_node_id, float default_weight,
+                           Type default_edge_type) const
 {
     if (!check_sorted_unique_types(input_edge_types.data(), input_edge_types.size()))
     {
@@ -403,8 +443,9 @@ void Graph::SampleNeighbor(int64_t seed, std::span<const NodeId> input_node_ids,
             for (size_t partition = 0; partition < partition_count; ++partition)
             {
                 m_partitions[m_partitions_indices[index + partition]].SampleNeighbor(
-                    seed++, m_internal_indices[index + partition], input_edge_types, count,
-                    output_neighbor_ids.subspan(count * node_index, count),
+                    seed++, m_internal_indices[index + partition],
+                    timestamps.empty() ? std::nullopt : std::optional<snark::Timestamp>{timestamps[node_index]},
+                    input_edge_types, count, output_neighbor_ids.subspan(count * node_index, count),
                     output_neighbor_types.subspan(count * node_index, count),
                     neighbors_weights.subspan(count * node_index, count), neighbors_total_weights[node_index],
                     default_node_id, default_weight, default_edge_type);
@@ -414,9 +455,10 @@ void Graph::SampleNeighbor(int64_t seed, std::span<const NodeId> input_node_ids,
 }
 
 void Graph::UniformSampleNeighbor(bool without_replacement, int64_t seed, std::span<const NodeId> input_node_ids,
-                                  std::span<Type> input_edge_types, size_t count, std::span<NodeId> output_neighbor_ids,
-                                  std::span<Type> output_neighbor_types, std::span<uint64_t> neighbors_total_count,
-                                  NodeId default_node_id, Type default_edge_type) const
+                                  std::span<Type> input_edge_types, std::span<const Timestamp> timestamps, size_t count,
+                                  std::span<NodeId> output_neighbor_ids, std::span<Type> output_neighbor_types,
+                                  std::span<uint64_t> neighbors_total_count, NodeId default_node_id,
+                                  Type default_edge_type) const
 {
     if (!check_sorted_unique_types(input_edge_types.data(), input_edge_types.size()))
     {
@@ -439,10 +481,65 @@ void Graph::UniformSampleNeighbor(bool without_replacement, int64_t seed, std::s
             for (size_t partition = 0; partition < m_counts[index]; ++partition)
             {
                 m_partitions[m_partitions_indices[index + partition]].UniformSampleNeighbor(
-                    without_replacement, seed++, m_internal_indices[index + partition], input_edge_types, count,
-                    output_neighbor_ids.subspan(count * node_index, count),
+                    without_replacement, seed++, m_internal_indices[index + partition],
+                    timestamps.empty() ? std::nullopt : std::optional<snark::Timestamp>{timestamps[node_index]},
+                    input_edge_types, count, output_neighbor_ids.subspan(count * node_index, count),
                     output_neighbor_types.subspan(count * node_index, count), neighbors_total_count[node_index],
                     default_node_id, default_edge_type);
+            }
+        }
+    }
+}
+
+void Graph::LastNCreated(std::span<const NodeId> input_node_ids, std::span<Type> input_edge_types,
+                         std::span<const Timestamp> input_timestamps, size_t count,
+                         std::span<NodeId> output_neighbor_ids, std::span<Type> output_neighbor_types,
+                         std::span<float> output_weights, std::span<Timestamp> output_timestamps,
+                         NodeId default_node_id, float default_weight, Type default_edge_type,
+                         Timestamp default_timestamp) const
+{
+    if (!check_sorted_unique_types(input_edge_types.data(), input_edge_types.size()))
+    {
+        std::sort(std::begin(input_edge_types), std::end(input_edge_types));
+        auto last = std::unique(std::begin(input_edge_types), std::end(input_edge_types));
+        input_edge_types = input_edge_types.subspan(0, last - std::begin(input_edge_types));
+    }
+
+    // backfill global timestamps with minimal values for easier management in a priority queue later.
+    std::fill(std::begin(output_timestamps), std::end(output_timestamps), -1);
+    for (size_t node_index = 0; node_index < input_node_ids.size(); ++node_index)
+    {
+        auto internal_id = m_node_map.find(input_node_ids[node_index]);
+        if (internal_id == std::end(m_node_map))
+        {
+            std::fill_n(std::begin(output_neighbor_ids) + count * node_index, count, default_node_id);
+            std::fill_n(std::begin(output_neighbor_types) + count * node_index, count, default_edge_type);
+            std::fill_n(std::begin(output_weights) + count * node_index, count, default_weight);
+            std::fill_n(std::begin(output_timestamps) + count * node_index, count, default_timestamp);
+        }
+        else
+        {
+            const auto index = internal_id->second;
+            size_t found_neighbors = 0;
+            for (size_t partition = 0; partition < m_counts[index]; ++partition)
+            {
+                const auto partition_nbs = m_partitions[m_partitions_indices[index + partition]].LastNCreatedNeighbors(
+                    m_internal_indices[index + partition], input_timestamps[node_index], input_edge_types, count,
+                    output_neighbor_ids.subspan(count * node_index, count),
+                    output_neighbor_types.subspan(count * node_index, count),
+                    output_weights.subspan(count * node_index, count),
+                    output_timestamps.subspan(count * node_index, count), default_node_id, default_edge_type,
+                    default_weight, default_timestamp);
+                found_neighbors = std::max(found_neighbors, partition_nbs);
+            }
+            if (found_neighbors < count)
+            {
+                const auto offset = count * node_index + found_neighbors;
+                const auto backfill_count = count - found_neighbors;
+                std::fill_n(std::begin(output_neighbor_ids) + offset, backfill_count, default_node_id);
+                std::fill_n(std::begin(output_neighbor_types) + offset, backfill_count, default_edge_type);
+                std::fill_n(std::begin(output_weights) + offset, backfill_count, default_weight);
+                std::fill_n(std::begin(output_timestamps) + offset, backfill_count, default_timestamp);
             }
         }
     }
@@ -492,11 +589,16 @@ void Graph::ReadNodeMap(std::filesystem::path path, std::string suffix, uint32_t
             auto old_offset = el->second;
             auto old_count = m_counts[old_offset];
             m_node_map[pair[0]] = m_internal_indices.size();
-
-            std::copy_n(std::begin(m_internal_indices) + old_offset, old_count, std::back_inserter(m_internal_indices));
+            const auto old_internal_size = m_internal_indices.size();
+            m_internal_indices.resize(old_internal_size + old_count);
+            std::copy_n(std::begin(m_internal_indices) + old_offset, old_count,
+                        std::begin(m_internal_indices) + old_internal_size);
             m_internal_indices.emplace_back(pair[1]);
+            const auto old_size = m_partitions_indices.size();
+            m_partitions_indices.resize(old_size + old_count);
+
             std::copy_n(std::begin(m_partitions_indices) + old_offset, old_count,
-                        std::back_inserter(m_partitions_indices));
+                        std::begin(m_partitions_indices) + old_size);
             m_partitions_indices.emplace_back(index);
 
             std::fill_n(std::back_inserter(m_counts), old_count + 1, old_count + 1);

@@ -16,6 +16,7 @@ service GraphEngine {
 
   rpc GetNeighbors (GetNeighborsRequest) returns (GetNeighborsReply) {}
   rpc GetNeighborCounts (GetNeighborsRequest) returns (GetNeighborCountsReply) {}
+  rpc GetLastNCreatedNeighbors (GetLastNCreatedNeighborsRequest) returns (GetNeighborsReply) {}
 
   // Sample node neighbors
   rpc WeightedSampleNeighbors (WeightedSampleNeighborsRequest) returns (WeightedSampleNeighborsReply) {}
@@ -59,6 +60,7 @@ message MetadataReply {
   repeated uint64 node_count_per_type = 10;
   repeated uint64 edge_count_per_type = 11;
   uint64 version = 12;
+  int64 watermark = 13;
 }
 
 message CreateSamplerReply {
@@ -101,6 +103,7 @@ message FeatureInfo {
 message NodeFeaturesRequest {
   repeated int64 node_ids = 1;
   repeated FeatureInfo features = 2;
+  repeated int64 timestamps = 3;
 }
 
 
@@ -109,6 +112,7 @@ message NodeFeaturesReply {
   bytes feature_values = 1;
   // From the request nodes.
   repeated uint32 offsets = 2;
+  repeated int64 timestamps = 3;
 }
 
 message EdgeFeaturesRequest {
@@ -116,6 +120,7 @@ message EdgeFeaturesRequest {
   repeated int64 node_ids = 1;
   repeated int32 types = 2;
   repeated FeatureInfo features = 3;
+  repeated int64 timestamps = 4;
 }
 
 message EdgeFeaturesReply {
@@ -123,11 +128,13 @@ message EdgeFeaturesReply {
   bytes feature_values = 1;
   // Index of the edge in the request for the feature value.
   repeated uint32 offsets = 2;
+  repeated int64 timestamps = 3;
 }
 
 message NodeSparseFeaturesRequest {
   repeated int64 node_ids = 1;
   repeated int32 feature_ids = 2;
+  repeated int64 timestamps = 3;
 }
 
 message EdgeSparseFeaturesRequest {
@@ -135,6 +142,7 @@ message EdgeSparseFeaturesRequest {
   repeated int64 node_ids = 1;
   repeated int32 types = 2;
   repeated int32 feature_ids = 3;
+  repeated int64 timestamps = 4;
 }
 
 message SparseFeaturesReply {
@@ -143,16 +151,19 @@ message SparseFeaturesReply {
   repeated int64 dimensions = 3;
   repeated int64 indices_counts = 4;
   repeated int64 values_counts = 5;
+  repeated int64 timestamps = 6;
 }
 
 message StringFeaturesReply {
   bytes values = 1;
   repeated int64 dimensions = 2;
+  repeated int64 timestamps = 3;
 }
 
 message GetNeighborsRequest {
   repeated int64 node_ids = 1;
   repeated int32 edge_types = 2;
+  repeated int64 timestamps = 3;
 }
 
 message GetNeighborsReply {
@@ -160,10 +171,12 @@ message GetNeighborsReply {
   repeated float edge_weights = 2;
   repeated int32 edge_types = 3;
   repeated uint64 neighbor_counts = 4;
+  repeated int64 timestamps = 5;
 }
 
 message GetNeighborCountsReply {
   repeated uint64 neighbor_counts = 1;
+  repeated int64 timestamps = 2;
 }
 
 message WeightedSampleNeighborsRequest {
@@ -174,6 +187,7 @@ message WeightedSampleNeighborsRequest {
   float default_node_weight = 5;
   int32 default_edge_type = 6;
   int32 count = 7;
+  repeated int64 timestamps = 8;
 }
 
 message WeightedSampleNeighborsReply {
@@ -182,6 +196,7 @@ message WeightedSampleNeighborsReply {
   repeated int32 neighbor_types = 3;
   repeated int64 node_ids = 4;
   repeated float shard_weights = 5;
+  repeated int64 timestamps = 6;
 }
 
 
@@ -193,6 +208,7 @@ message UniformSampleNeighborsRequest {
   int32 default_edge_type = 5;
   int32 count = 6;
   bool without_replacement = 7;
+  repeated int64 timestamps = 8;
 }
 
 message UniformSampleNeighborsReply {
@@ -200,4 +216,12 @@ message UniformSampleNeighborsReply {
   repeated int32 neighbor_types = 2;
   repeated uint64 shard_counts = 3;
   repeated int64 node_ids = 4;
+  repeated int64 timestamps = 5;
+}
+
+message GetLastNCreatedNeighborsRequest {
+  repeated int64 node_ids = 1;
+  repeated int32 edge_types = 2;
+  repeated int64 timestamps = 3;
+  int64 count = 4;
 }

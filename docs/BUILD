@@ -104,6 +104,29 @@ py_test(
 )
 
 py_test(
+    name = "temporal_graph",
+    srcs = ["doctest_template.py"],
+    args = ["graph_engine/temporal.rst"],
+    data = [
+        "graph_engine/temporal.rst",
+    ],
+    imports = ["../src/python/"],
+    main = "doctest_template.py",
+    python_version = "PY3",
+    srcs_version = "PY3",
+    deps = [
+        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
+        requirement("azure-datalake-store"),
+        requirement("fsspec"),
+        requirement("numpy"),
+        requirement("opencensus"),
+        requirement("opencensus-context"),
+        requirement("opencensus-ext-azure"),
+        requirement("pyspark"),
+    ],
+)
+
+py_test(
     name = "dataset",
     srcs = ["doctest_template.py"],
     args = ["graph_engine/dataset.rst"],

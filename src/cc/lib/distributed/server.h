@@ -44,6 +44,7 @@ class GRPCServer final
     std::shared_ptr<snark::GraphSampler::Service> m_sampler_service_impl;
     std::unique_ptr<grpc::Server> m_server;
     std::vector<std::thread> m_runner_threads;
+    std::atomic<bool> m_shutdown;
 };
 } // namespace snark
 #endif // SNARK_SERVER_H

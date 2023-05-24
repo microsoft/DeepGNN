@@ -443,6 +443,8 @@ def linearize(value):
             -1,
             value["node_type"],
             value["node_weight"],
+            None,
+            None,
             get_features(value),
         )
     else:
@@ -451,28 +453,35 @@ def linearize(value):
             value["dst_id"],
             value["edge_type"],
             value["weight"],
+            None,
+            None,
             get_features(value),
         )
 
 
 def write_multi_binary(output_dir, partitions):
-    partition_meta = ""
     for i, p in enumerate(partitions):
         writer = BinaryWriter(output_dir, i)
         for v in p:
             writer.add([linearize(v)])
         writer.close()
-        nf = "\n".join(map(str, writer.node_type_count))
-        ef = "\n".join(map(str, writer.edge_type_count))
-        if nf == "":
-            nf = "0\n0\n0"
-        if ef == "":
-            ef = "0\n0"
-        partition_meta += f"{i}\n3\n3\n3\n2\n2\n{nf}\n{ef}\n"
-    meta = open(os.path.join(output_dir, "meta.txt"), "w+")
-    meta.write(f"v3\n3\n3\n2\n15\n15\n2\n")
-    meta.write(partition_meta)
-    meta.close()
+    content = {
+        "binary_data_version": "v2",  # converter version
+        "node_count": 3,
+        "edge_count": 3,
+        "node_type_count": 3,
+        "edge_type_count": 2,
+        "node_feature_count": 15,
+        "edge_feature_count": 15,
+        "partitions": {
+            f"{i}": {"node_weight": [3, 3, 3], "edge_weight": [2, 2]} for i in range(2)
+        },
+        "node_count_per_type": [1, 1, 1],
+        "edge_count_per_type": [1, 2],
+        "watermark": -1,
+    }
+    with open(os.path.join(output_dir, "meta.json"), "w+") as f:
+        f.write(json.dumps(content))
 
 
 @pytest.mark.parametrize("multi_partition_graph_data", param, indirect=True)
