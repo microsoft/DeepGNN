@@ -9,74 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  wheel:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v3.3.0
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v4.5.0
-        with:
-          python-version: "3.10"
-      - name: Upload examples
-        uses: actions/upload-artifact@v3.1.2
-        with:
-          name: examples
-          path: examples/*
-      - name: build wheel
-        uses: ./.github/actions/wheel
-        with:
-          package_version: "0.1.1"
-      - name: Upload wheel file
-        uses: actions/upload-artifact@v3.1.2
-        with:
-          name: deepgnn
-          path: src/python/dist/*.whl
-  tf_examples:
-    needs: wheel
-    strategy:
-      matrix:
-        python-version: ["3.10"]
-        os: ["ubuntu-22.04"]
-    runs-on: ${{ matrix.os }}
-    env:
-      HOROVOD_WITH_GLOO: 1
-      HOROVOD_WITHOUT_MPI: 1
-      HOROVOD_WITH_TENSORFLOW: 1
-      HOROVOD_WITHOUT_PYTORCH: 1
-      HOROVOD_WITHOUT_MXNET: 1
-    steps:
-      - name: Download wheels
-        uses: actions/download-artifact@v3.0.2
-        with:
-          name: deepgnn
-      - name: Download examples
-        uses: actions/download-artifact@v3.0.2
-        with:
-          name: examples
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4.5.0
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install tensorflow
-        run: pip install --timeout 300 tensorflow==2.11.1
-      - name: Install dependencies
-        run: pip install --timeout 300 -r tensorflow/requirements.txt
-      - name: Check horovod features
-        run: horovodrun --check-build
-      - name: Uninstall cached deepgnn packages
-        run: pip uninstall deepgnn-ge deepgnn-tf
-      - name: Install wheels
-        run: pip install deepgnn_ge*.whl deepgnn_tf*.whl
-      - name: Run graphsage examples
-        run: cd ./tensorflow/sage/ && sudo chmod +x *.sh && bash ./run.sh CPU && bash ./run.sh CPU disk yes
-      - name: Run gcn examples
-        run: cd ./tensorflow/gcn/ && sudo chmod +x *.sh && bash ./run.sh CPU cleanup
-      - name: Run han examples
-        run: cd ./tensorflow/han/ && sudo chmod +x *.sh && bash ./run.sh CPU cleanup
-      - name: Run gat examples
-        run: cd ./tensorflow/gat/ && sudo chmod +x *.sh && bash ./run.sh CPU cleanup
   torch_examples:
-    needs: wheel
     strategy:
       matrix:
         python-version: ["3.10"]
