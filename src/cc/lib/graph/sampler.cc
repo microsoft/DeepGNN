@@ -13,6 +13,7 @@
 #include <type_traits>
 
 #include "locator.h"
+#include "reservoir.h"
 #include "storage.h"
 #include "xoroshiro.h"
 
@@ -570,73 +571,13 @@ void SampleWithoutReplacement(int64_t seed, std::vector<std::span<const NodeId>>
     const auto population_size = population.front().size();
 
     snark::Xoroshiro128PlusGenerator gen(seed);
-    boost::random::uniform_real_distribution<float> toss(0, 1.f);
-    while (count >= population_size)
-    {
+    AlgorithmL sampler(count, gen);
+    sampler.add(population_size, [&population, &out](size_t pick, size_t stream_offset) {
         for (size_t index = 0; index < population.size(); ++index)
         {
-            std::copy(std::begin(population[index]), std::end(population[index]), std::begin(out[index]));
+            out[index][pick] = population[index][stream_offset];
         }
-        for (size_t pos = 0; pos < population_size; ++pos)
-        {
-            if (overwrite_rate < 1.0f || toss(gen) > overwrite_rate)
-            {
-                continue;
-            }
-            for (size_t index = 0; index < population.size(); ++index)
-            {
-                out[index][pos] = population[index][pos];
-            }
-        }
-
-        count -= population_size;
-        for (size_t index = 0; index < population.size(); ++index)
-        {
-            out[index] = out[index].subspan(population_size);
-        }
-    }
-    if (count == 0)
-    {
-        return;
-    }
-
-    for (size_t pos = 0; pos < std::min(count, population_size);)
-    {
-        if (overwrite_rate < 1.0f && toss(gen) > overwrite_rate)
-        {
-            for (size_t index = 0; index < population.size(); ++index)
-            {
-                std::swap(out[index][pos], out[index][count - 1]);
-            }
-            --count;
-            continue;
-        }
-        for (size_t index = 0; index < population.size(); ++index)
-        {
-            out[index][pos] = population[index][pos];
-        }
-        ++pos;
-    }
-    if (count == 0)
-    {
-        return;
-    }
-
-    float w = std::exp(std::log(toss(gen)) / count);
-    size_t i = count - 1;
-    while (i < population_size)
-    {
-        i += std::floor(std::log(toss(gen)) / std::log(1 - w)) + 1;
-        if (i < population_size)
-        {
-            const size_t pick = toss(gen) * count;
-            for (size_t index = 0; index < population.size(); ++index)
-            {
-                out[index][pick] = population[index][i];
-            }
-            w = w * std::exp(std::log(toss(gen)) / count);
-        }
-    }
+    });
 }
 
 void SampleWithReplacement(int64_t seed, std::vector<std::span<const NodeId>> population,

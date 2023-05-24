@@ -185,18 +185,19 @@ static void BM_ONE_NODE_TYPE_WEIGHTED(benchmark::State &state)
     std::vector<float> weight_holder(max_count, -1);
     std::vector<snark::Type> type_holder(max_count, -1);
     std::vector<snark::NodeId> node_holder(max_count, -1);
+    std::vector<snark::Timestamp> ts_holder(max_count, -1);
     int64_t seed = 42;
     size_t offset = 0;
     for (auto _ : state)
     {
         const size_t batch_size = state.range(0);
         std::vector<float> total_neighbor_weight(batch_size);
-        s.SampleNeighbor(++seed, std::span(input_nodes).subspan(offset, batch_size), std::span(edge_types), {},
-                         num_neighbors_to_sample,
-                         std::span(node_holder).subspan(0, num_neighbors_to_sample * batch_size),
-                         std::span(type_holder).subspan(0, num_neighbors_to_sample * batch_size),
-                         std::span(weight_holder).subspan(0, num_neighbors_to_sample * batch_size),
-                         std::span(total_neighbor_weight), 0, 0, -1);
+        s.SampleNeighbor(
+            false, ++seed, std::span(input_nodes).subspan(offset, batch_size), std::span(edge_types), {},
+            num_neighbors_to_sample, std::span(node_holder).subspan(0, num_neighbors_to_sample * batch_size),
+            std::span(type_holder).subspan(0, num_neighbors_to_sample * batch_size),
+            std::span(weight_holder).subspan(0, num_neighbors_to_sample * batch_size), std::span(total_neighbor_weight),
+            std::span(ts_holder).subspan(0, num_neighbors_to_sample * batch_size), 0, 0, -1);
         offset += batch_size;
         if (offset + batch_size > max_count)
         {

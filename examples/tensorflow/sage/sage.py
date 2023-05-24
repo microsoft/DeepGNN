@@ -63,13 +63,13 @@ class SAGEQuery:
             t = len(layer_infos) - k - 1
             cur_nodes = neighbor_list[k]
             support_size *= layer_infos[t].num_samples
-            neighbors, w, types, _ = graph.sample_neighbors(
+            neighbors = graph.sample_neighbors(
                 nodes=cur_nodes,
                 edge_types=layer_infos[t].neighbor_edge_types,
                 count=layer_infos[t].num_samples,
                 strategy=layer_infos[t].strategy,
                 default_node=-1,
-            )
+            )[0]
             neighbor_list.append(neighbors.reshape(-1))
             support_sizes.append(support_size)
         return neighbor_list, support_sizes

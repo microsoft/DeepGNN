@@ -717,12 +717,12 @@ void GRPCClient::NeighborCount(std::span<const NodeId> node_ids, std::span<const
     WaitForFutures(futures);
 }
 
-void GRPCClient::LastNCreated(std::span<const NodeId> input_node_ids, std::span<Type> input_edge_types,
-                              std::span<const Timestamp> input_timestamps, size_t count,
-                              std::span<NodeId> output_neighbor_ids, std::span<Type> output_neighbor_types,
-                              std::span<float> neighbors_weights, std::span<Timestamp> output_timestamps,
-                              NodeId default_node_id, float default_weight, Type default_edge_type,
-                              Timestamp default_timestamp)
+void GRPCClient::LastNCreated(bool return_edge_created_ts, std::span<const NodeId> input_node_ids,
+                              std::span<Type> input_edge_types, std::span<const Timestamp> input_timestamps,
+                              size_t count, std::span<NodeId> output_neighbor_ids,
+                              std::span<Type> output_neighbor_types, std::span<float> neighbors_weights,
+                              std::span<Timestamp> output_timestamps, NodeId default_node_id, float default_weight,
+                              Type default_edge_type, Timestamp default_timestamp)
 {
     GetLastNCreatedNeighborsRequest request;
 
@@ -743,7 +743,7 @@ void GRPCClient::LastNCreated(std::span<const NodeId> input_node_ids, std::span<
 
         call->callback = [&responses_left, &replies, input_node_ids, output_neighbor_ids, output_neighbor_types,
                           neighbors_weights, output_timestamps, count, default_node_id, default_weight,
-                          default_edge_type, default_timestamp]() {
+                          default_edge_type, default_timestamp, return_edge_created_ts]() {
             // Skip processing until all responses arrived. All responses are stored in the `replies` variable,
             // so we can safely return.
             if (responses_left.fetch_sub(1) > 1)
@@ -757,7 +757,11 @@ void GRPCClient::LastNCreated(std::span<const NodeId> input_node_ids, std::span<
                 auto out_nodes = output_neighbor_ids.subspan(count * node_index, count);
                 auto out_types = output_neighbor_types.subspan(count * node_index, count);
                 auto out_weights = neighbors_weights.subspan(count * node_index, count);
-                auto out_ts = output_timestamps.subspan(count * node_index, count);
+                auto out_ts = output_timestamps; // to avoid trigger assert in a debug builds.
+                if (return_edge_created_ts)
+                {
+                    out_ts = output_timestamps.subspan(count * node_index, count);
+                }
                 std::priority_queue<ts_position, std::vector<ts_position>, std::greater<ts_position>> lastn;
                 for (size_t reply_index = 0; reply_index < std::size(replies); ++reply_index)
                 {
@@ -791,8 +795,11 @@ void GRPCClient::LastNCreated(std::span<const NodeId> input_node_ids, std::span<
                         lastn.emplace(ts, pos);
                         out_nodes[pos] = reply.node_ids(nb_index);
                         out_types[pos] = reply.edge_types(nb_index);
-                        out_ts[pos] = ts;
                         out_weights[pos] = reply.edge_weights(nb_index);
+                        if (return_edge_created_ts)
+                        {
+                            out_ts[pos] = ts;
+                        }
                     }
                 }
 
@@ -801,8 +808,11 @@ void GRPCClient::LastNCreated(std::span<const NodeId> input_node_ids, std::span<
                     const auto start = lastn.size();
                     std::fill(std::begin(out_nodes) + start, std::end(out_nodes), default_node_id);
                     std::fill(std::begin(out_types) + start, std::end(out_types), default_edge_type);
-                    std::fill(std::begin(out_ts) + start, std::end(out_ts), default_timestamp);
                     std::fill(std::begin(out_weights) + start, std::end(out_weights), default_weight);
+                    if (return_edge_created_ts)
+                    {
+                        std::fill(std::begin(out_ts) + start, std::end(out_ts), default_timestamp);
+                    }
                 }
             }
         };
@@ -815,15 +825,17 @@ void GRPCClient::LastNCreated(std::span<const NodeId> input_node_ids, std::span<
     WaitForFutures(futures);
 }
 
-void GRPCClient::FullNeighbor(std::span<const NodeId> node_ids, std::span<const Type> edge_types,
-                              std::span<const snark::Timestamp> timestamps, std::vector<NodeId> &output_nodes,
-                              std::vector<Type> &output_types, std::vector<float> &output_weights,
+void GRPCClient::FullNeighbor(bool return_edge_created_ts, std::span<const NodeId> node_ids,
+                              std::span<const Type> edge_types, std::span<const snark::Timestamp> timestamps,
+                              std::vector<NodeId> &output_nodes, std::vector<Type> &output_types,
+                              std::vector<float> &output_weights, std::vector<Timestamp> &out_edge_created_ts,
                               std::span<uint64_t> output_neighbor_counts)
 {
     GetNeighborsRequest request;
 
     *request.mutable_node_ids() = {std::begin(node_ids), std::end(node_ids)};
     *request.mutable_edge_types() = {std::begin(edge_types), std::end(edge_types)};
+    request.set_return_edge_created_ts(return_edge_created_ts);
     *request.mutable_timestamps() = {std::begin(timestamps), std::end(timestamps)};
     std::vector<std::future<void>> futures;
     std::vector<GetNeighborsReply> replies(std::size(m_engine_stubs));
@@ -841,7 +853,7 @@ void GRPCClient::FullNeighbor(std::span<const NodeId> node_ids, std::span<const 
             m_engine_stubs[shard]->PrepareAsyncGetNeighbors(&call->context, request, NextCompletionQueue());
 
         call->callback = [&responses_left, &replies, &output_nodes, &output_types, &output_weights,
-                          &output_neighbor_counts, &reply_offsets]() {
+                          &output_neighbor_counts, &reply_offsets, &out_edge_created_ts, return_edge_created_ts]() {
             // Skip processing until all responses arrived. All responses are stored in the `replies` variable,
             // so we can safely return.
             if (responses_left.fetch_sub(1) > 1)
@@ -879,6 +891,13 @@ void GRPCClient::FullNeighbor(std::span<const NodeId> node_ids, std::span<const 
                     output_weights.insert(std::end(output_weights), edge_weights_start, edge_weights_start + count);
                     auto edge_types_start = reply.edge_types().begin() + offset;
                     output_types.insert(std::end(output_types), edge_types_start, edge_types_start + count);
+                    if (return_edge_created_ts)
+                    {
+                        auto edge_creation_ts_start = reply.timestamps().begin() + offset;
+                        out_edge_created_ts.insert(std::end(out_edge_created_ts), edge_creation_ts_start,
+                                                   edge_creation_ts_start + count);
+                    }
+
                     reply_offsets[reply_index] += count;
                 }
             }
@@ -891,11 +910,12 @@ void GRPCClient::FullNeighbor(std::span<const NodeId> node_ids, std::span<const 
     WaitForFutures(futures);
 }
 
-void GRPCClient::WeightedSampleNeighbor(int64_t seed, std::span<const NodeId> node_ids,
+void GRPCClient::WeightedSampleNeighbor(bool return_edge_created_ts, int64_t seed, std::span<const NodeId> node_ids,
                                         std::span<const Type> edge_types, std::span<const snark::Timestamp> timestamps,
                                         size_t count, std::span<NodeId> output_neighbors, std::span<Type> output_types,
-                                        std::span<float> output_weights, NodeId default_node_id, float default_weight,
-                                        Type default_edge_type)
+                                        std::span<float> output_weights,
+                                        std::span<snark::Timestamp> output_edge_created_ts, NodeId default_node_id,
+                                        float default_weight, Type default_edge_type)
 {
     snark::Xoroshiro128PlusGenerator engine(seed);
     boost::random::uniform_int_distribution<int64_t> subseed(std::numeric_limits<int64_t>::min(),
@@ -905,6 +925,7 @@ void GRPCClient::WeightedSampleNeighbor(int64_t seed, std::span<const NodeId> no
     *request.mutable_node_ids() = {std::begin(node_ids), std::end(node_ids)};
     *request.mutable_edge_types() = {std::begin(edge_types), std::end(edge_types)};
     *request.mutable_timestamps() = {std::begin(timestamps), std::end(timestamps)};
+    request.set_return_edge_created_ts(return_edge_created_ts);
     request.set_count(count);
     request.set_default_node_id(default_node_id);
     request.set_default_node_weight(default_weight);
@@ -926,8 +947,9 @@ void GRPCClient::WeightedSampleNeighbor(int64_t seed, std::span<const NodeId> no
         auto response_reader =
             m_engine_stubs[shard]->PrepareAsyncWeightedSampleNeighbors(&call->context, request, NextCompletionQueue());
 
-        call->callback = [&reply = replies[shard], count, output_neighbors, output_types, output_weights, node_ids,
-                          &mtx, &engine, &shard_weights, default_node_id, default_weight, default_edge_type]() {
+        call->callback = [&reply = replies[shard], count, output_neighbors, output_types, output_weights,
+                          output_edge_created_ts, node_ids, &mtx, &engine, &shard_weights, default_node_id,
+                          default_weight, default_edge_type, return_edge_created_ts]() {
             if (reply.node_ids().empty())
             {
                 return;
@@ -936,11 +958,13 @@ void GRPCClient::WeightedSampleNeighbor(int64_t seed, std::span<const NodeId> no
             auto curr_nodes = std::begin(node_ids);
             auto curr_out_neighbor = std::begin(output_neighbors);
             auto curr_out_type = std::begin(output_types);
+            auto curr_out_ts = std::begin(output_edge_created_ts);
             auto curr_out_weight = std::begin(output_weights);
             auto curr_shard_weight = std::begin(shard_weights);
 
             auto curr_reply_neighbor = std::begin(reply.neighbor_ids());
             auto curr_reply_type = std::begin(reply.neighbor_types());
+            auto curr_reply_ts = std::begin(reply.timestamps());
             auto curr_reply_weight = std::begin(reply.neighbor_weights());
             auto curr_reply_shard_weight = std::begin(reply.shard_weights());
             boost::random::uniform_real_distribution<float> selector(0, 1);
@@ -960,6 +984,10 @@ void GRPCClient::WeightedSampleNeighbor(int64_t seed, std::span<const NodeId> no
                     curr_out_neighbor += count;
                     curr_out_weight += count;
                     curr_out_type += count;
+                    if (return_edge_created_ts)
+                    {
+                        curr_out_ts += count;
+                    }
                     ++curr_shard_weight;
                 }
 
@@ -972,6 +1000,11 @@ void GRPCClient::WeightedSampleNeighbor(int64_t seed, std::span<const NodeId> no
                     curr_out_neighbor = std::fill_n(curr_out_neighbor, count, default_node_id);
                     curr_out_weight = std::fill_n(curr_out_weight, count, default_weight);
                     curr_out_type = std::fill_n(curr_out_type, count, default_edge_type);
+                    if (return_edge_created_ts)
+                    {
+                        curr_out_ts = std::fill_n(curr_out_ts, count, PLACEHOLDER_TIMESTAMP);
+                        curr_reply_ts += count;
+                    }
 
                     curr_reply_neighbor += count;
                     curr_reply_type += count;
@@ -992,6 +1025,11 @@ void GRPCClient::WeightedSampleNeighbor(int64_t seed, std::span<const NodeId> no
                         ++curr_reply_type;
                         ++curr_out_neighbor;
                         ++curr_out_type;
+                        if (return_edge_created_ts)
+                        {
+                            ++curr_out_ts;
+                            ++curr_reply_ts;
+                        }
                         ++curr_out_weight;
                         continue;
                     }
@@ -999,6 +1037,10 @@ void GRPCClient::WeightedSampleNeighbor(int64_t seed, std::span<const NodeId> no
                     *(curr_out_neighbor++) = *(curr_reply_neighbor++);
                     *(curr_out_type++) = *(curr_reply_type++);
                     *(curr_out_weight++) = *(curr_reply_weight++);
+                    if (return_edge_created_ts)
+                    {
+                        *(curr_out_ts++) = *(curr_reply_ts++);
+                    }
                 }
 
                 ++curr_reply_shard_weight;
@@ -1007,6 +1049,7 @@ void GRPCClient::WeightedSampleNeighbor(int64_t seed, std::span<const NodeId> no
             }
 
             assert(curr_reply_weight == std::end(reply.neighbor_weights()));
+            assert(curr_reply_ts == std::end(reply.timestamps()));
             assert(curr_reply_neighbor == std::end(reply.neighbor_ids()));
             assert(curr_reply_type == std::end(reply.neighbor_types()));
             assert(curr_reply_shard_weight == std::end(reply.shard_weights()));
@@ -1020,10 +1063,12 @@ void GRPCClient::WeightedSampleNeighbor(int64_t seed, std::span<const NodeId> no
     WaitForFutures(futures);
 }
 
-void GRPCClient::UniformSampleNeighbor(bool without_replacement, int64_t seed, std::span<const NodeId> node_ids,
-                                       std::span<const Type> edge_types, std::span<const snark::Timestamp> timestamps,
-                                       size_t count, std::span<NodeId> output_neighbors, std::span<Type> output_types,
-                                       NodeId default_node_id, Type default_type)
+void GRPCClient::UniformSampleNeighbor(bool without_replacement, bool return_edge_created_ts, int64_t seed,
+                                       std::span<const NodeId> node_ids, std::span<const Type> edge_types,
+                                       std::span<const snark::Timestamp> timestamps, size_t count,
+                                       std::span<NodeId> output_neighbors, std::span<Type> output_types,
+                                       std::span<snark::Timestamp> output_edge_created_ts, NodeId default_node_id,
+                                       Type default_type)
 {
     snark::Xoroshiro128PlusGenerator engine(seed);
     boost::random::uniform_int_distribution<int64_t> subseed(std::numeric_limits<int64_t>::min(),
@@ -1033,6 +1078,7 @@ void GRPCClient::UniformSampleNeighbor(bool without_replacement, int64_t seed, s
     *request.mutable_node_ids() = {std::begin(node_ids), std::end(node_ids)};
     *request.mutable_edge_types() = {std::begin(edge_types), std::end(edge_types)};
     *request.mutable_timestamps() = {std::begin(timestamps), std::end(timestamps)};
+    request.set_return_edge_created_ts(return_edge_created_ts);
     request.set_count(count);
     request.set_default_node_id(default_node_id);
     request.set_default_edge_type(default_type);
@@ -1053,8 +1099,8 @@ void GRPCClient::UniformSampleNeighbor(bool without_replacement, int64_t seed, s
 
         auto response_reader =
             m_engine_stubs[shard]->PrepareAsyncUniformSampleNeighbors(&call->context, request, NextCompletionQueue());
-        call->callback = [&reply = replies[shard], count, output_types, node_ids, &mtx, &engine, &shard_counts,
-                          output_neighbors, default_node_id, default_type]() {
+        call->callback = [&reply = replies[shard], count, output_types, output_edge_created_ts, node_ids, &mtx, &engine,
+                          &shard_counts, output_neighbors, default_node_id, default_type, return_edge_created_ts]() {
             if (reply.node_ids().empty())
             {
                 return;
@@ -1063,9 +1109,11 @@ void GRPCClient::UniformSampleNeighbor(bool without_replacement, int64_t seed, s
             auto curr_nodes = std::begin(node_ids);
             auto curr_out_neighbor = std::begin(output_neighbors);
             auto curr_out_type = std::begin(output_types);
+            auto curr_out_ts = std::begin(output_edge_created_ts);
             auto curr_shard_weight = std::begin(shard_counts);
             auto curr_reply_neighbor = std::begin(reply.neighbor_ids());
             auto curr_reply_type = std::begin(reply.neighbor_types());
+            auto curr_reply_ts = std::begin(reply.timestamps());
             auto curr_reply_shard_weight = std::begin(reply.shard_counts());
             boost::random::uniform_real_distribution<float> selector(0, 1);
 
@@ -1084,6 +1132,10 @@ void GRPCClient::UniformSampleNeighbor(bool without_replacement, int64_t seed, s
                     curr_out_neighbor += count;
                     curr_out_type += count;
                     ++curr_shard_weight;
+                    if (return_edge_created_ts)
+                    {
+                        curr_out_ts += count;
+                    }
                 }
 
                 *curr_shard_weight += *curr_reply_shard_weight;
@@ -1094,6 +1146,12 @@ void GRPCClient::UniformSampleNeighbor(bool without_replacement, int64_t seed, s
 
                     curr_out_neighbor = std::fill_n(curr_out_neighbor, count, default_node_id);
                     curr_out_type = std::fill_n(curr_out_type, count, default_type);
+
+                    if (return_edge_created_ts)
+                    {
+                        curr_reply_ts += count;
+                        curr_out_ts = std::fill_n(curr_out_ts, count, PLACEHOLDER_TIMESTAMP);
+                    }
 
                     curr_reply_neighbor += count;
                     curr_reply_type += count;
@@ -1112,11 +1170,21 @@ void GRPCClient::UniformSampleNeighbor(bool without_replacement, int64_t seed, s
                         ++curr_reply_type;
                         ++curr_out_neighbor;
                         ++curr_out_type;
+                        if (return_edge_created_ts)
+                        {
+                            ++curr_out_ts;
+                            ++curr_reply_ts;
+                        }
+
                         continue;
                     }
 
                     *(curr_out_neighbor++) = *(curr_reply_neighbor++);
                     *(curr_out_type++) = *(curr_reply_type++);
+                    if (return_edge_created_ts)
+                    {
+                        *(curr_out_ts++) = *(curr_reply_ts++);
+                    }
                 }
 
                 ++curr_reply_shard_weight;
@@ -1126,6 +1194,7 @@ void GRPCClient::UniformSampleNeighbor(bool without_replacement, int64_t seed, s
 
             assert(curr_reply_neighbor == std::end(reply.neighbor_ids()));
             assert(curr_reply_type == std::end(reply.neighbor_types()));
+            assert(curr_reply_ts == std::end(reply.timestamps()));
             assert(curr_reply_shard_weight == std::end(reply.shard_counts()));
         };
 

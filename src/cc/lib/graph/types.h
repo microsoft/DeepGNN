@@ -17,6 +17,7 @@ using Timestamp = int64_t;
 using FeatureMeta = std::pair<FeatureId, FeatureSize>;
 
 const int32_t PLACEHOLDER_NODE_TYPE = -1;
+const Timestamp PLACEHOLDER_TIMESTAMP = -1;
 
 // Enum ordering should match PyPartitionStorageType in py_graph.h.
 enum PartitionStorageType

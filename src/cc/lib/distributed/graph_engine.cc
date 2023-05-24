@@ -13,6 +13,8 @@
 #include <glog/raw_logging.h>
 
 #include "src/cc/lib/graph/locator.h"
+#include "src/cc/lib/graph/reservoir.h"
+#include "src/cc/lib/graph/xoroshiro.h"
 
 namespace
 {
@@ -452,12 +454,16 @@ grpc::Status GraphEngineServiceImpl::GetNeighbors(::grpc::ServerContext *context
                                                   const snark::GetNeighborsRequest *request,
                                                   snark::GetNeighborsReply *response)
 {
+    // Client might request timestamps, but the shard doesn't have them. Return placeholders then.
+    const auto return_edge_created_ts = request->return_edge_created_ts();
+    const auto fill_edge_ts_by_partition = request->return_edge_created_ts() && m_metadata.m_watermark >= 0;
     const auto node_count = request->node_ids().size();
     response->mutable_neighbor_counts()->Resize(node_count, 0);
     auto input_edge_types = std::span(request->edge_types().data(), request->edge_types().size());
     std::vector<NodeId> output_neighbor_ids;
     std::vector<Type> output_neighbor_types;
     std::vector<float> output_neighbors_weights;
+    std::vector<Timestamp> output_edge_created_ts;
     for (int node_index = 0; node_index < node_count; ++node_index)
     {
         auto internal_id = m_node_map.find(request->node_ids()[node_index]);
@@ -473,21 +479,33 @@ grpc::Status GraphEngineServiceImpl::GetNeighbors(::grpc::ServerContext *context
             {
                 response->mutable_neighbor_counts()->at(node_index) +=
                     m_partitions[m_partitions_indices[index]].FullNeighbor(
-                        m_internal_indices[index],
+                        fill_edge_ts_by_partition, m_internal_indices[index],
                         request->timestamps().empty()
                             ? std::nullopt
                             : std::optional<snark::Timestamp>(request->timestamps(node_index)),
-                        input_edge_types, output_neighbor_ids, output_neighbor_types, output_neighbors_weights);
+                        input_edge_types, output_neighbor_ids, output_neighbor_types, output_neighbors_weights,
+                        output_edge_created_ts);
                 response->mutable_node_ids()->Add(std::begin(output_neighbor_ids), std::end(output_neighbor_ids));
                 response->mutable_edge_types()->Add(std::begin(output_neighbor_types), std::end(output_neighbor_types));
                 response->mutable_edge_weights()->Add(std::begin(output_neighbors_weights),
                                                       std::end(output_neighbors_weights));
+                if (fill_edge_ts_by_partition)
+                {
+                    response->mutable_timestamps()->Add(std::begin(output_edge_created_ts),
+                                                        std::end(output_edge_created_ts));
+                    output_edge_created_ts.resize(0);
+                }
                 output_neighbor_ids.resize(0);
                 output_neighbor_types.resize(0);
                 output_neighbors_weights.resize(0);
             }
         }
     }
+    if (return_edge_created_ts && !fill_edge_ts_by_partition)
+    {
+        response->mutable_timestamps()->Resize(response->node_ids().size(), snark::PLACEHOLDER_TIMESTAMP);
+    }
+
     return grpc::Status::OK;
 }
 
@@ -495,6 +513,8 @@ grpc::Status GraphEngineServiceImpl::GetLastNCreatedNeighbors(::grpc::ServerCont
                                                               const snark::GetLastNCreatedNeighborsRequest *request,
                                                               snark::GetNeighborsReply *response)
 {
+    // Graph has to be temporal and we always return timestamps for client to merge data from multiple shards correctly.
+    assert(m_metadata.m_watermark >= 0);
     const auto node_count = request->node_ids().size();
     const auto count = size_t(request->count());
     const auto response_size = node_count * count;
@@ -508,7 +528,7 @@ grpc::Status GraphEngineServiceImpl::GetLastNCreatedNeighbors(::grpc::ServerCont
         std::span(response->mutable_edge_types()->mutable_data(), response->edge_types().size());
     response->mutable_edge_weights()->Resize(response_size, -1.f);
     auto output_weights = std::span(response->mutable_edge_weights()->mutable_data(), response->edge_weights().size());
-    response->mutable_timestamps()->Resize(response_size, -1);
+    response->mutable_timestamps()->Resize(response_size, snark::PLACEHOLDER_TIMESTAMP);
     auto output_timestamps = std::span(response->mutable_timestamps()->mutable_data(), response->timestamps().size());
     for (int node_index = 0; node_index < node_count; ++node_index)
     {
@@ -519,22 +539,24 @@ grpc::Status GraphEngineServiceImpl::GetLastNCreatedNeighbors(::grpc::ServerCont
         }
         else
         {
+            lastn_queue lastn;
             const auto index = internal_id->second;
             const size_t partition_count = m_counts[index];
             size_t found_neighbors = 0;
             for (size_t partition = 0; partition < partition_count; ++partition)
             {
                 const auto partition_nbs = m_partitions[m_partitions_indices[index + partition]].LastNCreatedNeighbors(
-                    m_internal_indices[index + partition], request->timestamps(node_index), input_edge_types, count,
-                    output_neighbor_ids.subspan(count * node_index, count),
+                    true, m_internal_indices[index + partition], request->timestamps(node_index), input_edge_types,
+                    count, output_neighbor_ids.subspan(count * node_index, count),
                     output_neighbor_types.subspan(count * node_index, count),
                     output_weights.subspan(count * node_index, count),
-                    output_timestamps.subspan(count * node_index, count), -1, -1, -1, -1);
+                    output_timestamps.subspan(count * node_index, count), lastn, -1, -1, -1, -1);
                 found_neighbors = std::max(found_neighbors, partition_nbs);
             }
             response->mutable_neighbor_counts()->Set(node_index, found_neighbors);
         }
     }
+
     return grpc::Status::OK;
 }
 
@@ -544,6 +566,9 @@ grpc::Status GraphEngineServiceImpl::WeightedSampleNeighbors(::grpc::ServerConte
 {
     assert(std::is_sorted(std::begin(request->edge_types()), std::end(request->edge_types())));
 
+    // Client might request timestamps, but the shard doesn't have them. Return placeholders then.
+    const auto return_edge_created_ts = request->return_edge_created_ts();
+    const auto fill_edge_ts_by_partition = return_edge_created_ts && m_metadata.m_watermark >= 0;
     size_t count = request->count();
     size_t nodes_found = 0;
     auto input_edge_types = std::span(request->edge_types().data(), request->edge_types().size());
@@ -567,18 +592,29 @@ grpc::Status GraphEngineServiceImpl::WeightedSampleNeighbors(::grpc::ServerConte
         response->mutable_neighbor_ids()->Resize(nodes_found * count, request->default_node_id());
         response->mutable_neighbor_types()->Resize(nodes_found * count, request->default_edge_type());
         response->mutable_neighbor_weights()->Resize(nodes_found * count, request->default_node_weight());
+        if (return_edge_created_ts)
+        {
+            response->mutable_timestamps()->Resize(nodes_found * count, PLACEHOLDER_TIMESTAMP);
+        }
         for (size_t partition = 0; partition < partition_count; ++partition)
         {
             m_partitions[m_partitions_indices[index + partition]].SampleNeighbor(
-                seed++, m_internal_indices[index + partition],
+                fill_edge_ts_by_partition, seed++, m_internal_indices[index + partition],
                 request->timestamps().empty() ? std::nullopt
                                               : std::optional<snark::Timestamp>(request->timestamps(node_index)),
                 input_edge_types, count, std::span(response->mutable_neighbor_ids()->mutable_data() + offset, count),
                 std::span(response->mutable_neighbor_types()->mutable_data() + offset, count),
-                std::span(response->mutable_neighbor_weights()->mutable_data() + offset, count), last_shard_weight,
+                std::span(response->mutable_neighbor_weights()->mutable_data() + offset, count),
+                std::span(response->mutable_timestamps()->mutable_data() + offset, count), last_shard_weight,
                 request->default_node_id(), request->default_node_weight(), request->default_edge_type());
         }
     }
+    if (return_edge_created_ts && !fill_edge_ts_by_partition)
+    {
+        std::fill(std::begin(*response->mutable_timestamps()), std::end(*response->mutable_timestamps()),
+                  snark::PLACEHOLDER_TIMESTAMP);
+    }
+
     return grpc::Status::OK;
 }
 
@@ -588,11 +624,15 @@ grpc::Status GraphEngineServiceImpl::UniformSampleNeighbors(::grpc::ServerContex
 {
     assert(std::is_sorted(std::begin(request->edge_types()), std::end(request->edge_types())));
 
+    // Client might request timestamps, but the shard doesn't have them. Return placeholders then.
+    const auto return_edge_created_ts = request->return_edge_created_ts();
+    const auto fill_edge_ts_by_partition = return_edge_created_ts && m_metadata.m_watermark >= 0;
     size_t count = request->count();
     size_t nodes_found = 0;
     bool without_replacement = request->without_replacement();
     auto input_edge_types = std::span(request->edge_types().data(), request->edge_types().size());
     auto seed = request->seed();
+    snark::Xoroshiro128PlusGenerator gen(seed);
 
     for (int node_index = 0; node_index < request->node_ids().size(); ++node_index)
     {
@@ -602,6 +642,9 @@ grpc::Status GraphEngineServiceImpl::UniformSampleNeighbors(::grpc::ServerContex
         {
             continue;
         }
+
+        snark::AlgorithmL reservoir(count, gen);
+        snark::WithReplacement replacement_sampler(count, gen);
         size_t offset = nodes_found * count;
         ++nodes_found;
         const auto index = internal_id->second;
@@ -611,17 +654,31 @@ grpc::Status GraphEngineServiceImpl::UniformSampleNeighbors(::grpc::ServerContex
         auto &last_shard_weight = response->mutable_shard_counts()->at(nodes_found - 1);
         response->mutable_neighbor_ids()->Resize(nodes_found * count, request->default_node_id());
         response->mutable_neighbor_types()->Resize(nodes_found * count, request->default_edge_type());
+        std::span<snark::Timestamp> response_ts;
+        if (return_edge_created_ts)
+        {
+            response->mutable_timestamps()->Resize(nodes_found * count, PLACEHOLDER_TIMESTAMP);
+            response_ts = std::span(response->mutable_timestamps()->mutable_data() + offset, count);
+        }
+
         for (size_t partition = 0; partition < partition_count; ++partition)
         {
             m_partitions[m_partitions_indices[index + partition]].UniformSampleNeighbor(
-                without_replacement, seed++, m_internal_indices[index + partition],
+                without_replacement, fill_edge_ts_by_partition, m_internal_indices[index + partition],
                 request->timestamps().empty() ? std::nullopt
                                               : std::optional<snark::Timestamp>(request->timestamps(node_index)),
                 input_edge_types, count, std::span(response->mutable_neighbor_ids()->mutable_data() + offset, count),
-                std::span(response->mutable_neighbor_types()->mutable_data() + offset, count), last_shard_weight,
-                request->default_node_id(), request->default_edge_type());
+                std::span(response->mutable_neighbor_types()->mutable_data() + offset, count), response_ts,
+                last_shard_weight, request->default_node_id(), request->default_edge_type(), reservoir,
+                replacement_sampler);
         }
     }
+    if (return_edge_created_ts && !fill_edge_ts_by_partition)
+    {
+        std::fill(std::begin(*response->mutable_timestamps()), std::end(*response->mutable_timestamps()),
+                  snark::PLACEHOLDER_TIMESTAMP);
+    }
+
     return grpc::Status::OK;
 }
 
