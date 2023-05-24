@@ -22,10 +22,6 @@ jobs:
       HOROVOD_WITH_PYTORCH: 1
       HOROVOD_WITHOUT_MXNET: 1
     steps:
-      - name: Download examples
-        uses: actions/download-artifact@v3.0.2
-        with:
-          name: examples
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4.5.0
         with:
