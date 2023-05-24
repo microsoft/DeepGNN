@@ -130,7 +130,7 @@ class Client(Graph):
                 result[0],
                 result[1],
                 result[2],
-                np.empty(result[0].shape, dtype=np.int64),
+                np.full(result[0].shape, -1, dtype=np.int64),
             )
         without_replacement = strategy == "randomwithoutreplacement"
         if strategy in ["random", "randomwithoutreplacement"]:
@@ -149,7 +149,9 @@ class Client(Graph):
                 result[0],
                 np.empty(result[0].shape, dtype=np.float32),
                 result[1],
-                result[2],
+                result[2]
+                if return_edge_created_ts
+                else np.full(result[0].shape, -1, dtype=np.int64),
             )
         if strategy == "ppr-go":
             result = self.graph.ppr_neighbors(  # type: ignore
@@ -166,7 +168,7 @@ class Client(Graph):
                 result[0],
                 result[1],
                 np.empty(0, dtype=np.int32),
-                np.empty(result[0].shape, dtype=np.int64),
+                np.full(result[0].shape, -1, dtype=np.int64),
             )
 
         if strategy == "lastn":
