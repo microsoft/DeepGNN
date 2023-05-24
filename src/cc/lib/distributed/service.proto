@@ -106,7 +106,6 @@ message NodeFeaturesRequest {
   repeated int64 timestamps = 3;
 }
 
-
 message NodeFeaturesReply {
   // Keep bytes to simplify addition of new features later.
   bytes feature_values = 1;
@@ -164,6 +163,7 @@ message GetNeighborsRequest {
   repeated int64 node_ids = 1;
   repeated int32 edge_types = 2;
   repeated int64 timestamps = 3;
+  bool return_edge_created_ts = 4;
 }
 
 message GetNeighborsReply {
@@ -188,6 +188,7 @@ message WeightedSampleNeighborsRequest {
   int32 default_edge_type = 6;
   int32 count = 7;
   repeated int64 timestamps = 8;
+  bool return_edge_created_ts = 9;
 }
 
 message WeightedSampleNeighborsReply {
@@ -209,6 +210,7 @@ message UniformSampleNeighborsRequest {
   int32 count = 6;
   bool without_replacement = 7;
   repeated int64 timestamps = 8;
+  bool return_edge_created_ts = 9;
 }
 
 message UniformSampleNeighborsReply {

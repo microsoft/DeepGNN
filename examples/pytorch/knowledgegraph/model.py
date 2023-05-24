@@ -145,9 +145,8 @@ class KGEModel(BaseModel):
             node_ids = inputs[:, 0]
             edge_type = 0
 
-        neighbor_nodes, _, _, neighbor_counts = graph.neighbors(
-            node_ids, np.array([edge_type], dtype=np.int32)
-        )
+        nbs = graph.neighbors(node_ids, np.array([edge_type], dtype=np.int32))
+        neighbor_nodes, neighbor_counts = nbs[0], nbs[3]
 
         cur_pos = 0
         all_negative_list = []
@@ -194,10 +193,10 @@ class KGEModel(BaseModel):
                 pos_id = triple[0]
                 edge_type = 0
 
-            neighbor_nodes, _, _, _ = graph.neighbors(
+            neighbor_nodes = graph.neighbors(
                 np.array([pos_id], dtype=np.int64),
                 np.array([edge_type], dtype=np.int32),
-            )
+            )[0]
 
             if m == 0:
                 tmp = [

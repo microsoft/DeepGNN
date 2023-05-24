@@ -172,7 +172,7 @@ def test_neighbor_sampling_graph_multiple_partitions(multi_partition_graph_data)
     g = client.MemoryGraph(
         multi_partition_graph_data, [(multi_partition_graph_data, 0)]
     )
-    ns, ws, ts = g.weighted_sample_neighbors(
+    ns, ws, tp = g.weighted_sample_neighbors(
         nodes=np.array([0, 1], dtype=np.int64),
         edge_types=1,
         count=2,
@@ -182,7 +182,7 @@ def test_neighbor_sampling_graph_multiple_partitions(multi_partition_graph_data)
     )
     npt.assert_array_equal(ns, [[5, 5], [13, 13]])
     npt.assert_array_equal(ws, [[1, 1], [-1, -1]])
-    npt.assert_array_equal(ts, [[1, 1], [-1, -1]])
+    npt.assert_array_equal(tp, [[1, 1], [-1, -1]])
 
 
 def test_full_neighbor_graph_multiple_partitions(multi_partition_graph_data):
@@ -393,7 +393,7 @@ def test_uniform_neighbor_sampling_graph_multiple_partitions(
         multi_partition_graph_data, [(multi_partition_graph_data, 0)]
     )
     for replacement in [True, False]:
-        ns, ts = g.uniform_sample_neighbors(
+        res = g.uniform_sample_neighbors(
             replacement,
             nodes=np.array([0, 1], dtype=np.int64),
             edge_types=1,
@@ -403,11 +403,11 @@ def test_uniform_neighbor_sampling_graph_multiple_partitions(
             default_type=-1,
         )
         if replacement:
-            npt.assert_array_equal(ns, [[5, 13], [13, 13]])
-            npt.assert_array_equal(ts, [[1, -1], [-1, -1]])
+            npt.assert_array_equal(res[0], [[5, 13], [13, 13]])  # nodes
+            npt.assert_array_equal(res[1], [[1, -1], [-1, -1]])  # types
         else:
-            npt.assert_array_equal(ns, [[5, 5], [13, 13]])
-            npt.assert_array_equal(ts, [[1, 1], [-1, -1]])
+            npt.assert_array_equal(res[0], [[5, 5], [13, 13]])
+            npt.assert_array_equal(res[1], [[1, 1], [-1, -1]])
 
 
 def test_uniform_neighbor_sampling_after_reset(multi_partition_graph_data):
@@ -745,7 +745,6 @@ def lastn_graph(request):
             skip_edge_sampler=True,
             skip_node_sampler=True,
             watermark=0,
-            # debug=True,
         ).convert()
 
         if request.param == "memory":
@@ -762,6 +761,7 @@ def test_lastn_neighbor_sampling(
     lastn_graph,
 ):
     nodes, weights, types, timestamps = lastn_graph.lastn_neighbors(
+        return_edge_created_ts=True,
         nodes=np.array([1, 7, 15], dtype=np.int64),
         edge_types=[0, 1, 2, 3, 4, 5],
         count=2,
@@ -780,6 +780,7 @@ def test_lastn_neighbor_sampling_edge_cases(
     lastn_graph,
 ):
     nodes, weights, types, timestamps = lastn_graph.lastn_neighbors(
+        return_edge_created_ts=True,
         nodes=np.array([1, 7, 8], dtype=np.int64),
         edge_types=[0, 1, 2, 3, 4, 5],
         count=4,
@@ -795,6 +796,20 @@ def test_lastn_neighbor_sampling_edge_cases(
     assert np.array_equal(
         timestamps, [[0, 1, 23, 23], [23, 23, 23, 23], [23, 23, 23, 23]]
     )
+    nodes, weights, types = lastn_graph.lastn_neighbors(
+        return_edge_created_ts=False,
+        nodes=np.array([1, 8], dtype=np.int64),
+        edge_types=[0, 4, 5],
+        count=3,
+        timestamps=np.array([1, 1000], dtype=np.int64),
+        default_weight=3,
+        default_edge_type=13,
+        default_timestamp=23,
+    )
+
+    assert np.array_equal(nodes, [[10, -1, -1], [-1, -1, -1]])
+    assert np.array_equal(weights, [[1, 3, 3], [3, 3, 3]])
+    assert np.array_equal(types, [[0, 13, 13], [13, 13, 13]])
 
 
 if __name__ == "__main__":

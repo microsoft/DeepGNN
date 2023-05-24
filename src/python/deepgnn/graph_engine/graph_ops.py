@@ -36,9 +36,8 @@ def sample_out_edges(
       * edges: out edges of `nodes`, `edges.shape == (len(nodes) * count, 3)`.
       * features: edge features. return `None` if `edge_feature_meta is None`
     """
-    nbrs, nbr_weights, nbr_types, nbr_cnt = graph.sample_neighbors(
-        nodes, edge_types, count, sampling_strategy
-    )
+    res = graph.sample_neighbors(nodes, edge_types, count, sampling_strategy)
+    nbrs, nbr_types = res[0], res[2]
     assert nbrs.shape == (len(nodes), count)
 
     # edges shape: (#edge, 3)
@@ -121,13 +120,14 @@ def sub_graph(
     """
     nodes = [src_nodes]
     for i in range(num_hops - 1):
-        nb, _, _, _ = graph.neighbors(nodes[i], edge_types)
+        nb = graph.neighbors(nodes[i], edge_types)[0]
         tmp = np.unique(nb)
         nodes.append(tmp)
 
     nodes = np.concatenate(nodes)
     unodes = np.unique(nodes)
-    nb, _, _, cnt = graph.neighbors(unodes, edge_types)
+    res = graph.neighbors(unodes, edge_types)
+    nb, cnt = res[0], res[3]
 
     # get all edges
     num_edges = np.sum(cnt)
