@@ -6,8 +6,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.60] - 2022-04-18
-
 ### Added
 - Add `return_edge_created_ts` argument to neighbor sampling methods to return timestamps when edges connecting nodes were created.
 
