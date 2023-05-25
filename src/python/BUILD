@@ -5,13 +5,14 @@ load("@rules_python//python:defs.bzl", "py_library")
 
 py_library(
     name = "deepgnn",
-    srcs = [
-        "__init__.py",
-        "arg_types.py",
-        "log_consts.py",
-        "logging_utils.py",
-        "train_types.py",
-    ],
+    # srcs = [
+    #     "__init__.py",
+    #     "arg_types.py",
+    #     "log_consts.py",
+    #     "logging_utils.py",
+    #     "train_types.py",
+    # ],
     imports=["."],
+    deps=["//src/python/deepgnn:deepgnn"],
     visibility = ["//visibility:public"],
 )

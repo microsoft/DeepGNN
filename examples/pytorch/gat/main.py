@@ -16,11 +16,13 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torch_geometric.nn import GATConv
+import os
+print(f"PYTHONPATH contents are {os.environ.get('PYTHONPATH')}")
 
-from deepgnn.pytorch.common import Accuracy
+from deepgnn.pytorch.common.metrics import Accuracy
 from deepgnn.graph_engine import Graph, graph_ops
 from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
-from deepgnn.graph_engine.data.citation import Cora
+# from deepgnn.graph_engine.data.citation import Cora
 
 
 @dataclass

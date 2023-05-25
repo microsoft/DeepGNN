@@ -13,5 +13,6 @@ py_library(
         "//src/python/deepgnn/graph_engine:graph_engine_exports",
         "//src/python/deepgnn:deepgnn",
     ],
+    imports = ["src/python", "src/python/deepgnn", "src/python/deepgnn/pytorch"],
     visibility = ["//visibility:public"],
 )
