@@ -114,4 +114,4 @@ if __name__ == "__main__":
         args.random_selection,
         num_partitions=args.num_partitions,
     )
-    print(f"graph data: {args.data_dir} n_partitions {args.num_partitions}")
+    print(f"graph data: {args.data_dir}")
