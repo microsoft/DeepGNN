@@ -12,6 +12,8 @@ Multi-node users need to follow these steps,
 """
 from time import sleep
 
+import numpy as np
+import numpy.testing as npt
 import ray
 from ray.train.torch import TorchTrainer
 from ray.air import session
@@ -90,20 +92,22 @@ def train_func(config: dict):
 
     cl = DistributedClient(address)
 
-    # TODO Replace these 2 lines with a model
-    print(cl)
+    # TODO Replace these lines with a model
+    features = cl.node_features(np.array([0, 1]), np.array([[0, 1]]), np.float32)
+    npt.assert_equal(features, np.array([100]))
     sleep(10)
 
     release_lock(server_lock, session.get_world_rank())
 
 
 if __name__ == "__main__":
-    import azureml
+    import sys
     from azureml.core import Workspace
     from ray_on_aml.core import Ray_On_AML
 
     aml = True
-    try:
+    if len(sys.argv) < 2 or sys.argv[1] != "--unit_test":
+        exit()
         ws = Workspace.from_config()
         print(
             "Workspace name: " + ws.name,
@@ -124,10 +128,10 @@ if __name__ == "__main__":
                 "deepgnn-torch",
             ],
         )
-    except azureml.exceptions._azureml_exception.UserErrorException:
+    else:
         aml = False
         ray.init()
-        ray_on_aml = type("Ray_On_AML", (object,), {"shutdown": (lambda: None)})
+        ray_on_aml = type("Ray_On_AML", (object,), {"shutdown": (lambda: None)})()
 
     try:
         num_workers = 2
@@ -135,14 +139,7 @@ if __name__ == "__main__":
 
         trainer = TorchTrainer(
             train_func,
-            train_loop_config={
-                "num_epochs": 10,
-                "feature_idx": 0,
-                "feature_dim": 1433,
-                "label_idx": 1,
-                "label_dim": 1,
-                "num_classes": 7,
-            },
+            train_loop_config={},
             run_config=RunConfig(),
             scaling_config=ScalingConfig(
                 num_workers=num_workers,
