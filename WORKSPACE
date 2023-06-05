@@ -130,9 +130,9 @@ rules_foreign_cc_dependencies()
 http_archive(
     name = "mimalloc",
     build_file = "//config:mimalloc.BUILD",
-    sha256 = "4a29edae32a914a706715e2ac8e7e4109e25353212edeed0888f4e3e15db5850",
-    strip_prefix = "mimalloc-2.0.9",
-    urls = ["https://github.com/microsoft/mimalloc/archive/refs/tags/v2.0.9.tar.gz"],
+    sha256 = "2b1bff6f717f9725c70bf8d79e4786da13de8a270059e4ba0bdd262ae7be46eb",
+    strip_prefix = "mimalloc-2.1.2",
+    urls = ["https://github.com/microsoft/mimalloc/archive/refs/tags/v2.1.2.tar.gz"],
 )
 
 http_archive(
