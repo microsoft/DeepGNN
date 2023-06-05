@@ -19,7 +19,7 @@ from ray.train.torch import TorchTrainer
 from ray.air import session
 from ray.air.config import ScalingConfig, RunConfig
 
-from deepgnn.graph_engine.data.ppi import PPI
+from deepgnn.graph_engine.data.cora import CoraFull
 from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
 
 
@@ -74,11 +74,16 @@ def release_lock(server_lock, rank):
 
 def train_func(config: dict):
     """Training loop for ray trainer."""
-    ppi = PPI(num_partitions=session.get_world_size())
+    cora = CoraFull(num_partitions=session.get_world_size())
 
-    address = (
-        f"{ray._private.services.get_node_ip_address()}:999{session.get_world_rank()}"
+    hostname = (
+        "127.0.0.1"
+        if config["is_unit_test"]
+        else ray._private.services.get_node_ip_address()
     )
+    address = f"{hostname}:999{session.get_world_rank()}"
+
+    Server(address, cora.data_dir(), session.get_world_size(), 1)
 
     set_lock(server_lock, session.get_world_rank(), address)
 
@@ -86,15 +91,11 @@ def train_func(config: dict):
         [server_lock.get.remote(i) for i in range(session.get_world_size())]
     )
 
-    Server(
-        address[session.get_world_rank()], ppi.data_dir(), session.get_world_size(), 1
-    )
-
     cl = DistributedClient(address)
 
     # TODO Replace these lines with a model
     features = cl.node_features(np.array([0, 1]), np.array([[0, 1]]), np.float32)
-    npt.assert_equal(features, np.array([100]))
+    npt.assert_equal(features, np.array([[0.0], [0.0]]))
     sleep(10)
 
     release_lock(server_lock, session.get_world_rank())
@@ -107,7 +108,6 @@ if __name__ == "__main__":
 
     aml = True
     if len(sys.argv) < 2 or sys.argv[1] != "--unit_test":
-        exit()
         ws = Workspace.from_config()
         print(
             "Workspace name: " + ws.name,
@@ -131,7 +131,7 @@ if __name__ == "__main__":
     else:
         aml = False
         ray.init()
-        ray_on_aml = type("Ray_On_AML", (object,), {"shutdown": (lambda: None)})()
+        ray_on_aml = type("Ray_On_AML", (object,), {"shutdown": (lambda self: None)})()
 
     try:
         num_workers = 2
@@ -139,7 +139,7 @@ if __name__ == "__main__":
 
         trainer = TorchTrainer(
             train_func,
-            train_loop_config={},
+            train_loop_config={"is_unit_test": not aml},
             run_config=RunConfig(),
             scaling_config=ScalingConfig(
                 num_workers=num_workers,
