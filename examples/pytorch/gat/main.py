@@ -1,10 +1,17 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
 from typing import List, Any
 from dataclasses import dataclass
 
 import numpy as np
+
+
+from deepgnn.pytorch.common.metrics import Accuracy
+from deepgnn.graph_engine import Graph, graph_ops
+from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
+from deepgnn.graph_engine.data.citation import Cora
+# print("Starting example")
+# cora = Cora(output_dir="/tmp/cora")
 
 import ray
 import ray.train as train
@@ -17,12 +24,7 @@ from torch import nn
 import torch.nn.functional as F
 from torch_geometric.nn import GATConv
 import os
-print(f"PYTHONPATH contents are {os.environ.get('PYTHONPATH')}")
 
-from deepgnn.pytorch.common.metrics import Accuracy
-from deepgnn.graph_engine import Graph, graph_ops
-from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
-# from deepgnn.graph_engine.data.citation import Cora
 
 
 @dataclass
@@ -190,7 +192,6 @@ import os
 def _main():
     os.environ["RAY_PROFILING"] = "1"
     ray.init(num_cpus=3) #, log_to_driver=False)
-    # cora = Cora()
 
     address = "localhost:9999"
     # s = Server(address, cora.data_dir(), 0, 1)
