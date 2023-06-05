@@ -20,6 +20,7 @@ class CoraFull(Dataset):
          - if set to True,
          - if set to False, training nodes `[1, X]`, test nodes: `[X+1, NUM_NODES]`.
            here, `X` is NUM_NODES * train_node_ratio.
+      num_partitions (int, default=1): Number of partitions
 
     Graph Statistics:
     - Nodes: 2708
@@ -34,6 +35,7 @@ class CoraFull(Dataset):
         train_node_ratio: float = 1.0,
         random_selection: bool = False,
         url="https://deepgraphpub.blob.core.windows.net/public/testdata/cora.tgz",
+        num_partitions: int = 1,
     ):
         """Initialize dataset."""
         super().__init__(
@@ -45,6 +47,7 @@ class CoraFull(Dataset):
             train_node_ratio=train_node_ratio,
             random_selection=random_selection,
             output_dir=output_dir,
+            num_partitions=num_partitions,
         )
 
     def _load_raw_graph(
@@ -102,7 +105,13 @@ if __name__ == "__main__":
     parser.add_argument("--data_dir", default=f"{tempfile.gettempdir()}/cora", type=str)
     parser.add_argument("--train_node_ratio", default=1.0, type=float)
     parser.add_argument("--random_selection", action="store_true")
+    parser.add_argument("--num_partitions", default=1)
     args = parser.parse_args()
 
-    g = CoraFull(args.data_dir, args.train_node_ratio, args.random_selection)
+    g = CoraFull(
+        args.data_dir,
+        args.train_node_ratio,
+        args.random_selection,
+        num_partitions=args.num_partitions,
+    )
     print(f"graph data: {args.data_dir}")

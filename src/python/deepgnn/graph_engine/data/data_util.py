@@ -92,6 +92,7 @@ class Dataset(Client):
         train_node_ratio: float,
         random_selection: bool,
         output_dir: Optional[str] = None,
+        num_partitions: int = 1,
     ):
         """Initialize Dataset."""
         assert name in ["cora_full", "citeseer_full"]
@@ -101,6 +102,7 @@ class Dataset(Client):
         self.FEATURE_DIM = feature_dim
         self.NUM_CLASSES = num_classes
         self.output_dir = output_dir
+        self._num_partitions = num_partitions
         if self.output_dir is None:
             self.output_dir = os.path.join(
                 f"{tempfile.gettempdir()}/citation", self.GRAPH_NAME
@@ -132,7 +134,7 @@ class Dataset(Client):
         # convert graph: edge_list -> Binary
         convert.MultiWorkersConverter(
             graph_path=graph_file,
-            partition_count=1,
+            partition_count=self._num_partitions,
             output_dir=data_dir,
             decoder=decoders.EdgeListDecoder(),
         ).convert()
