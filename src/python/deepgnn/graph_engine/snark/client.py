@@ -26,8 +26,15 @@ from typing import Any, List, Tuple, Union, Optional, Sequence, Dict
 from enum import IntEnum
 
 import json
+import logging
 import numpy as np
-from tenacity import Retrying, stop_after_attempt, wait_exponential
+from tenacity import (
+    Retrying,
+    stop_after_attempt,
+    wait_exponential,
+    before_log,
+    after_log,
+)
 from deepgnn import get_logger
 from deepgnn.graph_engine.snark._lib import _get_c_lib
 from deepgnn.graph_engine.snark._downloader import download_graph_data, GraphPath
@@ -1366,6 +1373,8 @@ class DistributedGraph(MemoryGraph):
                 min=retry_ops["initial_backoff"],
                 max=retry_ops["max_attempts"],
             ),
+            before=before_log(get_logger(), logging.DEBUG),
+            after=after_log(get_logger(), logging.WARNING),
             reraise=True,
         )
 
