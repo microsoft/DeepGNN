@@ -30,23 +30,23 @@ class ServerLock:
     def __init__(self, size):
         """Initialize server lock."""
         self.cache = {}
-        self.locks = [False for _ in range(size)]
+        self.locks = [0 for _ in range(size)]
 
     def set_lock(self, i):
         """Set lock i."""
-        self.locks[i] = True
+        self.locks[i] = 1
 
     def release_lock(self, i):
         """Release lock i."""
-        self.locks[i] = False
+        self.locks[i] = 2
 
     def wait_set(self):
         """See if all locks set."""
-        return all(self.locks)
+        return all([v == 1 for v in self.locks])
 
     def wait_released(self):
         """See if all locks released."""
-        return all([not lock for lock in self.locks])
+        return all([v == 2 for v in self.locks])
 
     def put(self, x, y):
         """Put value y at x."""
@@ -57,19 +57,33 @@ class ServerLock:
         return self.cache.get(x)
 
 
-def set_lock(server_lock, rank, address):
-    """Set lock at rank, then halt until all servers locked."""
-    server_lock.put.remote(rank, address)
-    server_lock.set_lock.remote(rank)
-    while not ray.get(server_lock.wait_set.remote()):
-        sleep(1)
+class ServerContext:
+    """Server context."""
 
+    def __init__(self, world_size: int, rank: int, address: str):
+        """Initialize server context."""
+        self.world_size = world_size
+        self.rank = rank
+        self.address = address
+        self.server_lock = server_lock
 
-def release_lock(server_lock, rank):
-    """Release lock at rank, then halt until all servers released."""
-    server_lock.release_lock.remote(session.get_world_rank())
-    while not ray.get(server_lock.wait_released.remote()):
-        sleep(1)
+    def __enter__(self):
+        """Enter server context."""
+        self.server_lock.put.remote(self.rank, self.address)
+        self.server_lock.set_lock.remote(self.rank)
+        while not ray.get(self.server_lock.wait_set.remote()):
+            sleep(1)
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        """Exit server context."""
+        self.server_lock.release_lock.remote(self.rank)
+        while not ray.get(self.server_lock.wait_released.remote()):
+            sleep(1)
+
+    def get_address(self):
+        """Return addresses of all servers connected."""
+        return ray.get([self.server_lock.get.remote(i) for i in range(self.world_size)])
 
 
 def train_func(config: dict):
@@ -85,20 +99,15 @@ def train_func(config: dict):
 
     Server(address, cora.data_dir(), session.get_world_size(), 1)
 
-    set_lock(server_lock, session.get_world_rank(), address)
+    with ServerContext(
+        session.get_world_size(), session.get_world_rank(), address
+    ) as lock:
+        cl = DistributedClient(lock.get_address())
 
-    address = ray.get(
-        [server_lock.get.remote(i) for i in range(session.get_world_size())]
-    )
+        features = cl.node_features(np.array([0, 1]), np.array([[0, 1]]), np.float32)
+        npt.assert_equal(features, np.array([[0.0], [0.0]]))
 
-    cl = DistributedClient(address)
-
-    # TODO Replace these lines with a model
-    features = cl.node_features(np.array([0, 1]), np.array([[0, 1]]), np.float32)
-    npt.assert_equal(features, np.array([[0.0], [0.0]]))
-    sleep(10)
-
-    release_lock(server_lock, session.get_world_rank())
+        sleep(5)
 
 
 if __name__ == "__main__":
