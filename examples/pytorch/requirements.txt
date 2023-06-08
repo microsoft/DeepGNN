@@ -1,4 +1,5 @@
 azureml==0.2.7
+azureml-core==1.51.0
 horovod[torch]==0.25.0;sys_platform != 'win32'
 ray-on-aml==0.2.4
 ray[train]==2.4.0
