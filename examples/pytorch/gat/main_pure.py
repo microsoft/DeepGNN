@@ -5,27 +5,16 @@ from dataclasses import dataclass
 
 import numpy as np
 
-
 from deepgnn.pytorch.common.metrics import Accuracy
 from deepgnn.graph_engine import Graph, graph_ops
-from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
-from deepgnn.graph_engine.data.citation import Cora
-# print("Starting example")
-# cora = Cora(output_dir="/tmp/cora")
+from deepgnn.graph_engine.snark.local import Client as MemoryClient
 
-import ray
-import ray.train as train
-from ray.train.torch import TorchTrainer
-from ray.air import session
-from ray.air.config import ScalingConfig
+# from deepgnn.graph_engine.data.citation import Cora
 
 import torch
 from torch import nn
 import torch.nn.functional as F
 from torch_geometric.nn import GATConv
-import os
-
-
 
 @dataclass
 class GATQueryParameter:
@@ -47,8 +36,7 @@ class GATQuery:
     def __init__(self, p: GATQueryParameter):
         """Initialize graph query."""
         self.p = p
-        self.label_meta = np.array([[p.label_idx, p.label_dim]], np.int32)
-        self.feat_meta = np.array([[p.feature_idx, p.feature_dim]], np.int32)
+        self.feat_meta = np.array([[p.label_idx, p.label_dim], [p.feature_idx, p.feature_dim]], np.int32)
 
     def __call__(self, graph: Graph, inputs: np.ndarray) -> tuple:
         """Fetch training data."""
@@ -63,9 +51,9 @@ class GATQuery:
         )
         input_mask = np.zeros(nodes.size, np.bool_)
         input_mask[src_idx] = True
-        feat = graph.node_features(nodes, self.feat_meta, self.p.feature_type)
-        label = graph.node_features(nodes, self.label_meta, self.p.label_type)
-        label = label.astype(np.int32)
+        features_labels = graph.node_features(nodes, self.feat_meta, self.p.feature_type)
+        feat = features_labels[:, 0:self.p.feature_dim]
+        label = features_labels[:, self.p.feature_dim:].astype(np.int32)
         edges = np.transpose(edges)
 
         graph_tensor: List[Any] = [nodes, feat, edges, input_mask, label]
@@ -95,7 +83,6 @@ class GAT(nn.Module):
             out_channels=hidden_dim,
             heads=head_num[0],
             dropout=0.6,
-            concat=True,
         )
         layer0_output_dim = head_num[0] * hidden_dim
         self.conv2 = GATConv(
@@ -123,16 +110,12 @@ class GAT(nn.Module):
         labels = labels.type(torch.int64)
         labels = labels[mask]  # [batch_size]
         scores = scores[mask]  # [batch_size]
-        pred = scores.argmax(dim=1)
         loss = self.xent(scores, labels)
 
-        return loss, pred, labels
+        return loss, scores, labels
 
 
 def train_func(config: dict):
-    """Training loop for ray trainer."""
-
-    train.torch.enable_reproducibility(seed=session.get_world_rank())
     p = GATQueryParameter(
         neighbor_edge_types=np.array([0], np.int32),
         feature_idx=config["feature_idx"],
@@ -147,81 +130,58 @@ def train_func(config: dict):
         num_classes=config["num_classes"],
         q_param=p,
     )
-    model = train.torch.prepare_model(model)
 
     optimizer = torch.optim.Adam(
         filter(lambda p: p.requires_grad, model.parameters()),
-        lr=0.005 * session.get_world_size(),
+        lr=0.005,  # * session.get_world_size(),
         weight_decay=0.0005,
     )
 
-    g = config["get_graph"]()
-    batch_size = 140
+    g = MemoryClient(config["data_dir"], [0])  # DistributedClient([config["address"]])
     train_np = np.loadtxt(f"{config['data_dir']}/train.nodes", dtype=np.int64)
-    # train_dataset = ray.data.from_numpy(train_np)
-
-    # train_pipe = train_dataset.repeat(config["num_epochs"])
     eval_batch = np.loadtxt(f"{config['data_dir']}/test.nodes", dtype=np.int64)
 
-    # train_batches = [
-    #     batch for batch in train_pipe.iter_torch_batches(batch_size=batch_size)
-    # ]
-
-    # for batch in train_batches:
-    # model.train()
-    for e in range(config["num_epochs"]):
-        # train_tensor = model.query(g, batch.detach().numpy())
-        np.random.shuffle(train_np)
-        train_tensor = model.query(g, train_np)
-        loss, _, _ = model([torch.from_numpy(a) for a in train_tensor])
+    model.train()
+    train_tensor = model.query(g, train_np)
+    torch_tensor = [torch.from_numpy(a) for a in train_tensor]
+    for _ in range(config["num_epochs"]):
+        # np.random.shuffle(train_np)
+        # train_tensor = model.query(g, train_np)
+        loss, _, _ = model(torch_tensor)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-
     model.eval()
 
     eval_tensor = model.query(g, eval_batch)
-    loss, score, label = model([torch.from_numpy(a) for a in eval_tensor])
-    session.report(
-        {
-            model.metric.name(): model.metric.compute(score, label).item(),
-            "loss": loss.detach().numpy(),
-        },
-    )
+    _, scores, label = model([torch.from_numpy(a) for a in eval_tensor])
+    accuracy = model.metric.compute(scores.argmax(dim=1), label).item()
+    print(f"Accuracy is {accuracy}")
+    assert accuracy == 0.828
 
-import os
 
 def _main():
-    os.environ["RAY_PROFILING"] = "1"
-    os.environ["RAY_DATA_VERBOSE_PROGRESS"] = "1"
-    ray.init(num_cpus=3) #, log_to_driver=False)
-
     address = "localhost:9999"
-    # s = Server(address, cora.data_dir(), 0, 1)
-    s = Server(address, "/tmp/cora", 0, 1)
+    # s = Server(address, "/tmp/cora", 0, 1)
 
     def get_graph():
-        return DistributedClient([address])
+        return
 
-    trainer = TorchTrainer(
-        train_func,
-        train_loop_config={
-            "get_graph": get_graph,
+    train_func(
+        config={
+            # "get_graph": get_graph,
             # "data_dir": cora.data_dir(),
+            # "address": address,
             "data_dir": "/tmp/cora",
-            "num_epochs": 51,
+            "num_epochs": 200,
             "feature_idx": 0,
             "feature_dim": 1433,
             "label_idx": 1,
             "label_dim": 1,
             "num_classes": 7,
         },
-        scaling_config=ScalingConfig(num_workers=1),
     )
-    result = trainer.fit()
-    ray.timeline(filename="/tmp/timeline.json")
-    assert result.metrics["Accuracy"] == 0.746
 
 
 if __name__ == "__main__":

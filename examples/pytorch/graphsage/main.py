@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-from typing import Optional, Tuple, Union, IO
+from typing import Tuple
 
 import numpy as np
 
@@ -14,11 +14,7 @@ from deepgnn.graph_engine.snark.local import Client as MemoryGraph
 from deepgnn.graph_engine.data.citation import Cora
 from deepgnn.pytorch.common import BaseMetric, MRR, F1Score
 
-from torch.autograd import Variable
-from deepgnn.graph_engine import Graph, SamplingStrategy, QueryOutput
-from deepgnn.pytorch.encoding.feature_encoder import FeatureEncoder
-from deepgnn.graph_engine.samplers import BaseSampler
-from deepgnn import get_logger
+from deepgnn.graph_engine import Graph, QueryOutput
 
 
 class PTGSupervisedGraphSage(nn.Module):
@@ -66,7 +62,7 @@ class PTGSupervisedGraphSage(nn.Module):
     def build_edges_tensor(self, N, K):
         """Build edge matrix."""
         nk = torch.arange((N * K).item(), dtype=torch.long, device=N.device)
-        src = (nk // K).reshape(1, -1)
+        src = torch.div(nk, K, rounding_mode="floor").reshape(1, -1)
         dst = (N + nk).reshape(1, -1)
         elist = torch.cat([src, dst], dim=0)
         return elist
@@ -182,23 +178,16 @@ def train_func(config: dict):
         feature_dim=config["feature_dim"],
         feature_idx=config["feature_idx"],
         edge_type=0,
-        fanouts=[25, 10],
+        fanouts=[10, 10],
     )
     model.train()
 
-    optimizer = torch.optim.SGD(
-        model.parameters(),
-        lr=0.05,
-        momentum=0.9,
-    )
-
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     g = MemoryGraph(config["data_dir"], partitions=[0])
     train_dataset = np.loadtxt(f"{config['data_dir']}/train.nodes", dtype=np.int64)
     eval_batch = np.loadtxt(f"{config['data_dir']}/test.nodes", dtype=np.int64)
 
     for epoch in range(config["num_epochs"]):
-        scores = []
-        labels = []
         losses = []
         np.random.shuffle(train_dataset)
         for batch in np.split(
@@ -211,9 +200,6 @@ def train_func(config: dict):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-
-            scores = score
-            labels = label
             losses = loss.item()
 
         if epoch % 10 == 0:

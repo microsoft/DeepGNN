@@ -1,11 +1,10 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-load("@rules_python//python:defs.bzl", "py_test", "py_library")
-load("@pip_deps//:requirements.bzl", "requirement")
+load("@rules_python//python:defs.bzl", "py_binary")
 
-py_library(
-    name = "example_torch_graphsage",
+py_binary(
+    name = "main",
     srcs = [
         "main.py",
     ],
@@ -19,5 +18,6 @@ py_library(
         "//src/python/deepgnn/pytorch/nn:deepgnn_pytorch_nn",
         "//src/python/deepgnn/pytorch/training:deepgnn_pytorch_training",
         "//examples/pytorch:example_torch_tests",
+        "//src/python:deepgnn",
     ],
 )

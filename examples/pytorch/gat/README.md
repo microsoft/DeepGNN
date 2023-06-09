@@ -13,4 +13,4 @@ Graph attention networks (GATs) is a novel neural network architectures that ope
 
 | Dataset  | Test Accuracy | Baseline (Paper) |
 | -------- | ------------- | ---------------- |
-| Cora     | 83.0          | 83.0 (+/-0.5)    |
+| Cora     | 82.8          | 83.0 (+/-0.5)    |
