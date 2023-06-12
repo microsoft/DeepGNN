@@ -128,7 +128,7 @@ if __name__ == "__main__":
         ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="ray-cluster")
         ray = ray_on_aml.getRay(
             ci_is_head=True,
-            num_node=3 if aml else 1,
+            num_node=3,
             pip_packages=[
                 "ray[air]",
                 "ray[data]",
@@ -139,7 +139,7 @@ if __name__ == "__main__":
         )
     else:
         aml = False
-        ray.init()
+        ray.init(num_cpus=3)
         ray_on_aml = type("Ray_On_AML", (object,), {"shutdown": (lambda self: None)})()
 
     try:
