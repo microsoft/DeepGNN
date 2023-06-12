@@ -10,8 +10,6 @@ Multi-node users need to follow these steps,
 3. Manually include pip packages shown in ray_on_aml + others required
 4. For multi-node, this script needs to be run in azure ml terminal not local.
 """
-from time import sleep
-
 import numpy as np
 import numpy.testing as npt
 import ray
@@ -72,14 +70,14 @@ class ServerContext:
         self.server_lock.put.remote(self.rank, self.address)
         self.server_lock.set_lock.remote(self.rank)
         while not ray.get(self.server_lock.wait_set.remote()):
-            sleep(1)
+            pass
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         """Exit server context."""
         self.server_lock.release_lock.remote(self.rank)
         while not ray.get(self.server_lock.wait_released.remote()):
-            sleep(1)
+            pass
 
     def get_address(self):
         """Return addresses of all servers connected."""
@@ -106,8 +104,6 @@ def train_func(config: dict):
 
         features = cl.node_features(np.array([0, 1]), np.array([[0, 1]]), np.float32)
         npt.assert_equal(features, np.array([[0.0], [0.0]]))
-
-        sleep(5)
 
 
 if __name__ == "__main__":
