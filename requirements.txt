@@ -247,7 +247,7 @@ torch_geometric==2.1.0
 tornado==6.3.2
 tqdm==4.64.1
 traitlets==5.4.0
-transformers==4.23.1
+transformers==4.30.0
 typeguard==2.13.3
 typing-extensions==4.4.0
 urllib3==1.26.12
