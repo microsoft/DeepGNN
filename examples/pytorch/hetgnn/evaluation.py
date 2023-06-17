@@ -12,7 +12,7 @@ def load_data(data_file_name, n_features, n_samples):
         data_file = csv.reader(f)
         data = numpy.empty((n_samples, n_features))
         for i, d in enumerate(data_file):
-            data[i] = numpy.asarray(d[:], dtype=numpy.float)
+            data[i] = numpy.asarray(d[:], dtype=numpy.float32)
         f.close
 
         return data
@@ -20,7 +20,7 @@ def load_data(data_file_name, n_features, n_samples):
 
 def evaluate_node_classification(args, train_num, test_num, datafile_dir):
     """Evaluate HetGnn model on a node classification task."""
-    train_data_f = str(datafile_dir.join("train_class_feature.txt"))
+    train_data_f = str(datafile_dir + ("/train_class_feature.txt"))
     train_data = load_data(train_data_f, args.embed_d + 2, train_num)
     train_features = train_data.astype(numpy.float32)[:, 2:-1]
     train_target = train_data.astype(numpy.float32)[:, 1]
@@ -30,7 +30,7 @@ def evaluate_node_classification(args, train_num, test_num, datafile_dir):
     train_features = None
     train_target = None
 
-    test_data_f = str(datafile_dir.join("test_class_feature.txt"))
+    test_data_f = str(datafile_dir + ("/test_class_feature.txt"))
     test_data = load_data(test_data_f, args.embed_d + 2, test_num)
     test_id = test_data.astype(numpy.int32)[:, 0]
     test_features = test_data.astype(numpy.float32)[:, 2:-1]
@@ -38,7 +38,7 @@ def evaluate_node_classification(args, train_num, test_num, datafile_dir):
     test_predict = learner.predict(test_features)
     test_features = None
 
-    output_f = open(str(datafile_dir.join("NC_prediction.txt")), "w")
+    output_f = open(str(datafile_dir + ("/NC_prediction.txt")), "w")
     for i in range(len(test_predict)):
         output_f.write("%d,%lf\n" % (test_id[i], test_predict[i]))
     output_f.close()
@@ -52,7 +52,7 @@ def evaluate_node_classification(args, train_num, test_num, datafile_dir):
 def evaluate_link_prediction(args, train_num, test_num, datafile_dir):
     """Evaluate HetGnn model for a link prediction task."""
     # prepare training data and train.
-    train_data_f = str(datafile_dir.join("train_feature.txt"))
+    train_data_f = str(datafile_dir + ("/train_feature.txt"))
     train_data = load_data(train_data_f, args.embed_d + 3, train_num)
     train_features = train_data.astype(numpy.float32)[:, 3:-1]
     train_target = train_data.astype(numpy.float32)[:, 2]
@@ -63,7 +63,7 @@ def evaluate_link_prediction(args, train_num, test_num, datafile_dir):
     train_target = None
 
     # prepare test data
-    test_data_f = str(datafile_dir.join("test_feature.txt"))
+    test_data_f = str(datafile_dir + ("/test_feature.txt"))
     test_data = load_data(test_data_f, args.embed_d + 3, test_num)
     test_id = test_data.astype(numpy.int32)[:, 0:2]
     test_features = test_data.astype(numpy.float32)[:, 3:-1]
@@ -71,7 +71,7 @@ def evaluate_link_prediction(args, train_num, test_num, datafile_dir):
     test_predict = learner.predict(test_features)
     test_features = None
 
-    output_f = open(str(datafile_dir.join("link_prediction.txt")), "w")
+    output_f = open(str(datafile_dir + ("/link_prediction.txt")), "w")
     for i in range(len(test_predict)):
         output_f.write(
             "%d, %d, %lf\n" % (test_id[i][0], test_id[i][1], test_predict[i])
