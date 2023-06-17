@@ -22,7 +22,6 @@ import torch
 from torch.utils.data import IterableDataset
 
 from deepgnn import get_logger
-from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
 from contextlib import contextmanager
 from deepgnn.graph_engine import (
     Graph,
@@ -255,8 +254,8 @@ def a_a_collaborate_train_test(args, model_path, input_data_map, temp_data_dirna
         a_a_list_train[i] = list(set(a_a_list_train[i]))
         a_a_list_test[i] = list(set(a_a_list_test[i]))
 
-    a_a_list_train_f = open(str(temp_data_dirname.join("a_a_list_train.txt")), "w")
-    a_a_list_test_f = open(str(temp_data_dirname.join("a_a_list_test.txt")), "w")
+    a_a_list_train_f = open(str(temp_data_dirname + "/a_a_list_train.txt"), "w")
+    a_a_list_test_f = open(str(temp_data_dirname + "/a_a_list_test.txt"), "w")
     a_a_list = [a_a_list_train, a_a_list_test]
 
     for t in range(len(a_a_list)):
@@ -294,7 +293,7 @@ def a_a_collaborate_train_test(args, model_path, input_data_map, temp_data_dirna
 
 def a_a_collab_feature_setting(args, model_path, temp_data_dirname):
     a_embed = np.around(np.random.normal(0, 0.01, [args.A_n, args.embed_d]), 4)
-    embed_f = open(model_path + "node_embedding.txt", "r")
+    embed_f = open(model_path + "/node_embedding.txt", "r")
     for line in islice(embed_f, 0, None):
         line = line.strip()
         node_id = re.split(" ", line)[0]
@@ -304,9 +303,9 @@ def a_a_collab_feature_setting(args, model_path, temp_data_dirname):
     embed_f.close()
 
     train_num = 0
-    a_a_list_train_f = open(str(temp_data_dirname.join("a_a_list_train.txt")), "r")
+    a_a_list_train_f = open(str(temp_data_dirname + "/a_a_list_train.txt"), "r")
     a_a_list_train_feature_f = open(
-        str(temp_data_dirname.join("train_feature.txt")), "w"
+        str(temp_data_dirname + "/train_feature.txt"), "w"
     )
     for line in a_a_list_train_f:
         line = line.strip()
@@ -329,8 +328,8 @@ def a_a_collab_feature_setting(args, model_path, temp_data_dirname):
     a_a_list_train_feature_f.close()
 
     test_num = 0
-    a_a_list_test_f = open(str(temp_data_dirname.join("a_a_list_test.txt")), "r")
-    a_a_list_test_feature_f = open(str(temp_data_dirname.join("test_feature.txt")), "w")
+    a_a_list_test_f = open(str(temp_data_dirname + "/a_a_list_test.txt"), "r")
+    a_a_list_test_feature_f = open(str(temp_data_dirname + "/test_feature.txt"), "w")
     for line in a_a_list_test_f:
         line = line.strip()
         a_1 = int(re.split(",", line)[0])
@@ -353,7 +352,7 @@ def a_a_collab_feature_setting(args, model_path, temp_data_dirname):
 
 def a_class_cluster_feature_setting(args, model_path, tmpdir, test_rootdir):
     a_embed = np.around(np.random.normal(0, 0.01, [args.A_n, args.embed_d]), 4)
-    embed_f = open(model_path + "node_embedding.txt", "r")
+    embed_f = open(model_path + "/node_embedding.txt", "r")
     for line in islice(embed_f, 0, None):
         line = line.strip()
         node_id = re.split(" ", line)[0]
@@ -400,8 +399,8 @@ def a_class_cluster_feature_setting(args, model_path, tmpdir, test_rootdir):
     for i in range(args.A_n):
         a_max_v[i] = a_v_num[i].index(max(a_v_num[i]))
 
-    cluster_f = open(str(tmpdir.join("cluster.txt")), "w")
-    cluster_embed_f = open(str(tmpdir.join("cluster_embed.txt")), "w")
+    cluster_f = open(str(tmpdir + "/cluster.txt"), "w")
+    cluster_embed_f = open(str(tmpdir + "/cluster_embed.txt"), "w")
     a_class_list = [[] for k in range(args.C_n)]
     cluster_id = 0
     num_hidden = args.embed_d
@@ -450,10 +449,10 @@ def a_class_cluster_feature_setting(args, model_path, tmpdir, test_rootdir):
     cluster_f.close()
     cluster_embed_f.close()
 
-    a_class_train_f = open(str(tmpdir.join("a_class_train.txt")), "w")
-    a_class_test_f = open(str(tmpdir.join("a_class_test.txt")), "w")
-    train_class_feature_f = open(str(tmpdir.join("train_class_feature.txt")), "w")
-    test_class_feature_f = open(str(tmpdir.join("test_class_feature.txt")), "w")
+    a_class_train_f = open(str(tmpdir + ("/a_class_train.txt")), "w")
+    a_class_test_f = open(str(tmpdir + ("/a_class_test.txt")), "w")
+    train_class_feature_f = open(str(tmpdir + ("/train_class_feature.txt")), "w")
+    test_class_feature_f = open(str(tmpdir + ("/test_class_feature.txt")), "w")
 
     train_num = 0
     test_num = 0
@@ -539,7 +538,6 @@ class MockGraph:
         node_type: int,
         strategy: SamplingStrategy = SamplingStrategy.Random,
     ) -> np.ndarray:
-        assert strategy == "random"
         return np.random.randint(
             self.type_ranges[node_type][0], self.type_ranges[node_type][1], size
         )
@@ -696,14 +694,20 @@ def get_train_args(data_dir, model_dir, test_rootdir):
     )
     return args
 
+
 class MockIterableDataset(torch.utils.data.IterableDataset):
-    def __init__(self, batch_size, graph):
+    def __init__(self, batch_size, graph, model, sampler):
         self.graph = graph
         self.batch_size = batch_size
+        self.model = model
+        self.sampler = sampler
 
     def __iter__(self):
         worker_info = torch.utils.data.get_worker_info()
         assert worker_info is None
+        for inputs in self.sampler:
+            result = self.model.query(self.graph, inputs)
+            yield result
 
 
 def train_academic_data(g, test_rootdir):
@@ -731,19 +735,18 @@ def train_academic_data(g, test_rootdir):
         weight_decay=0,
     )
 
-    backend = g
     for epoch in range(args.num_epochs):
         # reset dataset means we can iterate the dataset in next epoch
-        ds = TorchDeepGNNDataset(
-            sampler_class=HetGnnDataSampler,
-            backend=backend,
-            query_fn=model.query,
-            prefetch_queue_size=10,
-            prefetch_worker_size=2,
-            num_nodes=args.batch_size,
-            node_type_count=args.node_type_count,
+        ds = MockIterableDataset(
+            sampler=HetGnnDataSampler(
+                graph=g,
+                num_nodes=args.batch_size,
+                batch_size=args.batch_size,
+                node_type_count=args.node_type_count,
+            ),
+            graph=g,
+            model=model,
             batch_size=args.batch_size,
-            walk_length=args.walk_length,
         )
         data_loader = torch.utils.data.DataLoader(ds, batch_size=None)
 
@@ -784,7 +787,7 @@ def train_academic_data(g, test_rootdir):
 
 
 def save_embedding(model_path, graph, test_rootdir):
-    args = get_train_args("", model_path.name(), test_rootdir)
+    args = get_train_args("", model_path, test_rootdir)
     model = HetGnnModel(
         node_type_count=args.node_type_count,
         neighbor_count=args.neighbor_count,
@@ -794,10 +797,10 @@ def save_embedding(model_path, graph, test_rootdir):
         feature_dim=args.feature_dim,
     )
 
-    model.load_state_dict(torch.load(model_path.name() + "gnnmodel.pt"))
+    model.load_state_dict(torch.load(model_path + "/gnnmodel.pt"))
     model.train()
 
-    embed_file = open(model_path.name() + "/node_embedding.txt", "w")
+    embed_file = open(model_path+ "/node_embedding.txt", "w")
 
     batch_size = 200
     saving_dataset = MockHetGnnFileNodeLoader(
@@ -820,11 +823,9 @@ def save_embedding(model_path, graph, test_rootdir):
     embed_file.close()
 
 
-def test_link_prediction_on_het_gnn(
-    model_path, input_data_map, tmpdir  # noqa: F811
-):
+def test_link_prediction_on_het_gnn(model_path, input_data_map, tmpdir):  # noqa: F811
     random.seed(0)
-    input_data_map = init_het_input_data
+    # input_data_map = init_het_input_data
 
     # do evaluation
     args = parse_testing_args([])
@@ -871,15 +872,21 @@ if __name__ == "__main__":
     args = parser.parse_args()
     with prepare_local_test_files() as local_test_files:
         feat_data, adj_lists, test_rootdir = load_data(local_test_files)
+        print(f"Loaded data from {test_rootdir}")
         het_input_data = init_het_input_data(local_test_files)
         graph = MockGraph(feat_data, adj_lists)
         print("Graph loaded!")
         model_path, model = train_academic_data(graph, test_rootdir)
         print("model trained")
-        save_embedding(model_path, graph, test_rootdir)
+        save_embedding(model_path.name, graph, test_rootdir)
         print("embedings saved")
         if args.model == "link_prediction":
-            test_link_prediction_on_het_gnn(model_path.name(), het_input_data, test_rootdir)
+            print(f"Passing {test_rootdir}")
+            test_link_prediction_on_het_gnn(
+                model_path.name, het_input_data, test_rootdir
+            )
             print("Tested link prediction")
         else:
-            test_classification_on_het_gnn(model_path.name(), het_input_data, test_rootdir)
+            test_classification_on_het_gnn(
+                model_path.name, het_input_data, test_rootdir
+            )
