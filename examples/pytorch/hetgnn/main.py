@@ -1,7 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import argparse
 import csv
 import numpy as np
 import os
@@ -11,7 +10,6 @@ import time
 import zipfile
 import re
 import random
-import numpy as np
 import urllib.request
 import tempfile
 from itertools import islice
@@ -67,7 +65,7 @@ def load_data(prepare_local_test_files):
         line = line.strip()
         index = re.split(" ", line)[0]
         if len(index) and (index[0] == "a" or index[0] == "v" or index[0] == "p"):
-            embeds = np.asarray(re.split(" ", line)[1:], dtype="float32")
+            embeds = np.asarray(re.split(" ", line)[1:], dtype=np.float32)
             if index[0] == "a":
                 a_net_embed[index[1:]] = embeds
             elif index[0] == "v":
@@ -131,7 +129,7 @@ def load_data(prepare_local_test_files):
 
     adj_list = [a_p_list_train, p_neigh_list_train, v_p_list_train]
 
-    return features, adj_list, prepare_local_test_files
+    return features, adj_list
 
 
 def init_het_input_data(prepare_local_test_files):
@@ -215,9 +213,9 @@ def init_het_input_data(prepare_local_test_files):
     }
 
 
-def a_a_collaborate_train_test(args, model_path, input_data_map, temp_data_dirname):
-    a_a_list_train = [[] for k in range(args.A_n)]
-    a_a_list_test = [[] for k in range(args.A_n)]
+def a_a_collaborate_train_test(config, input_data_map):
+    a_a_list_train = [[] for _ in range(config["A_n"])]
+    a_a_list_test = [[] for _ in range(config["A_n"])]
     p_a_list = [input_data_map["p_a_list_train"], input_data_map["p_a_list_test"]]
 
     for t in range(len(p_a_list)):
@@ -250,12 +248,12 @@ def a_a_collaborate_train_test(args, model_path, input_data_map, temp_data_dirna
                                     int(p_a_list[t][i][j][1:])
                                 )
 
-    for i in range(args.A_n):
+    for i in range(config["A_n"]):
         a_a_list_train[i] = list(set(a_a_list_train[i]))
         a_a_list_test[i] = list(set(a_a_list_test[i]))
 
-    a_a_list_train_f = open(str(temp_data_dirname + "/a_a_list_train.txt"), "w")
-    a_a_list_test_f = open(str(temp_data_dirname + "/a_a_list_test.txt"), "w")
+    a_a_list_train_f = open(str(config["data_dir"] + "/a_a_list_train.txt"), "w")
+    a_a_list_test_f = open(str(config["data_dir"] + "/a_a_list_test.txt"), "w")
     a_a_list = [a_a_list_train, a_a_list_test]
 
     for t in range(len(a_a_list)):
@@ -267,46 +265,44 @@ def a_a_collaborate_train_test(args, model_path, input_data_map, temp_data_dirna
                         a_a_list_train_f.write(
                             "%d, %d, %d\n" % (i, a_a_list[t][i][j], 1)
                         )
-                        node_n = random.randint(0, args.A_n - 1)
+                        node_n = random.randint(0, config["A_n"] - 1)
                         while node_n in a_a_list[t][i]:
-                            node_n = random.randint(0, args.A_n - 1)
+                            node_n = random.randint(0, config["A_n"] - 1)
                         a_a_list_train_f.write("%d, %d, %d\n" % (i, node_n, 0))
                 else:
                     for j in range(len(a_a_list[t][i])):
                         a_a_list_test_f.write(
                             "%d, %d, %d\n" % (i, a_a_list[t][i][j], 1)
                         )
-                        node_n = random.randint(0, args.A_n - 1)
+                        node_n = random.randint(0, config["A_n"] - 1)
                         while (
                             node_n in a_a_list[t][i]
                             or node_n in a_a_list_train[i]
                             or len(a_a_list_train[i]) == 0
                         ):
-                            node_n = random.randint(0, args.A_n - 1)
+                            node_n = random.randint(0, config["A_n"] - 1)
                         a_a_list_test_f.write("%d, %d, %d\n" % (i, node_n, 0))
 
     a_a_list_train_f.close()
     a_a_list_test_f.close()
 
-    return a_a_collab_feature_setting(args, model_path, temp_data_dirname)
+    return a_a_collab_feature_setting(config)
 
 
-def a_a_collab_feature_setting(args, model_path, temp_data_dirname):
-    a_embed = np.around(np.random.normal(0, 0.01, [args.A_n, args.embed_d]), 4)
-    embed_f = open(model_path + "/node_embedding.txt", "r")
+def a_a_collab_feature_setting(config):
+    a_embed = np.around(np.random.normal(0, 0.01, [config["A_n"], config["dim"]]), 4)
+    embed_f = open(config["data_dir"] + "/node_embedding.txt", "r")
     for line in islice(embed_f, 0, None):
         line = line.strip()
         node_id = re.split(" ", line)[0]
         index = int(node_id) - 1000000
-        embed = np.asarray(re.split(" ", line)[1:], dtype="float32")
+        embed = np.asarray(re.split(" ", line)[1:], dtype=np.float32)
         a_embed[index] = embed
     embed_f.close()
 
     train_num = 0
-    a_a_list_train_f = open(str(temp_data_dirname + "/a_a_list_train.txt"), "r")
-    a_a_list_train_feature_f = open(
-        str(temp_data_dirname + "/train_feature.txt"), "w"
-    )
+    a_a_list_train_f = open(str(config["data_dir"] + "/a_a_list_train.txt"), "r")
+    a_a_list_train_feature_f = open(str(config["data_dir"] + "/train_feature.txt"), "w")
     for line in a_a_list_train_f:
         line = line.strip()
         a_1 = int(re.split(",", line)[0])
@@ -316,20 +312,21 @@ def a_a_collab_feature_setting(args, model_path, temp_data_dirname):
         if random.random() < 0.2:  # training data ratio
             train_num += 1
             a_a_list_train_feature_f.write("%d, %d, %d," % (a_1, a_2, label))
-            for d in range(args.embed_d - 1):
+            for d in range(config["dim"] - 1):
                 a_a_list_train_feature_f.write(
                     "%f," % (a_embed[a_1][d] * a_embed[a_2][d])
                 )
             a_a_list_train_feature_f.write(
-                "%f" % (a_embed[a_1][args.embed_d - 1] * a_embed[a_2][args.embed_d - 1])
+                "%f"
+                % (a_embed[a_1][config["dim"] - 1] * a_embed[a_2][config["dim"] - 1])
             )
             a_a_list_train_feature_f.write("\n")
     a_a_list_train_f.close()
     a_a_list_train_feature_f.close()
 
     test_num = 0
-    a_a_list_test_f = open(str(temp_data_dirname + "/a_a_list_test.txt"), "r")
-    a_a_list_test_feature_f = open(str(temp_data_dirname + "/test_feature.txt"), "w")
+    a_a_list_test_f = open(str(config["data_dir"] + "/a_a_list_test.txt"), "r")
+    a_a_list_test_feature_f = open(str(config["data_dir"] + "/test_feature.txt"), "w")
     for line in a_a_list_test_f:
         line = line.strip()
         a_1 = int(re.split(",", line)[0])
@@ -338,10 +335,10 @@ def a_a_collab_feature_setting(args, model_path, temp_data_dirname):
         label = int(re.split(",", line)[2])
         test_num += 1
         a_a_list_test_feature_f.write("%d, %d, %d," % (a_1, a_2, label))
-        for d in range(args.embed_d - 1):
+        for d in range(config["dim"] - 1):
             a_a_list_test_feature_f.write("%f," % (a_embed[a_1][d] * a_embed[a_2][d]))
         a_a_list_test_feature_f.write(
-            "%f" % (a_embed[a_1][args.embed_d - 1] * a_embed[a_2][args.embed_d - 1])
+            "%f" % (a_embed[a_1][config["dim"] - 1] * a_embed[a_2][config["dim"] - 1])
         )
         a_a_list_test_feature_f.write("\n")
     a_a_list_test_f.close()
@@ -350,9 +347,9 @@ def a_a_collab_feature_setting(args, model_path, temp_data_dirname):
     return train_num, test_num
 
 
-def a_class_cluster_feature_setting(args, model_path, tmpdir, test_rootdir):
-    a_embed = np.around(np.random.normal(0, 0.01, [args.A_n, args.embed_d]), 4)
-    embed_f = open(model_path + "/node_embedding.txt", "r")
+def a_class_cluster_feature_setting(config):
+    a_embed = np.around(np.random.normal(0, 0.01, [config["A_n"], config["dim"]]), 4)
+    embed_f = open(config["data_dir"] + "/node_embedding.txt", "r")
     for line in islice(embed_f, 0, None):
         line = line.strip()
         node_id = re.split(" ", line)[0]
@@ -361,9 +358,9 @@ def a_class_cluster_feature_setting(args, model_path, tmpdir, test_rootdir):
         a_embed[index] = embed
     embed_f.close()
 
-    a_p_list_train = [[] for k in range(args.A_n)]
+    a_p_list_train = [[] for k in range(config["A_n"])]
     a_p_list_train_f = open(
-        os.path.join(test_rootdir, "academic", "a_p_list_train.txt"), "r"
+        os.path.join(config["data_dir"], "academic", "a_p_list_train.txt"), "r"
     )
     for line in a_p_list_train_f:
         line = line.strip()
@@ -374,8 +371,8 @@ def a_class_cluster_feature_setting(args, model_path, tmpdir, test_rootdir):
             a_p_list_train[node_id].append("p" + str(neigh_list_id[j]))
     a_p_list_train_f.close()
 
-    p_v = [0] * args.P_n
-    p_v_f = open(os.path.join(test_rootdir, "academic", "p_v.txt"), "r")
+    p_v = [0] * config["P_n"]
+    p_v_f = open(os.path.join(config["data_dir"], "academic", "p_v.txt"), "r")
     for line in p_v_f:
         line = line.strip()
         p_id = int(re.split(",", line)[0])
@@ -383,28 +380,28 @@ def a_class_cluster_feature_setting(args, model_path, tmpdir, test_rootdir):
         p_v[p_id] = v_id
     p_v_f.close()
 
-    a_v_list_train = [[] for k in range(args.A_n)]
+    a_v_list_train = [[] for k in range(config["A_n"])]
     for i in range(len(a_p_list_train)):  # tranductive node classification
         for j in range(len(a_p_list_train[i])):
             p_id = int(a_p_list_train[i][j][1:])
             a_v_list_train[i].append(p_v[p_id])
 
-    a_v_num = [[0 for k in range(args.V_n)] for k in range(args.A_n)]
-    for i in range(args.A_n):
+    a_v_num = [[0 for k in range(config["V_n"])] for k in range(config["A_n"])]
+    for i in range(config["A_n"]):
         for j in range(len(a_v_list_train[i])):
             v_index = int(a_v_list_train[i][j])
             a_v_num[i][v_index] += 1
 
-    a_max_v = [0] * args.A_n
-    for i in range(args.A_n):
+    a_max_v = [0] * config["A_n"]
+    for i in range(config["A_n"]):
         a_max_v[i] = a_v_num[i].index(max(a_v_num[i]))
 
-    cluster_f = open(str(tmpdir + "/cluster.txt"), "w")
-    cluster_embed_f = open(str(tmpdir + "/cluster_embed.txt"), "w")
-    a_class_list = [[] for k in range(args.C_n)]
+    cluster_f = open(str(config["data_dir"] + "/cluster.txt"), "w")
+    cluster_embed_f = open(str(config["data_dir"] + "/cluster_embed.txt"), "w")
+    a_class_list = [[] for k in range(config["C_n"])]
     cluster_id = 0
-    num_hidden = args.embed_d
-    for i in range(args.A_n):
+    num_hidden = config["dim"]
+    for i in range(config["A_n"]):
         if len(a_p_list_train[i]):
             if (
                 a_max_v[i] == 17 or a_max_v[i] == 4 or a_max_v[i] == 1
@@ -449,14 +446,18 @@ def a_class_cluster_feature_setting(args, model_path, tmpdir, test_rootdir):
     cluster_f.close()
     cluster_embed_f.close()
 
-    a_class_train_f = open(str(tmpdir + ("/a_class_train.txt")), "w")
-    a_class_test_f = open(str(tmpdir + ("/a_class_test.txt")), "w")
-    train_class_feature_f = open(str(tmpdir + ("/train_class_feature.txt")), "w")
-    test_class_feature_f = open(str(tmpdir + ("/test_class_feature.txt")), "w")
+    a_class_train_f = open(str(config["data_dir"] + ("/a_class_train.txt")), "w")
+    a_class_test_f = open(str(config["data_dir"] + ("/a_class_test.txt")), "w")
+    train_class_feature_f = open(
+        str(config["data_dir"] + ("/train_class_feature.txt")), "w"
+    )
+    test_class_feature_f = open(
+        str(config["data_dir"] + ("/test_class_feature.txt")), "w"
+    )
 
     train_num = 0
     test_num = 0
-    for i in range(args.C_n):
+    for i in range(config["C_n"]):
         for j in range(len(a_class_list[i])):
             randvalue = random.random()
             if randvalue < 0.1:
@@ -482,7 +483,7 @@ def a_class_cluster_feature_setting(args, model_path, tmpdir, test_rootdir):
     a_class_train_f.close()
     a_class_test_f.close()
 
-    return train_num, test_num, cluster_id
+    return train_num, test_num
 
 
 class MockHetGnnFileNodeLoader(IterableDataset):
@@ -536,7 +537,7 @@ class MockGraph:
         self,
         size: int,
         node_type: int,
-        strategy: SamplingStrategy = SamplingStrategy.Random,
+        **kwargs,
     ) -> np.ndarray:
         return np.random.randint(
             self.type_ranges[node_type][0], self.type_ranges[node_type][1], size
@@ -555,10 +556,7 @@ class MockGraph:
         nodes: np.ndarray,
         edge_types: np.ndarray,
         count: int = 10,
-        strategy: str = "byweight",
-        default_node: int = -1,
-        default_weight: float = 0.0,
-        default_node_type: int = -1,
+        *args,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         res = np.empty((len(nodes), count), dtype=np.int64)
         res_types = np.full((len(nodes), count), -1, dtype=np.int32)
@@ -607,94 +605,6 @@ class MockGraph:
         return node_features
 
 
-def parse_testing_args(arg_str):
-    parser = argparse.ArgumentParser(description="application data process")
-    parser.add_argument("--A_n", type=int, default=28646, help="number of author node")
-    parser.add_argument("--P_n", type=int, default=21044, help="number of paper node")
-    parser.add_argument("--V_n", type=int, default=18, help="number of venue node")
-    parser.add_argument("--C_n", type=int, default=4, help="number of node class label")
-    parser.add_argument("--embed_d", type=int, default=128, help="embedding dimension")
-
-    args = parser.parse_args(arg_str)
-    return args
-
-
-def parse_training_args(arg_str):
-    parser = argparse.ArgumentParser(description="application data process")
-    parser.add_argument(
-        "--node_type", default=0, type=int, help="Node type to train/evaluate model."
-    )
-    parser.add_argument("--batch_size", default=512, type=int, help="Mini-batch size.")
-    parser.add_argument(
-        "--num_epochs", default=10, type=int, help="Number of epochs for training."
-    )
-    parser.add_argument(
-        "--neighbor_count",
-        type=int,
-        default=10,
-        help="number of neighbors to sample of each node",
-    )
-    parser.add_argument("--walk_length", default=5, type=int)
-    parser.add_argument(
-        "--node_type_count",
-        type=int,
-        default=2,
-        help="number of node type in the graph",
-    )
-    parser.add_argument(
-        "--model_dir", type=str, default="./hettrain", help="path to save model"
-    )
-    parser.add_argument(
-        "--save_model_freq",
-        type=float,
-        default=2,
-        help="number of iterations to save model",
-    )
-    parser.add_argument("--cuda", default=0, type=int)
-    parser.add_argument("--checkpoint", default="", type=str)
-    parser.add_argument(
-        "--learning_rate", default=0.01, type=float, help="Learning rate."
-    )
-    parser.add_argument("--dim", default=256, type=int, help="Dimension of embedding.")
-    parser.add_argument("--max_id", type=int, help="Max node id.")
-    parser.add_argument("--feature_idx", default=-1, type=int, help="Feature index.")
-    parser.add_argument("--feature_dim", default=0, type=int, help="Feature dimension.")
-    parser.add_argument(
-        "--data_dir", type=str, default="", help="Local graph data dir."
-    )
-    parser.add_argument(
-        "--sample_file",
-        type=str,
-        default="",
-        help="file contains node id and type to calculate embeddings.",
-    )
-
-    args = parser.parse_args(arg_str)
-    return args
-
-
-def get_train_args(data_dir, model_dir, test_rootdir):
-    args = parse_training_args(
-        [
-            "--data_dir=" + data_dir,
-            "--neighbor_count=10",
-            "--model_dir=" + model_dir,
-            "--num_epochs=2",
-            "--batch_size=128",
-            "--walk_length=5",
-            "--dim=128",
-            "--max_id=1024",
-            "--node_type_count=3",
-            "--neighbor_count=10",
-            "--feature_dim=128",
-            "--sample_file="
-            + os.path.join(test_rootdir, "academic", "a_node_list.txt"),
-            "--feature_idx=0",
-        ]
-    )
-    return args
-
-
 class MockIterableDataset(torch.utils.data.IterableDataset):
     def __init__(self, batch_size, graph, model, sampler):
         self.graph = graph
@@ -710,43 +620,38 @@ class MockIterableDataset(torch.utils.data.IterableDataset):
             yield result
 
 
-def train_academic_data(g, test_rootdir):
+def train_academic_data(g, config):
     torch.manual_seed(0)
     np.random.seed(0)
 
-    model_path = tempfile.TemporaryDirectory()
-    model_path_name = model_path.name + "/"
-
-    args = get_train_args("", model_path_name, test_rootdir)
-
     # train model
     model = HetGnnModel(
-        node_type_count=args.node_type_count,
-        neighbor_count=args.neighbor_count,
-        embed_d=args.dim,
+        node_type_count=config["node_type_count"],
+        neighbor_count=config["neighbor_count"],
+        embed_d=config["dim"],
         feature_type=np.float32,
-        feature_idx=args.feature_idx,
-        feature_dim=args.feature_dim,
+        feature_idx=config["feature_idx"],
+        feature_dim=config["feature_dim"],
     )
 
     optimizer = torch.optim.Adam(
         filter(lambda p: p.requires_grad, model.parameters()),
-        lr=args.learning_rate,
+        lr=config["learning_rate"],
         weight_decay=0,
     )
 
-    for epoch in range(args.num_epochs):
-        # reset dataset means we can iterate the dataset in next epoch
+    for epoch in range(config["num_epochs"]):
+        # reset dataset, it means we can iterate the dataset in next epoch
         ds = MockIterableDataset(
             sampler=HetGnnDataSampler(
                 graph=g,
-                num_nodes=args.batch_size,
-                batch_size=args.batch_size,
-                node_type_count=args.node_type_count,
+                num_nodes=config["batch_size"],
+                batch_size=config["batch_size"],
+                node_type_count=config["node_type_count"],
             ),
             graph=g,
             model=model,
-            batch_size=args.batch_size,
+            batch_size=config["batch_size"],
         )
         data_loader = torch.utils.data.DataLoader(ds, batch_size=None)
 
@@ -775,36 +680,23 @@ def train_academic_data(g, test_rootdir):
                 times.append(end_time - start_time)
                 start_time = time.time()
 
-        if epoch % args.save_model_freq == 0 or epoch == args.num_epochs - 1:
-            logger.info("model saved in epoch: {:04d}".format(epoch))
-            torch.save(model.state_dict(), model_path_name + "gnnmodel.pt")
-
         metric = model.compute_metric(scores, labels)
         logger.info("Mean epoch {}: {}".format(model.metric_name(), metric))
 
     # trained node embedding path
-    return model_path, model
+    return model
 
 
-def save_embedding(model_path, graph, test_rootdir):
-    args = get_train_args("", model_path, test_rootdir)
-    model = HetGnnModel(
-        node_type_count=args.node_type_count,
-        neighbor_count=args.neighbor_count,
-        embed_d=args.dim,
-        feature_type=np.float32,
-        feature_idx=args.feature_idx,
-        feature_dim=args.feature_dim,
-    )
-
-    model.load_state_dict(torch.load(model_path + "/gnnmodel.pt"))
+def save_embedding(model, graph, config):
     model.train()
-
-    embed_file = open(model_path+ "/node_embedding.txt", "w")
+    embed_file = open(config["data_dir"] + "/node_embedding.txt", "w")
 
     batch_size = 200
     saving_dataset = MockHetGnnFileNodeLoader(
-        graph=graph, batch_size=batch_size, model=model, sample_file=args.sample_file
+        graph=graph,
+        batch_size=batch_size,
+        model=model,
+        sample_file=config["sample_file"],
     )
 
     data_loader = torch.utils.data.DataLoader(saving_dataset)
@@ -823,70 +715,67 @@ def save_embedding(model_path, graph, test_rootdir):
     embed_file.close()
 
 
-def test_link_prediction_on_het_gnn(model_path, input_data_map, tmpdir):  # noqa: F811
+def evaluate_link_prediction_on_het_gnn(input_data_map, config):  # noqa: F811
     random.seed(0)
-    # input_data_map = init_het_input_data
 
     # do evaluation
-    args = parse_testing_args([])
-    train_num, test_num = a_a_collaborate_train_test(
-        args, model_path, input_data_map, tmpdir
-    )
-    auc, f1 = evaluation.evaluate_link_prediction(args, train_num, test_num, tmpdir)
+    train_num, test_num = a_a_collaborate_train_test(config, input_data_map)
+    auc, f1 = evaluation.evaluate_link_prediction(config, train_num, test_num)
+    print(f"auc is {auc} and f1 {f1}")
 
     assert auc > 0.6 and auc < 0.9
     assert f1 > 0.6 and f1 < 0.9
 
 
-def test_classification_on_het_gnn(
-    prepare_local_test_files, save_embedding, tmpdir  # noqa: F811
-):
+def evaluate_classification_on_het_gnn(config):  # noqa: F811
     random.seed(0)
 
-    model_path = save_embedding
-
     # do evaluation
-    args = parse_testing_args([])
-    train_num, test_num, _ = a_class_cluster_feature_setting(
-        args, model_path, tmpdir, prepare_local_test_files
-    )
+    train_num, test_num = a_class_cluster_feature_setting(config)
     macroF1, microF1 = evaluation.evaluate_node_classification(
-        args, train_num, test_num, tmpdir
+        train_num, test_num, config
     )
+    print(f"{macroF1} {microF1}")
     assert macroF1 > 0.9
     assert microF1 > 0.9
 
 
 if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Evaluate HetGNN model.")
-    parser.add_argument(
-        "model",
-        choices=["link_prediction", "classification"],
-        default="link_prediction",
-        const="link_prediction",
-        nargs="?",
-        help="Task to perform model training on: classification or link prediction.",
-    )
-    args = parser.parse_args()
     with prepare_local_test_files() as local_test_files:
-        feat_data, adj_lists, test_rootdir = load_data(local_test_files)
-        print(f"Loaded data from {test_rootdir}")
+        feat_data, adj_lists = load_data(local_test_files)
+        print(f" local_test_files {local_test_files}")
+        config = {
+            "data_dir": local_test_files,  # path to save intermediate data for evaluation
+            "neighbor_count": 10,  # number of neighbors to sample of each node
+            "num_epochs": 2,  # number of epochs for training.
+            "batch_size": 128,  # mini-batch size.
+            "walk_length": 5,
+            "dim": 128,  # dimension of embedding.
+            "learning_rate": 0.01,
+            # "max_id": 1024,
+            "node_type": 0,  # node type to train/evaluate model
+            "node_type_count": 3,
+            "neighbor_count": 10,
+            "feature_dim": 128,
+            "feature_idx": 0,
+            "sample_file": os.path.join(
+                local_test_files, "academic", "a_node_list.txt"
+            ),  # file contains node id and type to calculate embeddings
+            "A_n": 28646,  # number of author nodes
+            "P_n": 21044,  # number of paper nodes
+            "V_n": 18,  # number of venue nodes
+            "C_n": 4,  # number of node class labels
+        }
+        print(f"Loaded data from {local_test_files}")
         het_input_data = init_het_input_data(local_test_files)
         graph = MockGraph(feat_data, adj_lists)
         print("Graph loaded!")
-        model_path, model = train_academic_data(graph, test_rootdir)
+        model = train_academic_data(graph, config)
         print("model trained")
-        save_embedding(model_path.name, graph, test_rootdir)
+        save_embedding(model, graph, config)
         print("embedings saved")
-        if args.model == "link_prediction":
-            print(f"Passing {test_rootdir}")
-            test_link_prediction_on_het_gnn(
-                model_path.name, het_input_data, test_rootdir
-            )
-            print("Tested link prediction")
-        else:
-            test_classification_on_het_gnn(
-                model_path.name, het_input_data, test_rootdir
-            )
+        print(f"Passing {local_test_files}")
+        evaluate_link_prediction_on_het_gnn(het_input_data, config)
+        print("Tested link prediction")
+        evaluate_classification_on_het_gnn(config)
+        print("Tested classification")
