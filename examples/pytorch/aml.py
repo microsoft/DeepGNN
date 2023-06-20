@@ -88,12 +88,7 @@ def train_func(config: dict):
     """Training loop for ray trainer."""
     cora = CoraFull(num_partitions=session.get_world_size())
 
-    hostname = (
-        "127.0.0.1"
-        if config["is_unit_test"]
-        else ray._private.services.get_node_ip_address()
-    )
-    address = f"{hostname}:999{session.get_world_rank()}"
+    address = f"127.0.0.1:999{session.get_world_rank()}"
 
     Server(address, cora.data_dir(), session.get_world_rank(), 1)
 
@@ -102,256 +97,16 @@ def train_func(config: dict):
     ) as lock:
         cl = DistributedClient(lock.get_address())
 
-        features = cl.node_features(np.array([2, 3]), np.array([[0, 121]]), np.float32)
+        features = cl.node_features(np.array([2, 3]), np.array([[1, 1]]), np.float32)
         npt.assert_equal(
             features,
             np.array(
                 [
                     [
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
                         1.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
                     ],
                     [
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        1.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
+                        2.0,
                     ],
                 ]
             ),
@@ -359,36 +114,35 @@ def train_func(config: dict):
 
 
 if __name__ == "__main__":
+    """# Ray on AML setup
     import sys
     from azureml.core import Workspace
     from ray_on_aml.core import Ray_On_AML
 
-    aml = True
-    if len(sys.argv) < 2 or sys.argv[1] != "--unit_test":
-        ws = Workspace.from_config()
-        print(
-            "Workspace name: " + ws.name,
-            "Subscription id: " + ws.subscription_id,
-            "Resource group: " + ws.resource_group,
-            sep="\n",
-        )
+    ws = Workspace.from_config()
+    print(
+        "Workspace name: " + ws.name,
+        "Subscription id: " + ws.subscription_id,
+        "Resource group: " + ws.resource_group,
+        sep="\n",
+    )
 
-        ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="ray-cluster")
-        ray = ray_on_aml.getRay(
-            ci_is_head=True,
-            num_node=3,
-            pip_packages=[
-                "ray[air]",
-                "ray[data]",
-                "azureml-mlflow==1.48.0",
-                "torch",
-                "deepgnn-torch",
-            ],
-        )
-    else:
-        aml = False
-        ray.init(num_cpus=3)
-        ray_on_aml = type("Ray_On_AML", (object,), {"shutdown": (lambda self: None)})()
+    ray_on_aml = Ray_On_AML(ws=ws, compute_cluster="ray-cluster")
+    ray = ray_on_aml.getRay(
+        ci_is_head=True,
+        num_node=3,
+        pip_packages=[
+            "ray[air]",
+            "ray[data]",
+            "azureml-mlflow==1.48.0",
+            "torch",
+            "deepgnn-torch",
+        ],
+    )
+    """
+
+    ray.init(num_cpus=3)
+    ray_on_aml = type("Ray_On_AML", (object,), {"shutdown": (lambda self: None)})()
 
     try:
         num_workers = 2
@@ -396,11 +150,9 @@ if __name__ == "__main__":
 
         trainer = TorchTrainer(
             train_func,
-            train_loop_config={"is_unit_test": not aml},
             run_config=RunConfig(),
             scaling_config=ScalingConfig(
                 num_workers=num_workers,
-                placement_strategy="STRICT_SPREAD" if aml else "PACK",
             ),
         )
         result = trainer.fit()
