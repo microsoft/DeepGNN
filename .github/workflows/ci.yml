@@ -161,3 +161,5 @@ jobs:
         run: cd ./pytorch/graphsage/ && sudo chmod +x *.sh && bash ./run.sh unsupervised no CPU
       - name: Run hetgnn examples
         run: cd ./pytorch/hetgnn/ && sudo chmod +x *.sh && bash ./run.sh CPU
+      - name: Run AML example
+        run: cd ./pytorch/ && sudo chmod +x *.py && python aml.py --unit_test
