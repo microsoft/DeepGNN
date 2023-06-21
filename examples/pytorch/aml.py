@@ -10,6 +10,7 @@ Multi-node users need to follow these steps,
 3. Manually include pip packages shown in ray_on_aml + others required
 4. For multi-node, this script needs to be run in azure ml terminal not local.
 """
+import tempfile
 import numpy as np
 import numpy.testing as npt
 import ray
@@ -86,7 +87,8 @@ class ServerContext:
 
 def train_func(config: dict):
     """Training loop for ray trainer."""
-    cora = CoraFull(num_partitions=session.get_world_size())
+    data_dir = tempfile.TemporaryDirectory()
+    cora = CoraFull(data_dir.name, num_partitions=session.get_world_size())
 
     address = f"127.0.0.1:999{session.get_world_rank()}"
 
