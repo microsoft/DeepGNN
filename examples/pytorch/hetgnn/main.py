@@ -1,7 +1,5 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-
-import csv
 import numpy as np
 import os
 import random
@@ -14,28 +12,35 @@ import urllib.request
 import tempfile
 from itertools import islice
 
-from typing import Tuple
-
 import torch
-from torch.utils.data import IterableDataset
 
 from deepgnn import get_logger
 from contextlib import contextmanager
-from deepgnn.graph_engine import (
-    Graph,
-    SamplingStrategy,
-)
 from model import HetGnnModel  # type: ignore
 from sampler import HetGnnDataSampler  # type: ignore
 import evaluation  # type: ignore
-
-node_base_index = 1000000
-
-num_a = 28646
-num_p = 21044
-num_v = 18
+from graph import MockGraph, MockHetGnnFileNodeLoader
 
 logger = get_logger()
+
+
+def mrr(
+    scores: torch.Tensor, labels: torch.Tensor, rank_in_ascending_order: bool = False
+) -> torch.Tensor:
+    """Compute metric based on logit scores."""
+    assert len(scores.shape) > 1
+    assert scores.size() == labels.size()
+
+    size = scores.shape[-1]
+    if rank_in_ascending_order:
+        scores = -1 * scores
+    _, indices_of_ranks = torch.topk(scores, k=size)
+    _, ranks = torch.topk(-indices_of_ranks, k=size)
+    return torch.mean(
+        torch.reciprocal(
+            torch.matmul(ranks.float(), torch.transpose(labels, -2, -1).float()) + 1
+        )
+    )
 
 
 @contextmanager
@@ -53,32 +58,32 @@ def prepare_local_test_files():
     working_dir.cleanup()
 
 
-def load_data(prepare_local_test_files):
+def load_data(config):
     a_net_embed = {}
     p_net_embed = {}
     v_net_embed = {}
-    net_e_f = open(
-        os.path.join(prepare_local_test_files, "academic", "node_net_embedding.txt"),
+    with open(
+        os.path.join(config["data_dir"], "academic", "node_net_embedding.txt"),
         "r",
-    )
-    for line in islice(net_e_f, 1, None):
-        line = line.strip()
-        index = re.split(" ", line)[0]
-        if len(index) and (index[0] == "a" or index[0] == "v" or index[0] == "p"):
-            embeds = np.asarray(re.split(" ", line)[1:], dtype=np.float32)
-            if index[0] == "a":
-                a_net_embed[index[1:]] = embeds
-            elif index[0] == "v":
-                v_net_embed[index[1:]] = embeds
-            else:
-                p_net_embed[index[1:]] = embeds
-    net_e_f.close()
+    ) as net_e_f:
+        for line in islice(net_e_f, 1, None):
+            line = line.strip()
+            index = re.split(" ", line)[0]
+            if len(index) and (index[0] == "a" or index[0] == "v" or index[0] == "p"):
+                embeds = np.asarray(re.split(" ", line)[1:], dtype=np.float32)
+                if index[0] == "a":
+                    a_net_embed[index[1:]] = embeds
+                elif index[0] == "v":
+                    v_net_embed[index[1:]] = embeds
+                else:
+                    p_net_embed[index[1:]] = embeds
+
     features = [a_net_embed, p_net_embed, v_net_embed]
 
-    a_p_list_train = [[] for k in range(num_a)]
-    p_a_list_train = [[] for k in range(num_p)]
-    p_p_cite_list_train = [[] for k in range(num_a)]
-    v_p_list_train = [[] for k in range(num_v)]
+    a_p_list_train = [[] for _ in range(config["A_n"])]
+    p_a_list_train = [[] for _ in range(config["P_n"])]
+    p_p_cite_list_train = [[] for _ in range(config["A_n"])]
+    v_p_list_train = [[] for _ in range(config["V_n"])]
 
     relation_f = [
         "a_p_list_train.txt",
@@ -90,39 +95,37 @@ def load_data(prepare_local_test_files):
     # store academic relational data
     for i in range(len(relation_f)):
         f_name = relation_f[i]
-        neigh_f = open(os.path.join(prepare_local_test_files, "academic", f_name), "r")
-        for line in neigh_f:
-            line = line.strip()
-            node_id = int(re.split(":", line)[0])
-            neigh_list = re.split(":", line)[1]
-            neigh_list_id = re.split(",", neigh_list)
-            if f_name == "a_p_list_train.txt":
-                for j in range(len(neigh_list_id)):
-                    a_p_list_train[node_id].append("p" + str(neigh_list_id[j]))
-            elif f_name == "p_a_list_train.txt":
-                for j in range(len(neigh_list_id)):
-                    p_a_list_train[node_id].append("a" + str(neigh_list_id[j]))
-            elif f_name == "p_p_citation_list.txt":
-                for j in range(len(neigh_list_id)):
-                    p_p_cite_list_train[node_id].append("p" + str(neigh_list_id[j]))
-            else:
-                for j in range(len(neigh_list_id)):
-                    v_p_list_train[node_id].append("p" + str(neigh_list_id[j]))
-        neigh_f.close()
+        with open(os.path.join(config["data_dir"], "academic", f_name), "r") as neigh_f:
+            for line in neigh_f:
+                line = line.strip()
+                node_id = int(re.split(":", line)[0])
+                neigh_list = re.split(":", line)[1]
+                neigh_list_id = re.split(",", neigh_list)
+                if f_name == "a_p_list_train.txt":
+                    for j in range(len(neigh_list_id)):
+                        a_p_list_train[node_id].append("p" + str(neigh_list_id[j]))
+                elif f_name == "p_a_list_train.txt":
+                    for j in range(len(neigh_list_id)):
+                        p_a_list_train[node_id].append("a" + str(neigh_list_id[j]))
+                elif f_name == "p_p_citation_list.txt":
+                    for j in range(len(neigh_list_id)):
+                        p_p_cite_list_train[node_id].append("p" + str(neigh_list_id[j]))
+                else:
+                    for j in range(len(neigh_list_id)):
+                        v_p_list_train[node_id].append("p" + str(neigh_list_id[j]))
 
     # store paper venue
-    p_v = [0] * num_p
-    p_v_f = open(os.path.join(prepare_local_test_files, "academic", "p_v.txt"), "r")
-    for line in p_v_f:
-        line = line.strip()
-        p_id = int(re.split(",", line)[0])
-        v_id = int(re.split(",", line)[1])
-        p_v[p_id] = v_id
-    p_v_f.close()
+    p_v = [0] * config["P_n"]
+    with open(os.path.join(config["data_dir"], "academic", "p_v.txt"), "r") as p_v_f:
+        for line in p_v_f:
+            line = line.strip()
+            p_id = int(re.split(",", line)[0])
+            v_id = int(re.split(",", line)[1])
+            p_v[p_id] = v_id
 
     # paper neighbor: author + citation + venue
-    p_neigh_list_train = [[] for k in range(num_p)]
-    for i in range(num_p):
+    p_neigh_list_train = [[] for k in range(config["P_n"])]
+    for i in range(config["P_n"]):
         p_neigh_list_train[i] += p_a_list_train[i]
         p_neigh_list_train[i] += p_p_cite_list_train[i]
         p_neigh_list_train[i].append("v" + str(p_v[i]))
@@ -132,14 +135,14 @@ def load_data(prepare_local_test_files):
     return features, adj_list
 
 
-def init_het_input_data(prepare_local_test_files):
-    a_p_list_train = [[] for k in range(num_a)]
-    a_p_list_test = [[] for k in range(num_a)]
-    p_a_list_train = [[] for k in range(num_p)]
-    p_a_list_test = [[] for k in range(num_p)]
-    p_p_cite_list_train = [[] for k in range(num_p)]
-    p_p_cite_list_test = [[] for k in range(num_p)]
-    v_p_list_train = [[] for k in range(num_v)]
+def init_het_input_data(config):
+    a_p_list_train = [[] for _ in range(config["A_n"])]
+    a_p_list_test = [[] for _ in range(config["A_n"])]
+    p_a_list_train = [[] for _ in range(config["P_n"])]
+    p_a_list_test = [[] for _ in range(config["P_n"])]
+    p_p_cite_list_train = [[] for _ in range(config["P_n"])]
+    p_p_cite_list_test = [[] for _ in range(config["P_n"])]
+    v_p_list_train = [[] for _ in range(config["V_n"])]
 
     relation_f = [
         "a_p_list_train.txt",
@@ -154,48 +157,46 @@ def init_het_input_data(prepare_local_test_files):
     # store academic relational data
     for i in range(len(relation_f)):
         f_name = relation_f[i]
-        neigh_f = open(os.path.join(prepare_local_test_files, "academic", f_name), "r")
-        for line in neigh_f:
-            line = line.strip()
-            node_id = int(re.split(":", line)[0])
-            neigh_list = re.split(":", line)[1]
-            neigh_list_id = re.split(",", neigh_list)
-            if f_name == "a_p_list_train.txt":
-                for j in range(len(neigh_list_id)):
-                    a_p_list_train[node_id].append("p" + str(neigh_list_id[j]))
-            elif f_name == "a_p_list_test.txt":
-                for j in range(len(neigh_list_id)):
-                    a_p_list_test[node_id].append("p" + str(neigh_list_id[j]))
-            elif f_name == "p_a_list_train.txt":
-                for j in range(len(neigh_list_id)):
-                    p_a_list_train[node_id].append("a" + str(neigh_list_id[j]))
-            elif f_name == "p_a_list_test.txt":
-                for j in range(len(neigh_list_id)):
-                    p_a_list_test[node_id].append("a" + str(neigh_list_id[j]))
-            elif f_name == "p_p_cite_list_train.txt":
-                for j in range(len(neigh_list_id)):
-                    p_p_cite_list_train[node_id].append("p" + str(neigh_list_id[j]))
-            elif f_name == "p_p_cite_list_test.txt":
-                for j in range(len(neigh_list_id)):
-                    p_p_cite_list_test[node_id].append("p" + str(neigh_list_id[j]))
-            else:
-                for j in range(len(neigh_list_id)):
-                    v_p_list_train[node_id].append("p" + str(neigh_list_id[j]))
-        neigh_f.close()
+        with open(os.path.join(config["data_dir"], "academic", f_name), "r") as neigh_f:
+            for line in neigh_f:
+                line = line.strip()
+                node_id = int(re.split(":", line)[0])
+                neigh_list = re.split(":", line)[1]
+                neigh_list_id = re.split(",", neigh_list)
+                if f_name == "a_p_list_train.txt":
+                    for j in range(len(neigh_list_id)):
+                        a_p_list_train[node_id].append("p" + str(neigh_list_id[j]))
+                elif f_name == "a_p_list_test.txt":
+                    for j in range(len(neigh_list_id)):
+                        a_p_list_test[node_id].append("p" + str(neigh_list_id[j]))
+                elif f_name == "p_a_list_train.txt":
+                    for j in range(len(neigh_list_id)):
+                        p_a_list_train[node_id].append("a" + str(neigh_list_id[j]))
+                elif f_name == "p_a_list_test.txt":
+                    for j in range(len(neigh_list_id)):
+                        p_a_list_test[node_id].append("a" + str(neigh_list_id[j]))
+                elif f_name == "p_p_cite_list_train.txt":
+                    for j in range(len(neigh_list_id)):
+                        p_p_cite_list_train[node_id].append("p" + str(neigh_list_id[j]))
+                elif f_name == "p_p_cite_list_test.txt":
+                    for j in range(len(neigh_list_id)):
+                        p_p_cite_list_test[node_id].append("p" + str(neigh_list_id[j]))
+                else:
+                    for j in range(len(neigh_list_id)):
+                        v_p_list_train[node_id].append("p" + str(neigh_list_id[j]))
 
     # store paper venue
-    p_v = [0] * num_p
-    p_v_f = open(os.path.join(prepare_local_test_files, "academic", "p_v.txt"), "r")
-    for line in p_v_f:
-        line = line.strip()
-        p_id = int(re.split(",", line)[0])
-        v_id = int(re.split(",", line)[1])
-        p_v[p_id] = v_id
-    p_v_f.close()
+    p_v = [0] * config["P_n"]
+    with open(os.path.join(config["data_dir"], "academic", "p_v.txt"), "r") as p_v_f:
+        for line in p_v_f:
+            line = line.strip()
+            p_id = int(re.split(",", line)[0])
+            v_id = int(re.split(",", line)[1])
+            p_v[p_id] = v_id
 
     # paper neighbor: author + citation + venue
-    p_neigh_list_train = [[] for k in range(num_p)]
-    for i in range(num_p):
+    p_neigh_list_train = [[] for k in range(config["P_n"])]
+    for i in range(config["P_n"]):
         p_neigh_list_train[i] += p_a_list_train[i]
         p_neigh_list_train[i] += p_p_cite_list_train[i]
         p_neigh_list_train[i].append("v" + str(p_v[i]))
@@ -252,133 +253,135 @@ def a_a_collaborate_train_test(config, input_data_map):
         a_a_list_train[i] = list(set(a_a_list_train[i]))
         a_a_list_test[i] = list(set(a_a_list_test[i]))
 
-    a_a_list_train_f = open(str(config["data_dir"] + "/a_a_list_train.txt"), "w")
-    a_a_list_test_f = open(str(config["data_dir"] + "/a_a_list_test.txt"), "w")
-    a_a_list = [a_a_list_train, a_a_list_test]
-
-    for t in range(len(a_a_list)):
-        for i in range(len(a_a_list[t])):
-            # print (i)
-            if len(a_a_list[t][i]):
-                if t == 0:
-                    for j in range(len(a_a_list[t][i])):
-                        a_a_list_train_f.write(
-                            "%d, %d, %d\n" % (i, a_a_list[t][i][j], 1)
-                        )
-                        node_n = random.randint(0, config["A_n"] - 1)
-                        while node_n in a_a_list[t][i]:
-                            node_n = random.randint(0, config["A_n"] - 1)
-                        a_a_list_train_f.write("%d, %d, %d\n" % (i, node_n, 0))
-                else:
-                    for j in range(len(a_a_list[t][i])):
-                        a_a_list_test_f.write(
-                            "%d, %d, %d\n" % (i, a_a_list[t][i][j], 1)
-                        )
-                        node_n = random.randint(0, config["A_n"] - 1)
-                        while (
-                            node_n in a_a_list[t][i]
-                            or node_n in a_a_list_train[i]
-                            or len(a_a_list_train[i]) == 0
-                        ):
-                            node_n = random.randint(0, config["A_n"] - 1)
-                        a_a_list_test_f.write("%d, %d, %d\n" % (i, node_n, 0))
-
-    a_a_list_train_f.close()
-    a_a_list_test_f.close()
+    with open(str(config["data_dir"] + "/a_a_list_train.txt"), "w") as a_a_list_train_f:
+        with open(
+            str(config["data_dir"] + "/a_a_list_test.txt"), "w"
+        ) as a_a_list_test_f:
+            a_a_list = [a_a_list_train, a_a_list_test]
+            for t in range(len(a_a_list)):
+                for i in range(len(a_a_list[t])):
+                    if len(a_a_list[t][i]):
+                        if t == 0:
+                            for j in range(len(a_a_list[t][i])):
+                                a_a_list_train_f.write(
+                                    "%d, %d, %d\n" % (i, a_a_list[t][i][j], 1)
+                                )
+                                node_n = random.randint(0, config["A_n"] - 1)
+                                while node_n in a_a_list[t][i]:
+                                    node_n = random.randint(0, config["A_n"] - 1)
+                                a_a_list_train_f.write("%d, %d, %d\n" % (i, node_n, 0))
+                        else:
+                            for j in range(len(a_a_list[t][i])):
+                                a_a_list_test_f.write(
+                                    "%d, %d, %d\n" % (i, a_a_list[t][i][j], 1)
+                                )
+                                node_n = random.randint(0, config["A_n"] - 1)
+                                while (
+                                    node_n in a_a_list[t][i]
+                                    or node_n in a_a_list_train[i]
+                                    or len(a_a_list_train[i]) == 0
+                                ):
+                                    node_n = random.randint(0, config["A_n"] - 1)
+                                a_a_list_test_f.write("%d, %d, %d\n" % (i, node_n, 0))
 
     return a_a_collab_feature_setting(config)
 
 
 def a_a_collab_feature_setting(config):
     a_embed = np.around(np.random.normal(0, 0.01, [config["A_n"], config["dim"]]), 4)
-    embed_f = open(config["data_dir"] + "/node_embedding.txt", "r")
-    for line in islice(embed_f, 0, None):
-        line = line.strip()
-        node_id = re.split(" ", line)[0]
-        index = int(node_id) - 1000000
-        embed = np.asarray(re.split(" ", line)[1:], dtype=np.float32)
-        a_embed[index] = embed
-    embed_f.close()
+    with open(config["data_dir"] + "/node_embedding.txt", "r") as embed_f:
+        for line in islice(embed_f, 0, None):
+            line = line.strip()
+            node_id = re.split(" ", line)[0]
+            index = int(node_id) - 1000000
+            embed = np.asarray(re.split(" ", line)[1:], dtype=np.float32)
+            a_embed[index] = embed
 
     train_num = 0
-    a_a_list_train_f = open(str(config["data_dir"] + "/a_a_list_train.txt"), "r")
-    a_a_list_train_feature_f = open(str(config["data_dir"] + "/train_feature.txt"), "w")
-    for line in a_a_list_train_f:
-        line = line.strip()
-        a_1 = int(re.split(",", line)[0])
-        a_2 = int(re.split(",", line)[1])
+    with open(str(config["data_dir"] + "/a_a_list_train.txt"), "r") as a_a_list_train_f:
+        with open(
+            str(config["data_dir"] + "/train_feature.txt"), "w"
+        ) as a_a_list_train_feature_f:
+            for line in a_a_list_train_f:
+                line = line.strip()
+                a_1 = int(re.split(",", line)[0])
+                a_2 = int(re.split(",", line)[1])
 
-        label = int(re.split(",", line)[2])
-        if random.random() < 0.2:  # training data ratio
-            train_num += 1
-            a_a_list_train_feature_f.write("%d, %d, %d," % (a_1, a_2, label))
-            for d in range(config["dim"] - 1):
-                a_a_list_train_feature_f.write(
-                    "%f," % (a_embed[a_1][d] * a_embed[a_2][d])
-                )
-            a_a_list_train_feature_f.write(
-                "%f"
-                % (a_embed[a_1][config["dim"] - 1] * a_embed[a_2][config["dim"] - 1])
-            )
-            a_a_list_train_feature_f.write("\n")
-    a_a_list_train_f.close()
-    a_a_list_train_feature_f.close()
+                label = int(re.split(",", line)[2])
+                if random.random() < 0.2:  # training data ratio
+                    train_num += 1
+                    a_a_list_train_feature_f.write("%d, %d, %d," % (a_1, a_2, label))
+                    for d in range(config["dim"] - 1):
+                        a_a_list_train_feature_f.write(
+                            "%f," % (a_embed[a_1][d] * a_embed[a_2][d])
+                        )
+                    a_a_list_train_feature_f.write(
+                        "%f"
+                        % (
+                            a_embed[a_1][config["dim"] - 1]
+                            * a_embed[a_2][config["dim"] - 1]
+                        )
+                    )
+                    a_a_list_train_feature_f.write("\n")
 
     test_num = 0
-    a_a_list_test_f = open(str(config["data_dir"] + "/a_a_list_test.txt"), "r")
-    a_a_list_test_feature_f = open(str(config["data_dir"] + "/test_feature.txt"), "w")
-    for line in a_a_list_test_f:
-        line = line.strip()
-        a_1 = int(re.split(",", line)[0])
-        a_2 = int(re.split(",", line)[1])
+    with open(str(config["data_dir"] + "/a_a_list_test.txt"), "r") as a_a_list_test_f:
+        with open(
+            str(config["data_dir"] + "/test_feature.txt"), "w"
+        ) as a_a_list_test_feature_f:
+            for line in a_a_list_test_f:
+                line = line.strip()
+                a_1 = int(re.split(",", line)[0])
+                a_2 = int(re.split(",", line)[1])
 
-        label = int(re.split(",", line)[2])
-        test_num += 1
-        a_a_list_test_feature_f.write("%d, %d, %d," % (a_1, a_2, label))
-        for d in range(config["dim"] - 1):
-            a_a_list_test_feature_f.write("%f," % (a_embed[a_1][d] * a_embed[a_2][d]))
-        a_a_list_test_feature_f.write(
-            "%f" % (a_embed[a_1][config["dim"] - 1] * a_embed[a_2][config["dim"] - 1])
-        )
-        a_a_list_test_feature_f.write("\n")
-    a_a_list_test_f.close()
-    a_a_list_test_feature_f.close()
+                label = int(re.split(",", line)[2])
+                test_num += 1
+                a_a_list_test_feature_f.write("%d, %d, %d," % (a_1, a_2, label))
+                for d in range(config["dim"] - 1):
+                    a_a_list_test_feature_f.write(
+                        "%f," % (a_embed[a_1][d] * a_embed[a_2][d])
+                    )
+                a_a_list_test_feature_f.write(
+                    "%f"
+                    % (
+                        a_embed[a_1][config["dim"] - 1]
+                        * a_embed[a_2][config["dim"] - 1]
+                    )
+                )
+                a_a_list_test_feature_f.write("\n")
 
     return train_num, test_num
 
 
 def a_class_cluster_feature_setting(config):
     a_embed = np.around(np.random.normal(0, 0.01, [config["A_n"], config["dim"]]), 4)
-    embed_f = open(config["data_dir"] + "/node_embedding.txt", "r")
-    for line in islice(embed_f, 0, None):
-        line = line.strip()
-        node_id = re.split(" ", line)[0]
-        index = int(node_id) - 1000000
-        embed = np.asarray(re.split(" ", line)[1:], dtype="float32")
-        a_embed[index] = embed
-    embed_f.close()
+    with open(config["data_dir"] + "/node_embedding.txt", "r") as embed_f:
+        for line in islice(embed_f, 0, None):
+            line = line.strip()
+            node_id = re.split(" ", line)[0]
+            index = int(node_id) - 1000000
+            embed = np.asarray(re.split(" ", line)[1:], dtype="float32")
+            a_embed[index] = embed
 
     a_p_list_train = [[] for k in range(config["A_n"])]
-    a_p_list_train_f = open(
+    with open(
         os.path.join(config["data_dir"], "academic", "a_p_list_train.txt"), "r"
-    )
-    for line in a_p_list_train_f:
-        line = line.strip()
-        node_id = int(re.split(":", line)[0])
-        neigh_list = re.split(":", line)[1]
-        neigh_list_id = re.split(",", neigh_list)
-        for j in range(len(neigh_list_id)):
-            a_p_list_train[node_id].append("p" + str(neigh_list_id[j]))
-    a_p_list_train_f.close()
+    ) as a_p_list_train_f:
+        for line in a_p_list_train_f:
+            line = line.strip()
+            node_id = int(re.split(":", line)[0])
+            neigh_list = re.split(":", line)[1]
+            neigh_list_id = re.split(",", neigh_list)
+            for j in range(len(neigh_list_id)):
+                a_p_list_train[node_id].append("p" + str(neigh_list_id[j]))
 
     p_v = [0] * config["P_n"]
-    p_v_f = open(os.path.join(config["data_dir"], "academic", "p_v.txt"), "r")
-    for line in p_v_f:
-        line = line.strip()
-        p_id = int(re.split(",", line)[0])
-        v_id = int(re.split(",", line)[1])
-        p_v[p_id] = v_id
-    p_v_f.close()
+    with open(os.path.join(config["data_dir"], "academic", "p_v.txt"), "r") as p_v_f:
+        for line in p_v_f:
+            line = line.strip()
+            p_id = int(re.split(",", line)[0])
+            v_id = int(re.split(",", line)[1])
+            p_v[p_id] = v_id
 
     a_v_list_train = [[] for k in range(config["A_n"])]
     for i in range(len(a_p_list_train)):  # tranductive node classification
@@ -396,213 +399,105 @@ def a_class_cluster_feature_setting(config):
     for i in range(config["A_n"]):
         a_max_v[i] = a_v_num[i].index(max(a_v_num[i]))
 
-    cluster_f = open(str(config["data_dir"] + "/cluster.txt"), "w")
-    cluster_embed_f = open(str(config["data_dir"] + "/cluster_embed.txt"), "w")
-    a_class_list = [[] for k in range(config["C_n"])]
-    cluster_id = 0
-    num_hidden = config["dim"]
-    for i in range(config["A_n"]):
-        if len(a_p_list_train[i]):
-            if (
-                a_max_v[i] == 17 or a_max_v[i] == 4 or a_max_v[i] == 1
-            ):  # cv: cvpr, iccv, eccv
-                a_class_list[0].append(i)
-                cluster_f.write("%d,%d\n" % (cluster_id, 3))
-                cluster_embed_f.write("%d " % (cluster_id))
-                for k in range(num_hidden):
-                    cluster_embed_f.write("%lf " % (a_embed[i][k]))
-                cluster_embed_f.write("\n")
-                cluster_id += 1
-            elif (
-                a_max_v[i] == 16 or a_max_v[i] == 2 or a_max_v[i] == 3
-            ):  # nlp: acl, emnlp, naacl
-                a_class_list[1].append(i)
-                cluster_f.write("%d,%d\n" % (cluster_id, 0))
-                cluster_embed_f.write("%d " % (cluster_id))
-                for k in range(num_hidden):
-                    cluster_embed_f.write("%lf " % (a_embed[i][k]))
-                cluster_embed_f.write("\n")
-                cluster_id += 1
-            elif (
-                a_max_v[i] == 9 or a_max_v[i] == 13 or a_max_v[i] == 6
-            ):  # dm: kdd, wsdm, icdm
-                a_class_list[2].append(i)
-                cluster_f.write("%d,%d\n" % (cluster_id, 1))
-                cluster_embed_f.write("%d " % (cluster_id))
-                for k in range(num_hidden):
-                    cluster_embed_f.write("%lf " % (a_embed[i][k]))
-                cluster_embed_f.write("\n")
-                cluster_id += 1
-            elif (
-                a_max_v[i] == 12 or a_max_v[i] == 10 or a_max_v[i] == 5
-            ):  # db: sigmod, vldb, icde
-                a_class_list[3].append(i)
-                cluster_f.write("%d,%d\n" % (cluster_id, 2))
-                cluster_embed_f.write("%d " % (cluster_id))
-                for k in range(num_hidden):
-                    cluster_embed_f.write("%lf " % (a_embed[i][k]))
-                cluster_embed_f.write("\n")
-                cluster_id += 1
-    cluster_f.close()
-    cluster_embed_f.close()
+    with open(str(config["data_dir"] + "/cluster.txt"), "w") as cluster_f:
+        with open(
+            str(config["data_dir"] + "/cluster_embed.txt"), "w"
+        ) as cluster_embed_f:
+            a_class_list = [[] for k in range(config["C_n"])]
+            cluster_id = 0
+            num_hidden = config["dim"]
+            for i in range(config["A_n"]):
+                if len(a_p_list_train[i]):
+                    if (
+                        a_max_v[i] == 17 or a_max_v[i] == 4 or a_max_v[i] == 1
+                    ):  # cv: cvpr, iccv, eccv
+                        a_class_list[0].append(i)
+                        cluster_f.write("%d,%d\n" % (cluster_id, 3))
+                        cluster_embed_f.write("%d " % (cluster_id))
+                        for k in range(num_hidden):
+                            cluster_embed_f.write("%lf " % (a_embed[i][k]))
+                        cluster_embed_f.write("\n")
+                        cluster_id += 1
+                    elif (
+                        a_max_v[i] == 16 or a_max_v[i] == 2 or a_max_v[i] == 3
+                    ):  # nlp: acl, emnlp, naacl
+                        a_class_list[1].append(i)
+                        cluster_f.write("%d,%d\n" % (cluster_id, 0))
+                        cluster_embed_f.write("%d " % (cluster_id))
+                        for k in range(num_hidden):
+                            cluster_embed_f.write("%lf " % (a_embed[i][k]))
+                        cluster_embed_f.write("\n")
+                        cluster_id += 1
+                    elif (
+                        a_max_v[i] == 9 or a_max_v[i] == 13 or a_max_v[i] == 6
+                    ):  # dm: kdd, wsdm, icdm
+                        a_class_list[2].append(i)
+                        cluster_f.write("%d,%d\n" % (cluster_id, 1))
+                        cluster_embed_f.write("%d " % (cluster_id))
+                        for k in range(num_hidden):
+                            cluster_embed_f.write("%lf " % (a_embed[i][k]))
+                        cluster_embed_f.write("\n")
+                        cluster_id += 1
+                    elif (
+                        a_max_v[i] == 12 or a_max_v[i] == 10 or a_max_v[i] == 5
+                    ):  # db: sigmod, vldb, icde
+                        a_class_list[3].append(i)
+                        cluster_f.write("%d,%d\n" % (cluster_id, 2))
+                        cluster_embed_f.write("%d " % (cluster_id))
+                        for k in range(num_hidden):
+                            cluster_embed_f.write("%lf " % (a_embed[i][k]))
+                        cluster_embed_f.write("\n")
+                        cluster_id += 1
 
-    a_class_train_f = open(str(config["data_dir"] + ("/a_class_train.txt")), "w")
-    a_class_test_f = open(str(config["data_dir"] + ("/a_class_test.txt")), "w")
-    train_class_feature_f = open(
-        str(config["data_dir"] + ("/train_class_feature.txt")), "w"
-    )
-    test_class_feature_f = open(
-        str(config["data_dir"] + ("/test_class_feature.txt")), "w"
-    )
-
-    train_num = 0
-    test_num = 0
-    for i in range(config["C_n"]):
-        for j in range(len(a_class_list[i])):
-            randvalue = random.random()
-            if randvalue < 0.1:
-                a_class_train_f.write("%d,%d\n" % (a_class_list[i][j], i))
-                train_class_feature_f.write("%d,%d," % (a_class_list[i][j], i))
-                for d in range(num_hidden - 1):
-                    train_class_feature_f.write("%lf," % a_embed[a_class_list[i][j]][d])
-                train_class_feature_f.write(
-                    "%lf" % a_embed[a_class_list[i][j]][num_hidden - 1]
-                )
-                train_class_feature_f.write("\n")
-                train_num += 1
-            else:
-                a_class_test_f.write("%d,%d\n" % (a_class_list[i][j], i))
-                test_class_feature_f.write("%d,%d," % (a_class_list[i][j], i))
-                for d in range(num_hidden - 1):
-                    test_class_feature_f.write("%lf," % a_embed[a_class_list[i][j]][d])
-                test_class_feature_f.write(
-                    "%lf" % a_embed[a_class_list[i][j]][num_hidden - 1]
-                )
-                test_class_feature_f.write("\n")
-                test_num += 1
-    a_class_train_f.close()
-    a_class_test_f.close()
+    with open(str(config["data_dir"] + ("/a_class_train.txt")), "w") as a_class_train_f:
+        with open(
+            str(config["data_dir"] + ("/a_class_test.txt")), "w"
+        ) as a_class_test_f:
+            with open(
+                str(config["data_dir"] + ("/train_class_feature.txt")), "w"
+            ) as train_class_feature_f:
+                with open(
+                    str(config["data_dir"] + ("/test_class_feature.txt")), "w"
+                ) as test_class_feature_f:
+                    train_num = 0
+                    test_num = 0
+                    for i in range(config["C_n"]):
+                        for j in range(len(a_class_list[i])):
+                            randvalue = random.random()
+                            if randvalue < 0.1:
+                                a_class_train_f.write(
+                                    "%d,%d\n" % (a_class_list[i][j], i)
+                                )
+                                train_class_feature_f.write(
+                                    "%d,%d," % (a_class_list[i][j], i)
+                                )
+                                for d in range(num_hidden - 1):
+                                    train_class_feature_f.write(
+                                        "%lf," % a_embed[a_class_list[i][j]][d]
+                                    )
+                                train_class_feature_f.write(
+                                    "%lf" % a_embed[a_class_list[i][j]][num_hidden - 1]
+                                )
+                                train_class_feature_f.write("\n")
+                                train_num += 1
+                            else:
+                                a_class_test_f.write(
+                                    "%d,%d\n" % (a_class_list[i][j], i)
+                                )
+                                test_class_feature_f.write(
+                                    "%d,%d," % (a_class_list[i][j], i)
+                                )
+                                for d in range(num_hidden - 1):
+                                    test_class_feature_f.write(
+                                        "%lf," % a_embed[a_class_list[i][j]][d]
+                                    )
+                                test_class_feature_f.write(
+                                    "%lf" % a_embed[a_class_list[i][j]][num_hidden - 1]
+                                )
+                                test_class_feature_f.write("\n")
+                                test_num += 1
 
     return train_num, test_num
-
-
-class MockHetGnnFileNodeLoader(IterableDataset):
-    def __init__(
-        self, graph: Graph, batch_size: int = 200, sample_file: str = "", model=None
-    ):
-        self.graph = graph
-        self.batch_size = batch_size
-        node_list = []
-        with open(sample_file, "r") as f:
-            data_file = csv.reader(f)
-            for i, d in enumerate(data_file):
-                node_list.append([int(d[0]) + node_base_index, int(d[1])])
-        self.node_list = np.array(node_list)
-        self.cur_batch = 0
-        self.model = model
-
-    def __iter__(self):
-        """Implement IterableDataset method to provide data iterator."""
-        return self
-
-    def __next__(self):
-        """Implement iterator interface."""
-        if self.cur_batch * self.batch_size >= len(self.node_list):
-            raise StopIteration
-        start_pos = self.cur_batch * self.batch_size
-        self.cur_batch += 1
-        end_pos = self.cur_batch * self.batch_size
-        if end_pos >= len(self.node_list):
-            end_pos = -1
-        context = {}
-        context["inputs"] = np.array(self.node_list[start_pos:end_pos][:, 0])
-        context["node_type"] = self.node_list[start_pos:end_pos][0][1]
-        context["encoder"] = self.model.build_node_context(
-            context["inputs"], self.graph
-        )
-        return context
-
-
-class MockGraph:
-    def __init__(self, feat_data, adj_lists):
-        self.feat_data = feat_data
-        self.adj_lists = adj_lists
-        self.type_ranges = [
-            (node_base_index, node_base_index + 2000),
-            (node_base_index * 2, node_base_index * 2 + 2000),
-            (node_base_index * 3, node_base_index * 3 + 10),
-        ]
-
-    def sample_nodes(
-        self,
-        size: int,
-        node_type: int,
-        **kwargs,
-    ) -> np.ndarray:
-        return np.random.randint(
-            self.type_ranges[node_type][0], self.type_ranges[node_type][1], size
-        )
-
-    def map_node_id(self, node_id, node_type):
-        if node_type == "a" or node_type == "0":
-            return int(node_id) + node_base_index
-        if node_type == "p" or node_type == "1":
-            return int(node_id) + (node_base_index * 2)
-        if node_type == "v" or node_type == "2":
-            return int(node_id) + (node_base_index * 3)
-
-    def sample_neighbors(
-        self,
-        nodes: np.ndarray,
-        edge_types: np.ndarray,
-        count: int = 10,
-        *args,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        res = np.empty((len(nodes), count), dtype=np.int64)
-        res_types = np.full((len(nodes), count), -1, dtype=np.int32)
-        res_count = np.empty((len(nodes)), dtype=np.int64)
-        for i in range(len(nodes)):
-            universe = []
-            if nodes[i] != -1:
-                node_type = (nodes[i] // node_base_index) - 1
-                universe = [
-                    self.map_node_id(x[1:], x[0])
-                    for x in self.adj_lists[node_type][nodes[i] % node_base_index]
-                ]
-
-            # If there are no neighbors, fill results with a dummy value.
-            if len(universe) == 0:
-                res[i] = np.full(count, -1, dtype=np.int64)
-                res_count[i] = 0
-            else:
-                res[i] = np.random.choice(universe, count, replace=True)
-                res_count[i] = count
-
-            for nt in range(len(res[i])):
-                if res[i][nt] != -1:
-                    neightype = (res[i][nt] // node_base_index) - 1
-                    res_types[i][nt] = neightype
-
-        return (
-            res,
-            np.full((len(nodes), count), 0.0, dtype=np.float32),
-            res_types,
-            res_count,
-        )
-
-    def node_features(
-        self, nodes: np.ndarray, features: np.ndarray, feature_type: np.dtype
-    ) -> np.ndarray:
-        node_features = np.zeros((len(nodes), features[0][1]), dtype=np.float32)
-        for i in range(len(nodes)):
-            node_id = nodes[i]
-            node_type = (node_id // node_base_index) - 1
-            key = str(node_id % node_base_index)
-            if node_id == -1 or key not in self.feat_data[node_type]:
-                continue
-
-            node_features[i] = self.feat_data[node_type][key][0 : features[0][1]]
-        return node_features
 
 
 class MockIterableDataset(torch.utils.data.IterableDataset):
@@ -679,18 +574,15 @@ def train_academic_data(g, config):
 
                 times.append(end_time - start_time)
                 start_time = time.time()
+        scores = torch.unsqueeze(torch.cat(scores, 0), 1)
+        labels = torch.unsqueeze(torch.cat(labels, 0), 1).type(scores.dtype)
+        logger.info("Mean epoch MRR: {:.4f}".format(mrr(scores, labels)))
 
-        metric = model.compute_metric(scores, labels)
-        logger.info("Mean epoch {}: {}".format(model.metric_name(), metric))
-
-    # trained node embedding path
     return model
 
 
 def save_embedding(model, graph, config):
-    model.train()
-    embed_file = open(config["data_dir"] + "/node_embedding.txt", "w")
-
+    model.eval()
     batch_size = 200
     saving_dataset = MockHetGnnFileNodeLoader(
         graph=graph,
@@ -700,50 +592,46 @@ def save_embedding(model, graph, config):
     )
 
     data_loader = torch.utils.data.DataLoader(saving_dataset)
-    for _, context in enumerate(data_loader):
-        out_temp = model.get_embedding(context)
-        out_temp = out_temp.data.cpu().numpy()
-        inputs = context["inputs"].squeeze(0)
-        for k in range(len(out_temp)):
-            embed_file.write(
-                str(inputs[k].numpy())
-                + " "
-                + " ".join([str(out_temp[k][x]) for x in range(len(out_temp[k]))])
-                + "\n"
-            )
-
-    embed_file.close()
+    with open(config["data_dir"] + "/node_embedding.txt", "w") as embed_file:
+        for _, context in enumerate(data_loader):
+            out_temp = model.get_embedding(context)
+            out_temp = out_temp.data.cpu().numpy()
+            inputs = context["inputs"].squeeze(0)
+            for k in range(len(out_temp)):
+                embed_file.write(
+                    str(inputs[k].numpy())
+                    + " "
+                    + " ".join([str(out_temp[k][x]) for x in range(len(out_temp[k]))])
+                    + "\n"
+                )
 
 
 def evaluate_link_prediction_on_het_gnn(input_data_map, config):  # noqa: F811
     random.seed(0)
-
-    # do evaluation
     train_num, test_num = a_a_collaborate_train_test(config, input_data_map)
     auc, f1 = evaluation.evaluate_link_prediction(config, train_num, test_num)
-    print(f"auc is {auc} and f1 {f1}")
+    logger.info("Link prediction AUC: {:.4f} F1 score:{:.4f}".format(auc, f1))
 
-    assert auc > 0.6 and auc < 0.9
-    assert f1 > 0.6 and f1 < 0.9
+    assert auc > 0.73 and auc < 0.75
+    assert f1 > 0.66 and f1 < 0.69
 
 
 def evaluate_classification_on_het_gnn(config):  # noqa: F811
     random.seed(0)
-
-    # do evaluation
     train_num, test_num = a_class_cluster_feature_setting(config)
     macroF1, microF1 = evaluation.evaluate_node_classification(
         train_num, test_num, config
     )
-    print(f"{macroF1} {microF1}")
-    assert macroF1 > 0.9
-    assert microF1 > 0.9
+
+    logger.info(
+        "Node classification microF1: {:.4f} macroF1:{:.4f}".format(microF1, macroF1)
+    )
+    assert macroF1 > 0.95
+    assert microF1 > 0.95
 
 
 if __name__ == "__main__":
     with prepare_local_test_files() as local_test_files:
-        feat_data, adj_lists = load_data(local_test_files)
-        print(f" local_test_files {local_test_files}")
         config = {
             "data_dir": local_test_files,  # path to save intermediate data for evaluation
             "neighbor_count": 10,  # number of neighbors to sample of each node
@@ -752,7 +640,6 @@ if __name__ == "__main__":
             "walk_length": 5,
             "dim": 128,  # dimension of embedding.
             "learning_rate": 0.01,
-            # "max_id": 1024,
             "node_type": 0,  # node type to train/evaluate model
             "node_type_count": 3,
             "neighbor_count": 10,
@@ -766,16 +653,11 @@ if __name__ == "__main__":
             "V_n": 18,  # number of venue nodes
             "C_n": 4,  # number of node class labels
         }
-        print(f"Loaded data from {local_test_files}")
-        het_input_data = init_het_input_data(local_test_files)
-        graph = MockGraph(feat_data, adj_lists)
-        print("Graph loaded!")
+
+        feat_data, adj_lists = load_data(config)
+        het_input_data = init_het_input_data(config)
+        graph = MockGraph(feat_data, adj_lists, config)
         model = train_academic_data(graph, config)
-        print("model trained")
         save_embedding(model, graph, config)
-        print("embedings saved")
-        print(f"Passing {local_test_files}")
         evaluate_link_prediction_on_het_gnn(het_input_data, config)
-        print("Tested link prediction")
         evaluate_classification_on_het_gnn(config)
-        print("Tested classification")
