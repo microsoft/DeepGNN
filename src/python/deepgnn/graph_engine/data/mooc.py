@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-"""PPI dataset."""
+"""MOOC dataset."""
 
 import argparse
 import os
@@ -71,7 +71,7 @@ class MOOC(Client):
     def _edge_iterator(self, file):
         reader = sorted(
             csv.reader(file, delimiter=",", quoting=csv.QUOTE_NONNUMERIC),
-            key=operator.itemgetter(0),
+            key=lambda t: (t[0], t[1], t[2]),
         )
         curr_src = -1
         curr_dst = -1
@@ -86,7 +86,7 @@ class MOOC(Client):
                 curr_dst = int(row[1])
             if node_id != curr_src:
                 yield node_id, -1, 0, 1.0, 0, -1, []
-                curr_dst = -1
+                curr_dst = int(row[1])
                 curr_src = node_id
             if int(row[1]) != curr_dst and len(features) > 0:
                 yield curr_src, curr_dst, 0, 1.0, features[0][
@@ -95,7 +95,7 @@ class MOOC(Client):
                 features = []
                 curr_dst = int(row[1])
             features.append((int(row[2]), -1, np.array(row[4:], dtype=np.float32)))
-            if len(features) > 2:
+            if len(features) > 1:
                 features[-2] = (features[-2][0], features[-1][0], features[-2][2])
 
         yield curr_src, int(row[1]), 0, 1.0, features[0][
@@ -145,16 +145,4 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir", default=f"{tempfile.gettempdir()}/mooc", type=str)
     args = parser.parse_args()
-
-    graph = MOOC(args.data_dir)
-    features = c.edge_features(
-        np.array([[7016, 9, 0]], dtype=np.int64),
-        # np.array([7016], dtype=np.int64),
-        # np.array([9], dtype=np.int64),
-        # np.array([0], dtype=np.int32),
-        features=np.array([[0, 4]], dtype=np.int32),
-        feature_type=np.float32,
-        timestamps=np.array([2536563], dtype=np.int64),
-    )
-    print(f"Features are {features}")
-    assert graph.num_partitions == args.num_partitions
+    MOOC(args.data_dir)
