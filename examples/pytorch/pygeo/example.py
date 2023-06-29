@@ -1,15 +1,21 @@
 """https://github.com/pyg-team/pytorch_geometric/blob/master/examples/compile/gin.py."""
+import numpy as np
+import torch
 from torch_geometric.loader import NeighborLoader
-from torch_geometric.data.feature_store import FeatureStore
-from torch_geometric.data.graph_store import GraphStore
+from torch_geometric.data.feature_store import FeatureStore, TensorAttr
+from torch_geometric.data.graph_store import GraphStore, EdgeAttr
+from deepgnn.graph_engine.data.citation import Cora
+from torch_geometric.datasets import Planetoid
+from deepgnn.graph_engine import SamplingStrategy
 
 
 class DeepGNNFeatureStore(FeatureStore):
     """An abstract base class to access features from a remote feature store."""
 
-    def __init__(self):
+    def __init__(self, ge):
         """Initialize DeepGNN feature store."""
         super().__init__()
+        self.ge = ge
 
     def _put_tensor(self, tensor, attr) -> bool:
         """To be implemented by :class:`FeatureStore` subclasses."""
@@ -21,11 +27,24 @@ class DeepGNNFeatureStore(FeatureStore):
 
     def _get_tensor(self, attr):
         """To be implemented by :class:`FeatureStore` subclasses."""
-        assert False, attr
-        return
+        return torch.Tensor(
+            self.ge.node_features(
+                attr.index.detach().numpy(), np.array([[0, 121]]), np.float32
+            )
+        )
 
     def _get_tensor_size(self, attr):
         return attr.size()
+
+    def get_all_tensor_attrs(self):
+        """Obtain all tensor attributes stored in this :class:`FeatureStore`."""
+        output = []
+        for i in range(self.ge.node_count(0)):
+            ta = TensorAttr()
+            ta.group_name = "0"
+            ta.attr_name = f"{i}"
+            output.append(ta)
+        return output
 
 
 class DeepGNNGraphStore(GraphStore):
@@ -37,9 +56,10 @@ class DeepGNNGraphStore(GraphStore):
             their ordering to uniquely identify edges. (default: :obj:`None`)
     """
 
-    def __init__(self):
+    def __init__(self, ge):
         """Initialize DeepGNN graph store."""
         super().__init__()
+        self.ge = ge
 
     def _put_edge_index(self, edge_index, edge_attr) -> bool:
         """To be implemented by :class:`GraphStore` subclasses."""
@@ -51,16 +71,51 @@ class DeepGNNGraphStore(GraphStore):
 
     def _get_edge_index(self, edge_attr):
         """To be implemented by :class:`GraphStore` subclasses."""
-        assert False, edge_attr
+        edge_type = int(edge_attr.edge_type[1])
+        edge = self.ge.sample_edges(
+            edge_attr.size[0], np.array(edge_type), SamplingStrategy.Random
+        )
+        edge_index = (torch.Tensor(edge[:, 0]).long(), torch.Tensor(edge[:, 1]).long())
+        return edge_index
+
+    def get_all_edge_attrs(self):
+        """Obtain all edge attributes stored in the :class:`GraphStore`."""
+        output = []
+        # for i in range(self.ge.node_count(0)):
+        # node_type_0, edge_type, node_type_1
+        ta = EdgeAttr(
+            ("0", "0", "0"), "coo", size=[self.ge.edge_count(0), self.ge.edge_count(0)]
+        )
+        output.append(ta)
+
+        return output
 
 
-loader = NeighborLoader(
-    (DeepGNNFeatureStore(), DeepGNNGraphStore()),
+data = Planetoid("../cora", name="Cora")[0]
+
+"""
+loader_base = NeighborLoader(
+    data,
     # Sample 30 neighbors for each node for 2 iterations
     num_neighbors=[30] * 2,
     # Use a batch size of 128 for sampling training nodes
     batch_size=128,
+    input_nodes=data.train_mask,
+)
+"""
+
+ge = Cora()
+train_mask = np.ones(2708, dtype=np.bool)
+train_mask[-270:] = False
+loader = NeighborLoader(
+    (DeepGNNFeatureStore(ge), DeepGNNGraphStore(ge)),
+    num_neighbors=[30] * 2,
+    batch_size=128,
+    input_nodes=("0", [i for i in range(2708)]),
 )
 
+# sampled_data_original = next(iter(loader_original))
+# print(sampled_data_original.batch_size)
+
 sampled_data = next(iter(loader))
-print(sampled_data.batch_size)
+print(sampled_data.__dict__)
