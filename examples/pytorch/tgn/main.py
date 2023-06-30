@@ -15,15 +15,18 @@ from torch_geometric.nn.models.tgn import (
 
 from deepgnn.graph_engine.snark.local import Client
 
-device = torch.device('cpu')
+device = torch.device("cpu")
 edge_feature_dim = 4
+
+
 class GraphAttentionEmbedding(torch.nn.Module):
     def __init__(self, in_channels, out_channels, msg_dim, time_enc):
         super().__init__()
         self.time_enc = time_enc
         edge_dim = msg_dim + time_enc.out_channels
-        self.conv = TransformerConv(in_channels, out_channels // 2, heads=2,
-                                    dropout=0.1, edge_dim=edge_dim)
+        self.conv = TransformerConv(
+            in_channels, out_channels // 2, heads=2, dropout=0.1, edge_dim=edge_dim
+        )
 
     def forward(self, x, last_update, edge_index, t, msg):
         rel_t = last_update[edge_index[0]] - t
@@ -44,32 +47,39 @@ class LinkPredictor(torch.nn.Module):
         h = h.relu()
         return self.lin_final(h)
 
-graph = Client('/tmp/mooc', [0])
-max_node_id = graph.num_nodes(0)
 
-def train_val_test_batches(self, test_ratio: float = 0.1, val_ratio: float = 0.1):        
+graph = Client("/tmp/mooc", [0])
+max_node_id = graph.node_count(0)
+
+
+def train_val_test_batches(self, test_ratio: float = 0.1, val_ratio: float = 0.1):
     """Split the graph edges into train/val/test batches."""
-    np.loadtxt(
-        os.path.join(self.data_dir, "mooc", "mooc.csv"),
+    edges = np.loadtxt(
+        os.path.join("/tmp/mooc/raw", "mooc", "mooc.csv"),
         delimiter=",",
         skiprows=1,
         usecols=(0, 1, 2),
     ).astype(np.int64)
 
-    test_time, val_time = np.quantile(self._edges[:, 2], [1 - test_ratio - val_ratio, 1- test_ratio])
-    test_idx = (self._edges[:, 2] <= test_time).sum()
-    val_idx = (self._edges[:, 2] <= val_time).sum()
-    return self._edges[:val_idx], self._edges[val_idx:test_idx], self._edges[test_idx:]
-train_data, val_data, test_data = train_val_test_batches(0.15, 0.15)
+    test_time, val_time = np.quantile(
+        edges[:, 2], [1 - test_ratio - val_ratio, 1 - test_ratio]
+    )
+    test_idx = (edges[:, 2] <= test_time).sum()
+    val_idx = (edges[:, 2] <= val_time).sum()
+    return edges[:val_idx], edges[val_idx:test_idx], edges[test_idx:]
 
-train_loader = SequentialSampler(train_data, batch_size=200)
-val_loader = SequentialSampler(val_data, batch_size=200)
-test_loader = SequentialSampler(test_data, batch_size=200)
+
+train_data, val_data, test_data = train_val_test_batches(0.15, 0.15)
+from torch.utils.data import DataLoader
+
+train_loader = DataLoader(train_data, batch_size=200)
+val_loader = DataLoader(val_data, batch_size=200)
+test_loader = DataLoader(test_data, batch_size=200)
 
 memory_dim = time_dim = embedding_dim = 100
 
 memory = TGNMemory(
-    graph.num_nodes,
+    graph.node_count(0),
     edge_feature_dim,
     memory_dim,
     time_dim,
@@ -87,9 +97,13 @@ gnn = GraphAttentionEmbedding(
 link_pred = LinkPredictor(in_channels=embedding_dim).to(device)
 
 optimizer = torch.optim.Adam(
-    set(memory.parameters()) | set(gnn.parameters())
-    | set(link_pred.parameters()), lr=0.0001)
+    set(memory.parameters()) | set(gnn.parameters()) | set(link_pred.parameters()),
+    lr=0.0001,
+)
 criterion = torch.nn.BCEWithLogitsLoss()
+
+# Helper vector to map global node indices to local ones.
+assoc = torch.empty(graph.node_count(0), dtype=torch.long, device=device)
 
 
 def train():
@@ -104,20 +118,38 @@ def train():
         batch = batch.to(device)
         optimizer.zero_grad()
 
-        src, pos_dst, t, msg = batch.src, batch.dst, batch.t, batch.msg
+        src, pos_dst, t = batch[:, 0], batch[:, 1], batch[:, 2]
+        edges = np.stack([src, pos_dst, np.zeros(src.size(), dtype=np.int64)])
+        features = graph.edge_features(
+            edges=edges,
+            features=np.array([[0, edge_feature_dim]], dtype=np.int32),
+            feature_type=np.float32,
+            timestamps=t,
+        )
 
         # Sample negative destination nodes.
-        neg_dst = torch.randint(0, max_node_id + 1, (src.size(0), ),
-                                dtype=torch.long, device=device)
+        neg_dst = torch.randint(
+            0, max_node_id + 1, (src.size(0),), dtype=torch.long, device=device
+        )
 
         n_id = torch.cat([src, pos_dst, neg_dst]).unique()
-        n_id, edge_index, e_id = neighbor_loader(n_id)
+        dst = graph.sample_neighbors(
+            src, 0, 10, strategy="lastn", timestamps=t, return_edge_created_ts=True
+        )
+        edge_index = []
+        # n_id, edge_index, e_id = neighbor_loader(n_id)
         assoc[n_id] = torch.arange(n_id.size(0), device=device)
 
         # Get updated memory of all nodes involved in the computation.
         z, last_update = memory(n_id)
-        z = gnn(z, last_update, edge_index, data.t[e_id].to(device),
-                data.msg[e_id].to(device))
+        z = gnn(
+            z,
+            last_update,
+            edge_index,
+            t.to(device),
+            features.to(device),
+            dst[3],
+        )
 
         pos_out = link_pred(z[assoc[src]], z[assoc[pos_dst]])
         neg_out = link_pred(z[assoc[src]], z[assoc[neg_dst]])
@@ -126,8 +158,8 @@ def train():
         loss += criterion(neg_out, torch.zeros_like(neg_out))
 
         # Update memory and neighbor loader with ground-truth state.
-        memory.update_state(src, pos_dst, t, msg)
-        neighbor_loader.insert(src, pos_dst)
+        memory.update_state(src, pos_dst, t, features)
+        # neighbor_loader.insert(src, pos_dst)
 
         loss.backward()
         optimizer.step()
@@ -135,6 +167,7 @@ def train():
         total_loss += float(loss) * batch.num_events
 
     return total_loss / train_data.num_events
+
 
 @torch.no_grad()
 def test(loader):
@@ -149,24 +182,34 @@ def test(loader):
         batch = batch.to(device)
         src, pos_dst, t, msg = batch.src, batch.dst, batch.t, batch.msg
 
-        neg_dst = torch.randint(min_dst_idx, max_dst_idx + 1, (src.size(0), ),
-                                dtype=torch.long, device=device)
+        neg_dst = torch.randint(
+            min_dst_idx,
+            max_dst_idx + 1,
+            (src.size(0),),
+            dtype=torch.long,
+            device=device,
+        )
 
         n_id = torch.cat([src, pos_dst, neg_dst]).unique()
         n_id, edge_index, e_id = neighbor_loader(n_id)
         assoc[n_id] = torch.arange(n_id.size(0), device=device)
 
         z, last_update = memory(n_id)
-        z = gnn(z, last_update, edge_index, data.t[e_id].to(device),
-                data.msg[e_id].to(device))
+        z = gnn(
+            z,
+            last_update,
+            edge_index,
+            data.t[e_id].to(device),
+            data.msg[e_id].to(device),
+        )
 
         pos_out = link_pred(z[assoc[src]], z[assoc[pos_dst]])
         neg_out = link_pred(z[assoc[src]], z[assoc[neg_dst]])
 
         y_pred = torch.cat([pos_out, neg_out], dim=0).sigmoid().cpu()
         y_true = torch.cat(
-            [torch.ones(pos_out.size(0)),
-             torch.zeros(neg_out.size(0))], dim=0)
+            [torch.ones(pos_out.size(0)), torch.zeros(neg_out.size(0))], dim=0
+        )
 
         aps.append(average_precision_score(y_true, y_pred))
         aucs.append(roc_auc_score(y_true, y_pred))
@@ -179,8 +222,8 @@ def test(loader):
 
 for epoch in range(1, 51):
     loss = train()
-    print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}')
+    print(f"Epoch: {epoch:02d}, Loss: {loss:.4f}")
     val_ap, val_auc = test(val_loader)
     test_ap, test_auc = test(test_loader)
-    print(f'Val AP: {val_ap:.4f}, Val AUC: {val_auc:.4f}')
-    print(f'Test AP: {test_ap:.4f}, Test AUC: {test_auc:.4f}')
+    print(f"Val AP: {val_ap:.4f}, Val AUC: {val_auc:.4f}")
+    print(f"Test AP: {test_ap:.4f}, Test AUC: {test_auc:.4f}")
