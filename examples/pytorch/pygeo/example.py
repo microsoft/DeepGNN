@@ -27,11 +27,10 @@ class DeepGNNFeatureStore(FeatureStore):
 
     def _get_tensor(self, attr):
         """To be implemented by :class:`FeatureStore` subclasses."""
+        feature = np.array([[0, 121]]) if attr.attr_name == "x" else np.array([[1, 1]])
         return torch.Tensor(
-            self.ge.node_features(
-                attr.index.detach().numpy(), np.array([[0, 121]]), np.float32
-            )
-        )
+            self.ge.node_features(attr.index.detach().numpy(), feature, np.float32)
+        ).squeeze()
 
     def _get_tensor_size(self, attr):
         return attr.size()
@@ -39,12 +38,11 @@ class DeepGNNFeatureStore(FeatureStore):
     def get_all_tensor_attrs(self):
         """Obtain all tensor attributes stored in this :class:`FeatureStore`."""
         output = []
-        i = 0
-        # for i in range(self.ge.node_count(0)):
-        ta = TensorAttr()
-        ta.group_name = "0"
-        ta.attr_name = f"{i}"
-        output.append(ta)
+        for i in ["x", "y"]:
+            ta = TensorAttr()
+            ta.group_name = "0"
+            ta.attr_name = f"{i}"
+            output.append(ta)
         return output
 
 
