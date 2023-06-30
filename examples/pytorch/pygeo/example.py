@@ -71,7 +71,9 @@ class DeepGNNGraphStore(GraphStore):
     def _get_edge_index(self, edge_attr):
         """To be implemented by :class:`GraphStore` subclasses."""
         edge_type = int(edge_attr.edge_type[1])
-        edge = self.ge.sample_edges(1, np.array(edge_type), SamplingStrategy.Random)
+        edge = self.ge.sample_edges(
+            self.ge.edge_count(0), np.array(edge_type), SamplingStrategy.Random
+        )
         edge_index = (torch.Tensor(edge[:, 0]).long(), torch.Tensor(edge[:, 1]).long())
         # assert False, edge_index
         return edge_index
