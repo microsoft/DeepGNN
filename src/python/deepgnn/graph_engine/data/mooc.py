@@ -38,9 +38,16 @@ class MOOC(Client):
         if self.output_dir is None:
             self.output_dir = os.path.join(tempfile.gettempdir(), self.GRAPH_NAME)
 
-        self.writer = BinaryWriter(self.output_dir, suffix=0, watermark=0)
+        self._writer = BinaryWriter(self.output_dir, suffix=0, watermark=0)
         self._build_graph()
         self._build_meta()
+        self._edges = np.loadtxt(
+            os.path.join(self.data_dir, "mooc", "mooc.csv"),
+            delimiter=",",
+            skiprows=1,
+            usecols=(0, 1, 2),
+        ).astype(np.int64)
+
         super().__init__(path=self.output_dir, partitions=[0])
 
     def data_dir(self):
@@ -110,27 +117,27 @@ class MOOC(Client):
             z.extractall(raw_data_dir)
         with open(os.path.join(raw_data_dir, "mooc", "mooc.csv")) as csvfile:
             next(csvfile)  # skip header
-            self.writer.add(self._edge_iterator(csvfile))
-            self.writer.close()
+            self._writer.add(self._edge_iterator(csvfile))
+            self._writer.close()
 
     def _build_meta(self):
         mjson = {
             "binary_data_version": BINARY_DATA_VERSION,
-            "node_count": self.writer.node_count,
-            "edge_count": self.writer.edge_count,
+            "node_count": self._writer.node_count,
+            "edge_count": self._writer.edge_count,
             "node_type_count": 1,
             "edge_type_count": 1,
             "node_feature_count": 0,
             "edge_feature_count": 1,
         }
 
-        edge_count_per_type = [self.writer.edge_count]
-        node_count_per_type = [self.writer.node_count]
+        edge_count_per_type = [self._writer.edge_count]
+        node_count_per_type = [self._writer.node_count]
         mjson["partitions"] = {}
 
         mjson["partitions"]["0"] = {
-            "node_weight": [self.writer.node_count],
-            "edge_weight": [self.writer.edge_count],
+            "node_weight": [self._writer.node_count],
+            "edge_weight": [self._writer.edge_count],
         }
 
         mjson["node_count_per_type"] = node_count_per_type
@@ -139,6 +146,13 @@ class MOOC(Client):
 
         with open(f"{self.output_dir}/meta.json", "w") as file:
             file.write(json.dumps(mjson))
+
+    def train_val_test_batches(self, test_ratio: float = 0.1, val_ratio: float = 0.1):        
+        """Split the graph edges into train/val/test batches."""
+        test_time, val_time = np.quantile(self._edges[:, 2], [1 - test_ratio - val_ratio, 1- test_ratio])
+        test_idx = (self._edges[:, 2] <= test_time).sum()
+        val_idx = (self._edges[:, 2] <= val_time).sum()
+        return self._edges[:val_idx], self._edges[val_idx:test_idx], self._edges[test_idx:]
 
 
 if __name__ == "__main__":
