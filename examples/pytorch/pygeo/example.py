@@ -39,11 +39,12 @@ class DeepGNNFeatureStore(FeatureStore):
     def get_all_tensor_attrs(self):
         """Obtain all tensor attributes stored in this :class:`FeatureStore`."""
         output = []
-        for i in range(self.ge.node_count(0)):
-            ta = TensorAttr()
-            ta.group_name = "0"
-            ta.attr_name = f"{i}"
-            output.append(ta)
+        i = 0
+        # for i in range(self.ge.node_count(0)):
+        ta = TensorAttr()
+        ta.group_name = "0"
+        ta.attr_name = f"{i}"
+        output.append(ta)
         return output
 
 
@@ -72,10 +73,9 @@ class DeepGNNGraphStore(GraphStore):
     def _get_edge_index(self, edge_attr):
         """To be implemented by :class:`GraphStore` subclasses."""
         edge_type = int(edge_attr.edge_type[1])
-        edge = self.ge.sample_edges(
-            edge_attr.size[0], np.array(edge_type), SamplingStrategy.Random
-        )
+        edge = self.ge.sample_edges(1, np.array(edge_type), SamplingStrategy.Random)
         edge_index = (torch.Tensor(edge[:, 0]).long(), torch.Tensor(edge[:, 1]).long())
+        # assert False, edge_index
         return edge_index
 
     def get_all_edge_attrs(self):
@@ -84,7 +84,7 @@ class DeepGNNGraphStore(GraphStore):
         # for i in range(self.ge.node_count(0)):
         # node_type_0, edge_type, node_type_1
         ta = EdgeAttr(
-            ("0", "0", "0"), "coo", size=[self.ge.edge_count(0), self.ge.edge_count(0)]
+            ("0", "0", "0"), "coo", size=[self.ge.node_count(0), self.ge.edge_count(0)]
         )
         output.append(ta)
 
@@ -93,8 +93,7 @@ class DeepGNNGraphStore(GraphStore):
 
 data = Planetoid("../cora", name="Cora")[0]
 
-"""
-loader_base = NeighborLoader(
+loader_original = NeighborLoader(
     data,
     # Sample 30 neighbors for each node for 2 iterations
     num_neighbors=[30] * 2,
@@ -102,20 +101,18 @@ loader_base = NeighborLoader(
     batch_size=128,
     input_nodes=data.train_mask,
 )
-"""
 
 ge = Cora()
-train_mask = np.ones(2708, dtype=np.bool)
-train_mask[-270:] = False
 loader = NeighborLoader(
     (DeepGNNFeatureStore(ge), DeepGNNGraphStore(ge)),
     num_neighbors=[30] * 2,
     batch_size=128,
-    input_nodes=("0", [i for i in range(2708)]),
+    input_nodes=("0", [i for i in range(140)]),
 )
 
-# sampled_data_original = next(iter(loader_original))
-# print(sampled_data_original.batch_size)
+sampled_data_original = next(iter(loader_original))
+print(sampled_data_original.to_heterogeneous())
 
 sampled_data = next(iter(loader))
-print(sampled_data.__dict__)
+print(sampled_data)
+# print(sampled_data.to_homogeneous())
