@@ -83,9 +83,7 @@ class DeepGNNGraphStore(GraphStore):
         output = []
         # for i in range(self.ge.node_count(0)):
         # node_type_0, edge_type, node_type_1
-        ta = EdgeAttr(
-            ("0", "0", "0"), "coo", size=[self.ge.node_count(0), self.ge.edge_count(0)]
-        )
+        ta = EdgeAttr(("0", "0", "0"), "coo", size=[self.ge.node_count(0), 2708])
         output.append(ta)
 
         return output
