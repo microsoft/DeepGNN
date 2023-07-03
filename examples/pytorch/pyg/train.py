@@ -100,34 +100,6 @@ class DeepGNNGraphStore(GraphStore):
         return output
 
 
-ge = PPI()
-loader = LinkNeighborLoader(
-    (DeepGNNFeatureStore(ge), DeepGNNGraphStore(ge)),
-    batch_size=2048,
-    shuffle=True,
-    neg_sampling_ratio=1.0,
-    num_neighbors=[10, 10],
-    num_workers=6,
-    persistent_workers=True,
-    edge_label_index=(
-        ("0", "0", "0"),
-        torch.Tensor(ge.sample_edges(248388, np.array(0), SamplingStrategy.Random))
-        .long()[:, :2]
-        .T,
-    ),
-)
-
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = GraphSAGE(
-    in_channels=50,
-    hidden_channels=64,
-    num_layers=2,
-    out_channels=64,
-).to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
-
-
 def train():
     """Train the model."""
     model.train()
@@ -154,6 +126,33 @@ def train():
     return total_loss / total_examples
 
 
-for epoch in range(1, 6):
-    loss = train()
-    print(f"Epoch: {epoch:02d}, Loss: {loss:.4f}")
+if __name__ == "__main__":
+    ge = PPI()
+    loader = LinkNeighborLoader(
+        (DeepGNNFeatureStore(ge), DeepGNNGraphStore(ge)),
+        batch_size=2048,
+        shuffle=True,
+        neg_sampling_ratio=1.0,
+        num_neighbors=[10, 10],
+        num_workers=6,
+        persistent_workers=True,
+        edge_label_index=(
+            ("0", "0", "0"),
+            torch.Tensor(ge.sample_edges(248388, np.array(0), SamplingStrategy.Random))
+            .long()[:, :2]
+            .T,
+        ),
+    )
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = GraphSAGE(
+        in_channels=50,
+        hidden_channels=64,
+        num_layers=2,
+        out_channels=64,
+    ).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
+
+    for epoch in range(1, 6):
+        loss = train()
+        print(f"Epoch: {epoch:02d}, Loss: {loss:.4f}")
