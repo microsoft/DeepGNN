@@ -158,6 +158,7 @@ def train():
     total_loss = total_examples = 0
     for data in tqdm.tqdm(loader):
         data = data.to(device)
+        data = data[("0", "0", "0")]
         optimizer.zero_grad()
 
         h = model(data.x, data.edge_index)
