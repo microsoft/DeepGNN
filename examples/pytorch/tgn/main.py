@@ -134,21 +134,23 @@ def train():
 
         n_id = torch.cat([src, pos_dst, neg_dst]).unique()
         dst = graph.sample_neighbors(
-            src, 0, 10, strategy="lastn", timestamps=t, return_edge_created_ts=True
+            n_id, 0, 10, strategy="lastn", timestamps=t, return_edge_created_ts=True
         )
-        edge_index = []
+        edge_index = torch.stack([dst, n_id])
         # n_id, edge_index, e_id = neighbor_loader(n_id)
         assoc[n_id] = torch.arange(n_id.size(0), device=device)
 
         # Get updated memory of all nodes involved in the computation.
-        z, last_update = memory(n_id)
+        # see https://github.com/twitter-research/tgn/blob/master/model/tgn.py#L134
+        z, last_update = memory(src)
+        z, last_update = memory(dst)
+        z, last_update = memory(neg_dst)
         z = gnn(
             z,
             last_update,
             edge_index,
-            t.to(device),
-            features.to(device),
-            dst[3],
+            torch.Tensor(t).to(device),
+            torch.Tensor(features).to(device),
         )
 
         pos_out = link_pred(z[assoc[src]], z[assoc[pos_dst]])

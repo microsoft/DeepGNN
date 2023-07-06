@@ -7,9 +7,7 @@ load("@pip_deps//:requirements.bzl", "requirement")
 py_binary(
     name = "main",
     srcs = [
-        "graph.py",
         "main.py",
-        "model.py",
     ],
     deps = [
         "//src/python:deepgnn",
