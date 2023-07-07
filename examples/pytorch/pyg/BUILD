@@ -4,10 +4,10 @@
 load("@rules_python//python:defs.bzl", "py_test", "py_library")
 load("@pip_deps//:requirements.bzl", "requirement")
 
-py_library(
-    name = "example_torch_pyg",
+py_binary(
+    name = "main",
     srcs = [
-        "train.py",
+        "main.py",
     ],
     deps = [
         "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",

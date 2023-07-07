@@ -163,3 +163,5 @@ jobs:
         run: cd ./pytorch/hetgnn/ && sudo chmod +x *.sh && bash ./run.sh CPU
       - name: Run AML example
         run: cd ./pytorch/ && sudo chmod +x *.py && python aml.py --unit_test
+      - name: Run PyG example
+        run: cd ./pytorch/pyg/ && sudo chmod +x *.py && python main.py
