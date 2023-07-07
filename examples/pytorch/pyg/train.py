@@ -14,7 +14,7 @@ from torch_geometric.data.feature_store import FeatureStore, TensorAttr
 from torch_geometric.data.graph_store import GraphStore, EdgeAttr
 
 from deepgnn.graph_engine import SamplingStrategy
-from deepgnn.graph_engine.data.ppi import PPI
+from deepgnn.graph_engine.data.citation import Cora
 
 
 class DeepGNNFeatureStore(FeatureStore):
@@ -35,7 +35,7 @@ class DeepGNNFeatureStore(FeatureStore):
 
     def _get_tensor(self, attr):
         """To be implemented by :class:`FeatureStore` subclasses."""
-        feature = np.array([[1, 50]]) if attr.attr_name == "x" else np.array([[0, 121]])
+        feature = np.array([[0, 121]]) if attr.attr_name == "x" else np.array([[1, 1]])
         return torch.Tensor(
             self.ge.node_features(attr.index.detach().numpy(), feature, np.float32)
         ).squeeze()
@@ -94,7 +94,7 @@ class DeepGNNGraphStore(GraphStore):
         output = []
         # for i in range(self.ge.node_count(0)):
         # node_type_0, edge_type, node_type_1
-        ta = EdgeAttr(("0", "0", "0"), "coo", size=[self.ge.node_count(0), 56944])
+        ta = EdgeAttr(("0", "0", "0"), "coo", size=[self.ge.node_count(0), 2708])
         output.append(ta)
 
         return output
@@ -127,18 +127,18 @@ def train():
 
 
 if __name__ == "__main__":
-    ge = PPI()
+    ge = Cora()
     loader = LinkNeighborLoader(
         (DeepGNNFeatureStore(ge), DeepGNNGraphStore(ge)),
-        batch_size=2048,
+        batch_size=140,
         shuffle=True,
         neg_sampling_ratio=1.0,
-        num_neighbors=[10, 10],
-        num_workers=6,
+        num_neighbors=[5, 5],
+        num_workers=1,
         persistent_workers=True,
         edge_label_index=(
             ("0", "0", "0"),
-            torch.Tensor(ge.sample_edges(248388, np.array(0), SamplingStrategy.Random))
+            torch.Tensor(ge.sample_edges(2708, np.array(0), SamplingStrategy.Random))
             .long()[:, :2]
             .T,
         ),
@@ -146,7 +146,7 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = GraphSAGE(
-        in_channels=50,
+        in_channels=121,
         hidden_channels=64,
         num_layers=2,
         out_channels=64,
@@ -155,4 +155,6 @@ if __name__ == "__main__":
 
     for epoch in range(1, 6):
         loss = train()
-        print(f"Epoch: {epoch:02d}, Loss: {loss:.4f}")
+        print(f"Epoch: {epoch:03d}, Loss: {loss:.4f}")
+
+    assert loss <= 0.55
