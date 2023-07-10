@@ -39,7 +39,6 @@ std::tuple<uint64_t, uint64_t, Timestamp> deserialize_temporal_feature(uint64_t 
 {
     uint32_t timestamps_size = 0;
     auto timestamps_size_output = std::span(reinterpret_cast<uint8_t *>(&timestamps_size), 4);
-    std::cout<< "Reading set " << initial_offset << " " << timestamps_size << " stored size: " << stored_size << std::endl;
     storage->read(initial_offset, timestamps_size_output.size(), std::begin(timestamps_size_output), file_ptr);
     if (timestamps_size == 0)
     {
@@ -49,13 +48,7 @@ std::tuple<uint64_t, uint64_t, Timestamp> deserialize_temporal_feature(uint64_t 
     std::vector<int64_t> timestamp_index(2 * timestamps_size + 1);
     std::span<uint8_t> timestamp_raw(reinterpret_cast<uint8_t *>(timestamp_index.data()),
                                      timestamp_index.size() * sizeof(int64_t));
-    std::cout<< "Reading ts " << timestamps_size << " ts index contents: " << std::endl;
     storage->read(initial_offset + 4, timestamp_raw.size(), std::begin(timestamp_raw), file_ptr);
-    for (auto ts: timestamp_index)
-    {
-        std::cout << ts << " ";
-    }
-    std::cout << std::endl;
     auto last_timestamp = std::begin(timestamp_index) + timestamps_size;
     auto time_pos = std::lower_bound(std::begin(timestamp_index), last_timestamp, timestamp);
 
@@ -195,7 +188,6 @@ void Partition::ReadEdges(std::filesystem::path path, std::string suffix)
 
     if (m_metadata.m_edge_feature_count > 0)
     {
-        std::cout << "Reading edge features" << std::endl;
         ReadEdgeFeaturesIndex(path, suffix);
         ReadEdgeFeaturesData(std::move(path), std::move(suffix));
     }
@@ -451,7 +443,6 @@ void Partition::ReadEdgeFeaturesData(std::filesystem::path path, std::string suf
     {
         m_edge_features =
             std::make_shared<MemoryStorage<uint8_t>>(std::move(path), std::move(suffix), &open_edge_features_data);
-        std::cout << "edge data size is " << m_edge_features->size() << std::endl;
     }
     else if (m_storage_type == PartitionStorageType::disk)
     {

@@ -13,10 +13,17 @@ from torch_geometric.nn.models.tgn import (
     LastNeighborLoader,
 )
 
+os.environ[
+    "SNARK_LIB_PATH"
+] = "/Users/mortid0/github/microsoft/DeepGNN/bazel-bin/src/cc/lib/libwrapper.dylib"
 from deepgnn.graph_engine.snark.local import Client
 
 device = torch.device("cpu")
 edge_feature_dim = 4
+min_dst_idx, max_dst_idx = 7047, 7143
+num_nodes = 7144
+train_num_events = 288224
+train_batch_size = 200
 
 
 class GraphAttentionEmbedding(torch.nn.Module):
@@ -103,7 +110,7 @@ optimizer = torch.optim.Adam(
 criterion = torch.nn.BCEWithLogitsLoss()
 
 # Helper vector to map global node indices to local ones.
-assoc = torch.empty(graph.node_count(0), dtype=torch.long, device=device)
+assoc = torch.empty(num_nodes+1, dtype=torch.long, device=device)
 
 
 def train():
@@ -119,38 +126,60 @@ def train():
         optimizer.zero_grad()
 
         src, pos_dst, t = batch[:, 0], batch[:, 1], batch[:, 2]
-        edges = np.stack([src, pos_dst, np.zeros(src.size(), dtype=np.int64)])
+        # !!!!!   check tgn code for src pos mixing
+        # edges = np.stack([src, pos_dst, np.zeros(src.size(), dtype=np.int64)])
+        # features = graph.edge_features(
+        #     edges=edges,
+        #     features=np.array([[0, edge_feature_dim]], dtype=np.int32),
+        #     feature_type=np.float32,
+        #     timestamps=t,
+        # )
+
+        # Sample negative destination nodes.
+
+        # Fix z for negdst
+        neg_dst = np.random.randint(min_dst_idx, max_dst_idx + 1, (src.size(0),), dtype=np.int64)
+
+        # need to return last index
+        n_id, n_index = np.unique(
+            np.concatenate([src, pos_dst, neg_dst]), return_index=True
+        )
+        t_id = np.full(n_id.size, t[-1], dtype=np.int64)
+        dst = graph.sample_neighbors(
+            n_id, 0, 10, strategy="lastn", timestamps=t_id, return_edge_created_ts=True
+        )
+        nbs = dst[0].ravel()
+        dst_ids = nbs[nbs > -1]
+        nid_np = n_id.repeat(10)[nbs>-1]
+        dst_ts = dst[3].ravel()[nbs>-1]
+        edge_index = torch.stack(
+            [
+                torch.as_tensor(dst_ids, dtype=torch.int64, device=device),
+                torch.as_tensor(nid_np, dtype=torch.int64, device=device),
+            ]
+        )
+        # edge_index = edge_index[edge_index != -1]
+        # n_id, edge_index, e_id = neighbor_loader(n_id)
+        assoc[n_id] = torch.arange(n_id.size, device=device)
+        
+        edges = np.stack([nid_np, dst_ids, np.zeros(nid_np.size, dtype=np.int64)], axis=1)
         features = graph.edge_features(
             edges=edges,
             features=np.array([[0, edge_feature_dim]], dtype=np.int32),
             feature_type=np.float32,
-            timestamps=t,
+            timestamps=dst_ts,
         )
-
-        # Sample negative destination nodes.
-        neg_dst = torch.randint(
-            0, max_node_id + 1, (src.size(0),), dtype=torch.long, device=device
-        )
-
-        n_id = torch.cat([src, pos_dst, neg_dst]).unique()
-        dst = graph.sample_neighbors(
-            n_id, 0, 10, strategy="lastn", timestamps=t, return_edge_created_ts=True
-        )
-        edge_index = torch.stack([dst, n_id])
-        # n_id, edge_index, e_id = neighbor_loader(n_id)
-        assoc[n_id] = torch.arange(n_id.size(0), device=device)
-
         # Get updated memory of all nodes involved in the computation.
         # see https://github.com/twitter-research/tgn/blob/master/model/tgn.py#L134
-        z, last_update = memory(src)
-        z, last_update = memory(dst)
-        z, last_update = memory(neg_dst)
+        z, last_update = memory(torch.as_tensor(nid_np, dtype=torch.int64).to(device))
+        feat_t = torch.as_tensor(features).to(device)
+        ts_t = torch.as_tensor(dst_ts).to(device)
         z = gnn(
             z,
             last_update,
             edge_index,
-            torch.Tensor(t).to(device),
-            torch.Tensor(features).to(device),
+            ts_t,
+            feat_t,
         )
 
         pos_out = link_pred(z[assoc[src]], z[assoc[pos_dst]])
@@ -160,15 +189,15 @@ def train():
         loss += criterion(neg_out, torch.zeros_like(neg_out))
 
         # Update memory and neighbor loader with ground-truth state.
-        memory.update_state(src, pos_dst, t, features)
+        memory.update_state(edge_index[1], edge_index[0], ts_t, feat_t)
         # neighbor_loader.insert(src, pos_dst)
 
         loss.backward()
         optimizer.step()
         memory.detach()
-        total_loss += float(loss) * batch.num_events
+        total_loss += float(loss) * train_batch_size # batch.num_events
 
-    return total_loss / train_data.num_events
+    return total_loss / train_num_events
 
 
 @torch.no_grad()

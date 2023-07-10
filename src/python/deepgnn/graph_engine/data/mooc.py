@@ -42,7 +42,7 @@ class MOOC(Client):
         self._build_graph()
         self._build_meta()
         self._edges = np.loadtxt(
-            os.path.join(self.data_dir, "mooc", "mooc.csv"),
+            os.path.join(self.output_dir, "raw", "mooc", "mooc.csv"),
             delimiter=",",
             skiprows=1,
             usecols=(0, 1, 2),

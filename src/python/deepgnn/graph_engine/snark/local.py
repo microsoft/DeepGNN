@@ -286,9 +286,7 @@ class Client(Graph):
                 self.logger.error(
                     f"Requesting feature with id #{feature[0]} that is larger than number of the edge features {self.graph.meta._edge_feature_count} in the graph"
                 )
-        print(f"src {edges[:, 0]}")
-        print(f"dst {edges[:, 1]}")
-        print(f"tp  {edges[:, 2]}")
+
         return self.graph.edge_features(
             np.copy(edges[:, 0]),
             np.copy(edges[:, 1]),
