@@ -86,14 +86,11 @@ class DeepGNNGraphStore(GraphStore):
             torch.Tensor(edge[:, 0]).long(),
             torch.Tensor(edge[:, 1]).long(),
         )
-        # assert False, edge_index
         return edge_index
 
     def get_all_edge_attrs(self):
         """Obtain all edge attributes stored in the :class:`GraphStore`."""
         output = []
-        # for i in range(self.ge.node_count(0)):
-        # node_type_0, edge_type, node_type_1
         ta = EdgeAttr(("0", "0", "0"), "coo", size=[self.ge.node_count(0), 2708])
         output.append(ta)
 
