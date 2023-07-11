@@ -15,6 +15,7 @@ from torch_geometric.data.graph_store import GraphStore, EdgeAttr
 
 from deepgnn.graph_engine import SamplingStrategy
 from deepgnn.graph_engine.data.citation import Cora
+from sklearn.metrics import f1_score
 
 
 class DeepGNNFeatureStore(FeatureStore):
@@ -63,10 +64,11 @@ class DeepGNNGraphStore(GraphStore):
             their ordering to uniquely identify edges. (default: :obj:`None`)
     """
 
-    def __init__(self, ge):
+    def __init__(self, ge, node_path):
         """Initialize DeepGNN graph store."""
         super().__init__()
         self.ge = ge
+        self.node_ids = np.loadtxt(node_path, dtype=np.int64)
 
     def _put_edge_index(self, edge_index, edge_attr) -> bool:
         """To be implemented by :class:`GraphStore` subclasses."""
@@ -79,12 +81,13 @@ class DeepGNNGraphStore(GraphStore):
     def _get_edge_index(self, edge_attr):
         """To be implemented by :class:`GraphStore` subclasses."""
         edge_type = int(edge_attr.edge_type[1])
-        edge = self.ge.sample_edges(
-            self.ge.edge_count(0), np.array(edge_type), SamplingStrategy.Random
-        )
+        edge = self.ge.neighbors(self.node_ids, edge_type)
+        srcs = []
+        for i, e in enumerate(edge[-1]):
+            srcs.extend([self.node_ids[i]] * e)
         edge_index = (
-            torch.Tensor(edge[:, 0]).long(),
-            torch.Tensor(edge[:, 1]).long(),
+            torch.Tensor(srcs).long(),
+            torch.Tensor(edge[0]).long(),
         )
         return edge_index
 
@@ -123,10 +126,38 @@ def train():
     return total_loss / total_examples
 
 
+def test():
+    for data in tqdm.tqdm(loader):
+        data = data[("0", "0", "0")]
+        pred = model(data.x, data.edge_index)
+        pred = pred.argmax(1).detach().numpy()
+        test_f1 = f1_score(data.y, pred, average="micro")
+        return test_f1
+
+
 if __name__ == "__main__":
     ge = Cora()
     loader = LinkNeighborLoader(
-        (DeepGNNFeatureStore(ge), DeepGNNGraphStore(ge)),
+        (
+            DeepGNNFeatureStore(ge),
+            DeepGNNGraphStore(ge, f"{ge.data_dir()}/train.nodes"),
+        ),
+        batch_size=140,
+        shuffle=True,
+        neg_sampling_ratio=1.0,
+        num_neighbors=[5, 5],
+        num_workers=1,
+        persistent_workers=True,
+        edge_label_index=(
+            ("0", "0", "0"),
+            torch.Tensor(ge.sample_edges(2708, np.array(0), SamplingStrategy.Random))
+            .long()[:, :2]
+            .T,
+        ),
+    )
+
+    test_loader = LinkNeighborLoader(
+        (DeepGNNFeatureStore(ge), DeepGNNGraphStore(ge, f"{ge.data_dir()}/test.nodes")),
         batch_size=140,
         shuffle=True,
         neg_sampling_ratio=1.0,
@@ -146,12 +177,12 @@ if __name__ == "__main__":
         in_channels=121,
         hidden_channels=64,
         num_layers=2,
-        out_channels=64,
+        out_channels=7,
     ).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
 
-    for epoch in range(1, 6):
+    for epoch in range(1, 10):
         loss = train()
-        print(f"Epoch: {epoch:03d}, Loss: {loss:.4f}")
-
+        test_f1 = test()
+        print(f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Test F1: {test_f1:.4f}")
     assert loss <= 0.55
