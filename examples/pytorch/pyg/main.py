@@ -19,7 +19,7 @@ from sklearn.metrics import f1_score
 
 
 class DeepGNNFeatureStore(FeatureStore):
-    """An abstract base class to access features from a remote feature store."""
+    """A class to access features from a remote feature store."""
 
     def __init__(self, ge):
         """Initialize DeepGNN feature store."""
@@ -27,15 +27,15 @@ class DeepGNNFeatureStore(FeatureStore):
         self.ge = ge
 
     def _put_tensor(self, tensor, attr) -> bool:
-        """To be implemented by :class:`FeatureStore` subclasses."""
+        """Put tensor."""
         return False
 
     def _remove_tensor(self, attr) -> bool:
-        """To be implemented by :obj:`FeatureStore` subclasses."""
+        """Remove tensor."""
         return False
 
     def _get_tensor(self, attr):
-        """To be implemented by :class:`FeatureStore` subclasses."""
+        """Get tensor."""
         feature = np.array([[0, 121]]) if attr.attr_name == "x" else np.array([[1, 1]])
         return torch.Tensor(
             self.ge.node_features(attr.index.detach().numpy(), feature, np.float32)
@@ -56,7 +56,7 @@ class DeepGNNFeatureStore(FeatureStore):
 
 
 class DeepGNNGraphStore(GraphStore):
-    """An abstract base class to access edges from a remote graph store.
+    """A class to access edges from a remote graph store.
 
     Args:
         edge_attr_cls (EdgeAttr, optional): A user-defined
@@ -71,15 +71,15 @@ class DeepGNNGraphStore(GraphStore):
         self.node_ids = np.loadtxt(node_path, dtype=np.int64)
 
     def _put_edge_index(self, edge_index, edge_attr) -> bool:
-        """To be implemented by :class:`GraphStore` subclasses."""
+        """Put edge index."""
         return False
 
     def _remove_edge_index(self, edge_attr) -> bool:
-        """To be implemented by :class:`GraphStore` subclasses."""
+        """Remove edge index."""
         return False
 
     def _get_edge_index(self, edge_attr):
-        """To be implemented by :class:`GraphStore` subclasses."""
+        """Get edge index."""
         edge_type = int(edge_attr.edge_type[1])
         edge = self.ge.neighbors(self.node_ids, edge_type)
         srcs = []
@@ -127,6 +127,8 @@ def train():
 
 
 def test():
+    """Test the model."""
+    model.eval()
     for data in tqdm.tqdm(loader):
         data = data[("0", "0", "0")]
         pred = model(data.x, data.edge_index)
