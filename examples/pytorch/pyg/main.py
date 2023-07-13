@@ -15,7 +15,11 @@ from deepgnn import get_logger
 
 
 class DeepGNNFeatureStore(FeatureStore):
-    """A class to access features from a DeepGNN graph engine."""
+    """A class to access features from a DeepGNN graph engine.
+
+    Args:
+        ge: MemoryGraph The graph engine to sample from.
+    """
 
     def __init__(self, ge):
         """Initialize DeepGNN feature store."""
@@ -55,9 +59,8 @@ class DeepGNNGraphStore(GraphStore):
     """A class to access edges from a DeepGNN graph engine.
 
     Args:
-        edge_attr_cls (EdgeAttr, optional): A user-defined
-            :class:`EdgeAttr` class to customize the required attributes and
-            their ordering to uniquely identify edges. (default: :obj:`None`)
+        ge: MemoryGraph The graph engine to sample from.
+        node_path: str Path of nodes file to sample initial nodes from.
     """
 
     def __init__(self, ge, node_path):
@@ -156,7 +159,9 @@ if __name__ == "__main__":
         persistent_workers=True,
         edge_label_index=(
             ("0", "0", "0"),
-            torch.Tensor(ge.sample_edges(2708, np.array(0), SamplingStrategy.Random))
+            torch.Tensor(
+                ge.sample_edges(ge.edge_count(0), np.array(0), SamplingStrategy.Random)
+            )
             .long()[:, :2]
             .T,
         ),
@@ -172,7 +177,9 @@ if __name__ == "__main__":
         persistent_workers=True,
         edge_label_index=(
             ("0", "0", "0"),
-            torch.Tensor(ge.sample_edges(2708, np.array(0), SamplingStrategy.Random))
+            torch.Tensor(
+                ge.sample_edges(ge.edge_count(0), np.array(0), SamplingStrategy.Random)
+            )
             .long()[:, :2]
             .T,
         ),
