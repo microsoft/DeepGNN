@@ -15,7 +15,7 @@ from deepgnn import get_logger
 
 
 class DeepGNNFeatureStore(FeatureStore):
-    """A class to access features from a remote feature store."""
+    """A class to access features from a DeepGNN graph engine."""
 
     def __init__(self, ge):
         """Initialize DeepGNN feature store."""
@@ -52,7 +52,7 @@ class DeepGNNFeatureStore(FeatureStore):
 
 
 class DeepGNNGraphStore(GraphStore):
-    """A class to access edges from a remote graph store.
+    """A class to access edges from a DeepGNN graph engine.
 
     Args:
         edge_attr_cls (EdgeAttr, optional): A user-defined
