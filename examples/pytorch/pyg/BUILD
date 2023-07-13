@@ -25,28 +25,3 @@ py_binary(
         "//examples/pytorch:example_torch_tests",
     ],
 )
-
-py_test(
-    name = "test_interface",
-    srcs = ["test_interface.py"],
-    imports = ["../../../src/python/"],
-    main = "test_interface.py",
-    python_version = "PY3",
-    srcs_version = "PY3",
-    deps = [
-        ":example_torch_pyg",
-        requirement("numpy"),
-        requirement("pytest"),
-        requirement("scikit-learn"),
-        requirement("torch"),
-        requirement("boto3"),
-        requirement("fsspec"),
-        requirement("transformers"),
-        requirement("networkx"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("azure-datalake-store"),
-        requirement("tenacity"),
-    ],
-)

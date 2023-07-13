@@ -1,8 +1,4 @@
-"""PyGeo interface training example.
-
-https://github.com/pyg-team/pytorch_geometric/blob/ae84a38f14591ba9b8ce64e704e04ea1271c3b78/examples/graph_sage_unsup_ppi.py#L12
-Epoch: 05, Loss: 0.5647
-"""
+"""PyGeo interface training example."""
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -15,7 +11,7 @@ from torch_geometric.data.graph_store import GraphStore, EdgeAttr
 
 from deepgnn.graph_engine import SamplingStrategy
 from deepgnn.graph_engine.data.citation import Cora
-from sklearn.metrics import f1_score
+from deepgnn import get_logger
 
 
 class DeepGNNFeatureStore(FeatureStore):
@@ -94,7 +90,11 @@ class DeepGNNGraphStore(GraphStore):
     def get_all_edge_attrs(self):
         """Obtain all edge attributes stored in the :class:`GraphStore`."""
         output = []
-        ta = EdgeAttr(("0", "0", "0"), "coo", size=[self.ge.node_count(0), 2708])
+        ta = EdgeAttr(
+            ("0", "0", "0"),
+            "coo",
+            size=[self.ge.node_count(0), self.ge.node_count(np.array([0, 1, 2, 3]))],
+        )
         output.append(ta)
 
         return output
@@ -131,9 +131,13 @@ def test():
     model.eval()
     for data in tqdm.tqdm(loader):
         data = data[("0", "0", "0")]
-        pred = model(data.x, data.edge_index)
-        pred = pred.argmax(1).detach().numpy()
-        test_f1 = f1_score(data.y, pred, average="micro")
+        h = model(data.x, data.edge_index)
+        h_src = h[data.edge_label_index[0]]
+        h_dst = h[data.edge_label_index[1]]
+        link_pred = (h_src * h_dst).sum(dim=-1)  # Inner product.
+        test_f1 = np.mean(
+            (link_pred > 0).detach().numpy() == data.edge_label.detach().numpy()
+        )
         return test_f1
 
 
@@ -186,5 +190,7 @@ if __name__ == "__main__":
     for epoch in range(1, 10):
         loss = train()
         test_f1 = test()
-        print(f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Test F1: {test_f1:.4f}")
-    assert loss <= 0.55
+        get_logger().info(
+            f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Test F1: {test_f1:.4f}"
+        )
+    assert loss <= 0.55 and test_f1 >= 0.62
