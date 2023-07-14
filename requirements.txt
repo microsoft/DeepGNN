@@ -1,4 +1,4 @@
--f https://data.pyg.org/whl/torch-1.12.1.html
+-f https://data.pyg.org/whl/torch-1.13.0+cpu.html
 absl-py==1.2.0
 adal==1.2.7
 adlfs==2021.10.0

@@ -144,7 +144,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install torch
-        run: pip install --timeout 300 torch==1.12.1
+        run: pip install --timeout 300 torch==1.13.1
+      - name: Pip freeze
+        run: pip freeze | grep torch
       - name: Install dependencies
         run: pip install --timeout 300 -r pytorch/requirements.txt
       - name: Uninstall cached deepgnn packages

@@ -1,4 +1,4 @@
--f https://data.pyg.org/whl/torch-1.12.1.html
+-f https://data.pyg.org/whl/torch-1.13.0+cpu.html
 azureml==0.2.7
 azureml-core==1.51.0
 horovod[torch]==0.25.0;sys_platform != 'win32'
