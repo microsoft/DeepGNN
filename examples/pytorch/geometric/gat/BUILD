@@ -43,7 +43,6 @@ py_test(
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
         requirement("azure-datalake-store"),
-        requirement("torch-cluster"),
         requirement("torch-scatter"),
         requirement("torch-sparse"),
         requirement("torch_geometric"),
