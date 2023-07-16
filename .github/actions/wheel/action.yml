@@ -50,15 +50,6 @@ runs:
       shell: bash
       name: Configure env variables for macos
 
-    - uses: actions/cache@v3.2.3
-      id: build-cache
-      with:
-        path: ~/bazel-cache
-        key: ${{ inputs.disk_cache }}
-        restore-keys: |
-          wheel-${{ runner.os }}-${{ github.ref }}
-          wheel-${{ runner.os }}
-
     - run: bazel build -c opt //src/cc/lib:wrapper --config=${{ env.BAZEL_CONFIG }}
       shell: bash
       name: Build shared library
