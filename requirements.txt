@@ -85,7 +85,7 @@ google-auth-oauthlib==0.5.3
 google-pasta==0.2.0
 googleapis-common-protos==1.56.4
 googledrivedownloader==0.4
-grpcio==1.49.1
+grpcio==1.53.0
 grpcio-health-checking==1.49.1
 grpcio-tools==1.49.1
 h5py==3.7.0
