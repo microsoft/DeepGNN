@@ -52,7 +52,7 @@ class PPI(Client):
         if self.output_dir is None:
             self.output_dir = os.path.join(tempfile.gettempdir(), self.GRAPH_NAME)
         self._build_graph(self.output_dir)
-        super().__init__(path=self.output_dir, partitions=[0])
+        super().__init__(path=self.output_dir, partitions=list(range(num_partitions)))
 
     def data_dir(self):
         """Graph location on disk."""
