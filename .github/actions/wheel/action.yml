@@ -19,7 +19,7 @@ runs:
         sudo chown $USER /dt11
       shell: bash
       name: Configure env variables for linux
-    - uses: actions/cache@v3.2.3
+    - uses: actions/cache@v3.3.1
       id: compiler-cache
       with:
         path: /dt11
