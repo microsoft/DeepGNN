@@ -39,8 +39,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Run tests
         uses: ./.github/actions/test
-        with:
-          disk_cache: test-${{ matrix.os }}-${{ matrix.python-version }}
   benchmarks:
     needs: tests
     runs-on: "ubuntu-22.04"
@@ -48,8 +46,6 @@ jobs:
       - uses: actions/checkout@v3.3.0
       - name: Run benchmarks
         uses: ./.github/actions/benchmarks
-        with:
-          disk_cache: benchmark-${{ matrix.os }}
   wheel:
     runs-on: ubuntu-22.04
     needs: tests

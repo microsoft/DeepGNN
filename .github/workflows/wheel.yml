@@ -24,7 +24,6 @@ jobs:
         uses: ./.github/actions/wheel
         with:
           package_version: ${{ github.event.inputs.package_version }}
-          disk_cache: wheel-${{ github.ref }}-${{ runner.os }}-${{ matrix.os }}-${{ matrix.python-version }}
       - name: Upload wheel file
         uses: actions/upload-artifact@v3.1.2
         with:

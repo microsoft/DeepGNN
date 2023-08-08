@@ -5,10 +5,6 @@ inputs:
     description: 'Package version'
     required: true
     default: '0.1.1'
-  disk_cache:
-    description: 'Build system cache key'
-    required: false
-    default: wheel-${{ github.ref }}-${{ runner.os }}
 runs:
   using: "composite"
   steps:
