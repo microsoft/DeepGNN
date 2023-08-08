@@ -7,10 +7,12 @@ load("@pip_deps//:requirements.bzl", "requirement")
 py_library(
     name = "graph_engine_data",
     srcs = [
+        "__init__.py",
         "citation.py",
         "citeseer.py",
         "cora.py",
         "data_util.py",
+        "mooc.py",
         "ppi.py",
         "reddit.py",
     ],

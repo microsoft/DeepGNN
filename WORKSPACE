@@ -18,10 +18,13 @@ http_archive(
 
 http_archive(
     name = "rules_python",
-    sha256 = "c03246c11efd49266e8e41e12931090b613e12a59e6f55ba2efd29a7cb8b4258",
-    strip_prefix = "rules_python-0.11.0",
-    url = "https://github.com/bazelbuild/rules_python/archive/0.11.0.tar.gz",
+    sha256 = "0a8003b044294d7840ac7d9d73eef05d6ceb682d7516781a4ec62eeb34702578",
+    strip_prefix = "rules_python-0.24.0",
+    url = "https://github.com/bazelbuild/rules_python/releases/download/0.24.0/rules_python-0.24.0.tar.gz",
 )
+
+load("@rules_python//python:repositories.bzl", "py_repositories")
+py_repositories()
 
 load("@rules_python//python:pip.bzl", "pip_parse")
 
@@ -169,3 +172,26 @@ http_archive(
     strip_prefix = "json-3.11.2",
     urls = ["https://github.com/nlohmann/json/archive/refs/tags/v3.11.2.tar.gz"],
 )
+
+http_archive(
+    name = "bazel_skylib",
+    sha256 = "66ffd9315665bfaafc96b52278f57c7e2dd09f5ede279ea6d39b2be471e7e3aa",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.4.2/bazel-skylib-1.4.2.tar.gz",
+        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.4.2/bazel-skylib-1.4.2.tar.gz",
+    ],
+)
+
+load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
+
+bazel_skylib_workspace()
+
+http_archive(
+    name = "jvolkman_rules_pycross",
+    url = "https://github.com/jvolkman/rules_pycross/archive/refs/tags/0.1.tar.gz",
+    sha256 = "ad261f9240491732166f1db6c02c2f781a00d5cda50eddc7b02d1d40b3b2d7be",
+    strip_prefix = "rules_pycross-0.1",
+)
+
+load("@jvolkman_rules_pycross//pycross:repositories.bzl", "rules_pycross_dependencies")
+rules_pycross_dependencies()

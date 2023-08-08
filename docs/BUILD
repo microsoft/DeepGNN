@@ -139,7 +139,6 @@ py_test(
     srcs_version = "PY3",
     tags = ["exclusive"],
     deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
         "//src/python/deepgnn/graph_engine/data:graph_engine_data",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/pytorch:deepgnn_pytorch",
@@ -177,7 +176,6 @@ py_test(
     srcs_version = "PY3",
     tags = ["exclusive"],
     deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
         "//src/python/deepgnn/graph_engine/data:graph_engine_data",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/pytorch:deepgnn_pytorch",
@@ -214,7 +212,6 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
         "//src/python/deepgnn/graph_engine/data:graph_engine_data",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/pytorch:deepgnn_pytorch",
@@ -249,7 +246,6 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
         "//src/python/deepgnn/graph_engine/data:graph_engine_data",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/pytorch:deepgnn_pytorch",
@@ -285,7 +281,6 @@ py_test(
     srcs_version = "PY3",
     tags = ["exclusive"],
     deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
         "//src/python/deepgnn/graph_engine/data:graph_engine_data",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/pytorch:deepgnn_pytorch",
@@ -323,7 +318,6 @@ py_test(
     srcs_version = "PY3",
     tags = ["exclusive"],
     deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
         "//src/python/deepgnn/graph_engine/data:graph_engine_data",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/pytorch:deepgnn_pytorch",
@@ -360,7 +354,6 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
         "//src/python/deepgnn/graph_engine/data:graph_engine_data",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/tf:deepgnn_tf",
@@ -391,7 +384,6 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
         "//src/python/deepgnn/graph_engine/data:graph_engine_data",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/tf:deepgnn_tf",
@@ -425,7 +417,6 @@ py_test(
     tags = ["exclusive"],
     env = {"PYTHONHASHSEED": "0"},
     deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
         "//src/python/deepgnn/graph_engine/data:graph_engine_data",
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
         "//src/python/deepgnn/tf:deepgnn_tf",

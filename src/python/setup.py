@@ -78,7 +78,7 @@ def graph_engine(version: str):
         },
         install_requires=[
             "numpy>=1.17.0",
-            "networkx==2.5.1",
+            "networkx>=3.0",
             "azure-datalake-store",
             "opencensus-ext-azure",
             "fsspec>=2021.8.1",
@@ -100,10 +100,10 @@ def graph_engine(version: str):
             "License :: OSI Approved :: MIT License",
             "Programming Language :: C++",
             "Programming Language :: Python :: 3",
-            "Programming Language :: Python :: 3.7",
             "Programming Language :: Python :: 3.8",
             "Programming Language :: Python :: 3.9",
             "Programming Language :: Python :: 3.10",
+            "Programming Language :: Python :: 3.11",
             "Topic :: Scientific/Engineering",
             "Topic :: Software Development :: Libraries",
         ],
@@ -117,89 +117,6 @@ def graph_engine(version: str):
         )
     )
 
-
-def deepgnn_tf(version: str):
-    """DeepGNN runtime and algorithms for tensorflow."""  # noqa: D403
-    depens = ["tensorflow>=2", "deepgnn-ge>=0.1"]
-    depens.extend(COMMON_PACKAGES)
-
-    setuptools.setup(
-        name="deepgnn-tf",
-        version=version,
-        description="DeepGNN algorithms for tensorflow.",
-        long_description="See [DeepGNN package](https://pypi.org/project/deepgnn-ge/) for detailed description.",
-        long_description_content_type="text/markdown",
-        url=CODE_URL,
-        author=AUTHOR,
-        author_email=AUTHOR_EMAIL,
-        packages=setuptools.find_packages(
-            include=["deepgnn", "deepgnn.tf", "deepgnn.tf.*"]
-        ),
-        install_requires=depens,
-        python_requires=">=3.7",
-        cmdclass={"clean": clean},
-        license="MIT",
-        classifiers=[
-            "Development Status :: 3 - Alpha",
-            "Intended Audience :: Developers",
-            "Intended Audience :: Science/Research",
-            "License :: OSI Approved :: MIT License",
-            "Programming Language :: Python :: 3",
-            "Programming Language :: Python :: 3.7",
-            "Programming Language :: Python :: 3.8",
-            "Programming Language :: Python :: 3.9",
-            "Programming Language :: Python :: 3.10",
-            "Topic :: Scientific/Engineering",
-            "Topic :: Software Development :: Libraries",
-        ],
-    )
-
-
-def deepgnn_pytorch(version: str):
-    """DeepGNN runtime and algorithms for pytorch."""  # noqa: D403
-    depens = [
-        "deepgnn-ge>=0.1",
-        "torch>=1.8",
-        "boto3>=1.15.16",
-        "transformers>=4.3.3",
-        "sentencepiece>=0.1.95",
-        "tqdm>=4.51.0",
-    ]
-
-    depens.extend(COMMON_PACKAGES)
-
-    setuptools.setup(
-        name="deepgnn-torch",
-        version=version,
-        description="DeepGNN algorithms for pytorch.",
-        long_description="See [DeepGNN package](https://pypi.org/project/deepgnn-ge/) for detailed description.",
-        long_description_content_type="text/markdown",
-        url=CODE_URL,
-        author=AUTHOR,
-        author_email=AUTHOR_EMAIL,
-        packages=setuptools.find_packages(
-            include=["deepgnn", "deepgnn.pytorch", "deepgnn.pytorch.*"]
-        ),
-        install_requires=depens,
-        python_requires=">=3.7",
-        cmdclass={"clean": clean},
-        license="MIT",
-        classifiers=[
-            "Development Status :: 3 - Alpha",
-            "Intended Audience :: Developers",
-            "Intended Audience :: Science/Research",
-            "License :: OSI Approved :: MIT License",
-            "Programming Language :: Python :: 3",
-            "Programming Language :: Python :: 3.7",
-            "Programming Language :: Python :: 3.8",
-            "Programming Language :: Python :: 3.9",
-            "Programming Language :: Python :: 3.10",
-            "Topic :: Scientific/Engineering",
-            "Topic :: Software Development :: Libraries",
-        ],
-    )
-
-
 if __name__ == "__main__":
     assert len(sys.argv) >= 2
 
@@ -211,9 +128,5 @@ if __name__ == "__main__":
     target = target.lower()
     if target == "deepgnn-ge":
         graph_engine(build_version)
-    elif target == "deepgnn-torch":
-        deepgnn_pytorch(build_version)
-    elif target == "deepgnn-tf":
-        deepgnn_tf(build_version)
     else:
         raise ValueError(f"invalid target: {target}")

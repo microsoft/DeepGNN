@@ -290,7 +290,7 @@ class Client(Graph):
         return self.graph.edge_features(
             np.copy(edges[:, 0]),
             np.copy(edges[:, 1]),
-            np.copy(edges[:, 2]),
+            np.array(edges[:, 2], dtype=np.int32),
             features,
             feature_type,
             timestamps=timestamps,

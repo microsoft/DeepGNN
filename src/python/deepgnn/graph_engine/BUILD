@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-load("@rules_python//python:defs.bzl", "py_test", "py_library")
+load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load("@pip_deps//:requirements.bzl", "requirement")
 
 py_library(
@@ -10,18 +10,15 @@ py_library(
         "_adl_reader.py",
         "_base.py",
         "adl_uploader.py",
-        "graph_dataset.py",
         "graph_ops.py",
         "multihop.py",
         "prefetch.py",
         "samplers.py",
-        "utils.py",
-    ],
-    data = ["//src/cc/lib:wrapper"],
-    deps = [
-        "//src/python/deepgnn:deepgnn",
     ],
     visibility = ["//visibility:public"],
+    deps = [
+        "//src/python/deepgnn",
+    ],
 )
 
 py_library(
@@ -29,10 +26,10 @@ py_library(
     srcs = [
         "__init__.py",
     ],
-    deps = [
-        "//src/python/deepgnn:deepgnn",
-    ],
     visibility = ["//visibility:public"],
+    deps = [
+        "//src/python/deepgnn",
+    ],
 )
 
 py_library(
@@ -40,10 +37,10 @@ py_library(
     srcs = [
         "test_adl_reader.py",
     ],
-    deps = [
-        "//src/python/deepgnn:deepgnn",
-    ],
     visibility = ["//visibility:public"],
+    deps = [
+        "//src/python/deepgnn",
+    ],
 )
 
 py_test(

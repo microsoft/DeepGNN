@@ -960,7 +960,7 @@ void Partition::GetEdgeFeature(uint64_t internal_src_node_id, NodeId input_edge_
         if (edge_ts.has_value())
         {
             std::tie(data_offset, stored_size, feature_ts) =
-                deserialize_temporal_feature(data_offset, stored_size, m_node_features, file_ptr, edge_ts.value());
+                deserialize_temporal_feature(data_offset, stored_size, m_edge_features, file_ptr, edge_ts.value());
         }
 
         feature_flags[feature_index] = feature_ts;
@@ -1017,7 +1017,7 @@ void Partition::GetEdgeSparseFeature(uint64_t internal_src_node_id, NodeId input
         if (edge_ts.has_value())
         {
             std::tie(data_offset, stored_size, feature_ts) =
-                deserialize_temporal_feature(data_offset, stored_size, m_node_features, file_ptr, edge_ts.value());
+                deserialize_temporal_feature(data_offset, stored_size, m_edge_features, file_ptr, edge_ts.value());
         }
 
         feature_flags[feature_index] = feature_ts;
@@ -1073,7 +1073,7 @@ void Partition::GetEdgeStringFeature(uint64_t internal_src_node_id, NodeId input
         if (edge_ts.has_value())
         {
             std::tie(data_offset, stored_size, feature_ts) =
-                deserialize_temporal_feature(data_offset, stored_size, m_node_features, file_ptr, edge_ts.value());
+                deserialize_temporal_feature(data_offset, stored_size, m_edge_features, file_ptr, edge_ts.value());
         }
 
         feature_flags[feature_index] = feature_ts;

@@ -26,7 +26,6 @@ _SNARK_LIB_PATH_ENV_KEY = "SNARK_LIB_PATH"
 @functools.lru_cache(maxsize=1)
 def _get_c_lib():
     global _LIB_PATH
-
     if _SNARK_LIB_PATH_ENV_KEY in os.environ:
         _LIB_PATH = os.environ[_SNARK_LIB_PATH_ENV_KEY]
 

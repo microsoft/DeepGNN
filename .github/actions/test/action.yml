@@ -17,9 +17,6 @@ runs:
     - run: echo "BAZEL_CONFIG=macos" >> $GITHUB_ENV
       shell: bash
       if: runner.os == 'macOS'
-    - run: echo ${{ inputs.disk_cache }}
-      shell: bash
-
     - run: bazel test -c dbg //src/cc/tests:* --test_output=all --test_timeout 30 --config=${{ env.BAZEL_CONFIG }}
       shell: bash
       name: run cpp tests
@@ -27,10 +24,13 @@ runs:
       shell: bash
       name: run python tests
     - run: |
-        bazel test -c dbg //examples/pytorch/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }}
-        bazel test -c dbg //examples/tensorflow/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }}
+        bazel run -c dbg //examples/pytorch:gat_pyg --config=${{ env.BAZEL_CONFIG }}
+        bazel run -c dbg //examples/pytorch:gat_ray --config=${{ env.BAZEL_CONFIG }}
+        bazel run -c dbg //examples/pytorch:sage --config=${{ env.BAZEL_CONFIG }}
+        bazel run -c dbg //examples/pytorch:tgn --config=${{ env.BAZEL_CONFIG }}
+        bazel run -c dbg //examples/pytorch/hetgnn:main --config=${{ env.BAZEL_CONFIG }}
       shell: bash
-      name: run python tests in examples folder
+      name: run python examples
       if: runner.os == 'Linux'
     - run: |
         bazel test -c dbg //docs:* --test_output=all --config=linux

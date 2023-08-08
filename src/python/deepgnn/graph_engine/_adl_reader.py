@@ -9,8 +9,10 @@ import threading
 from typing import Optional, List, Iterator
 from queue import Queue
 from concurrent.futures import ThreadPoolExecutor
+
 import xml.etree.ElementTree as et
 from azure.datalake.store import core, lib
+
 from deepgnn import get_logger
 from deepgnn.graph_engine._base import get_fs
 
