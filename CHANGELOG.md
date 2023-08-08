@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Uniform sampling works in temporal graphs.
 
+### Removed
+- Breaking. deepgnn-torch code is removed. The code from 0.1.60 version will be still available, but we are going to use pure TF/torch/PyG/ray bindings to create models with DeepGNN in the future.
+
 ## [0.1.60] - 2022-04-18
 
 ### Added
