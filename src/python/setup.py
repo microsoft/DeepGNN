@@ -83,7 +83,7 @@ def graph_engine(version: str):
             "opencensus-ext-azure",
             "fsspec>=2021.8.1",
             "scikit-learn",
-            "scipy",
+            "scipy>=1.10.0",
             "tenacity>=8",
         ],
         project_urls={
