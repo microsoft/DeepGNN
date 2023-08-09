@@ -273,7 +273,7 @@ class CitationGraph(Client):
                     node_types[nid],
                     flt_feat=list(features[nid].tolist()),
                     label=int(labels[nid]),
-                    neighbors=adj[nid].nonzero()[1],
+                    neighbors=adj.getrow(nid).nonzero()[1],
                 )
                 fout.write(tmp)
 
