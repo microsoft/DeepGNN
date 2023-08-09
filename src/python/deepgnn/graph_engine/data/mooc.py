@@ -32,9 +32,6 @@ class MOOC(Client):
     Args:
         output_dir (Optional[str]): Path to the directory where the graph data will be saved.
             If None, a temporary directory is used.
-
-    The class contains methods to process and handle the MOOC dataset including methods to
-    build the graph, handle serialization of temporal features, and iterate through edges.
     """
 
     def __init__(self, output_dir: Optional[str] = None):
