@@ -5,10 +5,6 @@ inputs:
     description: 'Package version'
     required: true
     default: '0.1.1'
-  disk_cache:
-    description: 'Build system cache key'
-    required: false
-    default: wheel-${{ github.ref }}-${{ runner.os }}
 runs:
   using: "composite"
   steps:
@@ -23,7 +19,7 @@ runs:
         sudo chown $USER /dt11
       shell: bash
       name: Configure env variables for linux
-    - uses: actions/cache@v3.2.3
+    - uses: actions/cache@v3.3.1
       id: compiler-cache
       with:
         path: /dt11

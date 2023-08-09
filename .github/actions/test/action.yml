@@ -1,10 +1,5 @@
 name: "Test"
 description: "Run unit tests"
-inputs:
-  disk_cache:
-    description: 'Build system cache key'
-    required: false
-    default: test-${{ github.ref }}-${{ runner.os }}
 runs:
   using: "composite"
   steps:
@@ -17,8 +12,6 @@ runs:
     - run: echo "BAZEL_CONFIG=macos" >> $GITHUB_ENV
       shell: bash
       if: runner.os == 'macOS'
-    - run: echo ${{ inputs.disk_cache }}
-      shell: bash
 
     - run: bazel test -c dbg //src/cc/tests:* --test_output=all --test_timeout 30 --config=${{ env.BAZEL_CONFIG }}
       shell: bash
