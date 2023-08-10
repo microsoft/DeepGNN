@@ -41,7 +41,7 @@ class MOOC(Client):
             output_dir (Optional[str]): Path to the directory where the graph data will be saved.
                 If None, a temporary directory is used.
         """
-        self.url = "https://zenodo.org/record/7213796/files/mooc.zip"
+        self.url = "https://deepgraphpub.blob.core.windows.net/public/testdata/mooc.zip"
         self.GRAPH_NAME = "mooc"
 
         if output_dir is None:
