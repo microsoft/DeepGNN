@@ -139,7 +139,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install torch
-        run: pip install --extra-index-url https://download.pytorch.org/whl/cpu --timeout 300 torch==1.13.1
+        run: pip install --extra-index-url https://download.pytorch.org/whl/cpu --timeout 300 torch==1.12.1
       - name: Install dependencies
         run: pip install --timeout 300 -r pytorch/requirements.txt
       - name: Uninstall cached deepgnn packages
