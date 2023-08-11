@@ -1,4 +1,4 @@
--f https://data.pyg.org/whl/torch-1.12.1+cpu.html  # For torch geometric skip torch-scatter/sparse setup.py
+-f https://data.pyg.org/whl/torch-1.13.1+cpu.html  # For torch geometric skip torch-scatter/sparse setup.py
 azureml==0.2.7
 azureml-core==1.51.0
 horovod[torch]==0.28.1;sys_platform != 'win32'
