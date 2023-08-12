@@ -5,7 +5,4 @@ horovod[torch]==0.28.1;sys_platform != 'win32'
 mlflow-skinny==2.2.2
 ray-on-aml==0.2.4
 ray[train]==2.4.0
-torch-cluster==1.6.0
-torch-scatter==2.0.9
-torch-sparse==0.6.15
-torch_geometric==2.1.0
+torch_geometric==2.3.0
