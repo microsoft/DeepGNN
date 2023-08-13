@@ -11,6 +11,7 @@ py_library(
         "citeseer.py",
         "cora.py",
         "data_util.py",
+        "mooc.py",
         "ppi.py",
         "reddit.py",
     ],

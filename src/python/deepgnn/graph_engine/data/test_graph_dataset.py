@@ -12,6 +12,7 @@ from deepgnn.graph_engine.data.cora import CoraFull
 from deepgnn.graph_engine.data.citeseer import CiteseerFull
 from deepgnn.graph_engine.data.citation import CitationGraph, Cora
 from deepgnn.graph_engine.data.ppi import PPI
+from deepgnn.graph_engine.data.mooc import MOOC
 
 
 def verify_nodes(g):
@@ -201,6 +202,28 @@ def test_ppi():
     # fmt: on
     check_feat()
     check_label()
+
+
+def test_mooc():
+    g = MOOC()
+    features = g.edge_features(
+        np.array([[7016, (9 + 7046), 0]], dtype=np.int64),
+        features=np.array([[0, 4]], dtype=np.int32),
+        feature_type=np.float32,
+        timestamps=np.array([2536836], dtype=np.int64),
+    )
+
+    np.testing.assert_almost_equal(
+        features,
+        [
+            [
+                -0.3199914794575269,
+                -0.4357014334929225,
+                0.10678377884769008,
+                -0.06730923976451772,
+            ]
+        ],
+    )
 
 
 if __name__ == "__main__":
