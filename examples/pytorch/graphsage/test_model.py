@@ -202,7 +202,7 @@ def test_deep_graph_on_cora(train_supervised_graphsage):
     simpler = MockFixedSimpleDataLoader(val_ref, query_fn=graphsage.query, graph=g)
     trainloader = torch.utils.data.DataLoader(simpler)
     it = iter(trainloader)
-    val_output_ref = graphsage.get_score(it.next())
+    val_output_ref = graphsage.get_score(next(it))
     val_labels = g.node_features(
         val_ref, np.array([[label_idx, label_dim]]), np.float32
     ).argmax(1)
@@ -288,7 +288,7 @@ def test_supervised_graphsage_model(mock_graph):  # noqa: F811
     )
     trainloader = torch.utils.data.DataLoader(simpler)
     it = iter(trainloader)
-    output = graphsage.get_score(it.next())
+    output = graphsage.get_score(next(it))
     npt.assert_allclose(output.detach().numpy(), expected, rtol=1e-3)
 
 
@@ -321,7 +321,7 @@ def test_supervised_graphsage_computational_graph(mock_graph):  # noqa: F811
         MockSimpleDataLoader(batch_size=256, query_fn=graphsage.query, graph=mock_graph)
     )
     it = iter(trainloader)
-    context = it.next()
+    context = next(it)
 
     # here we are using feature tensor as a proxy for node ids
     assert torch.equal(
@@ -363,7 +363,7 @@ def test_supervised_graphsage_loss_value(mock_graph):  # noqa: F811
     )
     it = iter(trainloader)
     optimizer.zero_grad()
-    loss, _, _ = graphsage(it.next())
+    loss, _, _ = graphsage(next(it))
     loss.backward()
     optimizer.step()
     npt.assert_allclose(loss.detach().numpy(), np.array([1.930]), rtol=1e-3)
@@ -401,7 +401,7 @@ def test_unsupervised_graphsage_model(mock_graph):  # noqa: F811
     )
     trainloader = torch.utils.data.DataLoader(simpler)
     it = iter(trainloader)
-    output = graphsage.get_score(it.next()["encoder"])
+    output = graphsage.get_score(next(it)["encoder"])
     npt.assert_allclose(output.detach().numpy(), expected, rtol=1e-3)
 
 
@@ -434,7 +434,7 @@ def test_unsupervised_graphsage_loss_value(mock_graph):  # noqa: F811
     )
     it = iter(trainloader)
     optimizer.zero_grad()
-    loss, _, _ = graphsage(it.next())
+    loss, _, _ = graphsage(next(it))
     loss.backward()
     optimizer.step()
 

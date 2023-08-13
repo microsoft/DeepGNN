@@ -29,6 +29,9 @@ py_test(
         requirement("opencensus-ext-azure"),
         requirement("tenacity"),
     ],
+    target_compatible_with = [
+        "@platforms//os:linux",
+    ],
 )
 
 py_test(
@@ -52,6 +55,9 @@ py_test(
         requirement("opencensus-ext-azure"),
         requirement("avro-python3"),
         requirement("tenacity"),
+    ],
+    target_compatible_with = [
+        "@platforms//os:linux",
     ],
 )
 
@@ -77,6 +83,9 @@ py_test(
         requirement("opencensus-ext-azure"),
         requirement("tenacity"),
     ],
+    target_compatible_with = [
+        "@platforms//os:linux",
+    ],
 )
 
 py_test(
@@ -101,6 +110,9 @@ py_test(
         requirement("pyspark"),
         requirement("tenacity"),
     ],
+    target_compatible_with = [
+        "@platforms//os:linux",
+    ],
 )
 
 py_test(
@@ -123,6 +135,9 @@ py_test(
         requirement("opencensus-context"),
         requirement("opencensus-ext-azure"),
         requirement("pyspark"),
+    ],
+    target_compatible_with = [
+        "@platforms//os:linux",
     ],
 )
 
@@ -162,6 +177,9 @@ py_test(
         requirement("torch"),
         requirement("tenacity"),
     ],
+    target_compatible_with = [
+        "@platforms//os:linux",
+    ],
 )
 
 py_test(
@@ -200,6 +218,9 @@ py_test(
         requirement("torch"),
         requirement("tenacity"),
     ],
+    target_compatible_with = [
+        "@platforms//os:linux",
+    ],
 )
 
 py_test(
@@ -235,6 +256,9 @@ py_test(
         requirement("torch"),
         requirement("tenacity"),
     ],
+    target_compatible_with = [
+        "@platforms//os:linux",
+    ],
 )
 
 py_test(
@@ -269,6 +293,9 @@ py_test(
         requirement("transformers"),
         requirement("torch"),
         requirement("tenacity"),
+    ],
+    target_compatible_with = [
+        "@platforms//os:linux",
     ],
 )
 
@@ -308,6 +335,9 @@ py_test(
         requirement("torch"),
         requirement("tenacity"),
     ],
+    target_compatible_with = [
+        "@platforms//os:linux",
+    ],
 )
 
 py_test(
@@ -346,6 +376,9 @@ py_test(
         requirement("torch"),
         requirement("tenacity"),
     ],
+    target_compatible_with = [
+        "@platforms//os:linux",
+    ],
 )
 
 py_test(
@@ -376,6 +409,9 @@ py_test(
         requirement("scikit-learn"),
         requirement("tensorflow"),
         requirement("tenacity"),
+    ],
+    target_compatible_with = [
+        "@platforms//os:linux",
     ],
 )
 
@@ -408,6 +444,9 @@ py_test(
         requirement("scikit-learn"),
         requirement("tensorflow"),
         requirement("tenacity"),
+    ],
+    target_compatible_with = [
+        "@platforms//os:linux",
     ],
 )
 
@@ -444,6 +483,9 @@ py_test(
         requirement("tensorflow"),
         requirement("torch"),
         requirement("tenacity"),
+    ],
+    target_compatible_with = [
+        "@platforms//os:linux",
     ],
 )
 
@@ -491,5 +533,8 @@ py_binary(
         doc_requirement("sphinxcontrib-htmlhelp"),
         doc_requirement("sphinxcontrib-qthelp"),
         doc_requirement("sphinx-copybutton"),
+    ],
+    target_compatible_with = [
+        "@platforms//os:linux",
     ],
 )

@@ -1,3 +1,4 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
 -f https://data.pyg.org/whl/torch-1.12.1+cpu.html  # For torch geometric skip torch-scatter/sparse setup.py
 absl-py==1.2.0
 adal==1.2.7
@@ -240,11 +241,8 @@ tokenizers==0.13.1
 toml==0.10.2
 tomli==2.0.1
 toolz==0.12.0
-torch==1.12.1
-torch-cluster==1.6.0
-torch-scatter==2.0.9
-torch-sparse==0.6.15
-torch_geometric==2.1.0
+torch==1.13.1
+torch_geometric==2.3.0
 tornado==6.3.2
 tqdm==4.64.1
 traitlets==5.4.0
