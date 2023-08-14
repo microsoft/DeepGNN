@@ -243,7 +243,7 @@ tomli==2.0.1
 toolz==0.12.0
 torch==1.13.1
 torch_geometric==2.3.0
-tornado==6.3.2
+tornado==6.3.3
 tqdm==4.64.1
 traitlets==5.4.0
 transformers==4.30.2
