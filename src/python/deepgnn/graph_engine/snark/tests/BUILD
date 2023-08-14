@@ -24,8 +24,7 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/graph_engine:graph_engine",
+        "//src/python/deepgnn:deepgnn_ge_wheel_library",
         "//src/python/deepgnn/graph_engine/snark/tests:snark_test_utils",
         requirement("numpy"),
         requirement("pytest"),
@@ -49,8 +48,7 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/graph_engine:graph_engine",
+        "//src/python/deepgnn:deepgnn_ge_wheel_library",
         "//src/python/deepgnn/graph_engine/snark/tests:snark_test_utils",
         requirement("numpy"),
         requirement("pytest"),
@@ -74,8 +72,7 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/graph_engine:graph_engine",
+        "//src/python/deepgnn:deepgnn_ge_wheel_library",
         "//src/python/deepgnn/graph_engine/snark/tests:snark_test_utils",
         requirement("importlib_metadata"),
         requirement("numpy"),
@@ -97,8 +94,7 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/graph_engine:graph_engine",
+        "//src/python/deepgnn:deepgnn_ge_wheel_library",
         requirement("numpy"),
         requirement("pytest"),
         requirement("networkx"),
@@ -117,8 +113,7 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/graph_engine:graph_engine",
+        "//src/python/deepgnn:deepgnn_ge_wheel_library",
         requirement("numpy"),
         requirement("pytest"),
         requirement("networkx"),
@@ -139,9 +134,7 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/graph_engine:graph_engine",
-        "//src/python/deepgnn/graph_engine/data:graph_engine_data",
+        "//src/python/deepgnn:deepgnn_ge_wheel_library",
         requirement("numpy"),
         requirement("py-cpuinfo"),
         requirement("pytest-benchmark"),
@@ -164,8 +157,7 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/graph_engine:graph_engine",
+        "//src/python/deepgnn:deepgnn_ge_wheel_library",
         "//src/python/deepgnn/graph_engine/snark/tests:snark_test_utils",
         requirement("numpy"),
         requirement("pytest"),
@@ -187,9 +179,7 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/graph_engine/snark/preprocess:snark_sampler",
-        "//src/python/deepgnn/graph_engine:graph_engine",
+        "//src/python/deepgnn:deepgnn_ge_wheel_library",
         requirement("numpy"),
         requirement("pytest"),
         requirement("networkx"),
@@ -209,9 +199,7 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/graph_engine:graph_engine",
-        "//src/python/deepgnn/graph_engine/snark/preprocess:snark_sampler",
+        "//src/python/deepgnn:deepgnn_ge_wheel_library",
         requirement("numpy"),
         requirement("pytest"),
         requirement("networkx"),
@@ -232,8 +220,7 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/graph_engine:graph_engine",
+        "//src/python/deepgnn:deepgnn_ge_wheel_library",
         requirement("numpy"),
         requirement("pytest"),
         requirement("networkx"),
@@ -255,8 +242,7 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/graph_engine:graph_engine",
+        "//src/python/deepgnn:deepgnn_ge_wheel_library",
         requirement("numpy"),
         requirement("pytest"),
         requirement("networkx"),
@@ -277,8 +263,7 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/graph_engine:graph_engine",
+        "//src/python/deepgnn:deepgnn_ge_wheel_library",
         requirement("numpy"),
         requirement("pytest"),
         requirement("opencensus"),
@@ -299,9 +284,7 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/graph_engine/data:graph_engine_data",
-        "//src/python/deepgnn/graph_engine:graph_engine",
+        "//src/python/deepgnn:deepgnn_ge_wheel_library",
         "@hadoop//:hadoop_py",
         requirement("azure-datalake-store"),
         requirement("fsspec"),

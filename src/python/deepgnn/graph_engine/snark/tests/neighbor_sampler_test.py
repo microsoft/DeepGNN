@@ -6,7 +6,6 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-import platform
 from typing import List, Any
 
 import numpy as np
@@ -19,7 +18,6 @@ from deepgnn.graph_engine.snark.decoders import JsonDecoder
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.dispatcher as dispatcher
-import deepgnn.graph_engine.snark._lib as lib
 
 
 def triangle_graph_json(folder):
@@ -115,19 +113,6 @@ def triangle_graph_data():
     data_name = triangle_graph_json(workdir.name)
     yield data_name
     workdir.cleanup()
-
-
-def get_lib_name():
-    lib_name = "libwrapper.so"
-    if platform.system() == "Windows":
-        lib_name = "wrapper.dll"
-    elif platform.system() == "Darwin":
-        lib_name = "libwrapper.dylib"
-    return os.path.join(os.path.dirname(__file__), "..", lib_name)
-
-
-def setup_module():
-    lib._LIB_PATH = get_lib_name()
 
 
 @pytest.fixture(scope="module")

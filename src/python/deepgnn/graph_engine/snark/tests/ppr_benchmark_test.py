@@ -3,29 +3,14 @@
 
 from dataclasses import dataclass
 import os
-import platform
 import sys
 
 import numpy as np
 import pytest
 
-import deepgnn.graph_engine.snark._lib as lib
 from deepgnn.graph_engine.data.cora import CoraFull
 import deepgnn.graph_engine.snark.server as server
 import deepgnn.graph_engine.snark.distributed as distributed
-
-
-def get_lib_name():
-    lib_name = "libwrapper.so"
-    if platform.system() == "Windows":
-        lib_name = "wrapper.dll"
-    elif platform.system() == "Darwin":
-        lib_name = "libwrapper.dylib"
-    return os.path.join(os.path.dirname(__file__), "..", lib_name)
-
-
-def setup_module():
-    lib._LIB_PATH = get_lib_name()
 
 
 def weighted_sample(graph, batches):

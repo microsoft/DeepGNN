@@ -144,24 +144,6 @@ def triangle_graph_data():
     workdir.cleanup()
 
 
-def get_lib_name():
-    lib_name = "libwrapper.so"
-    if platform.system() == "Windows":
-        lib_name = "wrapper.dll"
-    if platform.system() == "Darwin":
-        lib_name = "libwrapper.dylib"
-
-    _SNARK_LIB_PATH_ENV_KEY = "SNARK_LIB_PATH"
-    if _SNARK_LIB_PATH_ENV_KEY in os.environ:
-        return os.environ[_SNARK_LIB_PATH_ENV_KEY]
-
-    return os.path.join(os.path.dirname(__file__), "..", lib_name)
-
-
-def setup_module(module):
-    lib._LIB_PATH = get_lib_name()
-
-
 @pytest.fixture(scope="module")
 def default_triangle_graph():
     output = tempfile.TemporaryDirectory()
@@ -1224,14 +1206,12 @@ def test_edge_sampling_distributed_graph_multiple_partitions_server_down(
 
 
 class _TrainingWorker:
-    def __init__(self, addresses: List[str], path: str, num_processes: int, dir: str):
+    def __init__(self, addresses: List[str], num_processes: int, dir: str):
         self.addresses = addresses
-        self.path = path
         self.num_processes = num_processes
         self.dir = dir
 
     def __call__(self):
-        os.environ[lib._SNARK_LIB_PATH_ENV_KEY] = self.path
 
         cl = client.DistributedGraph(self.addresses)
         cl.node_features(
@@ -1266,7 +1246,6 @@ def test_servers_stay_alive_on_client_disconnects(
             p = mp.get_context("spawn").Process(
                 target=_TrainingWorker(
                     two_servers_multi_partition_graph_data,
-                    get_lib_name(),
                     num_processes,
                     workdir,
                 )

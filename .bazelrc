@@ -17,7 +17,6 @@ build:linux --action_env=BAZEL_LINKLIBS=-l%:libstdc++.a
 build:linux --action_env=BAZEL_LINKOPTS=-static-libgcc:-lm:-pthread
 build:linux --action_env=SETUPTOOLS_USE_DISTUTILS="false"
 build:linux --action_env=HADOOP_HOME="/tmp/snark/"
-build:linux --action_env=SNARK_LIB_PATH="./src/cc/lib/libwrapper.so"
 build:linux --action_env=LD_LIBRARY_PATH="./external/jvm/jre/lib/amd64/server"
 
 build:manylinux --crosstool_top=//tools/toolchain:manylinux
@@ -27,7 +26,6 @@ build:manylinux --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
 build:macos --cxxopt="-std=c++20"
 build:macos --action_env=SETUPTOOLS_USE_DISTUTILS="false"
 build:macos --action_env=HADOOP_HOME="/tmp/snark/"
-build:macos --action_env=SNARK_LIB_PATH="./src/cc/lib/libwrapper.dylib"
 
 build:windows --action_env=BAZEL_LINKOPTS=/MT
 build:windows --action_env=SETUPTOOLS_USE_DISTUTILS="false"
@@ -35,5 +33,4 @@ build:windows --action_env=HADOOP_HOME="C:/usr/local/hadoop/"
 build:windows --action_env=APPDATA="C:/usr/local/hadoop/datalake"
 build:windows --action_env=LIB="C:/Program Files/OpenSSL-Win64/lib"
 build:windows --action_env=INCLUDE="C:/Program Files/OpenSSL-Win64/include"
-build:windows --action_env=SNARK_LIB_PATH="./src/cc/lib/wrapper.dll"
 build:windows --action_env=USERPROFILE="."  # needed for python3.8 pathlib Path.home()

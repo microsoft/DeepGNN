@@ -7,6 +7,7 @@ load("@pip_deps//:requirements.bzl", "requirement")
 py_library(
     name = "graph_engine_backends_snark",
     srcs = [
+        "__init__.py",
         "client.py",
         "synchronized.py",
     ],
