@@ -65,7 +65,6 @@ py_test(
         requirement("numpy"),
         requirement("fsspec"),
         requirement("pytest"),
-        requirement("fsspec"),
         requirement("scikit-learn"),
         requirement("tensorflow"),
         requirement("networkx"),
