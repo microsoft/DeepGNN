@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Uniform sampling works in temporal graphs.
+- ADL path parsing to download graph data.
 
 ## [0.1.60] - 2022-04-18
 

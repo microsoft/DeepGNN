@@ -219,6 +219,7 @@ class Graph(abc.ABC):
 def get_fs(path: str):
     """Get fsspec filesystem object by path."""
     options = infer_storage_options(path)
-    # Remove 'path' from kwargs because it is not supported by all filesystems
+    # Remove 'path'/'host' from kwargs because it is not supported by all filesystems
     del options["path"]
+    del options["host"]
     return fsspec.filesystem(**options), options
