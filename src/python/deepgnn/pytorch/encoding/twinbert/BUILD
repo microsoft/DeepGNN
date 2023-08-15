@@ -30,6 +30,7 @@ py_test(
     deps = [
         ":deepgnn_pytorch_encoding_twinbert",
         requirement("numpy"),
+        requirement("fsspec"),
         requirement("pytest"),
         requirement("scikit-learn"),
         requirement("torch"),
@@ -53,6 +54,7 @@ py_test(
         ":deepgnn_pytorch_encoding_twinbert",
         requirement("numpy"),
         requirement("pytest"),
+        requirement("fsspec"),
         requirement("scikit-learn"),
         requirement("transformers"),
         requirement("torch"),

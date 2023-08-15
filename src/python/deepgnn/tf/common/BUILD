@@ -41,6 +41,7 @@ py_test(
     deps = [
         ":deepgnn_tf_common",
         requirement("numpy"),
+        requirement("fsspec"),
         requirement("pytest"),
         requirement("scikit-learn"),
         requirement("tensorflow"),
@@ -62,6 +63,7 @@ py_test(
     deps = [
         ":deepgnn_tf_common",
         requirement("numpy"),
+        requirement("fsspec"),
         requirement("pytest"),
         requirement("fsspec"),
         requirement("scikit-learn"),
