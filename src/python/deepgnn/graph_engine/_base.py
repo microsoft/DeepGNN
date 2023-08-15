@@ -220,6 +220,8 @@ def get_fs(path: str):
     """Get fsspec filesystem object by path."""
     options = infer_storage_options(path)
     # Remove 'path'/'host' from kwargs because it is not supported by all filesystems
-    del options["path"]
-    del options["host"]
+    if "path" in options:
+        del options["path"]
+    if "host" in options:
+        del options["host"]
     return fsspec.filesystem(**options), options
