@@ -1,10 +1,14 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import pytest
 import os
 import tempfile
+import sys
+
+import pytest
 import numpy as np
+
+from deepgnn.graph_engine._base import get_fs
 from deepgnn.graph_engine._adl_reader import (
     TextFileSplitIterator,
     TextFileIterator,
@@ -481,3 +485,16 @@ def test_local_adl_file_split_iterator(prepare_local_test_files):
     res = np.concatenate(res)
     exp = np.array(["25"])
     np.testing.assert_array_equal(res, exp)
+
+
+def test_adl_path():
+    fs = get_fs("adl://test.azuredatalakestore.net/some/path")
+    assert fs is not None
+
+
+if __name__ == "__main__":
+    sys.exit(
+        pytest.main(
+            [__file__, "--junitxml", os.environ["XML_OUTPUT_FILE"], *sys.argv[1:]]
+        )
+    )
