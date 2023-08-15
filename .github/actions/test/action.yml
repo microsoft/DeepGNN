@@ -14,22 +14,22 @@ runs:
       if: runner.os == 'macOS'
 
     - run: |
-        bazel test -c dbg //src/cc/tests:* --test_output=all --test_timeout 30 --config=${{ env.BAZEL_CONFIG }}
+        bazel test -c dbg //src/cc/tests:* --test_output=all --test_timeout 30 --config=${{ env.BAZEL_CONFIG }} --remote_cache=http://localhost:8080
       shell: bash
       name: run cpp tests
-    - run: bazel test -c dbg //src/python/deepgnn/...:* --jobs 1 --test_output=all --test_timeout 600 --config=${{ env.BAZEL_CONFIG }}
+    - run: bazel test -c dbg //src/python/deepgnn/...:* --jobs 1 --test_output=all --test_timeout 600 --config=${{ env.BAZEL_CONFIG }} --remote_cache=http://localhost:8080
       shell: bash
       name: run python tests
     - run: |
-        bazel test -c dbg //examples/pytorch/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }}
-        bazel test -c dbg //examples/tensorflow/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }}
-        bazel test -c dbg //docs:* --test_output=all --jobs 1 --config=${{ env.BAZEL_CONFIG }}
+        bazel test -c dbg //examples/pytorch/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }} --remote_cache=http://localhost:8080
+        bazel test -c dbg //examples/tensorflow/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }} --remote_cache=http://localhost:8080
+        bazel test -c dbg //docs:* --test_output=all --jobs 1 --config=${{ env.BAZEL_CONFIG }} --remote_cache=http://localhost:8080
       shell: bash
       name: run python tests in examples and docs folders
       if: runner.os == 'Linux'
     - run: |
-        bazel run -c dbg //docs:make_docs --config=linux
-        bazel build -c dbg src/cc/lib/benchmark:* --config=linux
+        bazel run -c dbg //docs:make_docs --config=linux --remote_cache=http://localhost:8080
+        bazel build -c dbg src/cc/lib/benchmark:* --config=linux --remote_cache=http://localhost:8080
       shell: bash
       name: build documentation and benchmarks
       if: runner.os == 'Linux'

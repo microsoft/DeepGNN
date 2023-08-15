@@ -17,5 +17,13 @@ jobs:
         uses: actions/setup-python@v4.7.0
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install azure-storage-blob
+      - name: Start Proxy Server
+        run: |
+          python tools/cache_proxy.py &
+          sleep 5 # Give the server time to start
       - name: Run tests
         uses: ./.github/actions/test
