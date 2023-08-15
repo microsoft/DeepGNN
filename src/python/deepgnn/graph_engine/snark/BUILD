@@ -26,6 +26,7 @@ copy_file(
 py_library(
     name = "graph_engine_snark",
     srcs = [
+        "__init__.py",
         "_downloader.py",
         "_lib.py",
         "alias.py",
@@ -50,6 +51,7 @@ py_library(
     }),
     deps = [
         "//src/python/deepgnn/graph_engine:graph_engine",
+        "//src/python/deepgnn/graph_engine/snark/preprocess:snark_sampler",
     ],
     visibility = ["//visibility:public"],
 )
