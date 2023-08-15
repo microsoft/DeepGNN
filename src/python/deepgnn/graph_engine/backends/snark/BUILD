@@ -55,5 +55,6 @@ py_test(
         requirement("azure-datalake-store"),
         requirement("opencensus-ext-azure"),
         requirement("tenacity"),
+        requirement("fsspec"),
     ],
 )
