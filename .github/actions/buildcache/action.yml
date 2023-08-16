@@ -1,0 +1,11 @@
+name: "Build cache"
+description: "Start remote bazel cache proxy to azure storage"
+runs:
+  using: "composite"
+  steps:
+    - name: Start cache proxy
+      run: |
+        python -m pip install --upgrade pip
+        pip install azure-storage-blob
+        python tools/cache_proxy.py &
+        sleep 5 # Give the server time to start

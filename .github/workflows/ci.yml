@@ -36,6 +36,10 @@ jobs:
         uses: actions/setup-python@v4.7.0
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Start build cache proxy
+        uses: ./.github/actions/buildcache
+        env:
+          BAZEL_CACHE_CONNECTION_STRING : ${{ secrets.BAZEL_CACHE_CONNECTION_STRING }}
       - name: Run tests
         uses: ./.github/actions/test
   benchmarks:
@@ -43,6 +47,10 @@ jobs:
     runs-on: "ubuntu-22.04"
     steps:
       - uses: actions/checkout@v3.5.3
+      - name: Start build cache proxy
+        uses: ./.github/actions/buildcache
+        env:
+          BAZEL_CACHE_CONNECTION_STRING : ${{ secrets.BAZEL_CACHE_CONNECTION_STRING }}
       - name: Run benchmarks
         uses: ./.github/actions/benchmarks
   wheel:

@@ -46,7 +46,7 @@ runs:
       shell: bash
       name: Configure env variables for macos
 
-    - run: bazel build -c opt //src/cc/lib:wrapper --config=${{ env.BAZEL_CONFIG }}
+    - run: bazel build -c opt //src/cc/lib:wrapper --config=${{ env.BAZEL_CONFIG }} --remote_cache=http://localhost:8080
       shell: bash
       name: Build shared library
 
