@@ -4,9 +4,9 @@ runs:
   using: "composite"
   steps:
     - name: Start cache proxy
+      if: runner.os == 'Linux'
       shell: bash
       run: |
-        python -m pip install --upgrade pip
-        pip install azure-storage-blob
-        python tools/cache_proxy.py &
+        go install github.com/buchgr/bazel-remote/v2@v2.4.1
+        bazel-remote --azblob.tenant_id=bazelcache --azblob.storage_account=bazelcache --azblob.container_name=cache --azblob.auth_method=shared_key --dir=/tmp/bazelcache --max_size=5 --http_address=localhost:8080 &
         sleep 5 # Give the server time to start

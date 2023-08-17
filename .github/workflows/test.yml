@@ -20,6 +20,6 @@ jobs:
       - name: Start build cache proxy
         uses: ./.github/actions/buildcache
         env:
-          BAZEL_CACHE_CONNECTION_STRING : ${{ secrets.BAZEL_CACHE_CONNECTION_STRING }}
+          BAZEL_REMOTE_AZBLOB_SHARED_KEY : ${{ secrets.BAZEL_REMOTE_AZBLOB_SHARED_KEY }}
       - name: Run tests
         uses: ./.github/actions/test
