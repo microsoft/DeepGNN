@@ -10,11 +10,34 @@ py_library(
         "util_test.py",
     ],
     deps = [
-        "//src/python/deepgnn:deepgnn",
+        "//src/python/deepgnn",
     ],
-    visibility = ["//visibility:public"],
 )
 
+requirement_deps = [
+    requirement("numpy"),
+    requirement("pytest"),
+    requirement("networkx"),
+    requirement("opencensus"),
+    requirement("grpcio"),
+    requirement("fsspec"),
+    requirement("grpcio-health-checking"),
+    requirement("opencensus-context"),
+    requirement("opencensus-ext-azure"),
+    requirement("azure-datalake-store"),
+    requirement("tenacity"),
+]
+
+# We keep windows and linux/mac dependencies separate because pycross fails to install wheels on windows in
+windows_deps = requirement_deps + [
+    "//src/python/deepgnn:deepgnn_ge_library",
+    "//src/python/deepgnn/graph_engine/snark/tests:snark_test_utils",
+]
+
+linux_mac_deps = requirement_deps + [
+    "//src/python/deepgnn:deepgnn_ge_wheel_library",
+    "//src/python/deepgnn/graph_engine/snark/tests:snark_test_utils",
+]
 
 py_test(
     name = "sparse_features_tests",
@@ -23,21 +46,10 @@ py_test(
     main = "sparse_features_test.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn:deepgnn_ge_wheel_library",
-        "//src/python/deepgnn/graph_engine/snark/tests:snark_test_utils",
-        requirement("numpy"),
-        requirement("pytest"),
-        requirement("networkx"),
-        requirement("opencensus"),
-        requirement("grpcio"),
-        requirement("fsspec"),
-        requirement("grpcio-health-checking"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("azure-datalake-store"),
-        requirement("tenacity"),
-    ],
+    deps = select({
+        "@platforms//os:windows": windows_deps,
+        "//conditions:default": linux_mac_deps,
+    }),
 )
 
 py_test(
@@ -47,21 +59,10 @@ py_test(
     main = "e2e_test.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn:deepgnn_ge_wheel_library",
-        "//src/python/deepgnn/graph_engine/snark/tests:snark_test_utils",
-        requirement("numpy"),
-        requirement("pytest"),
-        requirement("networkx"),
-        requirement("opencensus"),
-        requirement("fsspec"),
-        requirement("grpcio"),
-        requirement("grpcio-health-checking"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("azure-datalake-store"),
-        requirement("tenacity"),
-    ],
+    deps = select({
+        "@platforms//os:windows": windows_deps,
+        "//conditions:default": linux_mac_deps,
+    }),
 )
 
 py_test(
@@ -71,20 +72,10 @@ py_test(
     main = "convert_test.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn:deepgnn_ge_wheel_library",
-        "//src/python/deepgnn/graph_engine/snark/tests:snark_test_utils",
-        requirement("importlib_metadata"),
-        requirement("numpy"),
-        requirement("pytest"),
-        requirement("fsspec"),
-        requirement("networkx"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("azure-datalake-store"),
-        requirement("tenacity"),
-    ],
+    deps = select({
+        "@platforms//os:windows": windows_deps,
+        "//conditions:default": linux_mac_deps,
+    }),
 )
 
 py_test(
@@ -94,18 +85,10 @@ py_test(
     main = "alias_test.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn:deepgnn_ge_wheel_library",
-        requirement("numpy"),
-        requirement("pytest"),
-        requirement("fsspec"),
-        requirement("networkx"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("azure-datalake-store"),
-        requirement("tenacity"),
-    ],
+    deps = select({
+        "@platforms//os:windows": windows_deps,
+        "//conditions:default": linux_mac_deps,
+    }),
 )
 
 py_test(
@@ -115,18 +98,10 @@ py_test(
     main = "neighbor_sampler_test.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn:deepgnn_ge_wheel_library",
-        requirement("numpy"),
-        requirement("pytest"),
-        requirement("networkx"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("fsspec"),
-        requirement("azure-datalake-store"),
-        requirement("tenacity"),
-    ],
+    deps = select({
+        "@platforms//os:windows": windows_deps,
+        "//conditions:default": linux_mac_deps,
+    }),
 )
 
 py_test(
@@ -136,20 +111,16 @@ py_test(
     main = "ppr_benchmark_test.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn:deepgnn_ge_wheel_library",
-        requirement("numpy"),
-        requirement("py-cpuinfo"),
-        requirement("pytest-benchmark"),
-        requirement("pytest"),
-        requirement("networkx"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("fsspec"),
-        requirement("azure-datalake-store"),
-        requirement("tenacity"),
-    ],
+    deps = select({
+        "@platforms//os:windows": windows_deps + [
+            requirement("py-cpuinfo"),
+            requirement("pytest-benchmark"),
+        ],
+        "//conditions:default": linux_mac_deps + [
+            requirement("py-cpuinfo"),
+            requirement("pytest-benchmark"),
+        ],
+    }),
 )
 
 py_test(
@@ -159,19 +130,10 @@ py_test(
     main = "temporal_test.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn:deepgnn_ge_wheel_library",
-        "//src/python/deepgnn/graph_engine/snark/tests:snark_test_utils",
-        requirement("numpy"),
-        requirement("pytest"),
-        requirement("networkx"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("fsspec"),
-        requirement("azure-datalake-store"),
-        requirement("tenacity"),
-    ],
+    deps = select({
+        "@platforms//os:windows": windows_deps,
+        "//conditions:default": linux_mac_deps,
+    }),
 )
 
 py_test(
@@ -181,18 +143,10 @@ py_test(
     main = "forest_fire_test.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn:deepgnn_ge_wheel_library",
-        requirement("numpy"),
-        requirement("pytest"),
-        requirement("networkx"),
-        requirement("fsspec"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("azure-datalake-store"),
-        requirement("tenacity"),
-    ],
+    deps = select({
+        "@platforms//os:windows": windows_deps,
+        "//conditions:default": linux_mac_deps,
+    }),
 )
 
 py_test(
@@ -202,20 +156,10 @@ py_test(
     main = "metric_test.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn:deepgnn_ge_wheel_library",
-        requirement("numpy"),
-        requirement("pytest"),
-        requirement("networkx"),
-        requirement("fsspec"),
-        requirement("scipy"),
-        requirement("scikit-learn"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("azure-datalake-store"),
-        requirement("tenacity"),
-    ],
+    deps = select({
+        "@platforms//os:windows": windows_deps + [requirement("scipy")],
+        "//conditions:default": linux_mac_deps + [requirement("scipy")],
+    }),
 )
 
 py_test(
@@ -225,19 +169,10 @@ py_test(
     main = "downloader_test.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn:deepgnn_ge_wheel_library",
-        requirement("numpy"),
-        requirement("pytest"),
-        requirement("networkx"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("azure-datalake-store"),
-        requirement("fsspec"),
-        requirement("aiohttp"),
-        requirement("tenacity"),
-    ],
+    deps = select({
+        "@platforms//os:windows": windows_deps + [requirement("aiohttp")],
+        "//conditions:default": linux_mac_deps + [requirement("aiohttp")],
+    }),
 )
 
 py_test(
@@ -247,18 +182,10 @@ py_test(
     main = "random_walk_test.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn:deepgnn_ge_wheel_library",
-        requirement("numpy"),
-        requirement("pytest"),
-        requirement("networkx"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("fsspec"),
-        requirement("azure-datalake-store"),
-        requirement("tenacity"),
-    ],
+    deps = select({
+        "@platforms//os:windows": windows_deps,
+        "//conditions:default": linux_mac_deps,
+    }),
 )
 
 py_test(
@@ -268,18 +195,10 @@ py_test(
     main = "snark_test.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn:deepgnn_ge_wheel_library",
-        requirement("numpy"),
-        requirement("pytest"),
-        requirement("opencensus"),
-        requirement("networkx"),
-        requirement("fsspec"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("azure-datalake-store"),
-        requirement("tenacity"),
-    ],
+    deps = select({
+        "@platforms//os:windows": windows_deps,
+        "//conditions:default": linux_mac_deps,
+    }),
 )
 
 py_test(
@@ -289,20 +208,9 @@ py_test(
     main = "hdfs_test.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = requirement_deps + [
         "//src/python/deepgnn:deepgnn_ge_wheel_library",
         "@hadoop//:hadoop_py",
-        requirement("azure-datalake-store"),
-        requirement("fsspec"),
-        requirement("networkx"),
-        requirement("numpy"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("pytest"),
-        requirement("scipy"),
-        requirement("scikit-learn"),
-        requirement("tenacity"),
     ],
-    target_compatible_with = ["@platforms//os:linux"],
 )

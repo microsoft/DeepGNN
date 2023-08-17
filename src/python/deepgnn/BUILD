@@ -25,11 +25,10 @@ py_library(
     visibility = ["//visibility:public"],
 )
 
-py_package(
-    name = "deepgnn_ge_package",
-    packages = ["src.python.deepgnn.graph_engine", "src.python.deepgnn"],
-    deps = [
-        ":deepgnn_exports",
+py_library(
+    name = "deepgnn_ge_library",
+    srcs = [
+        "__init__.py",
         ":deepgnn",
         "//src/python/deepgnn/graph_engine:graph_engine",
         "//src/python/deepgnn/graph_engine/data:graph_engine_data",
@@ -38,6 +37,16 @@ py_package(
         "//src/python/deepgnn/graph_engine/snark/preprocess:snark_sampler",
         "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
         "//src/python/deepgnn/graph_engine/backends/snark:graph_engine_backends_snark",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+
+py_package(
+    name = "deepgnn_ge_package",
+    packages = ["src.python.deepgnn.graph_engine", "src.python.deepgnn"],
+    deps = [
+        "deepgnn_ge_library",
 
     ],
     visibility = ["//visibility:public"],
