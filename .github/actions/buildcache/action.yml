@@ -6,10 +6,9 @@ runs:
     - uses: actions/setup-go@v4
       with:
         go-version: '^1.20.7' # The Go version to download (if necessary) and use.
-    - run: go version
     - name: Start cache proxy
       shell: bash
-      if: runner.os == 'Linux'
+      if: runner.os == 'Linux'7
       run: |
         go install github.com/buchgr/bazel-remote/v2@v2.4.1
         bazel-remote --azblob.tenant_id=bazelcache --azblob.storage_account=bazelcache --azblob.container_name=cache --azblob.auth_method=shared_key --dir=/tmp/bazelcache --max_size=5 --http_address=localhost:8080 &
