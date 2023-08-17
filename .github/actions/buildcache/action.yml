@@ -3,10 +3,10 @@ description: "Start remote bazel cache proxy to azure storage"
 runs:
   using: "composite"
   steps:
-  - uses: actions/setup-go@v4
-    with:
-      go-version: '^1.20.7' # The Go version to download (if necessary) and use.
-  - run: go version
+    - uses: actions/setup-go@v4
+      with:
+        go-version: '^1.20.7' # The Go version to download (if necessary) and use.
+    - run: go version
     - name: Start cache proxy
       if: runner.os == 'Linux'
       shell: bash
