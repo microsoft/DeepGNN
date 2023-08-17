@@ -5,6 +5,19 @@ load("@rules_python//python:defs.bzl", "py_binary", "py_test")
 load("@doc_deps//:requirements.bzl", doc_requirement = "requirement")
 load("@pip_deps//:requirements.bzl", "requirement")
 
+common_doc_deps = [
+    "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
+    requirement("azure-datalake-store"),
+    requirement("numpy"),
+    requirement("fsspec"),
+    requirement("grpcio"),
+    requirement("grpcio-tools"),
+    requirement("opencensus"),
+    requirement("opencensus-context"),
+    requirement("opencensus-ext-azure"),
+    requirement("tenacity"),
+]
+
 py_test(
     name = "sql_shard",
     srcs = ["doctest_template.py"],
@@ -17,21 +30,10 @@ py_test(
     main = "doctest_template.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        requirement("azure-datalake-store"),
-        requirement("numpy"),
-        requirement("fsspec"),
-        requirement("grpcio"),
-        requirement("grpcio-tools"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("tenacity"),
-    ],
     target_compatible_with = [
         "@platforms//os:linux",
     ],
+    deps = common_doc_deps,
 )
 
 py_test(
@@ -45,20 +47,10 @@ py_test(
     main = "doctest_template.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        requirement("azure-datalake-store"),
-        requirement("numpy"),
-        requirement("fsspec"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("avro-python3"),
-        requirement("tenacity"),
-    ],
     target_compatible_with = [
         "@platforms//os:linux",
     ],
+    deps = common_doc_deps + [requirement("avro-python3")],
 )
 
 py_test(
@@ -72,20 +64,10 @@ py_test(
     main = "doctest_template.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        requirement("azure-datalake-store"),
-        requirement("numpy"),
-        requirement("networkx"),
-        requirement("fsspec"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("tenacity"),
-    ],
     target_compatible_with = [
         "@platforms//os:linux",
     ],
+    deps = common_doc_deps,
 )
 
 py_test(
@@ -99,20 +81,10 @@ py_test(
     main = "doctest_template.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        requirement("azure-datalake-store"),
-        requirement("fsspec"),
-        requirement("numpy"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("pyspark"),
-        requirement("tenacity"),
-    ],
     target_compatible_with = [
         "@platforms//os:linux",
     ],
+    deps = common_doc_deps + [requirement("pyspark")],
 )
 
 py_test(
@@ -126,20 +98,31 @@ py_test(
     main = "doctest_template.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        requirement("azure-datalake-store"),
-        requirement("fsspec"),
-        requirement("numpy"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("pyspark"),
-    ],
     target_compatible_with = [
         "@platforms//os:linux",
     ],
+    deps = common_doc_deps + [requirement("pyspark")],
 )
+
+common_tf_deps = common_doc_deps + [
+    "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
+    "//src/python/deepgnn/graph_engine/data:graph_engine_data",
+    "//src/python/deepgnn/pytorch:deepgnn_pytorch",
+    "//src/python/deepgnn/pytorch/common:deepgnn_pytorch_common",
+    "//src/python/deepgnn/pytorch/modeling:deepgnn_pytorch_modeling",
+    "//src/python/deepgnn/pytorch/nn:deepgnn_pytorch_nn",
+    "//src/python/deepgnn/pytorch/training:deepgnn_pytorch_training",
+    requirement("pyarrow"),
+    requirement("scikit-learn"),
+    requirement("tensorflow"),
+    requirement("transformers"),
+]
+
+common_torch_deps = common_tf_deps + [
+    requirement("torch"),
+]
+
+ray_deps = common_torch_deps + [requirement("ray")]
 
 py_test(
     name = "dataset",
@@ -153,34 +136,12 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     tags = ["exclusive"],
-    deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
-        "//src/python/deepgnn/graph_engine/data:graph_engine_data",
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/pytorch:deepgnn_pytorch",
-        "//src/python/deepgnn/pytorch/common:deepgnn_pytorch_common",
-        "//src/python/deepgnn/pytorch/modeling:deepgnn_pytorch_modeling",
-        "//src/python/deepgnn/pytorch/nn:deepgnn_pytorch_nn",
-        "//src/python/deepgnn/pytorch/training:deepgnn_pytorch_training",
-        requirement("ray"),
-        requirement("pyarrow"),
-        requirement("azure-datalake-store"),
-        requirement("fsspec"),
-        requirement("numpy"),
-        requirement("networkx"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("scikit-learn"),
-        requirement("tensorflow"),
-        requirement("transformers"),
-        requirement("torch"),
-        requirement("tenacity"),
-    ],
     target_compatible_with = [
         "@platforms//os:linux",
     ],
+    deps = ray_deps,
 )
+
 
 py_test(
     name = "meta_opt",
@@ -194,33 +155,10 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     tags = ["exclusive"],
-    deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
-        "//src/python/deepgnn/graph_engine/data:graph_engine_data",
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/pytorch:deepgnn_pytorch",
-        "//src/python/deepgnn/pytorch/common:deepgnn_pytorch_common",
-        "//src/python/deepgnn/pytorch/modeling:deepgnn_pytorch_modeling",
-        "//src/python/deepgnn/pytorch/nn:deepgnn_pytorch_nn",
-        "//src/python/deepgnn/pytorch/training:deepgnn_pytorch_training",
-        requirement("ray"),
-        requirement("pyarrow"),
-        requirement("azure-datalake-store"),
-        requirement("fsspec"),
-        requirement("numpy"),
-        requirement("networkx"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("scikit-learn"),
-        requirement("tensorflow"),
-        requirement("transformers"),
-        requirement("torch"),
-        requirement("tenacity"),
-    ],
     target_compatible_with = [
         "@platforms//os:linux",
     ],
+    deps = ray_deps,
 )
 
 py_test(
@@ -234,31 +172,10 @@ py_test(
     main = "doctest_template.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
-        "//src/python/deepgnn/graph_engine/data:graph_engine_data",
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/pytorch:deepgnn_pytorch",
-        "//src/python/deepgnn/pytorch/common:deepgnn_pytorch_common",
-        "//src/python/deepgnn/pytorch/modeling:deepgnn_pytorch_modeling",
-        "//src/python/deepgnn/pytorch/nn:deepgnn_pytorch_nn",
-        "//src/python/deepgnn/pytorch/training:deepgnn_pytorch_training",
-        requirement("azure-datalake-store"),
-        requirement("fsspec"),
-        requirement("numpy"),
-        requirement("networkx"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("scikit-learn"),
-        requirement("tensorflow"),
-        requirement("transformers"),
-        requirement("torch"),
-        requirement("tenacity"),
-    ],
     target_compatible_with = [
         "@platforms//os:linux",
     ],
+    deps = common_torch_deps,
 )
 
 py_test(
@@ -272,31 +189,10 @@ py_test(
     main = "doctest_template.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
-        "//src/python/deepgnn/graph_engine/data:graph_engine_data",
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/pytorch:deepgnn_pytorch",
-        "//src/python/deepgnn/pytorch/common:deepgnn_pytorch_common",
-        "//src/python/deepgnn/pytorch/modeling:deepgnn_pytorch_modeling",
-        "//src/python/deepgnn/pytorch/nn:deepgnn_pytorch_nn",
-        "//src/python/deepgnn/pytorch/training:deepgnn_pytorch_training",
-        requirement("azure-datalake-store"),
-        requirement("fsspec"),
-        requirement("numpy"),
-        requirement("networkx"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("scikit-learn"),
-        requirement("tensorflow"),
-        requirement("transformers"),
-        requirement("torch"),
-        requirement("tenacity"),
-    ],
     target_compatible_with = [
         "@platforms//os:linux",
     ],
+    deps = common_torch_deps,
 )
 
 py_test(
@@ -311,33 +207,10 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     tags = ["exclusive"],
-    deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
-        "//src/python/deepgnn/graph_engine/data:graph_engine_data",
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/pytorch:deepgnn_pytorch",
-        "//src/python/deepgnn/pytorch/common:deepgnn_pytorch_common",
-        "//src/python/deepgnn/pytorch/modeling:deepgnn_pytorch_modeling",
-        "//src/python/deepgnn/pytorch/nn:deepgnn_pytorch_nn",
-        "//src/python/deepgnn/pytorch/training:deepgnn_pytorch_training",
-        requirement("ray"),
-        requirement("pyarrow"),
-        requirement("azure-datalake-store"),
-        requirement("fsspec"),
-        requirement("numpy"),
-        requirement("networkx"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("scikit-learn"),
-        requirement("tensorflow"),
-        requirement("transformers"),
-        requirement("torch"),
-        requirement("tenacity"),
-    ],
     target_compatible_with = [
         "@platforms//os:linux",
     ],
+    deps = common_torch_deps,
 )
 
 py_test(
@@ -352,33 +225,10 @@ py_test(
     python_version = "PY3",
     srcs_version = "PY3",
     tags = ["exclusive"],
-    deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
-        "//src/python/deepgnn/graph_engine/data:graph_engine_data",
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/pytorch:deepgnn_pytorch",
-        "//src/python/deepgnn/pytorch/common:deepgnn_pytorch_common",
-        "//src/python/deepgnn/pytorch/modeling:deepgnn_pytorch_modeling",
-        "//src/python/deepgnn/pytorch/nn:deepgnn_pytorch_nn",
-        "//src/python/deepgnn/pytorch/training:deepgnn_pytorch_training",
-        requirement("ray"),
-        requirement("pyarrow"),
-        requirement("azure-datalake-store"),
-        requirement("fsspec"),
-        requirement("numpy"),
-        requirement("networkx"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("scikit-learn"),
-        requirement("tensorflow"),
-        requirement("transformers"),
-        requirement("torch"),
-        requirement("tenacity"),
-    ],
     target_compatible_with = [
         "@platforms//os:linux",
     ],
+    deps = common_torch_deps,
 )
 
 py_test(
@@ -392,27 +242,10 @@ py_test(
     main = "doctest_template.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
-        "//src/python/deepgnn/graph_engine/data:graph_engine_data",
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/tf:deepgnn_tf",
-        "//src/python/deepgnn/tf/common:deepgnn_tf_common",
-        "//src/python/deepgnn/tf/nn:deepgnn_tf_nn",
-        requirement("azure-datalake-store"),
-        requirement("fsspec"),
-        requirement("numpy"),
-        requirement("networkx"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("scikit-learn"),
-        requirement("tensorflow"),
-        requirement("tenacity"),
-    ],
     target_compatible_with = [
         "@platforms//os:linux",
     ],
+    deps = common_tf_deps,
 )
 
 py_test(
@@ -426,28 +259,10 @@ py_test(
     main = "doctest_template.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
-        "//src/python/deepgnn/graph_engine/data:graph_engine_data",
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/tf:deepgnn_tf",
-        "//src/python/deepgnn/tf/common:deepgnn_tf_common",
-        "//src/python/deepgnn/tf/nn:deepgnn_tf_nn",
-        requirement("azure-datalake-store"),
-        requirement("fsspec"),
-        requirement("matplotlib"),
-        requirement("networkx"),
-        requirement("numpy"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("scikit-learn"),
-        requirement("tensorflow"),
-        requirement("tenacity"),
-    ],
     target_compatible_with = [
         "@platforms//os:linux",
     ],
+    deps = common_tf_deps,
 )
 
 py_test(
@@ -457,36 +272,16 @@ py_test(
     data = [
         "tf/ray_usage.rst",
     ],
+    env = {"PYTHONHASHSEED": "0"},
     imports = ["../src/python/"],
     main = "doctest_template.py",
     python_version = "PY3",
     srcs_version = "PY3",
     tags = ["exclusive"],
-    env = {"PYTHONHASHSEED": "0"},
-    deps = [
-        "//src/python/deepgnn/graph_engine/backends:graph_engine_backends",
-        "//src/python/deepgnn/graph_engine/data:graph_engine_data",
-        "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
-        "//src/python/deepgnn/tf:deepgnn_tf",
-        "//src/python/deepgnn/tf/common:deepgnn_tf_common",
-        "//src/python/deepgnn/tf/nn:deepgnn_tf_nn",
-        requirement("ray"),
-        requirement("pyarrow"),
-        requirement("azure-datalake-store"),
-        requirement("fsspec"),
-        requirement("numpy"),
-        requirement("networkx"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("scikit-learn"),
-        requirement("tensorflow"),
-        requirement("torch"),
-        requirement("tenacity"),
-    ],
     target_compatible_with = [
         "@platforms//os:linux",
     ],
+    deps = ray_deps,
 )
 
 py_binary(
@@ -512,6 +307,9 @@ py_binary(
         "torch/link_pred.rst",
         "torch/node_class.rst",
     ],
+    target_compatible_with = [
+        "@platforms//os:linux",
+    ],
     deps = [
         doc_requirement("alabaster"),
         doc_requirement("sphinx"),
@@ -533,8 +331,5 @@ py_binary(
         doc_requirement("sphinxcontrib-htmlhelp"),
         doc_requirement("sphinxcontrib-qthelp"),
         doc_requirement("sphinx-copybutton"),
-    ],
-    target_compatible_with = [
-        "@platforms//os:linux",
     ],
 )

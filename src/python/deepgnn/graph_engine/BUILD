@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-load("@rules_python//python:defs.bzl", "py_test", "py_library")
+load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load("@pip_deps//:requirements.bzl", "requirement")
 
 py_library(
@@ -18,10 +18,10 @@ py_library(
         "utils.py",
     ],
     data = ["//src/cc/lib:wrapper"],
-    deps = [
-        "//src/python/deepgnn:deepgnn",
-    ],
     visibility = ["//visibility:public"],
+    deps = [
+        "//src/python/deepgnn",
+    ],
 )
 
 py_library(
@@ -29,10 +29,10 @@ py_library(
     srcs = [
         "__init__.py",
     ],
-    deps = [
-        "//src/python/deepgnn:deepgnn",
-    ],
     visibility = ["//visibility:public"],
+    deps = [
+        "//src/python/deepgnn",
+    ],
 )
 
 py_library(
@@ -40,11 +40,22 @@ py_library(
     srcs = [
         "test_adl_reader.py",
     ],
-    deps = [
-        "//src/python/deepgnn:deepgnn",
-    ],
     visibility = ["//visibility:public"],
+    deps = [
+        "//src/python/deepgnn",
+    ],
 )
+
+common_deps = [
+    ":graph_engine",
+    requirement("numpy"),
+    requirement("fsspec"),
+    requirement("pytest"),
+    requirement("opencensus"),
+    requirement("opencensus-context"),
+    requirement("opencensus-ext-azure"),
+    requirement("azure-datalake-store"),
+]
 
 py_test(
     name = "test_prefetch",
@@ -53,16 +64,7 @@ py_test(
     main = "test_prefetch.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        ":graph_engine",
-        requirement("numpy"),
-        requirement("fsspec"),
-        requirement("pytest"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("azure-datalake-store"),
-    ],
+    deps = common_deps,
 )
 
 py_test(
@@ -72,17 +74,7 @@ py_test(
     main = "test_adl_reader.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        ":graph_engine",
-        requirement("adlfs"),
-        requirement("numpy"),
-        requirement("fsspec"),
-        requirement("pytest"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("azure-datalake-store"),
-    ],
+    deps = common_deps + [requirement("adlfs")],
 )
 
 py_test(
@@ -92,14 +84,5 @@ py_test(
     main = "test_multihop.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        ":graph_engine",
-        requirement("numpy"),
-        requirement("fsspec"),
-        requirement("pytest"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("azure-datalake-store"),
-    ],
+    deps = common_deps,
 )

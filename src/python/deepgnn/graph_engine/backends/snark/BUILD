@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-load("@rules_python//python:defs.bzl", "py_test", "py_library")
+load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load("@pip_deps//:requirements.bzl", "requirement")
 
 py_library(
@@ -17,6 +17,19 @@ py_library(
     ],
 )
 
+common_deps = [
+    ":graph_engine_backends_snark",
+    requirement("numpy"),
+    requirement("pytest"),
+    requirement("opencensus"),
+    requirement("opencensus-context"),
+    requirement("opencensus-ext-azure"),
+    requirement("azure-datalake-store"),
+    requirement("networkx"),
+    requirement("fsspec"),
+    requirement("tenacity"),
+]
+
 py_test(
     name = "test_snark_client",
     srcs = ["test_snark_client.py"],
@@ -24,18 +37,7 @@ py_test(
     main = "test_snark_client.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        ":graph_engine_backends_snark",
-        requirement("numpy"),
-        requirement("pytest"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("opencensus-ext-azure"),
-        requirement("azure-datalake-store"),
-        requirement("networkx"),
-        requirement("fsspec"),
-        requirement("tenacity"),
-    ],
+    deps = common_deps,
 )
 
 py_test(
@@ -45,14 +47,5 @@ py_test(
     main = "test_synchronized.py",
     python_version = "PY3",
     srcs_version = "PY3",
-    deps = [
-        ":graph_engine_backends_snark",
-        requirement("numpy"),
-        requirement("pytest"),
-        requirement("opencensus"),
-        requirement("opencensus-context"),
-        requirement("azure-datalake-store"),
-        requirement("opencensus-ext-azure"),
-        requirement("tenacity"),
-    ],
+    deps = common_deps,
 )
