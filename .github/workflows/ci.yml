@@ -67,6 +67,10 @@ jobs:
         with:
           name: examples
           path: examples/*
+      - name: Start build cache proxy
+        uses: ./.github/actions/buildcache
+        env:
+          BAZEL_REMOTE_AZBLOB_SHARED_KEY : ${{ secrets.BAZEL_REMOTE_AZBLOB_SHARED_KEY }}
       - name: build wheel
         uses: ./.github/actions/wheel
         with:
