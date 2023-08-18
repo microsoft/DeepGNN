@@ -8,7 +8,7 @@ runs:
       if: runner.os == 'Linux'
     - run: echo "REMOTE_CACHE=--remote_cache=http://localhost:8080" >> $GITHUB_ENV
       shell: bash
-      if: runner.os == 'Linux'
+      if: runner.os != 'Windows'
     - run: echo "BAZEL_CONFIG=windows" >> $GITHUB_ENV
       shell: bash
       if: runner.os == 'Windows'
