@@ -4,8 +4,8 @@ runs:
   using: "composite"
   steps:
     - run: |
-        bazel run -c opt src/cc/lib/benchmark:grpc_benchmark --config=linux
-        bazel run -c opt src/cc/lib/benchmark:sampler_benchmark --config=linux
-        bazel run -c opt src/cc/lib/benchmark:neighbor_sampler_benchmark --config=linux
+        bazel run -c opt src/cc/lib/benchmark:grpc_benchmark --config=linux --remote_cache=http://localhost:8080
+        bazel run -c opt src/cc/lib/benchmark:sampler_benchmark --config=linux --remote_cache=http://localhost:8080
+        bazel run -c opt src/cc/lib/benchmark:neighbor_sampler_benchmark --config=linux --remote_cache=http://localhost:8080
       shell: bash
       if: runner.os == 'Linux'

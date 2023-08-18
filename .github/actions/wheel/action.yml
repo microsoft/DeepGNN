@@ -15,6 +15,7 @@ runs:
       run: |
         echo "BAZEL_CONFIG=manylinux" >> $GITHUB_ENV
         echo "PLAT_NAME=manylinux1_x86_64" >> $GITHUB_ENV
+        echo "REMOTE_CACHE=--remote_cache=http://localhost:8080" >> $GITHUB_ENV
         sudo mkdir /dt11
         sudo chown $USER /dt11
       shell: bash
@@ -46,7 +47,7 @@ runs:
       shell: bash
       name: Configure env variables for macos
 
-    - run: bazel build -c opt //src/cc/lib:wrapper --config=${{ env.BAZEL_CONFIG }}
+    - run: bazel build -c opt //src/cc/lib:wrapper --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }}
       shell: bash
       name: Build shared library
 
