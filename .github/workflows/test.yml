@@ -17,5 +17,9 @@ jobs:
         uses: actions/setup-python@v4.7.0
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Start build cache proxy
+        uses: ./.github/actions/buildcache
+        env:
+          BAZEL_REMOTE_AZBLOB_SHARED_KEY : ${{ secrets.BAZEL_REMOTE_AZBLOB_SHARED_KEY }}
       - name: Run tests
         uses: ./.github/actions/test

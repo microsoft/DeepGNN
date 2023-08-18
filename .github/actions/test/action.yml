@@ -6,6 +6,9 @@ runs:
     - run: echo "BAZEL_CONFIG=linux" >> $GITHUB_ENV
       shell: bash
       if: runner.os == 'Linux'
+    - run: echo "REMOTE_CACHE=--remote_cache=http://localhost:8080" >> $GITHUB_ENV
+      shell: bash
+      if: runner.os == 'Linux'
     - run: echo "BAZEL_CONFIG=windows" >> $GITHUB_ENV
       shell: bash
       if: runner.os == 'Windows'
@@ -14,22 +17,22 @@ runs:
       if: runner.os == 'macOS'
 
     - run: |
-        bazel test -c dbg //src/cc/tests:* --test_output=all --test_timeout 30 --config=${{ env.BAZEL_CONFIG }}
+        bazel test -c dbg //src/cc/tests:* --test_output=all --test_timeout 30 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }} --verbose_failures
       shell: bash
       name: run cpp tests
-    - run: bazel test -c dbg //src/python/deepgnn/...:* --jobs 1 --test_output=all --test_timeout 600 --config=${{ env.BAZEL_CONFIG }}
+    - run: bazel test -c dbg //src/python/deepgnn/...:* --jobs 1 --test_output=all --test_timeout 600 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }}  --verbose_failures
       shell: bash
       name: run python tests
     - run: |
-        bazel test -c dbg //examples/pytorch/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }}
-        bazel test -c dbg //examples/tensorflow/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }}
-        bazel test -c dbg //docs:* --test_output=all --jobs 1 --config=${{ env.BAZEL_CONFIG }}
+        bazel test -c dbg //examples/pytorch/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }}  --verbose_failures
+        bazel test -c dbg //examples/tensorflow/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }}  --verbose_failures
+        bazel test -c dbg //docs:* --test_output=all --jobs 1 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }}  --verbose_failures
       shell: bash
       name: run python tests in examples and docs folders
       if: runner.os == 'Linux'
     - run: |
-        bazel run -c dbg //docs:make_docs --config=linux
-        bazel build -c dbg src/cc/lib/benchmark:* --config=linux
+        bazel run -c dbg //docs:make_docs --config=linux ${{ env.REMOTE_CACHE }}  --verbose_failures
+        bazel build -c dbg src/cc/lib/benchmark:* --config=linux ${{ env.REMOTE_CACHE }}  --verbose_failures
       shell: bash
       name: build documentation and benchmarks
       if: runner.os == 'Linux'
