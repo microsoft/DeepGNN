@@ -29,7 +29,23 @@ HetGNN introduces a random walk with restart strategy to sample a fixed size of 
 
 # TGN
 
-Temporal Graph Networks is a generic framework for deep learning on dynamic graphs represented as sequences of timed events.
+Temporal Graph Networks(TGNs) is a generic framework for deep learning on dynamic graphs represented as sequences of timed events.
+TGNs are made of an encoder-decoder pair that transforms dynamic graphs into node embeddings and makes task-specific predictions.
+The TGN encoder operates on continuous-time dynamic graphs and translates time-stamped events into node embeddings. Its core modules
+include a memory function to retain a node's history, message functions to compute updates to a node's memory during an event, and an
+embedding module to tackle the staleness problem, allowing up-to-date embeddings even when a node has been inactive for a while.
+Aggregation and memory update functions are used to manage messages related to nodes, and multiple formulations for embedding are provided,
+including Temporal Graph Attention and Temporal Graph Sum.
 
 - Reference: [https://arxiv.org/abs/2006.10637](https://arxiv.org/abs/2006.10637)
 - `tgn.py` contains TGN model implementation with pytorch-geometric modules and temporal graph based on MOOC dataset.
+
+
+
+# GCN
+
+Graph Convolutional Networks operate directly on graphs via a localized first-order approximation of spectral graph convolutions.
+The model scales linearly in the number of graph edges and learns hidden layer representations that encode both local graph structure and features of nodes.
+
+- Reference: [https://arxiv.org/abs/1609.02907](https://arxiv.org/abs/1609.02907)
+- `gcn.py` contains GCN model implementation with pytorch-geometric modules and distributed training with 2 [Ray](https://www.ray.io/) workers.
