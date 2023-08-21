@@ -27,12 +27,17 @@ runs:
       shell: bash
       name: run python tests
     - run: |
-        bazel test -c dbg //examples/pytorch/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }}  --verbose_failures
+        bazel run -c dbg //examples/pytorch:aml --config=${{ env.BAZEL_CONFIG }}
+        bazel run -c dbg //examples/pytorch:gcn --config=${{ env.BAZEL_CONFIG }}
+        bazel run -c dbg //examples/pytorch:gat --config=${{ env.BAZEL_CONFIG }}
+        bazel run -c dbg //examples/pytorch:sage --config=${{ env.BAZEL_CONFIG }}
+        bazel run -c dbg //examples/pytorch:tgn --config=${{ env.BAZEL_CONFIG }}
+        bazel run -c dbg //examples/pytorch/hetgnn:main --config=${{ env.BAZEL_CONFIG }}
         bazel test -c dbg //examples/tensorflow/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }}  --verbose_failures
         bazel test -c dbg //docs:* --test_output=all --jobs 1 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }}  --verbose_failures
         bazel clean --expunge
       shell: bash
-      name: run python tests in examples and docs folders
+      name: run python examples and docs folders
       if: runner.os == 'Linux'
     - run: |
         bazel run -c dbg //docs:make_docs --config=linux ${{ env.REMOTE_CACHE }}  --verbose_failures
