@@ -23,6 +23,7 @@ py_test(
     deps = [
         ":deepgnn_pytorch_nn",
         requirement("numpy"),
+        requirement("fsspec"),
         requirement("pytest"),
         requirement("scikit-learn"),
         requirement("torch"),
