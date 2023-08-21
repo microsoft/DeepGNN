@@ -226,7 +226,7 @@ stack_data==0.5.1
 tabulate==0.8.10
 tblib==1.7.0
 tenacity==8.2.1
-tensorboard==2.14.1
+tensorboard==2.14.0
 tensorboard-data-server==0.7.1
 tensorboard-plugin-wit==1.8.1
 tensorboardX==2.6.2.2
