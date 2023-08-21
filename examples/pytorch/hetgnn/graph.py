@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 """Graph engine implementation for HetGNN."""
 import csv
-from typing import Tuple, Union, Any
+from typing import Any, Dict, List, Tuple, Union
 
 import numpy as np
 from torch.utils.data import IterableDataset
@@ -26,7 +26,7 @@ class MockGraph(Graph):
     """
 
     def __init__(
-        self, feat_data: list[dict], adj_lists: list[list[list]], config: dict[str, Any]
+        self, feat_data: List[Dict], adj_lists: List[List[List]], config: Dict[str, Any]
     ):
         """Initialize graph from feature and adjacency data."""
         self.type_ranges = [
