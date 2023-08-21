@@ -37,7 +37,7 @@ runs:
         bazel test -c dbg //docs:* --test_output=all --jobs 1 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }}  --verbose_failures
         bazel clean --expunge
       shell: bash
-      name: run python examples and docs folders
+      name: run python examples and doctests
       if: runner.os == 'Linux'
     - run: |
         bazel run -c dbg //docs:make_docs --config=linux ${{ env.REMOTE_CACHE }}  --verbose_failures
