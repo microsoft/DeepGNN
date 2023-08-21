@@ -31,7 +31,11 @@ py_binary(
     srcs = [
         "gcn.py",
     ],
-    deps = common_deps,
+    deps = common_deps + [
+        requirement("torch-sparse"),
+        requirement("torch-scatter"),
+        requirement("torch-cluster"),
+    ],
 )
 
 py_binary(

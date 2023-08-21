@@ -34,7 +34,7 @@ class GCNQueryParameter:
     label_idx: int
     label_dim: int
     num_classes: int
-    batch_size: int = 2
+    batch_size: int = 70
     feature_type: np.dtype = np.float32
     label_type: np.dtype = np.float32
     num_hops: int = 2
