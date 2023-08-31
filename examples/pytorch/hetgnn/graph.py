@@ -64,7 +64,7 @@ class MockGraph(Graph):
         self,
         size: int,
         node_type: int,
-        _: SamplingStrategy,
+        strategy: SamplingStrategy,
     ) -> Union[
         Tuple[np.ndarray, np.ndarray, np.ndarray],
         Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],

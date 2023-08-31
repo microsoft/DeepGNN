@@ -26,16 +26,18 @@ common_deps = [
     requirement("tenacity"),
 ]
 
+sparse_deps = common_deps + [
+    requirement("torch-sparse"),
+    requirement("torch-scatter"),
+    requirement("torch-cluster"),
+]
+
 py_binary(
     name = "gcn",
     srcs = [
         "gcn.py",
     ],
-    deps = common_deps + [
-        requirement("torch-sparse"),
-        requirement("torch-scatter"),
-        requirement("torch-cluster"),
-    ],
+    deps = sparse_deps,
 )
 
 py_binary(
@@ -51,7 +53,7 @@ py_binary(
     srcs = [
         "tgn.py",
     ],
-    deps = common_deps,
+    deps = sparse_deps,
 )
 
 py_binary(
@@ -59,7 +61,7 @@ py_binary(
     srcs = [
         "sage.py",
     ],
-    deps = common_deps,
+    deps = sparse_deps,
 )
 
 py_binary(
