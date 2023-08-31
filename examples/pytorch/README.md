@@ -8,13 +8,13 @@ Graph attention networks (GATs) leverages masked self-attentional layers to addr
 
 - Reference : [https://arxiv.org/abs/1710.10903](https://arxiv.org/abs/1710.10903)
 - Author's code: [https://github.com/PetarV-/GAT](https://github.com/PetarV-/GAT)
-- `gat.py` contains GAT model implementation based on pytorch-geometric layers.
+- `gat.py` contains GAT model implementation based on pytorch-geometric layers with a full subgraph minibatches.
 
 # SAGE
 GraphSAGE is a framework for inductive representation learning on large graphs. GraphSAGE is used to generate low-dimensional vector representations for nodes, and is especially useful for graphs that have rich node attribute information.
 Reference: [Inductive Representation Learning on Large Graphs](https://cs.stanford.edu/people/jure/pubs/graphsage-nips17.pdf)
 
-- `sage.py` contains a supervised graphsage model with pytorch-geometric layers trained on Cora dataset.
+- `sage.py` contains an unsupervised graphsage model with pytorch-geometric layers trained subgraph with sampled neighbors from Cora dataset.
 
 # HetGNN
 
