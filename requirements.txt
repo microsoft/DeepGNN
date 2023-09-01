@@ -230,7 +230,7 @@ tensorboardX==2.5.1
 tensorflow==2.11.1
 tensorflow-addons==0.18.0
 tensorflow-estimator==2.10.0
-tensorflow-intel==2.11.1
+tensorflow-intel==2.12.0
 tensorflow-io-gcs-filesystem==0.27.0
 termcolor==2.0.1
 terminado==0.16.0
