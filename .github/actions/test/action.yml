@@ -22,6 +22,7 @@ runs:
       name: run cpp tests
     - run: |
         bazel test -c dbg //src/python/deepgnn/...:* --jobs 1 --test_output=all --test_timeout 600 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }}  --verbose_failures
+        bazel clean --expunge
       shell: bash
       name: run python tests
     - run: |
