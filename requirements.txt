@@ -231,7 +231,7 @@ tensorflow==2.13.0
 tensorflow-addons==0.21.0
 tensorflow-estimator==2.13.0
 tensorflow-intel==2.13.0
-tensorflow-io-gcs-filesystem==0.33.0
+tensorflow-io-gcs-filesystem==0.31.0
 termcolor==2.0.1
 terminado==0.16.0
 testpath==0.6.0
