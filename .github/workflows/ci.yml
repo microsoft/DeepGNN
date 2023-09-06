@@ -109,7 +109,7 @@ jobs:
       - name: Install tensorflow
         run: pip install --timeout 300 tensorflow==2.13.0
       - name: Install dependencies
-        run: pip install --timeout 300 -r tensorflow/requirements.txt
+        run: pip install --timeout 300 --no-cachedir -r tensorflow/requirements.txt
       - name: Check horovod features
         run: horovodrun --check-build
       - name: Uninstall cached deepgnn packages
