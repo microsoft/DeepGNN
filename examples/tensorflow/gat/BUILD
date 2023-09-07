@@ -32,6 +32,8 @@ py_test(
         requirement("numpy"),
         requirement("pytest"),
         requirement("scikit-learn"),
+        requirement("tensorflow-addons"),
+        requirement("keras"),
         requirement("tensorflow"),
         requirement("fsspec"),
         requirement("networkx"),

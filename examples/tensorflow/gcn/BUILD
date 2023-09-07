@@ -34,6 +34,8 @@ py_test(
         requirement("scikit-learn"),
         requirement("fsspec"),
         requirement("tensorflow"),
+        requirement("tensorflow-addons"),
+        requirement("keras"),
         requirement("networkx"),
         requirement("opencensus"),
         requirement("opencensus-context"),

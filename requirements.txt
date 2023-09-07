@@ -113,7 +113,7 @@ jsonpickle==2.2.0
 jsonschema==4.16.0
 jupyter_client==7.4.2
 jupyter_core==4.11.1
-keras==2.11.0
+keras==2.13.1
 keras-preprocessing==1.1.2
 keras_preprocessing==1.1.2
 keyring==23.9.3
@@ -227,11 +227,11 @@ tensorboard==2.10.1
 tensorboard-data-server==0.6.1
 tensorboard-plugin-wit==1.8.1
 tensorboardX==2.5.1
-tensorflow==2.11.1
-tensorflow-addons==0.18.0
-tensorflow-estimator==2.10.0
-tensorflow-intel==2.11.1
-tensorflow-io-gcs-filesystem==0.27.0
+tensorflow==2.13.0
+tensorflow-addons==0.21.0
+tensorflow-estimator==2.13.0
+tensorflow-intel==2.13.0
+tensorflow-io-gcs-filesystem==0.31.0
 termcolor==2.0.1
 terminado==0.16.0
 testpath==0.6.0
