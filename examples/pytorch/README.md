@@ -40,8 +40,6 @@ including Temporal Graph Attention and Temporal Graph Sum.
 - Reference: [https://arxiv.org/abs/2006.10637](https://arxiv.org/abs/2006.10637)
 - `tgn.py` contains TGN model implementation with pytorch-geometric modules and temporal graph based on MOOC dataset.
 
-
-
 # GCN
 
 Graph Convolutional Networks operate directly on graphs via a localized first-order approximation of spectral graph convolutions.
@@ -49,3 +47,8 @@ The model scales linearly in the number of graph edges and learns hidden layer r
 
 - Reference: [https://arxiv.org/abs/1609.02907](https://arxiv.org/abs/1609.02907)
 - `gcn.py` contains GCN model implementation with pytorch-geometric modules and distributed training with 2 [Ray](https://www.ray.io/) workers.
+
+# AML
+
+Graph engine servers must start before workers clients and reverse is also true, servers have to wait for all clients to disconnect before shutdown.
+`aml.py` exmaple shows how to do this with Azure ML workflows.

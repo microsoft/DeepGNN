@@ -1,7 +1,9 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 """Example of TGN model trained on MOOC dataset."""
+from dataclasses import dataclass
 import os
+from typing import Tuple
 
 import numpy as np
 from sklearn.metrics import average_precision_score, roc_auc_score
@@ -15,13 +17,9 @@ from torch_geometric.nn.models.tgn import (
 )
 from torch.utils.data import DataLoader
 
+from deepgnn.graph_engine import Graph
 from deepgnn.graph_engine.data.mooc import MOOC
 from deepgnn import get_logger
-
-device = torch.device("cpu")
-train_batch_size = 200
-num_neighbors = 10
-torch.manual_seed(42)
 
 
 class GraphAttentionEmbedding(torch.nn.Module):
@@ -63,23 +61,35 @@ class LinkPredictor(torch.nn.Module):
         return self.lin_final(h)
 
 
-graph = MOOC()
+@dataclass
+class Domain:
+    """Class to hold model components needed for predictions."""
+
+    assoc: torch.Tensor  # Helper tensors to map global node indices to local ones.
+    last_n_assoc: torch.Tensor
+    memory: TGNMemory
+    gnn: GraphAttentionEmbedding
+    link_pred: LinkPredictor
 
 
-def train_val_test_batches(test_ratio: float = 0.1, val_ratio: float = 0.1):
+def make_train_val_test_batches(config: dict) -> Tuple[np.array, np.array, np.array]:
     """Split the graph edges into train/val/test batches."""
     edges = np.loadtxt(
         os.path.join(
-            graph.data_dir(), "raw", graph.GRAPH_NAME, f"{graph.GRAPH_NAME}.csv"
+            config["data_dir"],
+            "raw",
+            config["graph_name"],
+            f'{config["graph_name"]}.csv',
         ),
         delimiter=",",
         skiprows=1,
         usecols=(0, 1, 2),
     ).astype(np.int64)
 
-    edges[:, 1] += graph.max_src
+    edges[:, 1] += config["max_src_id"]
     val_time, test_time = np.quantile(
-        edges[:, 2], [1 - test_ratio - val_ratio, 1 - test_ratio]
+        edges[:, 2],
+        [1 - config["test_ratio"] - config["val_ratio"], 1 - config["test_ratio"]],
     )
 
     test_idx = (edges[:, 2] <= test_time).sum()
@@ -87,49 +97,20 @@ def train_val_test_batches(test_ratio: float = 0.1, val_ratio: float = 0.1):
     return edges[:val_idx], edges[val_idx:test_idx], edges[test_idx:]
 
 
-train_data, _, test_data = train_val_test_batches(0.15, 0.15)
-train_loader = DataLoader(train_data, batch_size=train_batch_size)
-test_loader = DataLoader(test_data, batch_size=train_batch_size)
-
-memory_dim = time_dim = embedding_dim = 100
-
-memory = TGNMemory(
-    graph.num_nodes,
-    graph.edge_feature_dim,
-    memory_dim,
-    time_dim,
-    message_module=IdentityMessage(graph.edge_feature_dim, memory_dim, time_dim),
-    aggregator_module=LastAggregator(),
-).to(device)
-
-gnn = GraphAttentionEmbedding(
-    in_channels=memory_dim,
-    out_channels=embedding_dim,
-    msg_dim=graph.edge_feature_dim,
-    time_enc=memory.time_enc,
-).to(device)
-
-link_pred = LinkPredictor(in_channels=embedding_dim).to(device)
-
-optimizer = torch.optim.Adam(
-    set(memory.parameters()) | set(gnn.parameters()) | set(link_pred.parameters()),
-    lr=0.0001,
-)
-criterion = torch.nn.BCEWithLogitsLoss()
-
-# Helper tensors to map global node indices to local ones.
-assoc = torch.empty(graph.num_nodes + 1, dtype=torch.long, device=device)
-last_n_assoc = torch.empty(graph.num_nodes + 1, dtype=torch.long, device=device)
-
-
-def _predict(batch):
-    batch = batch.to(device)
+def predict(
+    batch: torch.Tensor,
+    domain: Domain,
+    graph: Graph,
+    config: dict,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Make predictions for a batch of edges."""
+    batch = batch.to(config["device"])
     src, pos_dst, t = batch[:, 0], batch[:, 1], batch[:, 2]
     # MOOC and other typical temporal graphs are bipartite. Destinations node ids
     # are always greater than source node ids. We need to use the right distribution
     # to sample negatives.
     neg_dst = np.random.randint(
-        graph.min_dst_idx, graph.max_dst_idx + 1, (src.size(0),), dtype=np.int64
+        config["min_dst_idx"], config["max_dst_idx"] + 1, (src.size(0),), dtype=np.int64
     )
     n_id, index = np.unique(np.concatenate([src, pos_dst, neg_dst]), return_index=True)
     times = np.concatenate([t, np.ones_like(pos_dst), np.ones_like(neg_dst)])
@@ -139,7 +120,7 @@ def _predict(batch):
     dst = graph.sample_neighbors(
         n_id,
         0,
-        num_neighbors,
+        config["num_neighbors"],
         strategy="lastn",
         timestamps=t_id,
         return_edge_created_ts=True,
@@ -148,31 +129,35 @@ def _predict(batch):
     nbs = dst[0].ravel()
     # Filter out stubs: if a node has no neighbors, sample_neighbors backfills with -1s.
     dst_ids = nbs[nbs > -1]
-    src_np = n_id.repeat(num_neighbors)[nbs > -1]
-    dst_ts = dst[3].ravel()[nbs > -1]
+    src_np = n_id.repeat(config["num_neighbors"])[nbs > -1]
+    dst_ts = dst[3].ravel()[nbs > -1]  # type: ignore
 
     final_nid = torch.as_tensor(
-        np.unique(np.concatenate([n_id, dst_ids])), device=device
+        np.unique(np.concatenate([n_id, dst_ids])), device=config["device"]
     )
-    last_n_assoc[final_nid] = torch.arange(final_nid.size(0), device=final_nid.device)
-    neighbors, nodes = last_n_assoc[dst_ids], last_n_assoc[src_np]
+    domain.last_n_assoc[final_nid] = torch.arange(
+        final_nid.size(0), device=final_nid.device
+    )
+    neighbors, nodes = domain.last_n_assoc[dst_ids], domain.last_n_assoc[src_np]
     if nodes.size(0) == 0:
         return (None, None)
 
     edge_index = torch.stack([neighbors, nodes])
-    assoc[final_nid] = torch.arange(final_nid.size(0), device=device)
+    domain.assoc[final_nid] = torch.arange(final_nid.size(0), device=config["device"])
     edges = np.stack([src_np, dst_ids, np.zeros(src_np.size, dtype=np.int64)], axis=1)
     features_np = graph.edge_features(
         edges=edges,
-        features=np.array([[0, graph.edge_feature_dim]], dtype=np.int32),
+        features=np.array([[0, config["edge_feature_dim"]]], dtype=np.int32),
         feature_type=np.float32,
         timestamps=dst_ts,
     )
 
-    z, last_update = memory(torch.as_tensor(final_nid, dtype=torch.int64).to(device))
-    features_torch = torch.as_tensor(features_np).to(device)
-    ts_torch = torch.as_tensor(dst_ts).to(device)
-    z = gnn(
+    z, last_update = domain.memory(
+        torch.as_tensor(final_nid, dtype=torch.int64).to(config["device"])
+    )
+    features_torch = torch.as_tensor(features_np).to(config["device"])
+    ts_torch = torch.as_tensor(dst_ts).to(config["device"])
+    z = domain.gnn(
         z,
         last_update,
         edge_index,
@@ -180,11 +165,11 @@ def _predict(batch):
         features_torch,
     )
 
-    pos_out = link_pred(z[assoc[src]], z[assoc[pos_dst]])
-    neg_out = link_pred(z[assoc[src]], z[assoc[neg_dst]])
-    memory.update_state(
-        torch.as_tensor(src_np, device=device),
-        torch.as_tensor(dst_ids, device=device),
+    pos_out = domain.link_pred(z[domain.assoc[src]], z[domain.assoc[pos_dst]])
+    neg_out = domain.link_pred(z[domain.assoc[src]], z[domain.assoc[neg_dst]])
+    domain.memory.update_state(
+        torch.as_tensor(src_np, device=config["device"]),
+        torch.as_tensor(dst_ids, device=config["device"]),
         ts_torch,
         features_torch,
     )
@@ -192,17 +177,25 @@ def _predict(batch):
     return (pos_out, neg_out)
 
 
-def train():
-    """Train the model."""
-    memory.train()
-    gnn.train()
-    link_pred.train()
-    memory.reset_state()
+def train(
+    domain: Domain,
+    train_loader: DataLoader,
+    graph: Graph,
+    optimizer: torch.optim.Optimizer,
+    criterion: torch.nn.BCEWithLogitsLoss,
+    config: dict,
+):
+    """Train the domain."""
+    domain.memory.train()
+    domain.gnn.train()
+    domain.link_pred.train()
+    domain.memory.reset_state()
 
     total_loss = 0
+    num_examples = len(train_loader) * config["batch_size"]
     for batch in train_loader:
         optimizer.zero_grad()
-        pos_out, neg_out = _predict(batch)
+        pos_out, neg_out = predict(batch, domain, graph, config)
         if pos_out is None:
             continue
 
@@ -211,22 +204,26 @@ def train():
 
         loss.backward()
         optimizer.step()
-        memory.detach()
-        total_loss += float(loss) * train_batch_size
-
-    return total_loss / train_data.shape[0]
+        domain.memory.detach()
+        total_loss += float(loss) * config["batch_size"]
+    return total_loss / num_examples
 
 
 @torch.no_grad()
-def test(loader):
+def test(
+    domain: Domain,
+    loader: DataLoader,
+    graph: Graph,
+    config: dict,
+):
     """Evaluate the model on test dataset."""
-    memory.eval()
-    gnn.eval()
-    link_pred.eval()
+    domain.memory.eval()
+    domain.gnn.eval()
+    domain.link_pred.eval()
     aps, aucs = [], []
     for batch in loader:
-        batch = batch.to(device)
-        pos_out, neg_out = _predict(batch)
+        batch = batch.to(config["device"])
+        pos_out, neg_out = predict(batch, domain, graph, config)
         y_pred = torch.cat([pos_out, neg_out], dim=0).sigmoid().cpu()
         y_true = torch.cat(
             [torch.ones(pos_out.size(0)), torch.zeros(neg_out.size(0))], dim=0
@@ -238,15 +235,82 @@ def test(loader):
     return float(torch.tensor(aps).mean()), float(torch.tensor(aucs).mean())
 
 
-test_ap = 0
-test_auc = 0
-logger = get_logger()
-# We can train the model for 2 epochs to get a decent performance.
-for epoch in range(1, 3):
-    loss = train()
-    logger.info(f"Epoch #{epoch:02d}: loss:{loss:.4f}")
+def _main():
+    graph = MOOC()
+    config = {
+        "data_dir": graph.data_dir(),
+        "graph_name": graph.GRAPH_NAME,
+        "max_src_id": graph.max_src,
+        "test_ratio": 0.1,
+        "val_ratio": 0.1,
+        "max_dst_idx": graph.max_dst_idx,
+        "min_dst_idx": graph.min_dst_idx,
+        "edge_feature_dim": graph.edge_feature_dim,
+        "device": torch.device("cpu"),
+        "batch_size": 200,
+        "num_neighbors": 10,
+    }
 
-test_ap, test_auc = test(test_loader)
-logger.info(f"Average precision{test_ap:.4f}: AUC:{test_auc:.4f}")
-assert test_ap >= 0.72
-assert test_auc >= 0.76
+    train_data, _, test_data = make_train_val_test_batches(config)
+    train_loader = DataLoader(train_data, batch_size=config["batch_size"])
+    test_loader = DataLoader(test_data, batch_size=config["batch_size"])
+    memory_dim = time_dim = embedding_dim = 100
+    memory = TGNMemory(
+        graph.num_nodes,
+        config["edge_feature_dim"],
+        memory_dim,
+        time_dim,
+        message_module=IdentityMessage(
+            config["edge_feature_dim"], memory_dim, time_dim
+        ),
+        aggregator_module=LastAggregator(),
+    )
+    domain = Domain(
+        memory=memory,
+        link_pred=LinkPredictor(in_channels=embedding_dim).to(config["device"]),
+        assoc=torch.empty(
+            graph.num_nodes + 1, dtype=torch.long, device=config["device"]
+        ),
+        last_n_assoc=torch.empty(
+            graph.num_nodes + 1, dtype=torch.long, device=config["device"]
+        ),
+        gnn=GraphAttentionEmbedding(
+            in_channels=memory_dim,
+            out_channels=embedding_dim,
+            msg_dim=config["edge_feature_dim"],
+            time_enc=memory.time_enc,
+        ).to(config["device"]),
+    )
+
+    optimizer = torch.optim.Adam(
+        set(domain.memory.parameters())
+        | set(domain.gnn.parameters())
+        | set(domain.link_pred.parameters()),
+        lr=0.0001,
+    )
+    criterion = torch.nn.BCEWithLogitsLoss()
+
+    test_ap = 0
+    test_auc = 0
+    logger = get_logger()
+    # We can train the model for 2 epochs to get a decent performance.
+    for epoch in range(1, 3):
+        loss = train(
+            domain,
+            train_loader,
+            graph,
+            optimizer,
+            criterion,
+            config,
+        )
+        logger.info(f"Epoch #{epoch:02d}: loss: {loss:.4f}")
+
+    test_ap, test_auc = test(domain, test_loader, graph, config)
+    logger.info(f"Average precision: {test_ap:.4f}; AUC: {test_auc:.4f}")
+    assert test_ap >= 0.72
+    assert test_auc >= 0.76
+
+
+if __name__ == "__main__":
+    torch.manual_seed(42)
+    _main()

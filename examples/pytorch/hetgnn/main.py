@@ -253,9 +253,11 @@ def a_a_collaborate_train_test(config, input_data_map):
         a_a_list_train[i] = list(set(a_a_list_train[i]))
         a_a_list_test[i] = list(set(a_a_list_test[i]))
 
-    with open(str(config["data_dir"] + "/a_a_list_train.txt"), "w") as a_a_list_train_f:
+    with open(
+        osp.join(config["data_dir"], "a_a_list_train.txt"), "w"
+    ) as a_a_list_train_f:
         with open(
-            str(config["data_dir"] + "/a_a_list_test.txt"), "w"
+            osp.join(config["data_dir"], "a_a_list_test.txt"), "w"
         ) as a_a_list_test_f:
             a_a_list = [a_a_list_train, a_a_list_test]
             for t in range(len(a_a_list)):
@@ -289,7 +291,7 @@ def a_a_collaborate_train_test(config, input_data_map):
 
 def a_a_collab_feature_setting(config):
     a_embed = np.around(np.random.normal(0, 0.01, [config["A_n"], config["dim"]]), 4)
-    with open(config["data_dir"] + "/node_embedding.txt", "r") as embed_f:
+    with open(osp.join(config["data_dir"], "node_embedding.txt"), "r") as embed_f:
         for line in islice(embed_f, 0, None):
             line = line.strip()
             node_id = re.split(" ", line)[0]
@@ -298,9 +300,11 @@ def a_a_collab_feature_setting(config):
             a_embed[index] = embed
 
     train_num = 0
-    with open(str(config["data_dir"] + "/a_a_list_train.txt"), "r") as a_a_list_train_f:
+    with open(
+        osp.join(config["data_dir"], "a_a_list_train.txt"), "r"
+    ) as a_a_list_train_f:
         with open(
-            str(config["data_dir"] + "/train_feature.txt"), "w"
+            osp.join(config["data_dir"], "train_feature.txt"), "w"
         ) as a_a_list_train_feature_f:
             for line in a_a_list_train_f:
                 line = line.strip()
@@ -325,9 +329,11 @@ def a_a_collab_feature_setting(config):
                     a_a_list_train_feature_f.write("\n")
 
     test_num = 0
-    with open(str(config["data_dir"] + "/a_a_list_test.txt"), "r") as a_a_list_test_f:
+    with open(
+        osp.join(config["data_dir"], "a_a_list_test.txt"), "r"
+    ) as a_a_list_test_f:
         with open(
-            str(config["data_dir"] + "/test_feature.txt"), "w"
+            osp.join(config["data_dir"], "test_feature.txt"), "w"
         ) as a_a_list_test_feature_f:
             for line in a_a_list_test_f:
                 line = line.strip()
@@ -355,7 +361,7 @@ def a_a_collab_feature_setting(config):
 
 def a_class_cluster_feature_setting(config):
     a_embed = np.around(np.random.normal(0, 0.01, [config["A_n"], config["dim"]]), 4)
-    with open(config["data_dir"] + "/node_embedding.txt", "r") as embed_f:
+    with open(osp.join(config["data_dir"] + "node_embedding.txt"), "r") as embed_f:
         for line in islice(embed_f, 0, None):
             line = line.strip()
             node_id = re.split(" ", line)[0]
@@ -399,9 +405,9 @@ def a_class_cluster_feature_setting(config):
     for i in range(config["A_n"]):
         a_max_v[i] = a_v_num[i].index(max(a_v_num[i]))
 
-    with open(str(config["data_dir"] + "/cluster.txt"), "w") as cluster_f:
+    with open(osp.join(config["data_dir"], "cluster.txt"), "w") as cluster_f:
         with open(
-            str(config["data_dir"] + "/cluster_embed.txt"), "w"
+            osp.join(config["data_dir"], "cluster_embed.txt"), "w"
         ) as cluster_embed_f:
             a_class_list = [[] for k in range(config["C_n"])]
             cluster_id = 0
@@ -449,15 +455,17 @@ def a_class_cluster_feature_setting(config):
                         cluster_embed_f.write("\n")
                         cluster_id += 1
 
-    with open(str(config["data_dir"] + ("/a_class_train.txt")), "w") as a_class_train_f:
+    with open(
+        osp.join(config["data_dir"], "a_class_train.txt"), "w"
+    ) as a_class_train_f:
         with open(
-            str(config["data_dir"] + ("/a_class_test.txt")), "w"
+            osp.join(config["data_dir"], "a_class_test.txt"), "w"
         ) as a_class_test_f:
             with open(
-                str(config["data_dir"] + ("/train_class_feature.txt")), "w"
+                osp.join(config["data_dir"], "train_class_feature.txt"), "w"
             ) as train_class_feature_f:
                 with open(
-                    str(config["data_dir"] + ("/test_class_feature.txt")), "w"
+                    osp.join(config["data_dir"], "test_class_feature.txt"), "w"
                 ) as test_class_feature_f:
                     train_num = 0
                     test_num = 0
@@ -592,7 +600,7 @@ def save_embedding(model, graph, config):
     )
 
     data_loader = torch.utils.data.DataLoader(saving_dataset)
-    with open(config["data_dir"] + "/node_embedding.txt", "w") as embed_file:
+    with open(osp.join(config["data_dir"], "node_embedding.txt"), "w") as embed_file:
         for _, context in enumerate(data_loader):
             out_temp = model.get_embedding(context)
             out_temp = out_temp.data.cpu().numpy()

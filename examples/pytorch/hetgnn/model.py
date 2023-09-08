@@ -25,19 +25,14 @@ class HetGnnModel(nn.Module):
     ):
         """Initialize HetGnn model."""
         super(HetGnnModel, self).__init__()
-        # super(HetGnnModel, self).__init__(
         self.feature_type = feature_type
         self.feature_idx = feature_idx
         self.feature_dim = feature_dim
         self.feature_enc = None
-        # )
 
         self.embed_d = embed_d
         self.node_type_count = node_type_count
         self.neighbor_count = neighbor_count
-
-        # NOTE: do not use python list to store nn layers, use nn.ModuleList, otherwise
-        # the parameters will not added to the optimizer by default and loss function won't work.
         self.content_rnn = nn.ModuleList(
             [
                 nn.LSTM(embed_d, int(embed_d / 2), 1, bidirectional=True)

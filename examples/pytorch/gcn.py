@@ -93,13 +93,15 @@ class GCN(nn.Module):
         """Initialize model."""
         super().__init__()
 
-        self.lins = nn.ModuleList()
-        self.lins.append(nn.Linear(feature_dim, hidden_channels))
-        self.lins.append(nn.Linear(hidden_channels, num_classes))
+        self.lins = nn.ModuleList(
+            [
+                nn.Linear(feature_dim, hidden_channels),
+                nn.Linear(hidden_channels, num_classes),
+            ]
+        )
         self.dropout = dropout
-        self.convs = nn.ModuleList()
-        for layer in range(num_layers):
-            self.convs.append(
+        self.convs = nn.ModuleList(
+            [
                 GCN2Conv(
                     hidden_channels,
                     alpha,
@@ -108,7 +110,9 @@ class GCN(nn.Module):
                     shared_weights,
                     normalize=False,
                 )
-            )
+                for layer in range(num_layers)
+            ]
+        )
 
     def forward(self, x: torch.Tensor, adj: SparseTensor):
         """Forward pass."""
