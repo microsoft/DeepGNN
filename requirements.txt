@@ -189,7 +189,7 @@ pytz==2022.4
 pywin32==304;sys_platform == 'win32'
 PyYAML==6.0
 pyzmq==24.0.1
-ray[tune]==2.6.3
+ray[tune]==2.2.0
 rdflib==6.2.0
 referencing==0.30.2
 regex==2022.9.13
