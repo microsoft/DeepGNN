@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 import numpy as np
 import os
+import os.path as osp
 import random
 import tempfile
 import time
@@ -47,7 +48,7 @@ def mrr(
 def prepare_local_test_files():
     name = "academic.zip"
     working_dir = tempfile.TemporaryDirectory()
-    zip_file = os.path.join(working_dir.name, name)
+    zip_file = osp.join(working_dir.name, name)
     urllib.request.urlretrieve(
         f"https://deepgraphpub.blob.core.windows.net/public/testdata/{name}", zip_file
     )
@@ -63,7 +64,7 @@ def load_data(config):
     p_net_embed = {}
     v_net_embed = {}
     with open(
-        os.path.join(config["data_dir"], "academic", "node_net_embedding.txt"),
+        osp.join(config["data_dir"], "academic", "node_net_embedding.txt"),
         "r",
     ) as net_e_f:
         for line in islice(net_e_f, 1, None):
@@ -95,7 +96,7 @@ def load_data(config):
     # store academic relational data
     for i in range(len(relation_f)):
         f_name = relation_f[i]
-        with open(os.path.join(config["data_dir"], "academic", f_name), "r") as neigh_f:
+        with open(osp.join(config["data_dir"], "academic", f_name), "r") as neigh_f:
             for line in neigh_f:
                 line = line.strip()
                 node_id = int(re.split(":", line)[0])
@@ -116,7 +117,7 @@ def load_data(config):
 
     # store paper venue
     p_v = [0] * config["P_n"]
-    with open(os.path.join(config["data_dir"], "academic", "p_v.txt"), "r") as p_v_f:
+    with open(osp.join(config["data_dir"], "academic", "p_v.txt"), "r") as p_v_f:
         for line in p_v_f:
             line = line.strip()
             p_id = int(re.split(",", line)[0])
@@ -157,7 +158,7 @@ def init_het_input_data(config):
     # store academic relational data
     for i in range(len(relation_f)):
         f_name = relation_f[i]
-        with open(os.path.join(config["data_dir"], "academic", f_name), "r") as neigh_f:
+        with open(osp.join(config["data_dir"], "academic", f_name), "r") as neigh_f:
             for line in neigh_f:
                 line = line.strip()
                 node_id = int(re.split(":", line)[0])
@@ -187,7 +188,7 @@ def init_het_input_data(config):
 
     # store paper venue
     p_v = [0] * config["P_n"]
-    with open(os.path.join(config["data_dir"], "academic", "p_v.txt"), "r") as p_v_f:
+    with open(osp.join(config["data_dir"], "academic", "p_v.txt"), "r") as p_v_f:
         for line in p_v_f:
             line = line.strip()
             p_id = int(re.split(",", line)[0])
@@ -361,7 +362,7 @@ def a_a_collab_feature_setting(config):
 
 def a_class_cluster_feature_setting(config):
     a_embed = np.around(np.random.normal(0, 0.01, [config["A_n"], config["dim"]]), 4)
-    with open(osp.join(config["data_dir"] + "node_embedding.txt"), "r") as embed_f:
+    with open(osp.join(config["data_dir"], "node_embedding.txt"), "r") as embed_f:
         for line in islice(embed_f, 0, None):
             line = line.strip()
             node_id = re.split(" ", line)[0]
@@ -371,7 +372,7 @@ def a_class_cluster_feature_setting(config):
 
     a_p_list_train = [[] for k in range(config["A_n"])]
     with open(
-        os.path.join(config["data_dir"], "academic", "a_p_list_train.txt"), "r"
+        osp.join(config["data_dir"], "academic", "a_p_list_train.txt"), "r"
     ) as a_p_list_train_f:
         for line in a_p_list_train_f:
             line = line.strip()
@@ -382,7 +383,7 @@ def a_class_cluster_feature_setting(config):
                 a_p_list_train[node_id].append("p" + str(neigh_list_id[j]))
 
     p_v = [0] * config["P_n"]
-    with open(os.path.join(config["data_dir"], "academic", "p_v.txt"), "r") as p_v_f:
+    with open(osp.join(config["data_dir"], "academic", "p_v.txt"), "r") as p_v_f:
         for line in p_v_f:
             line = line.strip()
             p_id = int(re.split(",", line)[0])
@@ -653,7 +654,7 @@ if __name__ == "__main__":
             "neighbor_count": 10,
             "feature_dim": 128,
             "feature_idx": 0,
-            "sample_file": os.path.join(
+            "sample_file": osp.join(
                 local_test_files, "academic", "a_node_list.txt"
             ),  # file contains node id and type to calculate embeddings
             "A_n": 28646,  # number of author nodes
