@@ -92,6 +92,44 @@ def test_hdfs_remote(hdfs_data):
     npt.assert_array_equal(t, [0, 0, 0, 0, 0])
 
 
+def test_streaming_storage_args(hdfs_data):
+    repo_dir = os.environ["TEST_SRCDIR"].split("/sandbox")[0]
+    if os.path.exists(f"{repo_dir}/bazel-snark"):
+        hadoop_home = f"{repo_dir}/bazel-snark"
+    elif os.path.exists(f"{repo_dir}/bazel-s"):
+        hadoop_home = f"{repo_dir}/bazel-s"
+    else:
+        hadoop_home = f"{repo_dir.split('/bazel-out')[0]}"
+    os.environ["HADOOP_HOME"] = f"{hadoop_home}/external/hadoop/"
+    if "CLASSPATH" in os.environ:
+        del os.environ["CLASSPATH"]
+    data_path = "file://" + hdfs_data
+
+    with pytest.raises(
+        ValueError,
+        match="Use stream=False to download files first and use them from disk.",
+    ):
+        client.MemoryGraph(
+            data_path,
+            [(data_path, 0)],
+            config_path="",
+            stream=True,
+            storage_type=PartitionStorageType.disk,
+        )
+    with pytest.raises(
+        ValueError,
+        match="Use stream=False to download files first and use them from disk.",
+    ):
+        server.Server(
+            data_path,
+            [(data_path, 0)],
+            "localhost:0",
+            config_path="",
+            stream=True,
+            storage_type=PartitionStorageType.disk,
+        )
+
+
 if __name__ == "__main__":
     sys.exit(
         pytest.main(
