@@ -9,11 +9,9 @@ import torch.nn.functional as F
 import numpy as np
 
 from deepgnn.graph_engine import Graph
-from deepgnn.pytorch.common import MRR
-from deepgnn.pytorch.modeling import BaseUnsupervisedModel
 
 
-class HetGnnModel(BaseUnsupervisedModel):
+class HetGnnModel(nn.Module):
     """Core heterogenous gnn model."""
 
     def __init__(
@@ -24,23 +22,17 @@ class HetGnnModel(BaseUnsupervisedModel):
         feature_idx: int,
         feature_dim: int,
         feature_type: np.dtype,
-        metric=MRR(),
     ):
         """Initialize HetGnn model."""
-        super(HetGnnModel, self).__init__(
-            feature_type=feature_type,
-            feature_idx=feature_idx,
-            feature_dim=feature_dim,
-            feature_enc=None,
-        )
+        super(HetGnnModel, self).__init__()
+        self.feature_type = feature_type
+        self.feature_idx = feature_idx
+        self.feature_dim = feature_dim
+        self.feature_enc = None
 
         self.embed_d = embed_d
         self.node_type_count = node_type_count
         self.neighbor_count = neighbor_count
-        self.metric = metric
-
-        # NOTE: do not use python list to store nn layers, use nn.ModuleList, otherwise
-        # the parameters will not added to the optimizer by default and loss function won't work.
         self.content_rnn = nn.ModuleList(
             [
                 nn.LSTM(embed_d, int(embed_d / 2), 1, bidirectional=True)

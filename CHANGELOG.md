@@ -9,10 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Add `return_edge_created_ts` argument to neighbor sampling methods to return timestamps when edges connecting nodes were created.
 - `MOOC` temporal dataset.
+- TGN example.
+- GCN example.
 
 ### Fixed
 - Uniform sampling works in temporal graphs.
 - ADL path parsing to download graph data.
+
+### Changed
+- Changed pytorch examples to be self contained and use [Ray](https://www.ray.io/) for distributed training.
+
+### Removed
+- link prediction and knowledgegraph examples
 
 ## [0.1.60] - 2022-04-18
 
