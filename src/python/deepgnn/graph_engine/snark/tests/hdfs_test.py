@@ -9,6 +9,7 @@ import numpy as np
 import numpy.testing as npt
 import deepgnn.graph_engine.snark.client as client
 import deepgnn.graph_engine.snark.server as server
+from deepgnn.graph_engine.snark.client import PartitionStorageType
 from deepgnn.graph_engine.data.cora import CoraFull
 
 
