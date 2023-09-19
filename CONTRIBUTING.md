@@ -89,7 +89,7 @@ Install and run linters(same on all systems):
 ```sh
 pip install --upgrade pip
 pip install -r tests/requirements.txt
-pip install wheel pre-commit==2.17.0 mypy==0.971 numpy==1.22.4 torch==1.13.1 tensorflow==2.11.1
+pip install wheel pre-commit==2.17.0 mypy==0.971 numpy==1.22.4 torch==1.13.1 tensorflow==2.13.0
 pre-commit install
 pre-commit run --all-files
 ```

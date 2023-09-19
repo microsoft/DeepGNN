@@ -55,6 +55,11 @@ class Server:
             stream (bool, default=False): If remote path is given: by default, download files first then load,
                 if stream = True and libhdfs present, stream data directly to memory.
         """
+        if storage_type == PartitionStorageType.disk and stream:
+            raise ValueError(
+                "Use stream=False to download files first and use them from disk."
+            )
+
         if partitions is None:
             partitions = [(meta_path, 0)]
         partitions_with_path: List[Tuple[str, int]] = []
