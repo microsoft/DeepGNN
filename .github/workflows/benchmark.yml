@@ -7,6 +7,10 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v3.5.3
+      - name: Start build cache proxy
+        uses: ./.github/actions/buildcache
+        env:
+          BAZEL_REMOTE_AZBLOB_SHARED_KEY : ${{ secrets.BAZEL_REMOTE_AZBLOB_SHARED_KEY }}
       - name: Run benchmarks
         uses: ./.github/actions/benchmarks

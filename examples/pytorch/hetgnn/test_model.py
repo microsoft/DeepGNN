@@ -494,7 +494,7 @@ def test_academic_hetgnn_loss(mock_graph):
 
     it = iter(data_loader)
     optimizer.zero_grad()
-    loss, _, _ = model(it.next())
+    loss, _, _ = model(next(it))
     loss.backward()
     optimizer.step()
     print(loss.detach().numpy())
@@ -549,7 +549,7 @@ def test_academic_hetgnn_model(mock_graph):
 
     it = iter(data_loader)
     index = 0
-    context = it.next()
+    context = next(it)
     feature_list = context["encoder"]
     for feature_index in range(len(feature_list)):
         if len(feature_list[feature_index]) > 0:

@@ -16,12 +16,11 @@ jobs:
         os: ["ubuntu-22.04", "macos-12", "windows-2019"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v3.5.3
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4.5.0
+        uses: actions/setup-python@v4.7.0
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'pip'
       - name: Run lint
         uses: ./.github/actions/lint
   tests:
@@ -32,31 +31,35 @@ jobs:
         os: ["ubuntu-22.04", "macos-12", "windows-2019"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v3.5.3
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4.5.0
+        uses: actions/setup-python@v4.7.0
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Start build cache proxy
+        uses: ./.github/actions/buildcache
+        env:
+          BAZEL_REMOTE_AZBLOB_SHARED_KEY : ${{ secrets.BAZEL_REMOTE_AZBLOB_SHARED_KEY }}
       - name: Run tests
         uses: ./.github/actions/test
-        with:
-          disk_cache: test-${{ matrix.os }}-${{ matrix.python-version }}
   benchmarks:
     needs: tests
     runs-on: "ubuntu-22.04"
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v3.5.3
+      - name: Start build cache proxy
+        uses: ./.github/actions/buildcache
+        env:
+          BAZEL_REMOTE_AZBLOB_SHARED_KEY : ${{ secrets.BAZEL_REMOTE_AZBLOB_SHARED_KEY }}
       - name: Run benchmarks
         uses: ./.github/actions/benchmarks
-        with:
-          disk_cache: benchmark-${{ matrix.os }}
   wheel:
     runs-on: ubuntu-22.04
     needs: tests
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v3.5.3
       - name: Set up Python 3.10
-        uses: actions/setup-python@v4.5.0
+        uses: actions/setup-python@v4.7.0
         with:
           python-version: "3.10"
       - name: Upload examples
@@ -64,6 +67,10 @@ jobs:
         with:
           name: examples
           path: examples/*
+      - name: Start build cache proxy
+        uses: ./.github/actions/buildcache
+        env:
+          BAZEL_REMOTE_AZBLOB_SHARED_KEY : ${{ secrets.BAZEL_REMOTE_AZBLOB_SHARED_KEY }}
       - name: build wheel
         uses: ./.github/actions/wheel
         with:
@@ -96,7 +103,7 @@ jobs:
         with:
           name: examples
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4.5.0
+        uses: actions/setup-python@v4.7.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install tensorflow
@@ -140,15 +147,14 @@ jobs:
         with:
           name: examples
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4.5.0
+        uses: actions/setup-python@v4.7.0
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install torch
-        run: pip install --timeout 300 torch==1.13.1
-      - name: Pip freeze
-        run: pip freeze | grep torch
-      - name: Install dependencies
-        run: pip install --timeout 300 -r pytorch/requirements.txt
+      - run: |
+          pip install --upgrade pip
+          pip install torch==1.13.1 packaging==21.3 setuptools==67.8.0 cmake==3.27.1
+          pip install --timeout 300 -r pytorch/requirements.txt
+        name: Install dependencies
       - name: Uninstall cached deepgnn packages
         run: pip uninstall deepgnn-ge deepgnn-torch
       - name: Install wheels

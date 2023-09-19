@@ -5,10 +5,6 @@ inputs:
     description: 'Package version'
     required: true
     default: '0.1.1'
-  disk_cache:
-    description: 'Build system cache key'
-    required: false
-    default: wheel-${{ github.ref }}-${{ runner.os }}
 runs:
   using: "composite"
   steps:
@@ -19,11 +15,12 @@ runs:
       run: |
         echo "BAZEL_CONFIG=manylinux" >> $GITHUB_ENV
         echo "PLAT_NAME=manylinux1_x86_64" >> $GITHUB_ENV
+        echo "REMOTE_CACHE=--remote_cache=http://localhost:8080" >> $GITHUB_ENV
         sudo mkdir /dt11
         sudo chown $USER /dt11
       shell: bash
       name: Configure env variables for linux
-    - uses: actions/cache@v3.2.3
+    - uses: actions/cache@v3.3.1
       id: compiler-cache
       with:
         path: /dt11
@@ -50,16 +47,7 @@ runs:
       shell: bash
       name: Configure env variables for macos
 
-    - uses: actions/cache@v3.2.3
-      id: build-cache
-      with:
-        path: ~/bazel-cache
-        key: ${{ inputs.disk_cache }}
-        restore-keys: |
-          wheel-${{ runner.os }}-${{ github.ref }}
-          wheel-${{ runner.os }}
-
-    - run: bazel build -c opt //src/cc/lib:wrapper --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
+    - run: bazel build -c opt //src/cc/lib:wrapper --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }}
       shell: bash
       name: Build shared library
 

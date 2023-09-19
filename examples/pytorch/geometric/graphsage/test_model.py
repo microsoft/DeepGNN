@@ -119,7 +119,7 @@ def test_deep_graph_on_cora(train_supervised_graphsage):  # noqa: F811
     simpler = MockFixedSimpleDataLoader(val_ref, query_fn=graphsage.query, graph=g)
     trainloader = torch.utils.data.DataLoader(simpler)
     it = iter(trainloader)
-    val_output_ref = graphsage.get_score(it.next())
+    val_output_ref = graphsage.get_score(next(it))
     val_labels = g.node_features(
         val_ref, np.array([[label_idx, label_dim]]), np.float32
     ).argmax(1)
@@ -171,7 +171,7 @@ def test_supervised_graphsage_model(mock_graph):  # noqa: F811
     )
     trainloader = torch.utils.data.DataLoader(simpler)
     it = iter(trainloader)
-    output = graphsage.get_score(it.next())
+    output = graphsage.get_score(next(it))
     npt.assert_allclose(output.detach().numpy(), expected, rtol=1e-4)
 
 
@@ -208,7 +208,7 @@ def test_supervised_graphsage_loss_value(mock_graph):  # noqa: F811
     )
     it = iter(trainloader)
     optimizer.zero_grad()
-    loss, _, _ = graphsage(it.next())
+    loss, _, _ = graphsage(next(it))
     loss.backward()
     optimizer.step()
     npt.assert_allclose(loss.detach().numpy(), np.array([1.941329]), rtol=1e-5)

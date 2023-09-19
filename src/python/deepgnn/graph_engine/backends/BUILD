@@ -6,6 +6,7 @@ load("@rules_python//python:defs.bzl", "py_library")
 py_library(
     name = "graph_engine_backends",
     srcs = [
+        "__init__.py",
         "common.py",
         "options.py",
     ],

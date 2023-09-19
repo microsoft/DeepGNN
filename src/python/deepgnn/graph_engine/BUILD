@@ -74,6 +74,7 @@ py_test(
     srcs_version = "PY3",
     deps = [
         ":graph_engine",
+        requirement("adlfs"),
         requirement("numpy"),
         requirement("fsspec"),
         requirement("pytest"),

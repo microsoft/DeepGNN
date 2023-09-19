@@ -1,14 +1,12 @@
 name: "Test"
 description: "Run unit tests"
-inputs:
-  disk_cache:
-    description: 'Build system cache key'
-    required: false
-    default: test-${{ github.ref }}-${{ runner.os }}
 runs:
   using: "composite"
   steps:
     - run: echo "BAZEL_CONFIG=linux" >> $GITHUB_ENV
+      shell: bash
+      if: runner.os == 'Linux'
+    - run: echo "REMOTE_CACHE=--remote_cache=http://localhost:8080" >> $GITHUB_ENV
       shell: bash
       if: runner.os == 'Linux'
     - run: echo "BAZEL_CONFIG=windows" >> $GITHUB_ENV
@@ -17,37 +15,28 @@ runs:
     - run: echo "BAZEL_CONFIG=macos" >> $GITHUB_ENV
       shell: bash
       if: runner.os == 'macOS'
-    - run: echo ${{ inputs.disk_cache }}
-      shell: bash
 
-    - uses: actions/cache@v3.2.3
-      id: cache
-      with:
-        path: ~/bazel-cache
-        key: ${{ inputs.disk_cache }}
-        restore-keys: |
-          test-${{ runner.os }}-${{ github.ref }}
-          test-${{ runner.os }}
-
-    - run: bazel test -c dbg //src/cc/tests:* --test_output=all --test_timeout 30 --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
+    - run: |
+        bazel test -c dbg //src/cc/tests:* --test_output=all --test_timeout 30 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }} --verbose_failures
+        bazel clean --expunge
       shell: bash
       name: run cpp tests
-    - run: bazel test -c dbg //src/python/deepgnn/...:* --jobs 1 --test_output=all --test_timeout 600 --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
+    - run: |
+        bazel test -c dbg //src/python/deepgnn/...:* --jobs 1 --test_output=all --test_timeout 600 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }}  --verbose_failures
+        bazel clean --expunge
       shell: bash
       name: run python tests
     - run: |
-        bazel test -c dbg //examples/pytorch/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
-        bazel test -c dbg //examples/tensorflow/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
+        bazel test -c dbg //examples/pytorch/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }}  --verbose_failures
+        bazel test -c dbg //examples/tensorflow/...:* --jobs 1 --test_output=all --test_timeout 6000 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }}  --verbose_failures
+        bazel test -c dbg //docs:* --test_output=all --jobs 1 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }}  --verbose_failures
+        bazel clean --expunge
       shell: bash
-      name: run python tests in examples folder
+      name: run python tests in examples and docs folders
       if: runner.os == 'Linux'
     - run: |
-        bazel test -c dbg //docs:* --test_output=all --config=linux --disk_cache=~/bazel-cache
-        bazel run -c dbg //docs:make_docs --config=linux
+        bazel run -c dbg //docs:make_docs --config=linux ${{ env.REMOTE_CACHE }}  --verbose_failures
+        bazel build -c dbg src/cc/lib/benchmark:* --config=linux ${{ env.REMOTE_CACHE }}  --verbose_failures
       shell: bash
-      name: run doctest and build documentation
-      if: runner.os == 'Linux'
-    - run: bazel build -c dbg src/cc/lib/benchmark:* --config=${{ env.BAZEL_CONFIG }} --disk_cache=~/bazel-cache
-      shell: bash
-      name: build benchmarks
+      name: build documentation and benchmarks
       if: runner.os == 'Linux'

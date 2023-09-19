@@ -26,6 +26,7 @@ py_test(
     deps = [
         ":deepgnn_tf_nn",
         requirement("numpy"),
+        requirement("fsspec"),
         requirement("pytest"),
         requirement("scikit-learn"),
         requirement("tensorflow"),

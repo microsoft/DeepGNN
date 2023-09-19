@@ -3,28 +3,13 @@
 
 import sys
 import os
-import platform
 import tempfile
 import pytest
 import numpy as np
 import numpy.testing as npt
 import deepgnn.graph_engine.snark.client as client
 import deepgnn.graph_engine.snark.server as server
-import deepgnn.graph_engine.snark._lib as lib
 from deepgnn.graph_engine.data.cora import CoraFull
-
-
-def get_lib_name():
-    lib_name = "libwrapper.so"
-    _SNARK_LIB_PATH_ENV_KEY = "SNARK_LIB_PATH"
-    if _SNARK_LIB_PATH_ENV_KEY in os.environ:
-        return os.environ[_SNARK_LIB_PATH_ENV_KEY]
-
-    return os.path.join(os.path.dirname(__file__), "..", lib_name)
-
-
-def setup_module(module):
-    lib._LIB_PATH = get_lib_name()
 
 
 @pytest.fixture(scope="module")

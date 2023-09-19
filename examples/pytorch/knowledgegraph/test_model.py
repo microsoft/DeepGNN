@@ -195,7 +195,7 @@ def test_kg_rotatE_on_FB18k(mock_graph):
     )
     it = iter(trainloader)
     optimizer.zero_grad()
-    loss, _, _ = kge_model(it.next())
+    loss, _, _ = kge_model(next(it))
     loss.backward()
     optimizer.step()
 
@@ -226,7 +226,7 @@ def test_kg_DistMult_on_FB18k(mock_graph):
     )
     it = iter(trainloader)
     optimizer.zero_grad()
-    loss, _, _ = kge_model(it.next())
+    loss, _, _ = kge_model(next(it))
     loss.backward()
     optimizer.step()
 
@@ -257,7 +257,7 @@ def test_kg_ComplEx_on_FB18k(mock_graph):
     )
     it = iter(trainloader)
     optimizer.zero_grad()
-    loss, _, _ = kge_model(it.next())
+    loss, _, _ = kge_model(next(it))
     loss.backward()
     optimizer.step()
 
@@ -288,7 +288,7 @@ def test_kg_transE_on_FB18k(mock_graph):
     )
     it = iter(trainloader)
     optimizer.zero_grad()
-    loss, _, _ = kge_model(it.next())
+    loss, _, _ = kge_model(next(it))
     loss.backward()
     optimizer.step()
 
