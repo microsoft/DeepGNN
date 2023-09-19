@@ -4,7 +4,7 @@
 This example demonstrates how to use ray to submit a job to Azure ML using ray-on-aml.
 
 Multi-node users need to follow these steps,
-0., https://learn.microsoft.com/en-us/azure/machine-learning/how-to-secure-training-vnet?view=azureml-api-2&tabs=cli%2Crequired
+0. https://learn.microsoft.com/en-us/azure/machine-learning/how-to-secure-training-vnet?view=azureml-api-2&tabs=cli%2Crequired
 1. Create a virtual network and add your compute to it.
 2. Create a network security group.
 3. Manually include pip packages shown in ray_on_aml + others required
