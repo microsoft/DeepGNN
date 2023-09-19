@@ -71,3 +71,11 @@ py_binary(
     ],
     deps = common_deps,
 )
+
+py_binary(
+    name = "pyg_interface",
+    srcs = [
+        "pyg_interface.py",
+    ],
+    deps = common_deps,
+)

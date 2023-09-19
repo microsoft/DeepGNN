@@ -52,3 +52,7 @@ The model scales linearly in the number of graph edges and learns hidden layer r
 
 Graph engine servers must start before workers clients and reverse is also true, servers have to wait for all clients to disconnect before shutdown.
 `aml.py` exmaple shows how to do this with Azure ML workflows.
+
+# PyG Interface
+
+PyTorch Geometric remote backend example demonstrating how to use DeepGNN as a remote backend for a PyG frontend.
