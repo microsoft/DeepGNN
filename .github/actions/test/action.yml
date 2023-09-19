@@ -17,7 +17,7 @@ runs:
       if: runner.os == 'macOS'
 
     - run: |
-        bazel test -c dbg //src/cc/tests:* --test_output=all --test_timeout 30 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }} --verbose_failures
+        bazel test -c dbg //src/cc/tests:* --test_output=all --test_timeout 30 --config=${{ env.BAZEL_CONFIG }} --verbose_failures
       shell: bash
       name: run cpp tests
     - run: |
