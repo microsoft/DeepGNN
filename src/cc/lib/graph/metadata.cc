@@ -44,6 +44,15 @@ Metadata::Metadata(std::filesystem::path path, std::string config_path)
     std::ifstream f(path / "meta.json");
     json meta = json::parse(f);
 
+    if (meta.find("name") != meta.end())
+    {
+        m_name = meta["name"];
+    }
+    if (meta.find("data_path") != meta.end())
+    {
+        m_data_path = meta["data_path"];
+    }
+
     std::string version_full = meta["binary_data_version"];
     version_full.erase(0, 1);
     m_version = stoi(version_full);
@@ -107,6 +116,15 @@ void Metadata::Write(std::filesystem::path path) const
         {"edge_feature_count", m_edge_feature_count},
         {"watermark", m_watermark},
     };
+
+    if (m_name != "")
+    {
+        json_meta["name"] = m_name;
+    }
+    if (m_data_path != "")
+    {
+        json_meta["data_path"] = m_data_path;
+    }
 
     json_meta["partitions"] = {{"0", {{"node_weight", {0}}}}};
     for (size_t p = 0; p < m_partition_count; ++p)

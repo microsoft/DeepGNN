@@ -19,6 +19,10 @@ struct Metadata
     explicit Metadata(std::filesystem::path path, std::string config_path = "");
     void Write(std::filesystem::path path) const;
 
+    // Optional graph information.
+    std::string m_name = "";
+    std::string m_data_path = "";
+
     // Graph information.
     size_t m_version;
     size_t m_node_count;

@@ -179,6 +179,9 @@ class Meta:
                 "Meta file should contain binary_data_version, please regenerate binary data"
             )
 
+        self.name = meta["name"] if "name" in meta else ""
+        self.data_path = meta["data_path"] if "data_path" in meta else ""
+
         self.node_count = meta["node_count"]
         self.edge_count = meta["edge_count"]
         self.node_type_count = meta["node_type_count"]

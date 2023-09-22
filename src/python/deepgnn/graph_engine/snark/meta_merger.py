@@ -48,6 +48,9 @@ class Meta:
                 "Meta file should contain binary_data_version, please regenerate binary data"
             )
 
+        self.name = meta["name"] if "name" in meta else ""
+        self.data_path = meta["data_path"] if "data_path" in meta else ""
+
         self.node_count = meta["node_count"]
         self.edge_count = meta["edge_count"]
         self.node_type_count = meta["node_type_count"]
@@ -85,6 +88,8 @@ def merge(fs, output_dir: str, meta_list: List[Meta]):
     ), "All partitions must have the same binary version"
     content = {
         "binary_data_version": meta_list[0].version,
+        "name": meta_list[0].name,
+        "data_path": meta_list[0].data_path,
         "node_count": sum([i.node_count for i in meta_list]),
         "edge_count": sum([i.edge_count for i in meta_list]),
         "node_type_count": meta_list[0].node_type_count,
