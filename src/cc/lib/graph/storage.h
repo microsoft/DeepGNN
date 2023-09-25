@@ -122,13 +122,12 @@ template <typename T> struct MemoryStorage : BaseStorage<T>
 template <typename T> struct HDFSStorage final : public MemoryStorage<T>
 {
   public:
-    HDFSStorage(const char *hdfs_path, const std::string config_path)
+    HDFSStorage(const char *hdfs_path, const std::string &config_path)
         : MemoryStorage<T>(std::move(read_hdfs<T>(hdfs_path, config_path)))
     {
     }
 
-    HDFSStorage(const wchar_t *hdfs_path, const std::string config_path, const std::string suffix,
-                open_file_ptr open_file)
+    HDFSStorage(const wchar_t *hdfs_path, const std::string &config_path)
     {
         assert(false && "HDFS only supported on linux!");
     }
@@ -137,7 +136,7 @@ template <typename T> struct HDFSStorage final : public MemoryStorage<T>
 template <typename T> struct HDFSStreamStorage final : BaseStorage<T>
 {
   public:
-    HDFSStreamStorage(const char *hdfs_path, const std::string config_path)
+    HDFSStreamStorage(const char *hdfs_path, const std::string &config_path)
     {
         std::string data_path_str;
         std::string host_str;
@@ -154,7 +153,7 @@ template <typename T> struct HDFSStreamStorage final : BaseStorage<T>
         m_buffer = static_cast<char *>(malloc(BUFFER_SIZE));
     }
 
-    HDFSStreamStorage(const wchar_t *hdfs_path, const std::string config_path)
+    HDFSStreamStorage(const wchar_t *hdfs_path, const std::string &config_path)
     {
         assert(false && "HDFS only supported on linux!");
     }
@@ -168,8 +167,7 @@ template <typename T> struct HDFSStreamStorage final : BaseStorage<T>
         }
     }
 
-    HDFSStreamStorage(const wchar_t *hdfs_path, const std::string config_path, const std::string suffix,
-                      open_file_ptr open_file)
+    HDFSStreamStorage(const wchar_t *hdfs_path, const std::string &config_path)
     {
         assert(false && "HDFS only supported on linux!");
     }
