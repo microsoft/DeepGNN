@@ -15,6 +15,7 @@
 
 #include "absl/container/flat_hash_map.h"
 
+#include "logger.h"
 #include "metadata.h"
 #include "types.h"
 
@@ -138,7 +139,8 @@ class WeightedNodeSamplerPartition
     WeightedNodeSamplerPartition(const WeightedNodeSamplerPartition &) = default;
     WeightedNodeSamplerPartition(std::vector<WeightedNodeSamplerRecord> records, float weight);
 
-    WeightedNodeSamplerPartition(Metadata meta, Type tp, size_t partition_index, std::string partition_path);
+    WeightedNodeSamplerPartition(Metadata meta, Type tp, size_t partition_index, std::string partition_path,
+                                 std::shared_ptr<Logger> logger = nullptr);
 
     void Sample(int64_t seed, std::span<NodeId> out) const;
 
@@ -166,7 +168,8 @@ class WeightedEdgeSamplerPartition
     WeightedEdgeSamplerPartition(const WeightedEdgeSamplerPartition &) = default;
     WeightedEdgeSamplerPartition(std::vector<WeightedEdgeSamplerRecord> records, float weight);
 
-    WeightedEdgeSamplerPartition(Metadata meta, Type tp, size_t partition_index, std::string partition_path);
+    WeightedEdgeSamplerPartition(Metadata meta, Type tp, size_t partition_index, std::string partition_path,
+                                 std::shared_ptr<Logger> logger = nullptr);
 
     void Sample(int64_t seed, std::span<NodeId> out_src, std::span<NodeId> out_dst) const;
     float Weight() const;
@@ -183,7 +186,8 @@ template <bool WithReplacement> class UniformEdgeSamplerPartition
     UniformEdgeSamplerPartition(UniformEdgeSamplerPartition &&) = default;
     UniformEdgeSamplerPartition(const UniformEdgeSamplerPartition &) = default;
     explicit UniformEdgeSamplerPartition(std::vector<std::pair<NodeId, NodeId>> records);
-    UniformEdgeSamplerPartition(Metadata meta, Type tp, size_t partition_index, std::string partition_path);
+    UniformEdgeSamplerPartition(Metadata meta, Type tp, size_t partition_index, std::string partition_path,
+                                std::shared_ptr<Logger> logger = nullptr);
 
     void Sample(int64_t seed, std::span<NodeId> out_src, std::span<NodeId> out_dst) const;
     float Weight() const;
@@ -201,7 +205,8 @@ template <bool WithReplacement> class UniformNodeSamplerPartition
     UniformNodeSamplerPartition(UniformNodeSamplerPartition &&) = default;
     UniformNodeSamplerPartition(const UniformNodeSamplerPartition &) = default;
     explicit UniformNodeSamplerPartition(std::vector<NodeId> records);
-    UniformNodeSamplerPartition(Metadata meta, Type tp, size_t partition_index, std::string partition_path);
+    UniformNodeSamplerPartition(Metadata meta, Type tp, size_t partition_index, std::string partition_path,
+                                std::shared_ptr<Logger> logger = nullptr);
 
     void Sample(int64_t seed, std::span<NodeId> out) const;
     float Weight() const;

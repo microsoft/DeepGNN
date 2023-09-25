@@ -3,13 +3,12 @@
 
 #include "metadata.h"
 #include "locator.h"
+#include "logger.h"
 
 #include <cinttypes>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
-#include <glog/logging.h>
-#include <glog/raw_logging.h>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -17,19 +16,24 @@ using json = nlohmann::json;
 namespace snark
 {
 
-Metadata::Metadata(std::filesystem::path path, std::string config_path)
+Metadata::Metadata(std::filesystem::path path, std::string config_path, std::shared_ptr<Logger> logger)
     : m_version(MINIMUM_SUPPORTED_VERSION), m_path(path.string()), m_config_path(config_path), m_watermark(-1)
 {
+
+    if (!logger)
+    {
+        logger = std::make_shared<GLogger>();
+    }
     if (is_hdfs_path(path))
 #ifndef SNARK_PLATFORM_LINUX
-        RAW_LOG_FATAL("HDFS streaming only supported on Linux!");
+        logger->log_fatal("HDFS streaming only supported on Linux!");
 #else
     {
         auto full_path = path / "meta.json";
         auto buffer = read_hdfs<char>(full_path.string(), m_config_path);
 
         path = std::filesystem::temp_directory_path();
-        auto meta_write = open_meta(path, "w");
+        auto meta_write = open_meta(path, "w", logger);
         for (uint64_t i = 0; i < buffer.size(); ++i)
         {
             if (fprintf(meta_write, "%c", buffer[i]) <= 0)
@@ -49,9 +53,9 @@ Metadata::Metadata(std::filesystem::path path, std::string config_path)
     m_version = stoi(version_full);
     if (m_version < MINIMUM_SUPPORTED_VERSION)
     {
-        RAW_LOG_FATAL("Unsupported version of binary data %zu. Minimum supported version is %zu. Please use latest "
-                      "deepgnn package to convert data.",
-                      m_version, MINIMUM_SUPPORTED_VERSION);
+        logger->log_fatal("Unsupported version of binary data %zu. Minimum supported version is %zu. Please use latest "
+                          "deepgnn package to convert data.",
+                          m_version, MINIMUM_SUPPORTED_VERSION);
     }
 
     m_node_count = meta["node_count"];

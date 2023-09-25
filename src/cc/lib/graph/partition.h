@@ -14,6 +14,7 @@
 #include <utility>
 #include <vector>
 
+#include "logger.h"
 #include "metadata.h"
 #include "reservoir.h"
 #include "storage.h"
@@ -30,7 +31,8 @@ using lastn_queue = std::priority_queue<ts_position, std::vector<ts_position>, s
 struct Partition
 {
     Partition() = default;
-    Partition(Metadata m_metadata, std::filesystem::path path, std::string suffix, PartitionStorageType storage_type);
+    Partition(Metadata m_metadata, std::filesystem::path path, std::string suffix, PartitionStorageType storage_type,
+              std::shared_ptr<Logger> logger = nullptr);
 
     Type GetNodeType(uint64_t internal_node_id) const;
 
@@ -153,6 +155,7 @@ struct Partition
     std::vector<Type> m_node_types;
     Metadata m_metadata;
     PartitionStorageType m_storage_type;
+    std::shared_ptr<Logger> m_logger;
 };
 
 } // namespace snark

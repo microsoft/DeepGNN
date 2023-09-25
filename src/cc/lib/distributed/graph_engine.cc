@@ -9,10 +9,9 @@
 #include <span>
 
 #include "absl/container/flat_hash_set.h"
-#include <glog/logging.h>
-#include <glog/raw_logging.h>
 
 #include "src/cc/lib/graph/locator.h"
+#include "src/cc/lib/graph/logger.h"
 #include "src/cc/lib/graph/reservoir.h"
 #include "src/cc/lib/graph/xoroshiro.h"
 
@@ -27,13 +26,19 @@ namespace snark
 {
 
 GraphEngineServiceImpl::GraphEngineServiceImpl(snark::Metadata metadata, std::vector<std::string> paths,
-                                               std::vector<uint32_t> partitions, PartitionStorageType storage_type)
+                                               std::vector<uint32_t> partitions, PartitionStorageType storage_type,
+                                               std::shared_ptr<Logger> logger)
     : m_metadata(std::move(metadata))
 {
+    if (!logger)
+    {
+        logger = std::make_shared<GLogger>();
+    }
+    m_logger = logger;
     if (paths.size() != partitions.size())
     {
-        RAW_LOG_FATAL("Not enough %ld paths provided. Expected %ld for each partition.", paths.size(),
-                      partitions.size());
+        m_logger->log_fatal("Not enough %ld paths provided. Expected %ld for each partition.", paths.size(),
+                            partitions.size());
     }
     for (size_t partition_index = 0; partition_index < paths.size(); ++partition_index)
     {
@@ -721,7 +726,8 @@ void GraphEngineServiceImpl::ReadNodeMap(std::filesystem::path path, std::string
     std::shared_ptr<BaseStorage<uint8_t>> node_map;
     if (!is_hdfs_path(path))
     {
-        node_map = std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix), open_node_map);
+        node_map = std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix), open_node_map,
+                                                          std::make_shared<GLogger>());
     }
     else
     {
@@ -739,7 +745,7 @@ void GraphEngineServiceImpl::ReadNodeMap(std::filesystem::path path, std::string
         uint64_t pair[2];
         if (node_map->read(pair, 8, 2, node_map_ptr) != 2)
         {
-            RAW_LOG_FATAL("Failed to read pair in a node maping");
+            m_logger->log_fatal("Failed to read pair in a node maping");
         }
 
         auto el = m_node_map.find(pair[0]);
@@ -771,7 +777,7 @@ void GraphEngineServiceImpl::ReadNodeMap(std::filesystem::path path, std::string
         Type node_type;
         if (node_map->read(&node_type, sizeof(Type), 1, node_map_ptr) != 1)
         {
-            RAW_LOG_FATAL("Failed to read node type in a node maping");
+            m_logger->log_fatal("Failed to read node type in a node maping");
         }
     }
 }
