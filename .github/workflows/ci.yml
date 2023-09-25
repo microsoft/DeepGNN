@@ -6,6 +6,9 @@ on:
       - main
   pull_request:
     types: [opened, reopened, synchronize]
+    secrets:
+      BAZEL_REMOTE_AZBLOB_SHARED_KEY:
+        required: true
   workflow_dispatch:
 
 jobs:
