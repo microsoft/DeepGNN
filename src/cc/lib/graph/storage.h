@@ -167,11 +167,6 @@ template <typename T> struct HDFSStreamStorage final : BaseStorage<T>
         }
     }
 
-    HDFSStreamStorage(const wchar_t *hdfs_path, const std::string &config_path)
-    {
-        assert(false && "HDFS only supported on linux!");
-    }
-
     size_t size() override
     {
         return m_size;
