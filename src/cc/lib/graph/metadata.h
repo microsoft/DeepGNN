@@ -21,7 +21,7 @@ struct Metadata
 
     // Optional graph information.
     std::string m_name = "";
-    std::string m_data_path = "";
+    std::vector<std::string> m_data_path = std::vector<std::string>();
 
     // Graph information.
     size_t m_version;

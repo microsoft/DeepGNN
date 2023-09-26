@@ -179,9 +179,6 @@ class Meta:
                 "Meta file should contain binary_data_version, please regenerate binary data"
             )
 
-        self.name = meta["name"] if "name" in meta else ""
-        self.data_path = meta["data_path"] if "data_path" in meta else ""
-
         self.node_count = meta["node_count"]
         self.edge_count = meta["edge_count"]
         self.node_type_count = meta["node_type_count"]
@@ -200,3 +197,17 @@ class Meta:
         self.node_count_per_type = meta["node_count_per_type"]
         self.edge_count_per_type = meta["edge_count_per_type"]
         self.watermark = meta["watermark"]
+
+        self.name = meta["name"] if "name" in meta else ""
+        if "data_path" in meta:
+            if isinstance(meta["data_path"], str):
+                self.data_path = [
+                    meta["data_path"] for _ in range(self.partition_count)
+                ]
+            else:
+                self.data_path = meta["data_path"]
+                assert (
+                    len(self.data_path) == self.partition_count
+                ), "If data_path given is a list, it must have length == partition_count."
+        else:
+            self.data_path = []

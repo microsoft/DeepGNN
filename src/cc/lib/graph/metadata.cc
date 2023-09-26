@@ -44,15 +44,6 @@ Metadata::Metadata(std::filesystem::path path, std::string config_path)
     std::ifstream f(path / "meta.json");
     json meta = json::parse(f);
 
-    if (meta.find("name") != meta.end())
-    {
-        m_name = meta["name"];
-    }
-    if (meta.find("data_path") != meta.end())
-    {
-        m_data_path = meta["data_path"];
-    }
-
     std::string version_full = meta["binary_data_version"];
     version_full.erase(0, 1);
     m_version = stoi(version_full);
@@ -99,6 +90,24 @@ Metadata::Metadata(std::filesystem::path path, std::string config_path)
     {
         m_edge_count_per_type[i] = meta["edge_count_per_type"][i];
     }
+
+    if (meta.find("name") != meta.end())
+    {
+        m_name = meta["name"];
+    }
+    if (meta.find("data_path") != meta.end())
+    {
+        if (typeid(meta["data_path"]) == typeid(std::string))
+        {
+            m_data_path = std::vector<std::string>(m_partition_count, meta["data_path"]);
+        }
+        else
+        {
+            m_data_path = std::vector<std::string>(meta["data_path"]);
+        }
+        if (m_data_path.size() != m_partition_count)
+            RAW_LOG_FATAL("meta[\"data_path\"] needs to be same length as meta[\"partition_count\"]!");
+    }
 }
 
 void Metadata::Write(std::filesystem::path path) const
@@ -121,7 +130,7 @@ void Metadata::Write(std::filesystem::path path) const
     {
         json_meta["name"] = m_name;
     }
-    if (m_data_path != "")
+    if (!m_data_path.empty())
     {
         json_meta["data_path"] = m_data_path;
     }
