@@ -77,5 +77,5 @@ py_binary(
     srcs = [
         "pyg_interface.py",
     ],
-    deps = common_deps,
+    deps = sparse_deps,
 )
