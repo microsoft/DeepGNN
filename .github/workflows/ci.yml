@@ -127,5 +127,3 @@ jobs:
         run: cd ./tensorflow/han/ && sudo chmod +x *.sh && bash ./run.sh CPU cleanup
       - name: Run gat examples
         run: cd ./tensorflow/gat/ && sudo chmod +x *.sh && bash ./run.sh CPU cleanup
-      - name: Run PyG example
-        run: cd ./pytorch/pyg/ && sudo chmod +x *.py && python main.py
