@@ -1,8 +1,9 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
 """PyGeo interface training example."""
 import numpy as np
 import torch
-import torch.nn.functional as F
-import tqdm  # type: ignore
+from torch.nn.functional import binary_cross_entropy_with_logits
 
 from torch_geometric.loader import LinkNeighborLoader
 from torch_geometric.nn import GraphSAGE
@@ -25,14 +26,6 @@ class DeepGNNFeatureStore(FeatureStore):
         """Initialize DeepGNN feature store."""
         super().__init__()
         self.ge = ge
-
-    def _put_tensor(self, tensor, attr) -> bool:
-        """Put tensor."""
-        return False
-
-    def _remove_tensor(self, attr) -> bool:
-        """Remove tensor."""
-        return False
 
     def _get_tensor(self, attr):
         """Get tensor."""
@@ -69,14 +62,6 @@ class DeepGNNGraphStore(GraphStore):
         self.ge = ge
         self.node_ids = np.loadtxt(node_path, dtype=np.int64)
 
-    def _put_edge_index(self, edge_index, edge_attr) -> bool:
-        """Put edge index."""
-        return False
-
-    def _remove_edge_index(self, edge_attr) -> bool:
-        """Remove edge index."""
-        return False
-
     def _get_edge_index(self, edge_attr):
         """Get edge index."""
         edge_type = int(edge_attr.edge_type[1])
@@ -103,28 +88,32 @@ class DeepGNNGraphStore(GraphStore):
         return output
 
 
+def _get_link_pred(h, edge_label_index):
+    h_src = h[edge_label_index[0]]
+    h_dst = h[edge_label_index[1]]
+    return (h_src * h_dst).sum(dim=-1)
+
+
 def train():
     """Train the model."""
     model.train()
 
     total_loss = total_examples = 0
-    for data in tqdm.tqdm(loader):
+    for data in loader:
         data = data.to(device)
         data = data[("0", "0", "0")]
         optimizer.zero_grad()
 
         h = model(data.x, data.edge_index)
+        link_pred = _get_link_pred(h, data.edge_label_index)
 
-        h_src = h[data.edge_label_index[0]]
-        h_dst = h[data.edge_label_index[1]]
-        link_pred = (h_src * h_dst).sum(dim=-1)  # Inner product.
-
-        loss = F.binary_cross_entropy_with_logits(link_pred, data.edge_label)
+        loss = binary_cross_entropy_with_logits(link_pred, data.edge_label)
         loss.backward()
         optimizer.step()
 
-        total_loss += float(loss) * link_pred.numel()
-        total_examples += link_pred.numel()
+        numel = link_pred.numel()
+        total_loss += float(loss) * numel
+        total_examples += numel
 
     return total_loss / total_examples
 
@@ -132,12 +121,10 @@ def train():
 def test():
     """Test the model."""
     model.eval()
-    for data in tqdm.tqdm(loader):
+    for data in loader:
         data = data[("0", "0", "0")]
         h = model(data.x, data.edge_index)
-        h_src = h[data.edge_label_index[0]]
-        h_dst = h[data.edge_label_index[1]]
-        link_pred = (h_src * h_dst).sum(dim=-1)  # Inner product.
+        link_pred = _get_link_pred(h, data.edge_label_index)
         test_f1 = np.mean(
             (link_pred > 0).detach().numpy() == data.edge_label.detach().numpy()
         )
