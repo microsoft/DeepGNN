@@ -119,15 +119,6 @@ def graph_engine(version: str):
 
 
 if __name__ == "__main__":
-    assert len(sys.argv) >= 2
-
-    target = sys.argv[1]
     # get the build version from the pipeline.
     build_version = os.getenv("BUILD_VERSION")
-
-    sys.argv = [sys.argv[0]] + sys.argv[2:]
-    target = target.lower()
-    if target == "deepgnn-ge":
-        graph_engine(build_version)
-    else:
-        raise ValueError(f"invalid target: {target}")
+    graph_engine(build_version)
