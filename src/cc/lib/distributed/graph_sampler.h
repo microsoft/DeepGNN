@@ -14,6 +14,7 @@
 
 #include "src/cc/lib/distributed/service.grpc.pb.h"
 #include "src/cc/lib/graph/graph.h"
+#include "src/cc/lib/graph/logger.h"
 
 namespace snark
 {
@@ -26,7 +27,7 @@ class GraphSamplerServiceImpl final : public snark::GraphSampler::Service
 {
   public:
     GraphSamplerServiceImpl(snark::Metadata metadata, std::vector<std::string> partition_paths,
-                            std::vector<size_t> partition_indices);
+                            std::vector<size_t> partition_indices, std::shared_ptr<Logger> logger = nullptr);
 
     grpc::Status Create(::grpc::ServerContext *context, const snark::CreateSamplerRequest *request,
                         snark::CreateSamplerReply *response) override;
@@ -44,6 +45,7 @@ class GraphSamplerServiceImpl final : public snark::GraphSampler::Service
     std::vector<size_t> m_partition_indices;
     std::vector<std::string> m_patrition_paths;
     std::mutex m_mutex;
+    std::shared_ptr<Logger> m_logger;
 };
 
 } // namespace snark

@@ -13,10 +13,12 @@ cc_library(
         "sampler.cc",
         "hdfs_wrap.cc",
         "reservoir.cc",
+        "logger.cc",
     ],
     hdrs = [
         "graph.h",
         "locator.h",
+        "logger.h",
         "metadata.h",
         "partition.h",
         "sampler.h",
@@ -25,6 +27,7 @@ cc_library(
         "types.h",
         "xoroshiro.h",
         "reservoir.h",
+        "merger.h",
     ],
     copts = CXX_OPTS,
     linkopts = select({

@@ -13,6 +13,7 @@
 
 #include "absl/container/flat_hash_map.h"
 
+#include "logger.h"
 #include "partition.h"
 #include "sampler.h"
 #include "types.h"
@@ -24,7 +25,7 @@ class Graph
 {
   public:
     Graph(snark::Metadata metadata, std::vector<std::string> paths, std::vector<uint32_t> partitions,
-          PartitionStorageType storage_type);
+          PartitionStorageType storage_type, std::shared_ptr<Logger> logger = nullptr);
 
     void GetNodeType(std::span<const NodeId> node_ids, std::span<Type> output, Type default_type) const;
 
@@ -96,6 +97,7 @@ class Graph
     std::vector<uint64_t> m_internal_indices;
     std::vector<uint32_t> m_counts;
     Metadata m_metadata;
+    std::shared_ptr<Logger> m_logger;
 };
 
 } // namespace snark

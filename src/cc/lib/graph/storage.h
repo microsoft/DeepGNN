@@ -4,21 +4,20 @@
 #ifndef SNARK_STORAGE_BASE_H
 #define SNARK_STORAGE_BASE_H
 
+#include <cassert>
 #include <cstdio>
 #include <iterator>
 #include <span>
 #include <stdexcept>
 
 #include "locator.h"
+#include "logger.h"
 #include "types.h"
-
-#include <glog/logging.h>
-#include <glog/raw_logging.h>
 
 namespace
 {
-typedef FILE *(*open_file_ptr)(std::filesystem::path, std::string);
-typedef FILE *(*open_alias_file_ptr)(std::filesystem::path, size_t, snark::Type);
+typedef FILE *(*open_file_ptr)(std::filesystem::path, std::string, std::shared_ptr<snark::Logger>);
+typedef FILE *(*open_alias_file_ptr)(std::filesystem::path, size_t, snark::Type, std::shared_ptr<snark::Logger>);
 
 } // namespace
 
@@ -68,22 +67,25 @@ template <typename T> struct MemoryStorage : BaseStorage<T>
     {
         m_data = std::move(data);
     }
-    MemoryStorage(const std::filesystem::path path, const std::string suffix, const open_file_ptr open_file)
+    MemoryStorage(const std::filesystem::path path, const std::string suffix, open_file_ptr open_file,
+                  std::shared_ptr<Logger> logger)
     {
         if (open_file == nullptr)
             return;
+        if (!logger)
+        {
+            logger = std::make_shared<GLogger>();
+        }
+        m_logger = logger;
 
-        auto file_ptr = open_file(std::move(path), std::move(suffix));
+        auto file_ptr = open_file(std::move(path), std::move(suffix), m_logger);
 
         snark::platform_fseek(file_ptr, 0L, SEEK_END);
         auto size = snark::platform_ftell(file_ptr);
         m_data.resize(size);
 
         snark::platform_fseek(file_ptr, 0L, SEEK_SET);
-        if (size != fread(m_data.data(), 1, size, file_ptr))
-        {
-            RAW_LOG_FATAL("Failed to read node features data");
-        }
+        assert(size == fread(m_data.data(), 1, size, file_ptr) && "Failed to read node features data");
 
         fclose(file_ptr);
     }
@@ -100,7 +102,7 @@ template <typename T> struct MemoryStorage : BaseStorage<T>
 
     size_t read(void *output, size_t size, size_t count, std::shared_ptr<FilePtr> file_ptr_temp) override
     {
-        RAW_LOG_FATAL("pointer read not supported by MemoryStorage!");
+        assert(false && "pointer read not supported by MemoryStorage!");
         return -1;
     }
 
@@ -114,28 +116,27 @@ template <typename T> struct MemoryStorage : BaseStorage<T>
 
   private:
     std::vector<T> m_data;
+    std::shared_ptr<Logger> m_logger;
 };
 
 template <typename T> struct HDFSStorage final : public MemoryStorage<T>
 {
   public:
-    HDFSStorage(const char *hdfs_path, const std::string config_path, const std::string suffix,
-                const open_file_ptr open_file)
+    HDFSStorage(const char *hdfs_path, const std::string &config_path)
         : MemoryStorage<T>(std::move(read_hdfs<T>(hdfs_path, config_path)))
     {
     }
 
-    HDFSStorage(const wchar_t *hdfs_path, const std::string config_path, const std::string suffix,
-                const open_file_ptr open_file)
+    HDFSStorage(const wchar_t *hdfs_path, const std::string &config_path)
     {
-        RAW_LOG_FATAL("HDFS only supported on linux!");
+        assert(false && "HDFS only supported on linux!");
     }
 };
 
 template <typename T> struct HDFSStreamStorage final : BaseStorage<T>
 {
   public:
-    HDFSStreamStorage(const char *hdfs_path, const std::string config_path)
+    HDFSStreamStorage(const char *hdfs_path, const std::string &config_path)
     {
         std::string data_path_str;
         std::string host_str;
@@ -152,9 +153,9 @@ template <typename T> struct HDFSStreamStorage final : BaseStorage<T>
         m_buffer = static_cast<char *>(malloc(BUFFER_SIZE));
     }
 
-    HDFSStreamStorage(const wchar_t *hdfs_path, const std::string config_path)
+    HDFSStreamStorage(const wchar_t *hdfs_path, const std::string &config_path)
     {
-        RAW_LOG_FATAL("HDFS only supported on linux!");
+        assert(false && "HDFS only supported on linux!");
     }
 
     ~HDFSStreamStorage()
@@ -164,12 +165,6 @@ template <typename T> struct HDFSStreamStorage final : BaseStorage<T>
         {
             m_connection.close_file(m_file_ptr);
         }
-    }
-
-    HDFSStreamStorage(const wchar_t *hdfs_path, const std::string config_path, const std::string suffix,
-                      const open_file_ptr open_file)
-    {
-        RAW_LOG_FATAL("HDFS only supported on linux!");
     }
 
     size_t size() override
@@ -222,7 +217,7 @@ template <typename T> struct HDFSStreamStorage final : BaseStorage<T>
     typename std::span<T>::iterator read(uint64_t offset, uint64_t size, typename std::span<T>::iterator output_ptr,
                                          std::shared_ptr<FilePtr> file_ptr) const override
     {
-        RAW_LOG_FATAL("HDFSStreamStorage does not support iterator read!");
+        assert(false && "HDFSStreamStorage does not support iterator read!");
         return output_ptr;
     }
 
@@ -235,20 +230,26 @@ template <typename T> struct HDFSStreamStorage final : BaseStorage<T>
     char *m_buffer;
     size_t m_buffer_offset;
     size_t m_offset;
+    std::shared_ptr<Logger> m_logger;
 };
 
 template <typename T> struct DiskStorage final : BaseStorage<T>
 {
   public:
-    DiskStorage(std::filesystem::path path, std::string suffix, open_file_ptr open_file)
+    DiskStorage(std::filesystem::path path, std::string suffix, open_file_ptr open_file, std::shared_ptr<Logger> logger)
     {
+        if (!logger)
+        {
+            logger = std::make_shared<GLogger>();
+        }
+        m_logger = logger;
         m_path = std::move(path);
         m_suffix = std::move(suffix);
         m_open_file = open_file;
         if (open_file == nullptr)
             return;
 
-        auto file_ptr = m_open_file(m_path, m_suffix);
+        auto file_ptr = m_open_file(m_path, m_suffix, m_logger);
 
         snark::platform_fseek(file_ptr, 0L, SEEK_END);
         m_size = snark::platform_ftell(file_ptr);
@@ -256,8 +257,15 @@ template <typename T> struct DiskStorage final : BaseStorage<T>
         fclose(file_ptr);
     }
 
-    DiskStorage(std::filesystem::path path, size_t partition, snark::Type type, open_alias_file_ptr open_file)
+    DiskStorage(std::filesystem::path path, size_t partition, snark::Type type, open_alias_file_ptr open_file,
+                std::shared_ptr<Logger> logger)
     {
+        if (!logger)
+        {
+            logger = std::make_shared<GLogger>();
+        }
+        m_logger = logger;
+
         m_path = std::move(path);
         m_partition = partition;
         m_type = type;
@@ -265,7 +273,7 @@ template <typename T> struct DiskStorage final : BaseStorage<T>
         if (open_file == nullptr)
             return;
 
-        auto file_ptr = m_open_alias_file(m_path, m_partition, m_type);
+        auto file_ptr = m_open_alias_file(m_path, m_partition, m_type, m_logger);
 
         snark::platform_fseek(file_ptr, 0L, SEEK_END);
         m_size = snark::platform_ftell(file_ptr);
@@ -281,9 +289,9 @@ template <typename T> struct DiskStorage final : BaseStorage<T>
     {
         FILE *file_ptr;
         if (m_open_file != nullptr)
-            file_ptr = m_open_file(m_path, m_suffix);
+            file_ptr = m_open_file(m_path, m_suffix, m_logger);
         else
-            file_ptr = m_open_alias_file(m_path, m_partition, m_type);
+            file_ptr = m_open_alias_file(m_path, m_partition, m_type, m_logger);
 
         return std::make_shared<FilePtr>(file_ptr);
     }
@@ -326,6 +334,7 @@ template <typename T> struct DiskStorage final : BaseStorage<T>
     open_file_ptr m_open_file = nullptr;
     open_alias_file_ptr m_open_alias_file = nullptr;
     uint64_t m_size = 0;
+    std::shared_ptr<Logger> m_logger;
 };
 
 #endif

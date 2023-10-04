@@ -13,6 +13,7 @@
 
 #include "src/cc/lib/distributed/service.grpc.pb.h"
 #include "src/cc/lib/graph/graph.h"
+#include "src/cc/lib/graph/logger.h"
 
 namespace snark
 {
@@ -21,7 +22,7 @@ class GraphEngineServiceImpl final : public snark::GraphEngine::Service
 {
   public:
     GraphEngineServiceImpl(snark::Metadata metadata, std::vector<std::string> paths, std::vector<uint32_t> partitions,
-                           PartitionStorageType storage_type);
+                           PartitionStorageType storage_type, std::shared_ptr<Logger> logger = nullptr);
     grpc::Status GetNodeTypes(::grpc::ServerContext *context, const snark::NodeTypesRequest *request,
                               snark::NodeTypesReply *response) override;
 
@@ -62,6 +63,7 @@ class GraphEngineServiceImpl final : public snark::GraphEngine::Service
     std::vector<uint64_t> m_internal_indices;
     std::vector<uint32_t> m_counts;
     Metadata m_metadata;
+    std::shared_ptr<Logger> m_logger;
 };
 
 } // namespace snark

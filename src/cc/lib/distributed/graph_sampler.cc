@@ -6,21 +6,23 @@
 #include <cstdio>
 #include <thread>
 
-#include <glog/logging.h>
-#include <glog/raw_logging.h>
-
 namespace snark
 {
 
 GraphSamplerServiceImpl::GraphSamplerServiceImpl(snark::Metadata metadata, std::vector<std::string> partition_paths,
-                                                 std::vector<size_t> partition_indices)
+                                                 std::vector<size_t> partition_indices, std::shared_ptr<Logger> logger)
     : m_metadata(std::move(metadata)), m_partition_indices(std::move(partition_indices)),
       m_patrition_paths(std::move(partition_paths))
 {
+    if (!logger)
+    {
+        logger = std::make_shared<GLogger>();
+    }
+    m_logger = logger;
     if (m_patrition_paths.size() != m_partition_indices.size())
     {
-        RAW_LOG_FATAL("Not enough %ld paths provided. Expected %ld for each alias table.", m_patrition_paths.size(),
-                      m_partition_indices.size());
+        m_logger->log_fatal("Not enough %ld paths provided. Expected %ld for each alias table.",
+                            m_patrition_paths.size(), m_partition_indices.size());
     }
     m_node_sampler_factory[snark::CreateSamplerRequest_Category_WEIGHTED] =
         std::make_shared<WeightedNodeSamplerFactory>(m_metadata, m_patrition_paths, m_partition_indices);
@@ -45,7 +47,7 @@ grpc::Status GraphSamplerServiceImpl::Create(::grpc::ServerContext *context, con
     auto it = factory.find(request->category());
     if (it == std::end(factory))
     {
-        RAW_LOG_ERROR("Failed to find sampler in path");
+        m_logger->log_error("Failed to find sampler in path");
         return grpc::Status(grpc::StatusCode::FAILED_PRECONDITION, "Failed to find sampler in path");
     }
 

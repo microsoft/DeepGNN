@@ -214,13 +214,19 @@ template <typename Partition, SamplerElement element> void AbstractSamplerFactor
 }
 
 WeightedNodeSamplerPartition::WeightedNodeSamplerPartition(Metadata meta, Type tp, size_t partition_index,
-                                                           std::string partition_path)
+                                                           std::string partition_path, std::shared_ptr<Logger> logger)
     : m_weight(meta.m_partition_node_weights[partition_index][tp])
 {
+    if (!logger)
+    {
+        logger = std::make_shared<snark::GLogger>();
+    }
+
     std::shared_ptr<BaseStorage<uint8_t>> node_weights;
     if (!is_hdfs_path(partition_path))
     {
-        node_weights = std::make_shared<DiskStorage<uint8_t>>(partition_path, partition_index, tp, open_node_alias);
+        node_weights =
+            std::make_shared<DiskStorage<uint8_t>>(partition_path, partition_index, tp, open_node_alias, logger);
     }
     else
     {
@@ -238,15 +244,15 @@ WeightedNodeSamplerPartition::WeightedNodeSamplerPartition(Metadata meta, Type t
         auto &back = m_records.back();
         if (1 != node_weights->read(&back.m_left, 8, 1, node_weights_ptr))
         {
-            RAW_LOG_FATAL("Failed to read node from alias table");
+            logger->log_fatal("Failed to read node from alias table");
         }
         if (1 != node_weights->read(&back.m_right, 8, 1, node_weights_ptr))
         {
-            RAW_LOG_FATAL("Failed to read alias from alias table");
+            logger->log_fatal("Failed to read alias from alias table");
         }
         if (1 != node_weights->read(&back.m_threshold, 4, 1, node_weights_ptr))
         {
-            RAW_LOG_FATAL("Failed to read probability from alias table");
+            logger->log_fatal("Failed to read probability from alias table");
         }
     }
 }
@@ -287,13 +293,20 @@ bool WeightedNodeSamplerPartition::Replacement() const
 template <bool WithReplacement>
 UniformNodeSamplerPartition<WithReplacement>::UniformNodeSamplerPartition(Metadata meta, Type tp,
                                                                           size_t partition_index,
-                                                                          std::string partition_path)
+                                                                          std::string partition_path,
+                                                                          std::shared_ptr<Logger> logger)
 {
+    if (!logger)
+    {
+        logger = std::make_shared<snark::GLogger>();
+    }
+
     absl::flat_hash_set<NodeId> node_set;
     std::shared_ptr<BaseStorage<uint8_t>> node_weights;
     if (!is_hdfs_path(partition_path))
     {
-        node_weights = std::make_shared<DiskStorage<uint8_t>>(partition_path, partition_index, tp, open_node_alias);
+        node_weights =
+            std::make_shared<DiskStorage<uint8_t>>(partition_path, partition_index, tp, open_node_alias, logger);
     }
     else
     {
@@ -311,16 +324,16 @@ UniformNodeSamplerPartition<WithReplacement>::UniformNodeSamplerPartition(Metada
         float prob;
         if (1 != node_weights->read(&node, sizeof(NodeId), 1, node_weights_ptr))
         {
-            RAW_LOG_FATAL("Failed to read node from alias file");
+            logger->log_fatal("Failed to read node from alias file");
         }
         node_set.insert(node);
         if (1 != node_weights->read(&node, sizeof(NodeId), 1, node_weights_ptr))
         {
-            RAW_LOG_FATAL("Failed to read node from alias file");
+            logger->log_fatal("Failed to read node from alias file");
         }
         if (1 != node_weights->read(&prob, sizeof(float), 1, node_weights_ptr))
         {
-            RAW_LOG_FATAL("Failed to read probability from alias table");
+            logger->log_fatal("Failed to read probability from alias table");
         }
         // check for dummy node
         if (prob < 1.0)
@@ -342,13 +355,18 @@ WeightedEdgeSamplerPartition::WeightedEdgeSamplerPartition(std::vector<WeightedE
 }
 
 WeightedEdgeSamplerPartition::WeightedEdgeSamplerPartition(Metadata meta, Type tp, size_t partition_index,
-                                                           std::string partition_path)
+                                                           std::string partition_path, std::shared_ptr<Logger> logger)
     : m_weight(meta.m_partition_edge_weights[partition_index][tp])
 {
+    if (!logger)
+    {
+        logger = std::make_shared<snark::GLogger>();
+    }
     std::shared_ptr<BaseStorage<uint8_t>> edge_weights;
     if (!is_hdfs_path(meta.m_path))
     {
-        edge_weights = std::make_shared<DiskStorage<uint8_t>>(meta.m_path, partition_index, tp, open_edge_alias);
+        edge_weights =
+            std::make_shared<DiskStorage<uint8_t>>(meta.m_path, partition_index, tp, open_edge_alias, logger);
     }
     else
     {
@@ -365,13 +383,13 @@ WeightedEdgeSamplerPartition::WeightedEdgeSamplerPartition(Metadata meta, Type t
         NodeId record[4];
         if (4 != edge_weights->read(&record, sizeof(NodeId), 4, edge_weights_ptr))
         {
-            RAW_LOG_FATAL("Failed to read record from alias file");
+            logger->log_fatal("Failed to read record from alias file");
         }
 
         float threshold;
         if (1 != edge_weights->read(&threshold, sizeof(float), 1, edge_weights_ptr))
         {
-            RAW_LOG_FATAL("Failed to read threshold from edge alias table");
+            logger->log_fatal("Failed to read threshold from edge alias table");
         }
 
         m_records.emplace_back(WeightedEdgeSamplerRecord{record[0], record[1], record[2], record[3], threshold});
@@ -451,8 +469,13 @@ void UniformNodeSamplerPartition<WithReplacement>::Sample(int64_t seed, std::spa
 template <bool WithReplacement>
 UniformEdgeSamplerPartition<WithReplacement>::UniformEdgeSamplerPartition(Metadata meta, Type tp,
                                                                           size_t partition_index,
-                                                                          std::string partition_path)
+                                                                          std::string partition_path,
+                                                                          std::shared_ptr<Logger> logger)
 {
+    if (!logger)
+    {
+        logger = std::make_shared<snark::GLogger>();
+    }
     struct pair_hash
     {
         size_t operator()(const std::pair<int, int> &p) const
@@ -464,7 +487,8 @@ UniformEdgeSamplerPartition<WithReplacement>::UniformEdgeSamplerPartition(Metada
     std::shared_ptr<BaseStorage<uint8_t>> edge_alias;
     if (!is_hdfs_path(partition_path))
     {
-        edge_alias = std::make_shared<DiskStorage<uint8_t>>(partition_path, partition_index, tp, open_edge_alias);
+        edge_alias =
+            std::make_shared<DiskStorage<uint8_t>>(partition_path, partition_index, tp, open_edge_alias, logger);
     }
     else
     {
@@ -481,25 +505,25 @@ UniformEdgeSamplerPartition<WithReplacement>::UniformEdgeSamplerPartition(Metada
         float prob;
         if (1 != edge_alias->read(&src, sizeof(NodeId), 1, edge_alias_ptr))
         {
-            RAW_LOG_FATAL("Failed to read left edge source from alias file");
+            logger->log_fatal("Failed to read left edge source from alias file");
         }
         if (1 != edge_alias->read(&dst, sizeof(NodeId), 1, edge_alias_ptr))
         {
-            RAW_LOG_FATAL("Failed to read left edge destination from alias file");
+            logger->log_fatal("Failed to read left edge destination from alias file");
         }
         edge_set.insert(std::make_pair(src, dst));
 
         if (1 != edge_alias->read(&src, sizeof(NodeId), 1, edge_alias_ptr))
         {
-            RAW_LOG_FATAL("Failed to read right edge source from alias file");
+            logger->log_fatal("Failed to read right edge source from alias file");
         }
         if (1 != edge_alias->read(&dst, sizeof(NodeId), 1, edge_alias_ptr))
         {
-            RAW_LOG_FATAL("Failed to read right edge destination from alias file");
+            logger->log_fatal("Failed to read right edge destination from alias file");
         }
         if (1 != edge_alias->read(&prob, sizeof(float), 1, edge_alias_ptr))
         {
-            RAW_LOG_FATAL("Failed to read probability from edge alias file");
+            logger->log_fatal("Failed to read probability from edge alias file");
         }
 
         // check for dummy edge

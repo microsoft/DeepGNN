@@ -14,8 +14,6 @@
 #include "locator.h"
 #include "partition.h"
 #include "sampler.h"
-#include <glog/logging.h>
-#include <glog/raw_logging.h>
 namespace snark
 {
 namespace
@@ -88,15 +86,15 @@ void deserialize_sparse_features(uint64_t data_offset, uint64_t stored_size,
                                  std::shared_ptr<BaseStorage<uint8_t>> storage, snark::FeatureId feature,
                                  std::shared_ptr<snark::FilePtr> file_ptr, int64_t prefix, int64_t &out_dimension,
                                  std::vector<int64_t> &out_indices, std::vector<uint8_t> &out_values,
-                                 uint64_t &values_length)
+                                 uint64_t &values_length, std::shared_ptr<snark::Logger> logger)
 {
     if (stored_size <=
         12) // minimum is 4 bytes to record there is a single index, actual index (8 bytes) and some data(>0 bytes).
             // Something went wrong in binary converter, we'll log a warning instead of crashing.
     {
         auto feature_string = std::to_string(feature);
-        RAW_LOG_WARNING("Invalid feature request: sparse feature size is less than 12 bytes for feature %s",
-                        feature_string.c_str());
+        logger->log_warning("Invalid feature request: sparse feature size is less than 12 bytes for feature %s",
+                            feature_string.c_str());
         return;
     }
 
@@ -138,9 +136,14 @@ void deserialize_sparse_features(uint64_t data_offset, uint64_t stored_size,
 
 } // namespace
 Partition::Partition(Metadata metadata, std::filesystem::path path, std::string suffix,
-                     PartitionStorageType storage_type)
+                     PartitionStorageType storage_type, std::shared_ptr<Logger> logger)
     : m_metadata(std::move(metadata)), m_storage_type(storage_type)
 {
+    if (!logger)
+    {
+        logger = std::make_shared<GLogger>();
+    }
+    m_logger = logger;
     ReadNodeMap(path, suffix);
     ReadNodeFeatures(path, suffix);
     ReadEdges(std::move(path), std::move(suffix));
@@ -151,7 +154,7 @@ void Partition::ReadNodeMap(std::filesystem::path path, std::string suffix)
     std::shared_ptr<BaseStorage<uint8_t>> node_map;
     if (!is_hdfs_path(path))
     {
-        node_map = std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix), open_node_map);
+        node_map = std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix), open_node_map, m_logger);
     }
     else
     {
@@ -166,12 +169,12 @@ void Partition::ReadNodeMap(std::filesystem::path path, std::string suffix)
         uint64_t pair[2];
         if (node_map->read(pair, 8, 2, node_map_ptr) != 2)
         {
-            RAW_LOG_FATAL("Failed to read pair in a node maping");
+            m_logger->log_fatal("Failed to read pair in a node maping");
         }
         Type node_type;
         if (node_map->read(&node_type, 4, 1, node_map_ptr) != 1)
         {
-            RAW_LOG_FATAL("Failed to read node type in a node maping");
+            m_logger->log_fatal("Failed to read node type in a node maping");
         }
         m_node_types.emplace_back(node_type);
     }
@@ -193,7 +196,7 @@ void Partition::ReadEdges(std::filesystem::path path, std::string suffix)
     }
     else
     {
-        m_edge_features = std::make_shared<MemoryStorage<uint8_t>>(path, suffix, nullptr);
+        m_edge_features = std::make_shared<MemoryStorage<uint8_t>>(path, suffix, nullptr, m_logger);
     }
 }
 
@@ -203,7 +206,7 @@ void Partition::ReadNeighborsIndex(std::filesystem::path path, std::string suffi
     if (!is_hdfs_path(path))
     {
         neighbors_index =
-            std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix), open_neighbor_index);
+            std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix), open_neighbor_index, m_logger);
     }
     else
     {
@@ -215,7 +218,7 @@ void Partition::ReadNeighborsIndex(std::filesystem::path path, std::string suffi
     m_neighbors_index.resize(size_64);
     if (size_64 != neighbors_index->read(m_neighbors_index.data(), 8, size_64, neighbors_index_ptr))
     {
-        RAW_LOG_FATAL("Failed to read neighbor index file");
+        m_logger->log_fatal("Failed to read neighbor index file");
     }
 }
 
@@ -225,7 +228,7 @@ void Partition::ReadEdgeTimestamps(std::filesystem::path path, std::string suffi
     if (!is_hdfs_path(path))
     {
         edge_timestamps =
-            std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix), open_edge_timestamps);
+            std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix), open_edge_timestamps, m_logger);
     }
     else
     {
@@ -246,19 +249,19 @@ void Partition::ReadEdgeTimestamps(std::filesystem::path path, std::string suffi
            m_edge_destination.size()); // destination is padded with an extra value for faster search.
     if (1 != edge_timestamps->read(&m_watermark, 8, 1, edge_timestamps_ptr))
     {
-        RAW_LOG_FATAL("Failed to read watermark from edge timestamps file");
+        m_logger->log_fatal("Failed to read watermark from edge timestamps file");
     }
 
     for (auto &ts : m_edge_timestamps)
     {
         if (1 != edge_timestamps->read(&ts.first, 8, 1, edge_timestamps_ptr))
         {
-            RAW_LOG_FATAL("Failed to read edge timestamps file");
+            m_logger->log_fatal("Failed to read edge timestamps file");
         }
 
         if (1 != edge_timestamps->read(&ts.second, 8, 1, edge_timestamps_ptr))
         {
-            RAW_LOG_FATAL("Failed to read edge timestamps file");
+            m_logger->log_fatal("Failed to read edge timestamps file");
         }
     }
 }
@@ -269,7 +272,8 @@ void Partition::ReadEdgeIndex(std::filesystem::path path, std::string suffix)
     std::shared_ptr<BaseStorage<uint8_t>> edge_index;
     if (!is_hdfs_path(path))
     {
-        edge_index = std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix), open_edge_index);
+        edge_index =
+            std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix), open_edge_index, m_logger);
     }
     else
     {
@@ -298,7 +302,7 @@ void Partition::ReadEdgeIndex(std::filesystem::path path, std::string suffix)
             EdgeRecord edge;
             if (1 != edge_index->read(&edge, sizeof(EdgeRecord), 1, edge_index_ptr))
             {
-                RAW_LOG_FATAL("Failed to read edge index file");
+                m_logger->log_fatal("Failed to read edge index file");
             }
             if (edge.m_type != curr_type)
             {
@@ -319,7 +323,7 @@ void Partition::ReadEdgeIndex(std::filesystem::path path, std::string suffix)
     EdgeRecord edge;
     if (1 != edge_index->read(&edge, sizeof(EdgeRecord), 1, edge_index_ptr))
     {
-        RAW_LOG_FATAL("Failed to read edge index file");
+        m_logger->log_fatal("Failed to read edge index file");
     }
     // Extra padding to simplify edge type count calculations.
     m_neighbors_index.back() = m_edge_types.size();
@@ -338,7 +342,7 @@ void Partition::ReadNodeFeatures(std::filesystem::path path, std::string suffix)
     if (m_metadata.m_node_feature_count == 0)
     {
         // It's ok to miss files if there are no features.
-        m_node_features = std::make_shared<MemoryStorage<uint8_t>>(path, suffix, nullptr);
+        m_node_features = std::make_shared<MemoryStorage<uint8_t>>(path, suffix, nullptr, m_logger);
         return;
     }
     ReadNodeFeaturesIndex(path, suffix);
@@ -350,7 +354,8 @@ void Partition::ReadNodeIndex(std::filesystem::path path, std::string suffix)
     std::shared_ptr<BaseStorage<uint8_t>> node_index;
     if (!is_hdfs_path(path))
     {
-        node_index = std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix), open_node_index);
+        node_index =
+            std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix), open_node_index, m_logger);
     }
     else
     {
@@ -362,7 +367,7 @@ void Partition::ReadNodeIndex(std::filesystem::path path, std::string suffix)
     m_node_index.resize(size);
     if (size != node_index->read(m_node_index.data(), 8, size, node_index_ptr))
     {
-        RAW_LOG_FATAL("Failed to read node index file");
+        m_logger->log_fatal("Failed to read node index file");
     }
 }
 
@@ -371,8 +376,8 @@ void Partition::ReadNodeFeaturesIndex(std::filesystem::path path, std::string su
     std::shared_ptr<BaseStorage<uint8_t>> node_features_index;
     if (!is_hdfs_path(path))
     {
-        node_features_index =
-            std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix), open_node_features_index);
+        node_features_index = std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix),
+                                                                     open_node_features_index, m_logger);
     }
     else
     {
@@ -384,7 +389,7 @@ void Partition::ReadNodeFeaturesIndex(std::filesystem::path path, std::string su
     m_node_feature_index.resize(size);
     if (size != node_features_index->read(m_node_feature_index.data(), 8, size, node_features_index_ptr))
     {
-        RAW_LOG_FATAL("Failed to read node feature index file");
+        m_logger->log_fatal("Failed to read node feature index file");
     }
 }
 
@@ -393,18 +398,17 @@ void Partition::ReadNodeFeaturesData(std::filesystem::path path, std::string suf
     if (is_hdfs_path(path))
     {
         auto full_path = path / ("node_features_" + suffix + ".data");
-        m_node_features = std::make_shared<HDFSStorage<uint8_t>>(full_path.c_str(), m_metadata.m_config_path,
-                                                                 std::move(suffix), &open_node_features_data);
+        m_node_features = std::make_shared<HDFSStorage<uint8_t>>(full_path.c_str(), m_metadata.m_config_path);
     }
     else if (m_storage_type == PartitionStorageType::memory)
     {
-        m_node_features =
-            std::make_shared<MemoryStorage<uint8_t>>(std::move(path), std::move(suffix), &open_node_features_data);
+        m_node_features = std::make_shared<MemoryStorage<uint8_t>>(std::move(path), std::move(suffix),
+                                                                   open_node_features_data, m_logger);
     }
     else if (m_storage_type == PartitionStorageType::disk)
     {
-        m_node_features =
-            std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix), &open_node_features_data);
+        m_node_features = std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix),
+                                                                 open_node_features_data, m_logger);
     }
 }
 
@@ -413,8 +417,8 @@ void Partition::ReadEdgeFeaturesIndex(std::filesystem::path path, std::string su
     std::shared_ptr<BaseStorage<uint8_t>> edge_features_index;
     if (!is_hdfs_path(path))
     {
-        edge_features_index =
-            std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix), open_edge_features_index);
+        edge_features_index = std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix),
+                                                                     open_edge_features_index, m_logger);
     }
     else
     {
@@ -427,7 +431,7 @@ void Partition::ReadEdgeFeaturesIndex(std::filesystem::path path, std::string su
     m_edge_feature_index.resize(size_64);
     if (size != edge_features_index->read(m_edge_feature_index.data(), 1, size, edge_features_index_ptr))
     {
-        RAW_LOG_FATAL("Failed to read node feature index file");
+        m_logger->log_fatal("Failed to read node feature index file");
     }
 }
 
@@ -436,18 +440,17 @@ void Partition::ReadEdgeFeaturesData(std::filesystem::path path, std::string suf
     if (is_hdfs_path(path))
     {
         auto full_path = path / ("edge_features_" + suffix + ".data");
-        m_edge_features = std::make_shared<HDFSStorage<uint8_t>>(full_path.c_str(), m_metadata.m_config_path,
-                                                                 std::move(suffix), &open_edge_features_data);
+        m_edge_features = std::make_shared<HDFSStorage<uint8_t>>(full_path.c_str(), m_metadata.m_config_path);
     }
     else if (m_storage_type == PartitionStorageType::memory)
     {
-        m_edge_features =
-            std::make_shared<MemoryStorage<uint8_t>>(std::move(path), std::move(suffix), &open_edge_features_data);
+        m_edge_features = std::make_shared<MemoryStorage<uint8_t>>(std::move(path), std::move(suffix),
+                                                                   open_edge_features_data, m_logger);
     }
     else if (m_storage_type == PartitionStorageType::disk)
     {
-        m_edge_features =
-            std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix), &open_edge_features_data);
+        m_edge_features = std::make_shared<DiskStorage<uint8_t>>(std::move(path), std::move(suffix),
+                                                                 open_edge_features_data, m_logger);
     }
 }
 
@@ -578,7 +581,7 @@ void Partition::GetNodeSparseFeature(uint64_t internal_node_id, std::optional<Ti
 
         deserialize_sparse_features(data_offset, stored_size, m_node_features, feature_id, file_ptr, prefix,
                                     out_dimensions[feature_index], out_indices[feature_index],
-                                    out_values[feature_index], values_sizes[feature_index]);
+                                    out_values[feature_index], values_sizes[feature_index], m_logger);
     }
 }
 
@@ -1023,7 +1026,7 @@ void Partition::GetEdgeSparseFeature(uint64_t internal_src_node_id, NodeId input
         feature_flags[feature_index] = feature_ts;
         deserialize_sparse_features(data_offset, stored_size, m_edge_features, feature, file_ptr, prefix,
                                     out_dimensions[feature_index], out_indices[feature_index],
-                                    out_values[feature_index], values_sizes[feature_index]);
+                                    out_values[feature_index], values_sizes[feature_index], m_logger);
     }
 }
 

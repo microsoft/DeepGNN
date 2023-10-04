@@ -17,6 +17,7 @@
 
 #include "src/cc/lib/distributed/service.grpc.pb.h"
 #include "src/cc/lib/graph/graph.h"
+#include "src/cc/lib/graph/logger.h"
 
 namespace snark
 {
@@ -24,7 +25,8 @@ namespace snark
 class GRPCClient final
 {
   public:
-    GRPCClient(std::vector<std::shared_ptr<grpc::Channel>> channels, uint32_t num_threads, uint32_t num_threads_per_cq);
+    GRPCClient(std::vector<std::shared_ptr<grpc::Channel>> channels, uint32_t num_threads, uint32_t num_threads_per_cq,
+               std::shared_ptr<Logger> logger = nullptr);
     void GetNodeType(std::span<const NodeId> node_ids, std::span<Type> output, Type default_type);
     void GetNodeFeature(std::span<const NodeId> node_ids, std::span<const snark::Timestamp> timestamps,
                         std::span<FeatureMeta> features, std::span<uint8_t> output);
@@ -103,6 +105,7 @@ class GRPCClient final
     std::vector<grpc::CompletionQueue> m_completion_queue;
     std::vector<std::thread> m_reply_threads;
     std::atomic<size_t> m_counter;
+    std::shared_ptr<Logger> m_logger;
 };
 
 } // namespace snark
