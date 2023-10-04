@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TGN example.
 - GCN example.
 
+- Add PyG remote backend example.
+
 ### Fixed
 - Uniform sampling works in temporal graphs.
 - ADL path parsing to download graph data.
