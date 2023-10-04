@@ -62,14 +62,10 @@ bazel build -c dbg //src/cc/lib:* --config=linux
 
 ```bash
 cd src/python
-export BUILD_VERSION=0.1.54
+export BUILD_VERSION=0.1.60
 python setup.py deepgnn-ge bdist_wheel --plat-name manylinux1_x86_64 clean --all
-python setup.py deepgnn-tf bdist_wheel --plat-name manylinux1_x86_64 clean --all
-python setup.py deepgnn-torch bdist_wheel --plat-name manylinux1_x86_64 clean --all
 
 python -m pip install --upgrade --force-reinstall dist/deepgnn_ge-$BUILD_VERSION-py3-none-manylinux1_x86_64.whl
-python -m pip install --upgrade --force-reinstall dist/deepgnn_tf-$BUILD_VERSION-py3-none-manylinux1_x86_64.whl
-python -m pip install --upgrade --force-reinstall dist/deepgnn_torch-$BUILD_VERSION-py3-none-manylinux1_x86_64.whl
 ```
 
 

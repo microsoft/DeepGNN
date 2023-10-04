@@ -14,6 +14,7 @@ py_library(
         "sage_conv.py",
     ],
     visibility = ["//visibility:public"],
+    deprecation = "This target is deprecated",
 )
 
 py_test(
@@ -36,4 +37,6 @@ py_test(
         requirement("opencensus-ext-azure"),
         requirement("azure-datalake-store"),
     ],
+    tags = ["manual"],
+    deprecation = "This test is deprecated",
 )

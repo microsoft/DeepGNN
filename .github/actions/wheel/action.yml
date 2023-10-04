@@ -62,8 +62,6 @@ runs:
         cd src/python
         pip install wheel twine artifacts-keyring
         python setup.py deepgnn-ge bdist_wheel --plat-name "${PLAT_NAME}" clean --all
-        python setup.py deepgnn-tf bdist_wheel --plat-name "${PLAT_NAME}" clean --all
-        python setup.py deepgnn-torch bdist_wheel --plat-name "${PLAT_NAME}" clean --all
       name: build wheels
       shell: bash
 

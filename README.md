@@ -14,19 +14,15 @@ Project is in alpha version, there might be breaking changes in the future and t
 
 Install pip package:
 ```bash
-python -m pip install deepgnn-torch
+python -m pip install deepgnn
 ```
 If you want to build package from source, see instructions in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 Train and evaluate a graphsage model with pytorch on cora dataset:
 ```bash
-cd examples/pytorch/graphsage
-./run.sh
+cd examples/pytorch
+python sage.py
 ```
-
-### Training other models
-
-Examples folder contains various models one can experiment with DeepGNN. To train models with Tensorflow you need to install `deepgnn-tf` package, `deepgnn-torch` package contains packages to train pytorch examples. Each model folder contains a shell script `run.sh` that will train a corresponding model on a toy graph, a `README.md` file with a short description of a model, reference to original paper, and explanation of command line arguments.
 
 ## Migrating Scripts
 

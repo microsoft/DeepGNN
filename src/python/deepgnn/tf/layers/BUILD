@@ -11,4 +11,5 @@ py_library(
         "base.py",
     ],
     visibility = ["//visibility:public"],
+    deprecation = "This target is deprecated",
 )
