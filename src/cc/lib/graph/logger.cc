@@ -5,11 +5,6 @@
 #include <glog/logging.h>
 #include <glog/raw_logging.h>
 
-namespace
-{
-
-}
-
 namespace snark
 {
 
