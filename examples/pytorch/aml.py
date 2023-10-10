@@ -138,7 +138,7 @@ if __name__ == "__main__":
             "ray[data]",
             "azureml-mlflow==1.48.0",
             "torch",
-            "deepgnn-torch",
+            "deepgnn",
         ],
     )
     """

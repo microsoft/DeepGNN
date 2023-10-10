@@ -27,4 +27,6 @@ py_test(
         requirement("azure-datalake-store"),
         requirement("tenacity"),
     ],
+    tags = ["manual"],
+    deprecation = "This test is deprecated",
 )

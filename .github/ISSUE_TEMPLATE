@@ -4,8 +4,6 @@ Environment
 -----------
 * Python version: (python -V)
 * deepgnn-ge Version: (python -m pip show deepgnn-ge)
-* deepgnn-torch Version: (python -m pip show deepgnn-torch)
-* deepgnn-tf Version: (python -m pip show deepgnn-tf)
 * OS: (Windows, Linux, ...)
 
 Issue Details
