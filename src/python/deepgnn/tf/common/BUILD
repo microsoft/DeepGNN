@@ -29,6 +29,8 @@ py_library(
         "//src/python/deepgnn/graph_engine/snark:graph_engine_snark",
     ],
     visibility = ["//visibility:public"],
+    tags = ["manual"],
+    deprecation = "This target is deprecated",
 )
 
 py_test(
@@ -51,6 +53,8 @@ py_test(
         requirement("opencensus-ext-azure"),
         requirement("azure-datalake-store"),
     ],
+    tags = ["manual"],
+    deprecation = "This test is deprecated",
 )
 
 py_test(
@@ -74,6 +78,8 @@ py_test(
         requirement("azure-datalake-store"),
         requirement("tenacity"),
     ],
+    tags = ["manual"],
+    deprecation = "This test is deprecated",
 )
 
 py_test(
@@ -97,4 +103,6 @@ py_test(
         requirement("azure-datalake-store"),
         requirement("tenacity"),
     ],
+    tags = ["manual"],
+    deprecation = "This test is deprecated",
 )

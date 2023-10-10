@@ -14,4 +14,5 @@ py_library(
         "//src/python/deepgnn/graph_engine:graph_engine_exports",
     ],
     visibility = ["//visibility:public"],
+    deprecation = "This target is deprecated",
 )
