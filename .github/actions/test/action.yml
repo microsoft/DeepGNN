@@ -15,14 +15,13 @@ runs:
     - run: echo "BAZEL_CONFIG=macos" >> $GITHUB_ENV
       shell: bash
       if: runner.os == 'macOS'
-
     - run: |
         bazel test -c dbg //src/cc/tests:* --test_output=all --test_timeout 30 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }} --verbose_failures
       shell: bash
       name: run cpp tests
     - run: |
         bazel test -c dbg //src/python/deepgnn/...:* --jobs 1 --test_output=all --test_timeout 600 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }}  --verbose_failures
-        bazel clean --expunge
+        bazel clean
       shell: bash
       name: run python tests
     - run: |
@@ -34,7 +33,6 @@ runs:
         bazel run -c dbg //examples/pytorch:sage --config=${{ env.BAZEL_CONFIG }}
         bazel run -c dbg //examples/pytorch:pyg_interface --config=${{ env.BAZEL_CONFIG }}
         bazel test -c dbg //docs:* --test_output=all --jobs 1 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }}  --verbose_failures
-        bazel clean --expunge
       shell: bash
       name: run python examples and doctests
       if: runner.os == 'Linux'
