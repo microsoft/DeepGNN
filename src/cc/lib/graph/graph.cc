@@ -184,6 +184,41 @@ void Graph::GetNodeFeature(std::span<const NodeId> node_ids, std::span<const Tim
     }
 }
 
+void Graph::UpdateNodeFeature(std::span<const NodeId> node_ids, std::span<snark::FeatureMeta> features,
+                              std::span<uint8_t> values, std::span<uint32_t> output)
+{
+    assert(features.size() * node_ids.size() == output.size());
+
+    const size_t features_size = values.size() / node_ids.size();
+    size_t feature_offset = 0;
+    size_t dim_offset = 0;
+    const size_t dim_size = features.size();
+    for (size_t node_index = 0; node_index < node_ids.size(); ++node_index)
+    {
+        auto internal_id = m_node_map.find(node_ids[node_index]);
+        if (internal_id == std::end(m_node_map))
+        {
+            std::fill_n(std::begin(output) + dim_offset, dim_size, 0);
+        }
+        else
+        {
+            auto output_span = output.subspan(dim_offset, dim_size);
+            auto values_span = values.subspan(feature_offset, features_size);
+
+            auto index = internal_id->second;
+            size_t partition_count = m_counts[index];
+            for (size_t partition = 0; partition < partition_count; ++partition, ++index)
+            {
+                m_partitions[m_partitions_indices[index]].UpdateNodeFeature(m_internal_indices[index], features,
+                                                                            values_span, output_span);
+            }
+        }
+
+        feature_offset += features_size;
+        dim_offset += dim_size;
+    }
+}
+
 void Graph::GetNodeSparseFeature(std::span<const NodeId> node_ids, std::span<const Timestamp> timestamps,
                                  std::span<const snark::FeatureId> features, std::span<int64_t> out_dimensions,
                                  std::vector<std::vector<int64_t>> &out_indices,

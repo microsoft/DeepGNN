@@ -30,6 +30,8 @@ class GRPCClient final
     void GetNodeType(std::span<const NodeId> node_ids, std::span<Type> output, Type default_type);
     void GetNodeFeature(std::span<const NodeId> node_ids, std::span<const snark::Timestamp> timestamps,
                         std::span<FeatureMeta> features, std::span<uint8_t> output);
+    void UpdateNodeFeature(std::span<const NodeId> node_ids, std::span<FeatureMeta> features, std::span<uint8_t> values,
+                           std::span<uint32_t> output);
 
     void GetEdgeFeature(std::span<const NodeId> edge_src_ids, std::span<const NodeId> edge_dst_ids,
                         std::span<const Type> edge_types, std::span<const snark::Timestamp> timestamps,

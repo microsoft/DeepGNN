@@ -55,6 +55,22 @@ class NodeFeaturesCallData final : public CallData
     GraphEngine::AsyncService &m_service;
 };
 
+class UpdateNodeFeaturesCallData final : public CallData
+{
+  public:
+    UpdateNodeFeaturesCallData(GraphEngine::AsyncService &service, grpc::ServerCompletionQueue &cq,
+                               snark::GraphEngine::Service &service_impl);
+
+    void Proceed() override;
+
+  private:
+    UpdateNodeFeaturesRequest m_request;
+    UpdateNodeFeaturesReply m_reply;
+    grpc::ServerAsyncResponseWriter<UpdateNodeFeaturesReply> m_responder;
+    snark::GraphEngine::Service &m_service_impl;
+    GraphEngine::AsyncService &m_service;
+};
+
 class EdgeFeaturesCallData final : public CallData
 {
   public:

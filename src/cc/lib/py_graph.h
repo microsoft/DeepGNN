@@ -97,6 +97,9 @@ extern "C"
     DEEPGNN_DLL extern int32_t GetNodeFeature(PyGraph *graph, NodeID *node_ids, size_t node_ids_size,
                                               Timestamp *time_stamps, Feature *features, size_t features_size,
                                               uint8_t *output, size_t output_size);
+    DEEPGNN_DLL extern int32_t UpdateNodeFeature(PyGraph *graph, NodeID *node_ids, size_t node_ids_size,
+                                                 Feature *features, size_t features_size, uint8_t *values,
+                                                 size_t values_size, uint32_t *output, size_t output_size);
     DEEPGNN_DLL extern int32_t GetNodeSparseFeature(PyGraph *graph, NodeID *node_ids, size_t node_ids_size,
                                                     Timestamp *time_stamps, Feature *features, size_t features_size,
                                                     GetSparseFeaturesCallback callback);

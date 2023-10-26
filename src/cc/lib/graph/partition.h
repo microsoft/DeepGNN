@@ -39,6 +39,10 @@ struct Partition
     void GetNodeFeature(uint64_t internal_node_id, std::optional<Timestamp> timestamp,
                         std::span<snark::FeatureMeta> features, std::span<Timestamp> feature_flags,
                         std::span<uint8_t> output) const;
+
+    void UpdateNodeFeature(uint64_t internal_node_id, std::span<snark::FeatureMeta> features,
+                           std::span<const uint8_t> values, std::span<uint32_t> output);
+
     void GetNodeSparseFeature(uint64_t internal_node_id, std::optional<Timestamp> timestamp,
                               std::span<const snark::FeatureId> features, std::span<Timestamp> feature_flags,
                               int64_t prefix, std::span<int64_t> out_dimensions,

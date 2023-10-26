@@ -391,6 +391,39 @@ int32_t GetNodeFeature(PyGraph *py_graph, NodeID *node_ids, size_t node_ids_size
     }
 }
 
+int32_t UpdateNodeFeature(PyGraph *py_graph, NodeID *node_ids, size_t node_ids_size, Feature *features,
+                          size_t features_size, uint8_t *values, size_t values_size, uint32_t *output,
+                          size_t output_size)
+{
+    if (py_graph->graph == nullptr)
+    {
+        RAW_LOG_ERROR("Internal graph is not initialized");
+        return 1;
+    }
+
+    auto features_info = ExtractFeatureInfo(features, features_size);
+    if (py_graph->graph->graph)
+    {
+        py_graph->graph->graph->UpdateNodeFeature(std::span(reinterpret_cast<snark::NodeId *>(node_ids), node_ids_size),
+                                                  std::span(features_info), std::span(values, values_size),
+                                                  std::span(output, output_size));
+        return 0;
+    }
+
+    try
+    {
+        py_graph->graph->client->UpdateNodeFeature(
+            std::span(reinterpret_cast<snark::NodeId *>(node_ids), node_ids_size), std::span(features_info),
+            std::span(values, values_size), std::span(output, output_size));
+        return 0;
+    }
+    catch (const std::exception &e)
+    {
+        RAW_LOG_ERROR("Exception while updating node features: %s", e.what());
+        return 1;
+    }
+}
+
 int32_t GetNodeSparseFeature(PyGraph *py_graph, NodeID *node_ids, size_t node_ids_size, Timestamp *timestamps,
                              Feature *features, size_t features_size, GetSparseFeaturesCallback callback)
 {

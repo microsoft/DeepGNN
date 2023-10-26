@@ -214,3 +214,16 @@ py_test(
         "@hadoop//:hadoop_py",
     ],
 )
+
+py_test(
+    name = "update_tests",
+    srcs = ["update_test.py"],
+    imports = ["../../../../"],
+    main = "update_test.py",
+    python_version = "PY3",
+    srcs_version = "PY3",
+    deps = select({
+        "@platforms//os:windows": windows_deps,
+        "//conditions:default": linux_mac_deps,
+    }),
+)

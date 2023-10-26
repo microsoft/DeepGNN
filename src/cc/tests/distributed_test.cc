@@ -103,6 +103,48 @@ TEST(DistributedTest, NodeFeaturesSingleServer)
     EXPECT_EQ(output, std::vector<float>({0, 1, 1, 2, 2, 3}));
 }
 
+TEST(DistributedTest, UpdateNodeFeaturesSingleServer)
+{
+    const size_t num_nodes = 100;
+    const size_t fv_size = 2;
+    TestGraph::MemoryGraph m;
+    for (size_t n = 0; n < num_nodes; n++)
+    {
+        std::vector<float> vals(fv_size);
+        std::iota(std::begin(vals), std::end(vals), float(n));
+        m.m_nodes.push_back(TestGraph::Node{
+            .m_id = snark::NodeId(n), .m_type = 0, .m_weight = 1.0f, .m_float_features = {std::move(vals)}});
+    }
+
+    TempFolder path("DistributedUpdateNodeFeaturesSingleServer");
+    auto partition = TestGraph::convert(path.path, "0_0", std::move(m), 1);
+
+    snark::GRPCServer server(std::make_shared<snark::GraphEngineServiceImpl>(
+                                 snark::Metadata(path.string()), std::vector<std::string>{path.string()},
+                                 std::vector<uint32_t>{0}, snark::PartitionStorageType::memory),
+                             {}, "localhost:0", "", "", "");
+    snark::GRPCClient c({server.InProcessChannel()}, 1, 1);
+
+    std::vector<snark::NodeId> input_nodes = {0, 1, 2};
+    std::vector<float> values(fv_size * input_nodes.size());
+    std::vector<float> new_values(fv_size * input_nodes.size());
+
+    std::vector<snark::FeatureMeta> features = {{snark::FeatureId(0), snark::FeatureSize(sizeof(float) * fv_size)}};
+    c.GetNodeFeature(std::span(input_nodes), {}, std::span(features),
+                     std::span(reinterpret_cast<uint8_t *>(values.data()), sizeof(float) * values.size()));
+    EXPECT_EQ(values, std::vector<float>({0, 1, 1, 2, 2, 3}));
+
+    std::iota(std::begin(new_values), std::end(new_values), 20.0f);
+    std::vector<uint32_t> updated_sizes(input_nodes.size() * features.size());
+    c.UpdateNodeFeature(std::span(input_nodes), std::span(features),
+                        std::span(reinterpret_cast<uint8_t *>(new_values.data()), sizeof(float) * new_values.size()),
+                        std::span(updated_sizes));
+    EXPECT_EQ(updated_sizes, std::vector<uint32_t>({8, 8, 8}));
+    c.GetNodeFeature(std::span(input_nodes), {}, std::span(features),
+                     std::span(reinterpret_cast<uint8_t *>(values.data()), sizeof(float) * values.size()));
+    EXPECT_EQ(values, std::vector<float>({20, 21, 22, 23, 24, 25}));
+}
+
 TEST(DistributedTest, NodeStringFeaturesMultipleServers)
 {
     const size_t num_nodes = 4;
@@ -447,6 +489,31 @@ TEST(DistributedTest, NodeFeaturesMultipleServers)
     c.GetNodeFeature(std::span(input_nodes), {}, std::span(features),
                      std::span(reinterpret_cast<uint8_t *>(output.data()), sizeof(float) * output.size()));
     EXPECT_EQ(output, std::vector<float>({0, 1, 11, 12, 22, 23}));
+}
+
+TEST(DistributedTest, UpdateNodeFeaturesMultipleServers)
+{
+    auto mocks = MockServers(10, "UpdateNodeFeaturesMultipleServers");
+    snark::GRPCClient c(std::move(mocks.first), 1, 1);
+
+    std::vector<snark::NodeId> input_nodes = {0, 11, 22};
+    std::vector<float> values(fv_size * input_nodes.size());
+    std::vector<snark::FeatureMeta> features = {{snark::FeatureId(0), snark::FeatureSize(sizeof(float) * fv_size)}};
+    c.GetNodeFeature(std::span(input_nodes), {}, std::span(features),
+                     std::span(reinterpret_cast<uint8_t *>(values.data()), sizeof(float) * values.size()));
+    EXPECT_EQ(values, std::vector<float>({0, 1, 11, 12, 22, 23}));
+
+    std::vector<float> new_values = {23, 42};
+    std::vector<uint32_t> updated_sizes = {0, 0};
+    std::vector<snark::NodeId> nodes_to_update = {0, 22};
+    std::vector<snark::FeatureMeta> features_to_update = {{snark::FeatureId(0), snark::FeatureSize(sizeof(float))}};
+    c.UpdateNodeFeature(std::span(nodes_to_update), std::span(features_to_update),
+                        std::span(reinterpret_cast<uint8_t *>(new_values.data()), sizeof(float) * new_values.size()),
+                        std::span(updated_sizes));
+    EXPECT_EQ(updated_sizes, std::vector<uint32_t>({4, 4}));
+    c.GetNodeFeature(std::span(input_nodes), {}, std::span(features),
+                     std::span(reinterpret_cast<uint8_t *>(values.data()), sizeof(float) * values.size()));
+    EXPECT_EQ(values, std::vector<float>({23, 1, 11, 12, 42, 23}));
 }
 
 TEST(DistributedTest, NodeTypeMultipleServers)

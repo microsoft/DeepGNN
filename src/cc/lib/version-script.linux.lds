@@ -6,6 +6,7 @@
         StartServer;
         CreateRemoteClient;
         GetNodeFeature;
+        UpdateNodeFeature;
         GetNodeSparseFeature;
         GetNodeStringFeature;
         GetEdgeFeature;

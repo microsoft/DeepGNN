@@ -53,6 +53,12 @@ class EmptyGraphEngine final : public snark::GraphEngine::Service
         return grpc::Status::OK;
     }
 
+    grpc::Status UpdateNodeFeatures(::grpc::ServerContext *context, const snark::UpdateNodeFeaturesRequest *request,
+                                    snark::UpdateNodeFeaturesReply *response) override
+    {
+        return grpc::Status::OK;
+    }
+
     grpc::Status GetEdgeFeatures(::grpc::ServerContext *context, const snark::EdgeFeaturesRequest *request,
                                  snark::EdgeFeaturesReply *response) override
     {
@@ -171,6 +177,7 @@ GRPCServer::GRPCServer(std::shared_ptr<snark::GraphEngineServiceImpl> engine_ser
             new SampleNeighborsCallData(m_engine_service, *queue, *m_engine_service_impl);
             new UniformSampleNeighborsCallData(m_engine_service, *queue, *m_engine_service_impl);
             new NodeFeaturesCallData(m_engine_service, *queue, *m_engine_service_impl);
+            new UpdateNodeFeaturesCallData(m_engine_service, *queue, *m_engine_service_impl);
             new EdgeFeaturesCallData(m_engine_service, *queue, *m_engine_service_impl);
             new NodeSparseFeaturesCallData(m_engine_service, *queue, *m_engine_service_impl);
             new EdgeSparseFeaturesCallData(m_engine_service, *queue, *m_engine_service_impl);

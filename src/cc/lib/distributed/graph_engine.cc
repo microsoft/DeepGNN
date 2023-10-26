@@ -172,6 +172,53 @@ grpc::Status GraphEngineServiceImpl::GetNodeFeatures(::grpc::ServerContext *cont
     return grpc::Status::OK;
 }
 
+grpc::Status GraphEngineServiceImpl::UpdateNodeFeatures(::grpc::ServerContext *context,
+                                                        const snark::UpdateNodeFeaturesRequest *request,
+                                                        snark::UpdateNodeFeaturesReply *response)
+{
+    std::vector<snark::FeatureMeta> features;
+    size_t values_dim = 0;
+    for (const auto &feature : request->features())
+    {
+        features.emplace_back(feature.id(), feature.size());
+        values_dim += feature.size();
+    }
+
+    const auto output_dim = features.size();
+    response->mutable_sizes()->Resize(int(request->node_ids().size() * output_dim), uint32_t(0));
+    auto output = std::span(response->mutable_sizes()->mutable_data(), response->sizes().size());
+    auto values = std::span(reinterpret_cast<const uint8_t *>(request->feature_values().data()),
+                            request->feature_values().size());
+
+    size_t values_offset = 0;
+    size_t output_offset = 0;
+    for (int node_offset = 0; node_offset < request->node_ids().size(); ++node_offset)
+    {
+        auto internal_id = m_node_map.find(request->node_ids()[node_offset]);
+        if (internal_id == std::end(m_node_map))
+        {
+            values_offset += values_dim;
+            output_offset += output_dim;
+            continue;
+        }
+
+        auto index = internal_id->second;
+        const size_t partition_count = m_counts[index];
+        auto values_subspan = values.subspan(values_offset, values_dim);
+        auto output_subspan = output.subspan(output_offset, output_dim);
+        for (size_t partition = 0; partition < partition_count; ++partition, ++index)
+        {
+            m_partitions[m_partitions_indices[index]].UpdateNodeFeature(m_internal_indices[index], features,
+                                                                        values_subspan, output_subspan);
+        }
+
+        values_offset += values_dim;
+        output_offset += output_dim;
+    }
+
+    return grpc::Status::OK;
+}
+
 grpc::Status GraphEngineServiceImpl::GetEdgeFeatures(::grpc::ServerContext *context,
                                                      const snark::EdgeFeaturesRequest *request,
                                                      snark::EdgeFeaturesReply *response)
@@ -240,7 +287,7 @@ grpc::Status GraphEngineServiceImpl::GetNodeSparseFeatures(::grpc::ServerContext
     std::vector<std::vector<uint8_t>> values(features.size());
     std::vector<uint64_t> values_sizes(features.size());
     response->mutable_timestamps()->Resize(request->node_ids().size() * features.size(), -1);
-    auto feature_flags = response->mutable_timestamps()->begin();
+    auto feature_flags = response->mutable_timestamps()->mutable_data();
     for (int node_offset = 0; node_offset < request->node_ids().size(); ++node_offset)
     {
         auto internal_id = m_node_map.find(request->node_ids()[node_offset]);
@@ -291,7 +338,7 @@ grpc::Status GraphEngineServiceImpl::GetEdgeSparseFeatures(::grpc::ServerContext
     std::vector<std::vector<uint8_t>> values(features.size());
     std::vector<uint64_t> values_sizes(features.size());
     response->mutable_timestamps()->Resize(len * features.size(), -1);
-    auto feature_flags = response->mutable_timestamps()->begin();
+    auto feature_flags = response->mutable_timestamps()->mutable_data();
     for (size_t node_offset = 0; node_offset < len; ++node_offset)
     {
         auto internal_id = m_node_map.find(request->node_ids()[node_offset]);

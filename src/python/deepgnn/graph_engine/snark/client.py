@@ -537,6 +537,22 @@ class MemoryGraph:
             "extract node types"
         )
 
+        self.lib.UpdateNodeFeature.argtypes = [
+            POINTER(_DEEP_GRAPH),
+            POINTER(c_int64),
+            c_size_t,
+            POINTER(c_int32),
+            c_size_t,
+            POINTER(c_uint8),
+            c_size_t,
+            POINTER(c_uint32),
+            c_size_t,
+        ]
+        self.lib.UpdateNodeFeature.restype = c_int32
+        self.lib.UpdateNodeFeature.errcheck = _ErrCallback(  # type: ignore
+            "update node features"
+        )
+
     def node_features(
         self,
         nodes: np.ndarray,
@@ -576,6 +592,53 @@ class MemoryGraph:
             result.ctypes.data_as(POINTER(c_uint8)),
             c_size_t(result.nbytes),
         )
+
+        return result
+
+    def update_node_features(
+        self,
+        nodes: np.ndarray,
+        features: np.ndarray,
+        values: np.ndarray,
+    ) -> np.ndarray:
+        """Retrieve node features.
+
+        Args:
+            nodes (np.array): list of nodes
+            features (np.array): list of feature ids and sizes: [[feature_0, size_0], ..., [feature_n, size_n]]
+            values (np.ndarray): feature values. Dimensions should be [len(nodes), sum(feature sizes)].
+            Values are expected to be ordered by node ids first and then by feature ids.
+
+        Returns:
+            np.array: Flags ordered by node ids first and then by feature ids describing if a specific feature was updated.
+            Dimensions are [len(nodes), sum(feature sizes)].
+        """
+        nodes = np.array(nodes, dtype=np.int64)
+        features = np.array(features, dtype=np.int32)
+        assert features.shape[1] == 2
+        assert values.shape[0] == len(nodes)  # Every node should have a value
+        assert (
+            values.shape[1] == features[:, 1].sum()
+        )  # Every feature is expected to have a value
+
+        features_in_bytes = features.copy()
+        features_in_bytes *= (1, values.itemsize)
+        result = np.zeros((len(nodes), features.shape[0]), dtype=np.uint32)
+
+        self._retryer(
+            self.lib.UpdateNodeFeature,
+            self.g_,
+            nodes.ctypes.data_as(POINTER(c_int64)),
+            c_size_t(len(nodes)),
+            features_in_bytes.ctypes.data_as(POINTER(c_int32)),
+            c_size_t(len(features)),
+            values.ctypes.data_as(POINTER(c_uint8)),
+            c_size_t(values.nbytes),
+            result.ctypes.data_as(POINTER(c_uint32)),
+            c_size_t(len(nodes) * features.shape[0]),
+        )
+
+        result //= values.itemsize
 
         return result
 

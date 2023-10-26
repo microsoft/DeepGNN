@@ -55,6 +55,8 @@ template <typename T> struct BaseStorage
     virtual typename std::span<T>::iterator read(uint64_t offset, uint64_t size,
                                                  typename std::span<T>::iterator output_ptr,
                                                  std::shared_ptr<FilePtr> file_ptr) const = 0;
+    virtual size_t write(uint64_t offset, uint64_t size, typename std::span<const T>::iterator input_ptr,
+                         std::shared_ptr<FilePtr> file_ptr) = 0;
 };
 
 template <typename T> struct MemoryStorage : BaseStorage<T>
@@ -112,6 +114,13 @@ template <typename T> struct MemoryStorage : BaseStorage<T>
         std::copy_n(std::begin(m_data) + offset, sizeof(T) * size, output_ptr);
         output_ptr += size;
         return output_ptr;
+    }
+
+    size_t write(uint64_t offset, uint64_t size, typename std::span<const T>::iterator input_ptr,
+                 std::shared_ptr<FilePtr> file_ptr) override
+    {
+        std::copy_n(input_ptr, sizeof(T) * size, std::begin(m_data) + offset);
+        return sizeof(T) * size;
     }
 
   private:
@@ -221,6 +230,13 @@ template <typename T> struct HDFSStreamStorage final : BaseStorage<T>
         return output_ptr;
     }
 
+    size_t write(uint64_t offset, uint64_t size, typename std::span<const T>::iterator input_ptr,
+                 std::shared_ptr<FilePtr> file_ptr) override
+    {
+        assert(false && "HDFSStreamStorage does not support writes!");
+        return 0;
+    }
+
   private:
     const int64_t BUFFER_SIZE = 4096;
     HDFSConnection m_connection;
@@ -324,6 +340,13 @@ template <typename T> struct DiskStorage final : BaseStorage<T>
         output_ptr += fread(&(*output_ptr), sizeof(T), size, file_ptr);
 
         return output_ptr;
+    }
+
+    size_t write(uint64_t offset, uint64_t size, typename std::span<const T>::iterator input_ptr,
+                 std::shared_ptr<FilePtr> file_ptr) override
+    {
+        assert(false && "Disk storage does not support writes!");
+        return 0;
     }
 
   private:

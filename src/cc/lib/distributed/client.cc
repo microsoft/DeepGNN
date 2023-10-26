@@ -387,6 +387,65 @@ void GRPCClient::GetNodeFeature(std::span<const NodeId> node_ids, std::span<cons
     }
 }
 
+void GRPCClient::UpdateNodeFeature(std::span<const NodeId> node_ids, std::span<FeatureMeta> features,
+                                   std::span<uint8_t> values, std::span<uint32_t> output)
+{
+    assert(std::accumulate(std::begin(features), std::end(features), size_t(0),
+                           [](size_t val, const auto &f) { return val + f.second; }) *
+               node_ids.size() ==
+           values.size());
+    assert(features.size() * node_ids.size() == output.size());
+
+    UpdateNodeFeaturesRequest request;
+    *request.mutable_node_ids() = {std::begin(node_ids), std::end(node_ids)};
+
+    for (const auto &feature : features)
+    {
+        auto wire_feature = request.add_features();
+        wire_feature->set_id(feature.first);
+        wire_feature->set_size(feature.second);
+    }
+
+    request.set_feature_values({std::begin(values), std::end(values)});
+    std::vector<std::future<void>> futures;
+    futures.reserve(m_engine_stubs.size());
+    std::vector<UpdateNodeFeaturesReply> replies(m_engine_stubs.size());
+    std::mutex mtx;
+    for (size_t shard = 0; shard < m_engine_stubs.size(); ++shard)
+    {
+        auto *call = new AsyncClientCall();
+
+        auto response_reader =
+            m_engine_stubs[shard]->PrepareAsyncUpdateNodeFeatures(&call->context, request, NextCompletionQueue());
+
+        call->callback = [&reply = replies[shard], &mtx, &output]() {
+            if (reply.sizes().empty())
+            {
+                return;
+            }
+            assert(reply.sizes().size() == int(output.size()));
+            std::lock_guard lock(mtx);
+            for (int32_t output_index = 0; output_index < reply.sizes().size(); ++output_index)
+            {
+                auto &curr_size = output[output_index];
+                const auto reply_size = reply.sizes(output_index);
+                if (reply_size > 0)
+                {
+                    curr_size = curr_size > 0 ? std::min(curr_size, reply_size) : reply_size;
+                }
+            }
+        };
+
+        // Order is important: call variable can be deleted before futures can be
+        // obtained.
+        futures.emplace_back(call->promise.get_future());
+        response_reader->StartCall();
+        response_reader->Finish(&replies[shard], &call->status, static_cast<void *>(call));
+    }
+
+    WaitForFutures(futures);
+}
+
 void GRPCClient::GetEdgeFeature(std::span<const NodeId> edge_src_ids, std::span<const NodeId> edge_dst_ids,
                                 std::span<const Type> edge_types, std::span<const snark::Timestamp> timestamps,
                                 std::span<FeatureMeta> features, std::span<uint8_t> output)

@@ -1703,5 +1703,67 @@ TEST(GraphTest, GetNeigborCountMultiplePartitions)
     EXPECT_EQ(std::vector<uint64_t>({0, 0}), output_neighbors_count);
 }
 
+TEST(GraphTest, UpdateNodeFeaturesMultipleNodesSingleFeatureMissingNode)
+{
+    TestGraph::MemoryGraph m;
+    std::vector<std::vector<float>> f1 = {std::vector<float>{1.0f, 2.0f, 3.0f}};
+    m.m_nodes.push_back(TestGraph::Node{.m_id = 0, .m_type = 0, .m_weight = 1.0f, .m_float_features = std::move(f1)});
+    auto path = std::filesystem::path(::testing::UnitTest::GetInstance()->current_test_info()->name());
+    assert(std::filesystem::create_directories(path));
+    TestGraph::convert(path, "0_0", std::move(m), 2);
+    snark::Metadata metadata(path.string());
+    snark::Graph g(std::move(metadata), {path.string()}, std::vector<uint32_t>{0}, snark::PartitionStorageType::memory);
+    std::vector<snark::NodeId> nodes = {0, 1};
+    std::vector<uint8_t> output(4 * 3 * 2);
+    std::vector<snark::FeatureMeta> features = {{0, 12}};
+
+    g.GetNodeFeature(std::span(nodes), {}, std::span(features), std::span(output));
+    std::span res(reinterpret_cast<float *>(output.data()), output.size() / 4);
+    EXPECT_EQ(std::vector<float>(std::begin(res), std::end(res)), std::vector<float>({1, 2, 3, 0, 0, 0}));
+
+    std::vector<uint32_t> new_sizes(2);
+    std::vector<uint8_t> new_values(4 * 3 * 2);
+    std::span float_values(reinterpret_cast<float *>(new_values.data()), new_values.size() / 4);
+    std::iota(std::begin(float_values), std::end(float_values), 5.0f);
+    g.UpdateNodeFeature(std::span(nodes), std::span(features), std::span(new_values), std::span(new_sizes));
+    EXPECT_EQ(new_sizes, std::vector<uint32_t>({12, 0}));
+
+    g.GetNodeFeature(std::span(nodes), {}, std::span(features), std::span(output));
+    EXPECT_EQ(std::vector<float>(std::begin(res), std::end(res)), std::vector<float>({5, 6, 7, 0, 0, 0}));
+}
+
+TEST(GraphTest, UpdateNodeFeaturesMultipleNodesSingleFeatureMixedSizes)
+{
+    TestGraph::MemoryGraph m;
+    std::vector<std::vector<float>> f1 = {std::vector<float>{1.0f, 2.0f, 3.0f}};
+    std::vector<std::vector<float>> f2 = {std::vector<float>{11.0f, 12.0f}};
+    m.m_nodes.push_back(TestGraph::Node{.m_id = 0, .m_type = 0, .m_weight = 1.0f, .m_float_features = f1});
+    m.m_nodes.push_back(TestGraph::Node{.m_id = 1, .m_type = 1, .m_weight = 1.0f, .m_float_features = f2});
+    auto path = std::filesystem::path(::testing::UnitTest::GetInstance()->current_test_info()->name());
+    assert(std::filesystem::create_directories(path));
+    TestGraph::convert(path, "0_0", std::move(m), 2);
+    snark::Metadata metadata(path.string());
+    snark::Graph g(std::move(metadata), {path.string()}, std::vector<uint32_t>{0}, snark::PartitionStorageType::memory);
+    std::vector<snark::NodeId> nodes = {0, 1};
+    std::vector<uint8_t> large_output(4 * 3 * 2);
+    std::vector<snark::FeatureMeta> features = {{0, 12}};
+
+    g.GetNodeFeature(std::span(nodes), {}, std::span(features), std::span(large_output));
+    std::span large_res(reinterpret_cast<float *>(large_output.data()), large_output.size() / 4);
+    EXPECT_EQ(std::vector<float>(std::begin(large_res), std::end(large_res)), std::vector<float>({1, 2, 3, 11, 12, 0}));
+
+    std::vector<uint32_t> new_sizes(2);
+    std::vector<uint8_t> new_values(4 * 3 * 2);
+    std::span float_values(reinterpret_cast<float *>(new_values.data()), new_values.size() / 4);
+    std::iota(std::begin(float_values), std::end(float_values), 5.0f);
+    features[0].second = 8;
+    g.UpdateNodeFeature(std::span(nodes), std::span(features), std::span(new_values), std::span(new_sizes));
+    EXPECT_EQ(new_sizes, std::vector<uint32_t>({8, 8}));
+
+    features[0].second = 12;
+    g.GetNodeFeature(std::span(nodes), {}, std::span(features), std::span(large_output));
+    EXPECT_EQ(std::vector<float>(std::begin(large_res), std::end(large_res)), std::vector<float>({5, 6, 3, 8, 9, 0}));
+}
+
 INSTANTIATE_TEST_SUITE_P(StorageTypeGroup, StorageTypeGraphTest,
                          testing::Values(snark::PartitionStorageType::memory, snark::PartitionStorageType::disk));

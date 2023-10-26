@@ -28,6 +28,8 @@ class GraphEngineServiceImpl final : public snark::GraphEngine::Service
 
     grpc::Status GetNodeFeatures(::grpc::ServerContext *context, const snark::NodeFeaturesRequest *request,
                                  snark::NodeFeaturesReply *response) override;
+    grpc::Status UpdateNodeFeatures(::grpc::ServerContext *context, const snark::UpdateNodeFeaturesRequest *request,
+                                    snark::UpdateNodeFeaturesReply *response) override;
     grpc::Status GetEdgeFeatures(::grpc::ServerContext *context, const snark::EdgeFeaturesRequest *request,
                                  snark::EdgeFeaturesReply *response) override;
     grpc::Status GetNodeSparseFeatures(::grpc::ServerContext *context, const snark::NodeSparseFeaturesRequest *request,

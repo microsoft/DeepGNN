@@ -517,6 +517,42 @@ void Partition::GetNodeFeature(uint64_t internal_id, std::optional<Timestamp> no
     }
 }
 
+void Partition::UpdateNodeFeature(uint64_t internal_id, std::span<snark::FeatureMeta> features,
+                                  std::span<const uint8_t> values, std::span<uint32_t> output)
+{
+    if (m_node_feature_index.empty() || !m_node_features)
+    {
+        return;
+    }
+
+    auto file_ptr = m_node_features->start();
+    auto curr = std::begin(values);
+    auto feature_index_offset = m_node_index[internal_id];
+    auto next_offset = m_node_index[internal_id + 1];
+
+    for (size_t feature_index = 0; feature_index < features.size(); ++feature_index)
+    {
+        const auto feature_id = features[feature_index].first;
+        const auto feature_size = features[feature_index].second;
+
+        // Requested feature_id is larger than known features, nothing to update.
+        if (next_offset - feature_index_offset <= uint64_t(feature_id))
+        {
+            curr += feature_size;
+            continue;
+        }
+
+        auto data_offset = m_node_feature_index[feature_index_offset + feature_id];
+        auto stored_size = m_node_feature_index[feature_index_offset + feature_id + 1] - data_offset;
+
+        const auto updated_size = std::min<uint64_t>(stored_size, feature_size);
+        output[feature_index] =
+            output[feature_index] == 0 ? updated_size : std::min<uint32_t>(output[feature_index], updated_size);
+        m_node_features->write(data_offset, updated_size, curr, file_ptr);
+        curr += feature_size;
+    }
+}
+
 void Partition::GetNodeSparseFeature(uint64_t internal_node_id, std::optional<Timestamp> node_ts,
                                      std::span<const snark::FeatureId> features, std::span<Timestamp> feature_flags,
                                      int64_t prefix, std::span<int64_t> out_dimensions,

@@ -8,6 +8,7 @@ package snark;
 service GraphEngine {
   // Extract node/edge features
   rpc GetNodeFeatures (NodeFeaturesRequest) returns (NodeFeaturesReply) {}
+  rpc UpdateNodeFeatures (UpdateNodeFeaturesRequest) returns (UpdateNodeFeaturesReply) {}
   rpc GetEdgeFeatures (EdgeFeaturesRequest) returns (EdgeFeaturesReply) {}
   rpc GetNodeSparseFeatures (NodeSparseFeaturesRequest) returns (SparseFeaturesReply) {}
   rpc GetEdgeSparseFeatures (EdgeSparseFeaturesRequest) returns (SparseFeaturesReply) {}
@@ -112,6 +113,17 @@ message NodeFeaturesReply {
   // From the request nodes.
   repeated uint32 offsets = 2;
   repeated int64 timestamps = 3;
+}
+
+message UpdateNodeFeaturesRequest {
+  repeated int64 node_ids = 1;
+  repeated FeatureInfo features = 2;
+  bytes feature_values = 3;
+}
+
+message UpdateNodeFeaturesReply {
+  // From the request nodes.
+  repeated uint32 sizes = 1;
 }
 
 message EdgeFeaturesRequest {

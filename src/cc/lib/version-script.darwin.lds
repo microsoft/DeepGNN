@@ -4,6 +4,7 @@ _CreateLocalGraph
 _StartServer
 _CreateRemoteClient
 _GetNodeFeature
+_UpdateNodeFeature
 _GetNodeSparseFeature
 _GetNodeStringFeature
 _GetEdgeFeature

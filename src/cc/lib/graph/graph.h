@@ -31,6 +31,8 @@ class Graph
 
     void GetNodeFeature(std::span<const NodeId> node_ids, std::span<const Timestamp> timestamps,
                         std::span<snark::FeatureMeta> features, std::span<uint8_t> output) const;
+    void UpdateNodeFeature(std::span<const NodeId> node_ids, std::span<snark::FeatureMeta> features,
+                           std::span<uint8_t> values, std::span<uint32_t> output);
 
     void GetNodeSparseFeature(std::span<const NodeId> node_ids, std::span<const Timestamp> timestamps,
                               std::span<const snark::FeatureId> features, std::span<int64_t> out_dimensions,
