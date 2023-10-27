@@ -601,7 +601,7 @@ class MemoryGraph:
         features: np.ndarray,
         values: np.ndarray,
     ) -> np.ndarray:
-        """Retrieve node features.
+        """Update node features in memory.
 
         Args:
             nodes (np.array): list of nodes
@@ -610,7 +610,7 @@ class MemoryGraph:
             Values are expected to be ordered by node ids first and then by feature ids.
 
         Returns:
-            np.array: Flags ordered by node ids first and then by feature ids describing if a specific feature was updated.
+            np.array: Length of feature vector values written to memory..
             Dimensions are [len(nodes), sum(feature sizes)].
         """
         nodes = np.array(nodes, dtype=np.int64)
