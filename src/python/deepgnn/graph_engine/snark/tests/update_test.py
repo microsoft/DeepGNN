@@ -95,10 +95,6 @@ def multi_partition_graph_data():
 
 @pytest.fixture(params=["inmemory", "distributed"])
 def graph_dataset(multi_partition_graph_data, request):
-    import shutil
-
-    print(f"log: {multi_partition_graph_data}")
-    shutil.copytree(multi_partition_graph_data, "/tmp/update_test", dirs_exist_ok=True)
     if request.param == "inmemory":
         yield client.MemoryGraph(multi_partition_graph_data, [0, 1])
     else:
