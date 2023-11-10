@@ -172,7 +172,7 @@ pure_eval==0.2.2
 py==1.11.0
 py-cpuinfo==9.0.0
 py4j==0.10.9.7
-pyarrow==6.0.1
+pyarrow==14.0.1
 pyasn1==0.4.8
 pyasn1-modules==0.2.8
 pycparser==2.21
