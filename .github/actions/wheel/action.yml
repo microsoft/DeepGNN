@@ -4,7 +4,7 @@ inputs:
   package_version:
     description: 'Package version'
     required: true
-    default: '0.1.1'
+    default: '0.1.61.dev2'
 runs:
   using: "composite"
   steps:
@@ -47,7 +47,7 @@ runs:
       shell: bash
       name: Configure env variables for macos
 
-    - run: bazel build -c opt //src/cc/lib:wrapper --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }}
+    - run: bazel build -c dbg //src/cc/lib:wrapper --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }}
       shell: bash
       name: Build shared library
 
