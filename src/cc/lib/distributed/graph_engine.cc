@@ -723,7 +723,7 @@ grpc::Status GraphEngineServiceImpl::GetMetadata(::grpc::ServerContext *context,
 
 void GraphEngineServiceImpl::ReadNodeMap(std::filesystem::path path, std::string suffix, uint32_t index)
 {
-    std::cout << "Reading node map for partition " << index  << " with suffix " << suffix << " and path: " << (path.c_str()) << std::endl;
+    std::cout << "Reading node map for partition " << index  << " with suffix " << suffix << " and path: " << path.string() << std::endl;
     std::shared_ptr<BaseStorage<uint8_t>> node_map;
     if (!is_hdfs_path(path))
     {
