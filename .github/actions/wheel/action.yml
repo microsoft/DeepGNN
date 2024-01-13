@@ -15,7 +15,10 @@ runs:
       run: |
         echo "BAZEL_CONFIG=manylinux" >> $GITHUB_ENV
         echo "PLAT_NAME=manylinux1_x86_64" >> $GITHUB_ENV
-        echo "REMOTE_CACHE=--remote_cache=http://localhost:8080" >> $GITHUB_ENV
+        if ping -c 1 http://localhost:8080 &> /dev/null
+        then
+          echo "REMOTE_CACHE=--remote_cache=http://localhost:8080" >> $GITHUB_ENV
+        fi
         sudo mkdir /dt11
         sudo chown $USER /dt11
       shell: bash
