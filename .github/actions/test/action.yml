@@ -6,7 +6,11 @@ runs:
     - run: echo "BAZEL_CONFIG=linux" >> $GITHUB_ENV
       shell: bash
       if: runner.os == 'Linux'
-    - run: echo "REMOTE_CACHE=--remote_cache=http://localhost:8080" >> $GITHUB_ENV
+    - run: |
+        if [ ping -c 1 ${{ inputs.cache_address }} &> /dev/null ] && [ $(curl ${{ inputs.cache_address }}/status | python -c "import sys, json; print(json.load(sys.stdin)['NumFiles'])") -ne 0 ]
+        then
+          echo "REMOTE_CACHE=--remote_cache=${{ inputs.cache_address }}" >> $GITHUB_ENV
+        fi
       shell: bash
       if: runner.os == 'Linux'
     - run: echo "BAZEL_CONFIG=windows" >> $GITHUB_ENV

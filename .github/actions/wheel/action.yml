@@ -15,9 +15,9 @@ runs:
       run: |
         echo "BAZEL_CONFIG=manylinux" >> $GITHUB_ENV
         echo "PLAT_NAME=manylinux1_x86_64" >> $GITHUB_ENV
-        if [ ping -c 1 http://localhost:8080 &> /dev/null ] && [ $(curl http://localhost:8080/status | python -c "import sys, json; print(json.load(sys.stdin)['NumFiles'])") -ne 0 ]
+        if [ ping -c 1 ${{ inputs.cache_address }} &> /dev/null ] && [ $(curl ${{ inputs.cache_address }}/status | python -c "import sys, json; print(json.load(sys.stdin)['NumFiles'])") -ne 0 ]
         then
-          echo "REMOTE_CACHE=--remote_cache=http://localhost:8080" >> $GITHUB_ENV
+          echo "REMOTE_CACHE=--remote_cache=${{ inputs.cache_address }}" >> $GITHUB_ENV
         fi
         sudo mkdir /dt11
         sudo chown $USER /dt11
