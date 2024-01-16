@@ -1,4 +1,4 @@
-aiohttp==3.8.5
+aiohttp==3.9.0
 attr==0.3.1
 fsspec==2021.8.1
 # Preferably the vershion should match C++ version defined in the WORKSPACE file.

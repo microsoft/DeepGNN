@@ -11,9 +11,8 @@ First we download the Cora dataset and convert it to a valid binary representati
 
 .. code-block:: python
 
-	>>> from deepgnn.graph_engine.data.citation import Cora
-	>>> Cora("/tmp/cora/")
-	<deepgnn.graph_engine.data.citation.Cora object at 0x...>
+    >>> from deepgnn.graph_engine.data.citation import Cora
+    >>> graph = Cora()
 
 GAT Model
 =========
@@ -23,39 +22,11 @@ This model leverages masked self-attentional layers to address the shortcomings 
 
 `Paper <https://arxiv.org/abs/1710.10903>`_, `author's code <https://github.com/PetarV-/GAT>`_.
 
-Next we copy the GAT model from `DeepGNN's examples directory <https://github.com/microsoft/DeepGNN/blob/main/examples/pytorch/gat>`_. Pre-built models are kept out of the pip installation because it is rarely possible to inheret and selectively edit a single function of a graph model, instead it is best to copy the entire model and edit as needed.
-DeepGNN models typically contain multiple parts:
+Next we'll create the GAT model. DeepGNN models typically contain multiple parts:
 
-	1. Query struct and implementation
-	2. Model init and forward
-	3. Training setup: Dataset, Optimizer, Model creation
-	4. Execution
-
-Setup
-======
-
-Combined imports from `model.py <https://github.com/microsoft/DeepGNN/blob/main/examples/pytorch/gat/model.py>`_ and `main.py <https://github.com/microsoft/DeepGNN/blob/main/examples/pytorch/gat/main.py>`_.
-
-.. code-block:: python
-
-	>>> from typing import List
-	>>> from dataclasses import dataclass
-	>>> import argparse
-	>>> import numpy as np
-	>>> import torch
-	>>> import torch.nn as nn
-	>>> import torch.nn.functional as F
-	>>> import deepgnn.pytorch
-	>>> from deepgnn.pytorch.common import Accuracy
-	>>> from deepgnn.pytorch.modeling.base_model import BaseModel
-	>>> from deepgnn.pytorch.nn.gat_conv import GATConv
-	>>> from deepgnn.graph_engine import Graph, graph_ops
-	>>> from deepgnn import str2list_int
-	>>> from deepgnn.pytorch.common.utils import set_seed
-	>>> from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
-	>>> from deepgnn.pytorch.modeling import BaseModel
-	>>> from deepgnn.pytorch.training import run_dist
-	>>> from deepgnn.graph_engine import FileNodeSampler, GraphEngineBackend
+    1. Define query function to create a Dataset.
+    2. Model init and forward.
+    3. Training and evaluation.
 
 Query
 =====
@@ -64,44 +35,46 @@ In the GAT model, query samples neighbors repeatedly `num_hops` times in order t
 
 .. code-block:: python
 
-	>>> @dataclass
-	... class GATQueryParameter:
-	...     neighbor_edge_types: np.array
-	...     feature_idx: int
-	...     feature_dim: int
-	...     label_idx: int
-	...     label_dim: int
-	...     feature_type: np.dtype = np.float32
-	...     label_type: np.dtype = np.float32
-	...     num_hops: int = 2
-	>>> class GATQuery:
-	...     def __init__(self, p: GATQueryParameter):
-	...         self.p = p
-	...         self.label_meta = np.array([[p.label_idx, p.label_dim]], np.int32)
-	...         self.feat_meta = np.array([[p.feature_idx, p.feature_dim]], np.int32)
-	...
-	...     def query_training(self, graph: Graph, inputs):
-	...         nodes, edges, src_idx = graph_ops.sub_graph(
-	...             graph,
-	...             inputs,
-	...             edge_types=self.p.neighbor_edge_types,
-	...             num_hops=self.p.num_hops,
-	...             self_loop=True,
-	...             undirected=True,
-	...             return_edges=True,
-	...         )
-	...         input_mask = np.zeros(nodes.size, np.bool_)
-	...         input_mask[src_idx] = True
-	...
-	...         feat = graph.node_features(nodes, self.feat_meta, self.p.feature_type)
-	...         label = graph.node_features(nodes, self.label_meta, self.p.label_type)
-	...         label = label.astype(np.int32)
-	...         edges_value = np.ones(edges.shape[0], np.float32)
-	...         edges = np.transpose(edges)
-	...         adj_shape = np.array([nodes.size, nodes.size], np.int64)
-	...
-	...         graph_tensor = (nodes, feat, input_mask, label, edges, edges_value, adj_shape)
-	...         return graph_tensor
+    >>> import numpy as np
+    >>> from torch.utils.data import DataLoader, IterableDataset
+    >>> from deepgnn.graph_engine import Graph, graph_ops
+    >>> class GATDataset(IterableDataset):
+    ...     def __init__(self, inputs: np.array, graph: Graph, batch_size:int = 140):
+    ...         super(GATDataset, self).__init__()
+    ...         self.graph = graph
+    ...         self.inputs = inputs
+    ...         self.batch_size = batch_size
+    ...
+    ...     def __iter__(self):
+    ...         np.random.shuffle(self.inputs)
+    ...         batches = self.inputs
+    ...         last_elements = len(self.inputs) % self.batch_size
+    ...         if last_elements > 0:
+    ...             batches = batches[:-last_elements]
+    ...         batches = batches.reshape(-1, self.batch_size)
+    ...         return map(self.query, batches)
+    ...
+    ...     def query(self, inputs: np.ndarray) -> tuple:
+    ...         nodes, edges, src_idx = graph_ops.sub_graph(
+    ...             self.graph,
+    ...             inputs,
+    ...             edge_types=np.array([0], dtype=np.int32),
+    ...             num_hops=2,
+    ...             self_loop=True,
+    ...             undirected=True,
+    ...             return_edges=True,
+    ...         )
+    ...         input_mask = np.zeros(nodes.size, np.bool_)
+    ...         input_mask[src_idx] = True
+    ...         feat = self.graph.node_features(
+    ...             nodes, np.array([[0, 1433]], dtype=np.int32), np.float32
+    ...         )
+    ...         label = self.graph.node_features(
+    ...             nodes, np.array([[1, 1]], dtype=np.int32), np.float32
+    ...         ).astype(np.int32)
+    ...         edges = np.transpose(edges)
+    ...
+    ...         return (nodes, feat, edges, input_mask, label)
 
 Model Forward and Init
 ======================
@@ -110,185 +83,135 @@ In the GAT model, forward pass uses two of our built-in `GATConv layers <https:/
 
 .. code-block:: python
 
-	>>> class GAT(BaseModel):
-	...     def __init__(
-	...         self,
-	...         in_dim: int,
-	...         head_num: List = [8, 1],
-	...         hidden_dim: int = 8,
-	...         num_classes: int = -1,
-	...         ffd_drop: float = 0.0,
-	...         attn_drop: float = 0.0,
-	...         q_param: GATQueryParameter = None,
-	...     ):
-	...         self.q = GATQuery(q_param)
-	...         super().__init__(np.float32, 0, 0, None)
-	...         self.num_classes = num_classes
-	...
-	...         self.out_dim = num_classes
-	...
-	...         self.input_layer = GATConv(
-	...             in_dim=in_dim,
-	...             attn_heads=head_num[0],
-	...             out_dim=hidden_dim,
-	...             act=F.elu,
-	...             in_drop=ffd_drop,
-	...             coef_drop=attn_drop,
-	...             attn_aggregate="concat",
-	...         )
-	...         layer0_output_dim = head_num[0] * hidden_dim
-	...         assert len(head_num) == 2
-	...         self.out_layer = GATConv(
-	...             in_dim=layer0_output_dim,
-	...             attn_heads=head_num[1],
-	...             out_dim=self.out_dim,
-	...             act=None,
-	...             in_drop=ffd_drop,
-	...             coef_drop=attn_drop,
-	...             attn_aggregate="average",
-	...         )
-	...
-	...         self.metric = Accuracy()
-	...
-	...     def forward(self, inputs):
-	...         nodes, feat, mask, labels, edges, edges_value, adj_shape = inputs
-	...         nodes = torch.squeeze(nodes)                # [N], N: num of nodes in subgraph
-	...         feat = torch.squeeze(feat)                  # [N, F]
-	...         mask = torch.squeeze(mask)                  # [N]
-	...         labels = torch.squeeze(labels)              # [N]
-	...         edges = torch.squeeze(edges)                # [X, 2], X: num of edges in subgraph
-	...         edges_value = torch.squeeze(edges_value)    # [X]
-	...         adj_shape = torch.squeeze(adj_shape)        # [2]
-	...
-	...         sp_adj = torch.sparse_coo_tensor(edges, edges_value, adj_shape.tolist())
-	...         h_1 = self.input_layer(feat, sp_adj)
-	...         scores = self.out_layer(h_1, sp_adj)
-	...
-	...         labels = labels.type(torch.int64)
-	...         labels = labels[mask]  # [batch_size]
-	...         scores = scores[mask]  # [batch_size]
-	...         pred = scores.argmax(dim=1)
-	...         loss = self.xent(scores, labels)
-	...         return loss, pred, labels
+    >>> import torch.nn as nn
+    >>> import torch.nn.functional as F
+    >>> import torch
+    >>> from torch_geometric.nn import GATConv
+    >>> class GAT(nn.Module):
+    ...    """GAT model."""
+    ...
+    ...    def __init__(
+    ...        self,
+    ...        in_dim: int,
+    ...        head_num: list = [8, 1],
+    ...        hidden_dim: int = 8,
+    ...        num_classes: int = -1,
+    ...    ):
+    ...        """Initialize model."""
+    ...        super(GAT, self).__init__()
+    ...        self.num_classes = num_classes
+    ...        self.out_dim = num_classes
+    ...        self.xent = nn.CrossEntropyLoss()
+    ...        self.conv1 = GATConv(
+    ...            in_channels=in_dim,
+    ...            out_channels=hidden_dim,
+    ...            heads=head_num[0],
+    ...            dropout=0.6,
+    ...        )
+    ...        layer0_output_dim = head_num[0] * hidden_dim
+    ...        self.conv2 = GATConv(
+    ...            in_channels=layer0_output_dim,
+    ...            out_channels=self.out_dim,
+    ...            heads=1,
+    ...            dropout=0.6,
+    ...            concat=False,
+    ...        )
+    ...
+    ...    def forward(self, inputs: tuple):
+    ...        """Calculate loss, make predictions and fetch labels."""
+    ...        nodes, feat, edge_index, mask, label = inputs
+    ...        nodes = torch.squeeze(nodes.to(torch.int32))  # [N]
+    ...        feat = torch.squeeze(feat.to(torch.float32))  # [N, F]
+    ...        edge_index = torch.squeeze(edge_index.to(torch.int32))  # [2, X]
+    ...        mask = torch.squeeze(mask.to(torch.bool))  # [N]
+    ...        labels = torch.squeeze(label.to(torch.int64))  # [N]
+    ...
+    ...        x = feat
+    ...        x = F.dropout(x, p=0.6, training=self.training)
+    ...        x = F.elu(self.conv1(x, edge_index))
+    ...        x = F.dropout(x, p=0.6, training=self.training)
+    ...        scores = self.conv2(x, edge_index)
+    ...        labels = labels[mask]  # [batch_size]
+    ...        scores = scores[mask]  # [batch_size]
+    ...        pred = scores.argmax(dim=1)
+    ...        loss = self.xent(scores, labels)
+    ...
+    ...        return loss, pred, labels
 
 Model Init
 ==========
-We need to implement `create_model` and `create_optimizer` functions to allow distributed workers initialize model and optimizer.
+We can now create model
 
 .. code-block:: python
 
-	>>> def create_model(args: argparse.Namespace):
-	...     if args.seed:
-	...         set_seed(args.seed)
-	...
-	...     p = GATQueryParameter(
-	...         neighbor_edge_types=np.array([args.neighbor_edge_types], np.int32),
-	...         feature_idx=args.feature_idx,
-	...         feature_dim=args.feature_dim,
-	...         label_idx=args.label_idx,
-	...         label_dim=args.label_dim,
-	...     )
-	...
-	...     return GAT(
-	...         in_dim=args.feature_dim,
-	...         head_num=args.head_num,
-	...         hidden_dim=args.hidden_dim,
-	...         num_classes=args.num_classes,
-	...         ffd_drop=args.ffd_drop,
-	...         attn_drop=args.attn_drop,
-	...         q_param=p,
-	...     )
-	>>> def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):
-	...     return torch.optim.Adam(
-	...         filter(lambda p: p.requires_grad, model.parameters()),
-	...         lr=args.learning_rate * world_size,
-	...         weight_decay=0.0005,
-	...     )
+    >>> model = GAT(
+    ...     in_dim=1433,
+    ...     head_num=[8, 1],
+    ...     hidden_dim=8,
+    ...     num_classes=7, # TODO: extract from cora
+    ... )
+
+    >>> optimizer = torch.optim.Adam(
+    ...    filter(lambda p: p.requires_grad, model.parameters()),
+    ...    lr=0.005,
+    ...    weight_decay=0.0005,
+    ... )
 
 Dataset
 =======
-`create_dataset` function allows parameterization torch of the training data used by workers.
-Notably we use the `FileNodeSampler` here which loads `sample_files` and generates samples from them, otherwise in our `link prediction example <link_pred.html>`_ we use `GEEdgeSampler` which uses the backend to generate samples.
+We can now create graph and training dataset.
 
 .. code-block:: python
 
-	>>> def create_dataset(
-	...     args: argparse.Namespace,
-	...     model: BaseModel,
-	...     rank: int = 0,
-	...     world_size: int = 1,
-	...     backend: GraphEngineBackend = None,
-	... ):
-	...     return TorchDeepGNNDataset(
-	...         sampler_class=FileNodeSampler,
-	...         backend=backend,
-	...         query_fn=model.q.query_training,
-	...         prefetch_queue_size=2,
-	...         prefetch_worker_size=2,
-	...         sample_files=args.sample_file,
-	...         batch_size=args.batch_size,
-	...         shuffle=True,
-	...         drop_last=True,
-	...         worker_index=rank,
-	...         num_workers=world_size,
-	...     )
+	>>> import os.path as osp
+    >>> train_np = np.loadtxt(osp.join(graph.data_dir(), "test.nodes"), dtype=np.int64)
+    >>> train_dataloader = DataLoader(GATDataset(train_np, graph, len(train_np)))
 
-Arguments
+
+Cora comes with predetermined set of test nodes. We'll use it for evaluation dataset.
+
+.. code-block:: python
+
+    >>> eval_batch = np.loadtxt(osp.join(graph.data_dir(), "test.nodes"), dtype=np.int64)
+    >>> eval_dataloader = DataLoader(GATDataset(eval_batch, graph, len(eval_batch)))
+
+Training
 =========
-`init_args` registers any model specific arguments.
+Everything is ready to start training. We can get good results from training over 500 epochs. One epoch in this example is iteration through entire training dataset of 140 nodes.
 
 .. code-block:: python
 
-	>>> def init_args(parser):
-	...     parser.add_argument("--head_num", type=str2list_int, default="8,1", help="the number of attention headers.")
-	...     parser.add_argument("--hidden_dim", type=int, default=8, help="hidden layer dimension.")
-	...     parser.add_argument("--num_classes", type=int, default=-1, help="number of classes for category")
-	...     parser.add_argument("--ffd_drop", type=float, default=0.0, help="feature dropout rate.")
-	...     parser.add_argument("--attn_drop", type=float, default=0.0, help="attention layer dropout rate.")
-	...     parser.add_argument("--l2_coef", type=float, default=0.0005, help="l2 loss")
-	...     parser.add_argument("--neighbor_edge_types", type=str2list_int, default="0", help="Graph Edge for attention encoder.",)
-	...     parser.add_argument("--eval_file", default="", type=str, help="")
+    >>> model.train()
+    GAT(
+      (xent): CrossEntropyLoss()
+      (conv1): GATConv(1433, 8, heads=8)
+      (conv2): GATConv(64, 7, heads=1)
+    )
+    >>> for _ in range(100):
+    ...    for batch in train_dataloader:
+    ...        loss, _, _ = model(batch)
+    ...        optimizer.zero_grad()
+    ...        loss.backward()
+    ...        optimizer.step()
 
-NOTE Below code block is for jupyter notebooks only.
+Evaluaion
+=========
 
-.. code-block:: python
-
-	>>> MODEL_DIR = f"~/tmp/gat_{np.random.randint(9999999)}"
-	>>> arg_list = [
-	...     "--data_dir", "/tmp/cora",
-	...     "--mode", "train",
-	...     "--trainer", "base",
-	...     "--backend", "snark",
-	...     "--graph_type", "local",
-	...     "--converter", "skip",
-	...     "--sample_file", "/tmp/cora/train.nodes",
-	...     "--node_type", "0",
-	...     "--feature_idx", "0",
-	...     "--feature_dim", "1433",
-	...     "--label_idx", "1",
-	...     "--label_dim", "1",
-	...     "--num_classes", "7",
-	...     "--batch_size", "140",
-	...     "--learning_rate", ".005",
-	...     "--num_epochs", "20",
-	...     "--log_by_steps", "10",
-	...     "--use_per_step_metrics",
-	...     "--data_parallel_num", "0",
-	...     "--model_dir", MODEL_DIR,
-	...     "--metric_dir", MODEL_DIR,
-	...     "--save_path", MODEL_DIR,
-	... ]
-
-Train
-=====
-Finally we can train the model with `run_dist` function. We expect the loss to decrease with every epoch:
+We'll use accuracy metric to evaluate performance of our model.
 
 .. code-block:: python
 
-	>>> run_dist(
-	...     init_model_fn=create_model,
-	...     init_dataset_fn=create_dataset,
-	...     init_optimizer_fn=create_optimizer,
-	...     init_args_fn=init_args,
-	...		run_args=arg_list,
-	... )
+    >>> from sklearn.metrics import accuracy_score
+    >>> model.eval()
+    GAT(
+      (xent): CrossEntropyLoss()
+      (conv1): GATConv(1433, 8, heads=8)
+      (conv2): GATConv(64, 7, heads=1)
+    )
+    >>> eval_tensor = next(iter(eval_dataloader))
+    >>> _, score, label = model(eval_tensor)
+    >>> accuracy = torch.tensor(
+    ...     accuracy_score(y_true=label.cpu(), y_pred=score.detach().cpu().numpy())
+    ... )
+    >>> accuracy.item()
+    0.8...

@@ -1,347 +1,403 @@
-****************************
-Custom Link Prediction Model
-****************************
+*******************************
+GraphSage Link Prediction Model
+*******************************
 
-In this guide we build a Link Prediction model to predict whether there is a link between any two nodes of the `caveman dataset <https://networkx.org/documentation/stable/reference/generated/networkx.generators.community.connected_caveman_graph.html?highlight=connected_caveman_graph#networkx.generators.community.connected_caveman_graph>`_.
+We'll take you step-by-step through the process of creating a link prediction model using GraphSage.
+This model will be trained on the `Collaborative Filtering (Collab) dataset <https://ogb.stanford.edu/docs/linkprop/#ogbl-collab>`_,
+which is provided by Stanford's OGB. For a broader understanding of the entire DeepGNN training pipeline, feel free to consult the `overview guide <quickstart.html>`_.
 
-If you are interested in the high level DeepGNN training flow, see the `overiew guide <quickstart.html>`_. This guide focuses on building a custom model.
 
+Downloading the dataset
+=======================
 
-Generate Dataset
-================
+Before diving into the model, we need to download the datasetthat will serve as the foundation for training and evaluation. For this guide,
+we've chosen the Collab dataset for its suitability for link prediction tasks. The following code fetches the dataset from a designated URL
+and unzips its content to a temporary directory.
 
-A caveman graph consists of M clusters each with N nodes, each cluster has a single edge randomly rewired to another group.
-
-We generate this dataset with networkx, save it to json format and use snark to convert it to a binary format that the graph engine can read. See the full caveman dataset implementation details, `here <../graph_engine/from_networkx.html>`_.
 
 .. code-block:: python
 
-	>>> import networkx as nx
-	>>> import random
-	>>> random.seed(0)
-	>>> num_clusters = 30
-	>>> num_nodes_in_cluster = 12
-	>>> g = nx.connected_caveman_graph(num_clusters, num_nodes_in_cluster)
-	>>> test_ratio = 0.2 # Ratio of edges in a test dataset
-	>>> edge_list = list(nx.edges(g))
-	>>> random.shuffle(edge_list)
-	>>> test_cutoff = int(test_ratio * len(edge_list))
-	>>> test_dataset = set(edge_list[:test_cutoff])
-	>>> train_dataset = set(edge_list[test_cutoff:])
-	>>> import os
-	>>> working_dir = "/tmp/caveman"
-	>>> try:
-	...     os.mkdir(working_dir)
-	... except FileExistsError:
-	...     pass
+	>>> import io
+	>>> import requests
+	>>> import os.path as osp
+	>>> import tempfile
+	>>> import zipfile
+	>>> url = "https://deepgraphpub.blob.core.windows.net/public/testdata/collab.zip"
+	>>> response = requests.get(url)
+	>>> temp_dir = tempfile.mkdtemp()
+	>>> zip_file_like = io.BytesIO(response.content)
+	>>> with zipfile.ZipFile(zip_file_like) as zip_ref:
+	... 	zip_ref.extractall(temp_dir)
+
+The dataset must be adapted into a format that allows for convenient data manipulation and model training. To do this, we'll convert it to
+`ogb.LinkPropPredDataset`, enabling us to isolate edge data and establish train/validation/test splits.
+
+.. code-block:: python
+
+	>>> meta_dict = {
+	...     'dir_path': osp.join(temp_dir, "collab"),
+	...     'eval metric':'hits@50',
+	...     'task type':'link prediction',
+	...     'download_name':'collab',
+	...     'version':'1',
+	...     'url': url,
+	...     'add_inverse_edge':'True',
+	...     'has_node_attr':'True',
+	...     'has_edge_attr':'False',
+	...     'split':'time',
+	...     'additional node files':'None',
+	...     'additional edge files':'edge_weight,edge_year',
+	...     'is hetero':'False',
+	...     'binary':'False',
+	... }
+	>>> from ogb.linkproppred import LinkPropPredDataset
+	>>> dataset = LinkPropPredDataset(name = 'ogbl-collab', meta_dict=meta_dict)
+	Loading necessary files...
+
+Now we can create a binary graph data for DeepGNN to sample neighbors effectively.
+We need to sort the edges by source node, then by edge year and finally by destination node before feeding to a binary writer.
+
+.. code-block:: python
+
+	>>> import numpy as np
+	>>> edges = np.stack([dataset.graph['edge_index'][0], dataset.graph['edge_index'][1], dataset.graph['edge_year'][:,0], dataset.graph['edge_weight'][:,0]], axis=1)
+	>>> sorted_indices = np.lexsort((edges[:, 1], edges[:, 2], edges[:, 0]))
+	>>> edges = edges[sorted_indices]
+	>>> def edge_iterator(edge_arr: np.array, node_features: np.array):
+	...    curr_src = -1 # mark a new source node in the edge list to record node features
+	...    for row in edge_arr:
+	...        node_id = row[0]
+	...        if node_id != curr_src:
+	...            yield node_id, -1, 0, 1.0, -1, -1, [node_features[node_id]]
+	...            curr_src = node_id
+	...        edge_type = 0
+	...        if row[2] == 2018:
+	...            edge_type = 1
+	...        elif row[2] == 2019:
+	...            edge_type = 2
+	...        yield row[0], row[1], edge_type, float(row[3]), -1, -1, []
+
+After preprocessing the dataset, we'll save it in a binary format to facilitate efficient graph operations. The data is stored in a subfolder named `deepgnn`.
+
+.. code-block:: python
+
 	>>> import json
-	>>> nodes = []
-	>>> data = ""
-	>>> for node_id in g:
-	...     cluster_id = float(node_id // num_nodes_in_cluster)
-	...     train_list = []
-	...     test_list = []
-	...     for neighbor_id in nx.neighbors(g, node_id):
-	...         if (node_id, neighbor_id) in train_dataset:
-	...             train_list.append(neighbor_id)
-	...         else:
-	...             test_list.append(neighbor_id)
-	...     node = {
-	...         "node_weight": 1,
-	...         "node_id": node_id,
-	...         "node_type": 0,
-	...         "uint64_feature": None,
-	...         "float_feature": {
-	...             "0": [float(cluster_id)/num_clusters],
-	...         },
-	...         "binary_feature": None,
-	...         "edge": [
-	...             {
-	...                 "src_id": node_id,
-	...                 "dst_id": neighbor_id,
-	...                 "edge_type": 0,
-	...                 "weight": 1.0,
-	...             }
-	...             for neighbor_id in train_list
-	...         ] + [
-	...             {
-	...                 "src_id": node_id,
-	...                 "dst_id": neighbor_id,
-	...                 "edge_type": 1,
-	...                 "weight": 1.0,
-	...             }
-	...             for neighbor_id in test_list
-	...         ],
-	...         "neighbor": {
-	...             "0": dict([(str(neighbor_id), 1.0) for neighbor_id in train_list]),
-	...             "1": dict([(str(neighbor_id), 1.0) for neighbor_id in test_list])
-	...         },
-	...     }
-	...     data += json.dumps(node) + "\n"
-	...     nodes.append(node)
-	>>> data_filename = working_dir + "/data.json"
-	>>> with open(data_filename, "w+") as f:
-	...     f.write(data)
-	357456
+	>>> import os
+	>>> from deepgnn.graph_engine.snark.converter.writers import BinaryWriter
+	>>> from deepgnn.graph_engine.snark.meta import BINARY_DATA_VERSION
 
-	>>> import deepgnn.graph_engine.snark.convert as convert
-	>>> from deepgnn.graph_engine.snark.decoders import JsonDecoder
-	>>> partitions = 1
-	>>> convert.MultiWorkersConverter(
-	...     graph_path=data_filename,
-	...     partition_count=partitions,
-	...     output_dir=working_dir,
-	...     decoder=JsonDecoder,
-	... ).convert()
+	>>> binary_data = tempfile.mkdtemp()
+	>>> writer = BinaryWriter(binary_data, suffix=0, watermark=-1)
+	>>> writer.add(edge_iterator(edges, dataset.graph['node_feat']))
+	>>> writer.close()
 
+	>>> mjson = {
+	...     "binary_data_version": BINARY_DATA_VERSION,
+	...     "node_count": writer.node_count,
+	...     "edge_count": writer.edge_count,
+	...     "node_type_count": 1,
+	...     "edge_type_count": 1,
+	...     "node_feature_count": 1,
+	...     "edge_feature_count": 0,
+	...     "partitions": {
+	...         "0": {
+	...             "node_weight": [writer.node_count],
+	...             "edge_weight": [writer.edge_count],
+	...         }
+	...     },
+	...     "node_count_per_type": [writer.node_count],
+	...     "edge_count_per_type": [writer.edge_count],
+	...     "watermark": -1,
+	... }
+	>>> with open(osp.join(binary_data, "meta.json"), "w") as file:
+	...     file.write(json.dumps(mjson))
+	326
+
+The final step involves querying specific node features to verify that it's ready for model training.
+
+.. code-block:: python
+
+	>>> from deepgnn.graph_engine.snark.local import Client
+	>>> client = Client(binary_data, [0])
+	>>> client.node_features(np.array([49077], dtype=np.int64), np.array([[0,4]], dtype=np.int32), np.float32)
+	array([[-0.08541 ,  0.010725, -0.319365,  0.008517]], dtype=float32)
+	>>> import shutil
+	>>> shutil.rmtree(osp.join(temp_dir, "collab", "raw"))
 
 Build Link Prediction Model
 ===========================
 
-Our goal is to create a model capable of predicting whether an edge exists between any two nodes based on their own and their neighbor's feature vectors.
+The primary objective is to design and implement a link prediction model. The model aims to estimate the probability of an edge (or link) existing between
+any two nodes in a graph. For feature representation, we utilize node embeddings, generated through Graph Neural Networks (GNN), specifically, a GraphSAGE model.
+The LinkPredictor class is a torch module that accepts embeddings from two nodes and predicts whether a link should exist between them. It consists of multiple
+fully connected linear layers, ReLU activations, and dropout for regularization.
+
 
 .. code-block:: python
 
-	>>> from dataclasses import dataclass
-	>>> import argparse
-	>>> import numpy as np
 	>>> import torch
-	>>> from deepgnn.pytorch.modeling.base_model import BaseModel
-	>>> from deepgnn.graph_engine import SamplingStrategy, GEEdgeSampler, GraphEngineBackend
-	>>> from deepgnn.pytorch.common.utils import set_seed
-	>>> from deepgnn.pytorch.common.dataset import TorchDeepGNNDataset
-	>>> from deepgnn.pytorch.modeling import BaseModel
-	>>> from deepgnn.pytorch.training import run_dist
-	>>> from deepgnn.pytorch.common.metrics import F1Score
+	>>> import torch.nn.functional as F
+	>>> from torch_geometric.nn import GraphSAGE
+	>>> class LinkPredictor(torch.nn.Module):
+	...    def __init__(self, in_channels, hidden_channels, out_channels, num_layers,
+	...                 dropout):
+	...        super(LinkPredictor, self).__init__()
+	...
+	...        self.lins = torch.nn.ModuleList([(torch.nn.Linear(in_channels, hidden_channels))])
+	...        for _ in range(num_layers - 2):
+	...            self.lins.append(torch.nn.Linear(hidden_channels, hidden_channels))
+	...        self.lins.append(torch.nn.Linear(hidden_channels, out_channels))
+	...        self.dropout = dropout
+	...
+	...    def reset_parameters(self):
+	...        for lin in self.lins:
+	...            lin.reset_parameters()
+	...
+	...    def forward(self, x_i, x_j):
+	...        x = x_i * x_j
+	...        for lin in self.lins[:-1]:
+	...            x = lin(x)
+	...            x = F.relu(x)
+	...            x = F.dropout(x, p=self.dropout, training=self.training)
+	...        x = self.lins[-1](x)
+	...        return torch.sigmoid(x)
 
-Query is the interface between the model and graph database. It uses the graph engine API to perform graph functions like `node_features` and `sample_neighbors`, for a full reference on this interface see, `this guide <../graph_engine/overview>`_. Typically Query is initialized by the model as `self.q` so its functions may also be used ad-hoc by the model.
-
-In this example, the query function will generate a set of positive and negative samples that represent real and fake links respectively. Positive samples are real edges taken directly from the sampler while negative samples have the same source nodes as those sampled combined with random destination nodes. For both sets of samples, query will take their set of source and destination nodes and indivudally grab their features, then fetch and aggregate their neighbor's features, therefore rendering four outputs for each set of samples: source node features, destination node features, aggregated source node neighbor features and aggregated destination node neighbor features. This return value contains all graph information needed by the forward function for a single batch.
+We employ the GraphSAGE algorithm from the PyTorch Geometric(PyG) library to create node embeddings.
 
 .. code-block:: python
 
-	>>> @dataclass
-	... class LinkPredictionQueryParameter:
-	...     neighbor_edge_types: np.array
-	...     feature_idx: int
-	...     feature_dim: int
-	...     label_idx: int
-	...     label_dim: int
-	...     feature_type: np.dtype = np.float32
-	...     label_type: np.dtype = np.float32
+	>>> config = {
+	...     "feature_dim": 128,
+	...     "hidden_channels": 256,
+	...     "num_epochs": 2,
+	...     "fanout": [5, 5],
+	...     "batch_size": 64*1024,
+	...     "num_nodes": writer.node_count,
+	... }
 
-	>>> class LinkPredictionQuery:
-	...     def __init__(self, p: LinkPredictionQueryParameter):
-	...         self.p = p
-	...         self.label_meta = np.array([[p.label_idx, p.label_dim]], np.int32)
-	...         self.feat_meta = np.array([[p.feature_idx, p.feature_dim]], np.int32)
-	...
-	...     def _query(self, g, nodes, edge_types):
-	...         # Sample neighbors for every input node
-	...         try:
-	...             nodes = nodes.detach().numpy()
-	...         except Exception:
-	...             pass
-	...         nbs = g.sample_neighbors(
-	...             nodes=nodes.astype(dtype=np.int64),
-	...             edge_types=edge_types)[0]
-	...
-	...         # Extract features for all neighbors
-	...         nbs_features = g.node_features(
-	...             nodes=nbs.reshape(-1),
-	...             features=self.feat_meta,
-	...             feature_type=self.p.feature_type)
-	...
-	...         # reshape the feature tensor to [nodes, neighbors, features]
-	...         # and aggregate along neighbors dimension.
-	...         nbs_agg = nbs_features.reshape(list(nbs.shape)+[self.p.feature_dim]).mean(1)
-	...         node_features = g.node_features(
-	...             nodes=nodes.astype(dtype=np.int64),
-	...             features=self.feat_meta,
-	...             feature_type=self.p.feature_type,
-	...         )
-	...         return node_features, nbs_agg
-	...
-	...     def query_training(self, ge, edges, edge_types = np.array([0], dtype=np.int32)):
-	...         edges = torch.Tensor(edges[:, :2]).long()
-	...         src, src_nbs = self._query(ge, edges[:, 0], edge_types)
-	...         dst, dst_nbs = self._query(ge, edges[:, 1], edge_types)
-	...         context = [edges, src, src_nbs, dst, dst_nbs]
-	...
-	...         # Prepare negative examples: edges between source nodes and random nodes
-	...         dim = len(edges)
-	...         source_nodes = torch.as_tensor(edges[:, 0], dtype=torch.int64).reshape(1, dim)
-	...         random_nodes = ge.sample_nodes(dim, node_types=0, strategy=SamplingStrategy.Weighted).reshape(1, dim)
-	...         neg_inputs = torch.cat((source_nodes, torch.tensor(random_nodes)), axis=1)
-	...         src, src_nbs = self._query(ge, neg_inputs[:, 0], edge_types)
-	...         dst, dst_nbs = self._query(ge, neg_inputs[:, 1], edge_types)
-	...         context += [edges, src, src_nbs, dst, dst_nbs]
-	...
-	...         return context
-
-
-The model init and forward look the same as any other pytorch model, though instead of inhereting `torch.nn.Module`, we base off of `deepgnn.pytorch.modeling.base_model.BaseModel` which itself is a torch module with DeepGNN's specific interface. The forward function is expected to return three values: the batch loss, the model predictions for the given nodes and the expected labels for the given nodes.
-
-In this example,
-
-* `get_score` estimates the likelihood of a link existing between the nodes given. It accomplishes this by taking the difference between source and destination node features and aggregating these results. The final output is maped to `[0, 1]` interval with a sigmoid function. This function is used by `forward` as a helper function.
-* `forward` scores the connection likelihood for the positive and negative samples given and computes the loss as the sum of binary cross entropies of each sample set. The intuition behind this algorithm is the feature difference for nodes in the same cluster should be `0` while nodes from different clusters should be strictly larger than `0`.
-* `metric` is specified in init and is used to determine the accuracy of the model based on the model predictions and expected labels returned by `forward`. Here we use the F1Score to evaluate the model, which is the simple binary accuracy.
-
-.. code-block:: python
-
-	>>> class LinkPrediction(BaseModel):
-	...     def __init__(self, q_param):
-	...         self.q = LinkPredictionQuery(q_param)
-	...         super().__init__(
-	...             feature_type=q_param.feature_type,
-	...             feature_idx=q_param.feature_idx,
-	...             feature_dim=q_param.feature_dim,
-	...             feature_enc=None
-	...         )
-	...         self.feat_dim = q_param.feature_dim
-	...         self.embed_dim = 16
-	...         self.encode = torch.nn.Parameter(torch.FloatTensor(self.embed_dim, 2 * self.feat_dim))
-	...         self.weight = torch.nn.Parameter(torch.FloatTensor(1, self.embed_dim))
-	...         torch.nn.init.xavier_uniform(self.weight)
-	...         torch.nn.init.xavier_uniform(self.encode)
-	...
-	...         self.metric = F1Score()
-	...
-	...     def get_score(self, context: torch.Tensor, edge_types: np.array):
-	...         edges, src, src_nbs, dst, dst_nbs = context
-	...         src, src_nbs, dst, dst_nbs = [v.detach().numpy() for v in (src, src_nbs, dst, dst_nbs)]
-	...
-	...         diff, diff_nbs = np.fabs(dst-src), np.fabs(dst_nbs-src_nbs)
-	...         final = np.concatenate((diff, diff_nbs), axis=1)
-	...
-	...         embed = self.encode.mm(torch.tensor(final).t())
-	...         score = self.weight.mm(embed)
-	...         return torch.sigmoid(score)
-	...
-	...     def forward(self, context: torch.Tensor, edge_types: np.array = np.array([0], dtype=np.int32)):
-	...         context = [v.squeeze(0) for v in context]
-	...         pos_label = self.get_score(context[:5], edge_types)
-	...         true_xent = torch.nn.functional.binary_cross_entropy(
-	...                 target=torch.ones_like(pos_label), input=pos_label, reduction="mean"
-	...             )
-	...
-	...         neg_label = self.get_score(context[5:], edge_types)
-	...         negative_xent = torch.nn.functional.binary_cross_entropy(
-	...             target=torch.zeros_like(neg_label), input=neg_label, reduction="mean"
-	...         )
-	...
-	...         loss = torch.sum(true_xent) + torch.sum(negative_xent)
-	...
-	...         pred = (torch.cat((pos_label.reshape((-1)), neg_label.reshape((-1)))) >= .5)
-	...         label = torch.cat((torch.ones_like(pos_label, dtype=bool).reshape((-1)), torch.zeros_like(neg_label, dtype=bool).reshape((-1))))
-	...         return loss, pred, label
-
-Now we define the `create_` functions for use with `run_dist`. These functions allow command line arguments to be used in object creation. Each has a simple interface and requires little code changes per different model. The optimizers world_size parameter is the number of workers.
-
-.. code-block:: python
-
-	>>> def create_model(args: argparse.Namespace):
-	...     if args.seed:
-	...         set_seed(args.seed)
-	...
-	...     p = LinkPredictionQueryParameter(
-	...             neighbor_edge_types=np.array([0], np.int32),
-	...             feature_idx=0,
-	...             feature_dim=2,
-	...             label_idx=1,
-	...             label_dim=1,
-	...         )
-	...
-	...     return LinkPrediction(p)
-	>>> def create_optimizer(args: argparse.Namespace, model: BaseModel, world_size: int):
-	...     return torch.optim.Adam(
-	...         filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001
-	...     )
-
-
-Here we define `create_dataset` which allows command line argument parameterization of the dataset iterator.
-
-The rank parameter is the index of the worker, world_size is the total number of workers and the backend is chosen via command line arguments `backend` and `graph_type`. Notably we use the `GEEdgeSampler` which uses the backend to sample edges with types `edge_types`, otherwise in our `node classification example <../quickstart.rst>`_ we use `FileNodeSampler` which loads `sample_files` and generates samples from them.
-
-.. code-block:: python
-
-	>>> def create_dataset(
-	...     args: argparse.Namespace,
-	...     model: BaseModel,
-	...     rank: int = 0,
-	...     world_size: int = 1,
-	...     backend: GraphEngineBackend = None,
-	... ):
-	...     return TorchDeepGNNDataset(
-	...         sampler_class=GEEdgeSampler,
-	...         edge_types=np.array([0]),
-	...         backend=backend,
-	...         query_fn=model.q.query_training,
-	...         prefetch_queue_size=2,
-	...         prefetch_worker_size=2,
-	...         sample_files=args.sample_file,
-	...         batch_size=args.batch_size,
-	...         shuffle=True,
-	...         drop_last=True,
-	...         worker_index=rank,
-	...         num_workers=world_size,
-	...     )
-
-
-Arguments
-=========
-
-`init_args` registers any model specific arguments with `parser` as the argparse parser. In this example we do not need any extra arguments but the commented out code can be used for reference to add integer and list of integer arguments respectively
-
-.. code-block:: python
-
-	>>> from deepgnn import str2list_int
-	>>> def init_args(parser):
-	...     parser.add_argument("--hidden_dim", type=int, default=8, help="hidden layer dimension.")
-	...     parser.add_argument("--head_num", type=str2list_int, default="8,1", help="the number of attention headers.")
-	...     pass
-
-Prepare default command line arguments.
-
-.. code-block:: python
-
-	>>> MODEL_DIR = f"~/tmp/gat_{np.random.randint(9999999)}"
-	>>> arg_list = [
-	...     "--data_dir", "/tmp/caveman",
-	...     "--mode", "train",
-	...     "--trainer", "base",
-	...     "--backend", "snark",
-	...     "--graph_type", "local",
-	...     "--converter", "skip",
-	...     "--node_type", "0",
-	...     "--feature_idx", "0",
-	...     "--feature_dim", "2",
-	...     "--label_idx", "1",
-	...     "--label_dim", "1",
-	...     "--batch_size", "64",
-	...     "--learning_rate", ".001",
-	...     "--num_epochs", "100",
-	...     "--log_by_steps", "16",
-	...     "--data_parallel_num", "0",
-	...     "--use_per_step_metrics",
-	...     "--model_dir", MODEL_DIR,
-	...     "--metric_dir", MODEL_DIR,
-	...     "--save_path", MODEL_DIR,
-	... ]
-
-
-Train
-=====
-
-Finally we train the model to predict whether an edge exists between any two nodes to via run_dist. We expect the loss to decrease with epochs, the number of epochs and learning rate can be adjusted to better achieve this.
-
-.. code-block:: python
-
-	>>> run_dist(
-	...     init_model_fn=create_model,
-	...     init_dataset_fn=create_dataset,
-	...     init_optimizer_fn=create_optimizer,
-	...     init_args_fn=init_args,
-	...     run_args=arg_list,
+	>>> model = GraphSAGE(
+	...     config["feature_dim"],
+	...     hidden_channels=config["hidden_channels"],
+	...     num_layers=2,
 	... )
+	>>> predictor = LinkPredictor(config["hidden_channels"], config["hidden_channels"], 1, num_layers=3, dropout=0)
+	>>> optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+
+Dataset iterator
+================
+
+We need to prepare an iterator over the dataset to provide minibatches of edges and features for training.
+The SageDataset class serves as the iterator, sampling neighbors from the graph and creating an edge index for each edge in a minibatch.
+
+.. code-block:: python
+
+	>>> from torch.utils.data import IterableDataset, DataLoader
+	>>> from deepgnn.graph_engine import Graph
+	>>> class SageDataset(IterableDataset):
+	...     def __init__(
+	...         self,
+	...         batch_size: int,
+	...         fanout: list,
+	...         graph: Graph,
+	...         feature_dim: int,
+	...         num_nodes: int,
+	...         edge_list: np.array,
+	...         generate_negs: bool = True,
+	...     ):
+	...         super(SageDataset, self).__init__()
+	...         self.batch_size = batch_size
+	...         self.num_nodes = num_nodes
+	...         self.graph = graph
+	...         self.fanout = fanout
+	...         self.feature_dim = feature_dim
+	...         self.edge_list = edge_list
+	...         self.num_batches = -(-self.edge_list.shape[0] // batch_size)
+	...         self.generate_negs = generate_negs
+	...
+	...     def __iter__(self):
+	...         return map(self.query, range(self.num_batches))
+	...
+	...     def _make_edge_index(self, seed: np.array):
+	...         fst_hop = self.graph.sample_neighbors(
+	...             seed,
+	...             np.array([0], dtype=np.int32),
+	...             self.fanout[0],
+	...         )
+	...         fst_unique = np.unique(fst_hop[0].ravel())
+	...         snd_hop = self.graph.sample_neighbors(
+	...             fst_unique,
+	...             np.array([0], dtype=np.int32),
+	...             self.fanout[1],
+	...         )
+	...
+	...         # Dedupe second hop edges for faster training.
+	...         snd_edges = np.stack(
+	...             [fst_unique.repeat(self.fanout[1]), snd_hop[0].ravel()], axis=1
+	...         )
+	...         snd_edges = np.unique(snd_edges, axis=0)
+	...         edges = np.concatenate(
+	...             [
+	...                 seed.repeat(self.fanout[0]),
+	...                 snd_edges[:, 0],
+	...                 fst_hop[0].ravel(),
+	...                 snd_edges[:, 1],
+	...             ]
+	...         )
+	...
+	...         # np.unique returns sorted elements, but we need to preserve original order
+	...         # to track labels from the seed array.
+	...         unique_elements, first_occurrences, inverse_indices = np.unique(edges, return_index=True, return_inverse=True)
+	...         reorder_by_first_occurrence = np.argsort(first_occurrences)
+	...         unique_elements = unique_elements[reorder_by_first_occurrence]
+	...         inverse_indices = np.argsort(reorder_by_first_occurrence)[inverse_indices]
+	...
+	...         edge_len = len(edges) // 2
+	...         col = inverse_indices[:edge_len]
+	...         row = inverse_indices[edge_len:]
+	...         return unique_elements, col, row
+	...
+	...     def query(self, batch_index: int) -> tuple:
+	...         start_idx = batch_index * self.batch_size
+	...         end_idx = (batch_index + 1) * self.batch_size
+	...         edges = self.edge_list[start_idx:end_idx, :]
+	...         src = edges[:, 0]
+	...         dst = edges[:, 1]
+	...         num_pos = src.shape[0]
+	...         num_neg = num_pos if self.generate_negs else 0
+	...         neg_edges = np.random.randint(0, self.num_nodes - 1, size=2 * num_neg)
+	...         seed = np.concatenate(
+	...             [src, neg_edges[:num_neg], dst, neg_edges[num_neg:]], axis=0
+	...         )
+	...         edge_label = np.zeros(num_pos + num_neg)
+	...         edge_label[:num_pos] = 1
+	...         seed, inverse_seed = np.unique(seed, return_inverse=True)
+	...         edge_label_index = inverse_seed.reshape((2, -1))
+	...         nodes, cols, rows = self._make_edge_index(seed)
+	...         feats = self.graph.node_features(
+	...             nodes, np.array([[0, self.feature_dim]], dtype=np.int32), np.float32
+	...         )
+	...
+	...         return (feats, cols, rows, edge_label_index, edge_label)
+
+The function train orchestrates a single epoch of training. It iterates through the dataset,
+makes predictions using both GraphSAGE and LinkPredictor, and computes the binary cross-entropy loss.
+
+.. code-block:: python
+
+	>>> def train(model, predictor, optimizer, dataset):
+	...     model.train()
+	...     total_loss = 0
+	...     total_examples = 0
+	...     train_dataloader = DataLoader(dataset)
+	...     for batch in train_dataloader:
+	...         node_features, cols, rows, edge_label_index, edge_label = (
+	...             batch[0][0],
+	...             batch[2][0],
+	...             batch[1][0],
+	...             batch[3][0],
+	...             batch[4][0],
+	...         )
+	...         edge_index = torch.stack([cols, rows], dim=0)
+	...         optimizer.zero_grad()
+	...         h = model(node_features, edge_index)
+	...         h_src = h[edge_label_index[0]]
+	...         h_dst = h[edge_label_index[1]]
+	...         pred = predictor(h_src, h_dst)
+	...         loss = F.binary_cross_entropy_with_logits(pred.squeeze(), edge_label)
+	...         loss.backward()
+	...
+	...         optimizer.step()
+	...         num_examples = pred.size(0)
+	...         total_examples += num_examples
+	...         total_loss += float(loss) * num_examples
+	...
+	...     return total_loss / total_examples
+
+Finally, we initiate the training process. The code iterates through multiple epochs, utilizing all the aforementioned
+components, and prints out the loss for each epoch.
+
+.. code-block:: python
+
+	>>> for epoch in range(config["num_epochs"]):
+	...     loss = train(
+	...         model,
+	...         predictor,
+	...         optimizer,
+	...         SageDataset(
+	...             batch_size=config["batch_size"],
+	...             fanout=config["fanout"],
+	...             graph=client,
+	...             feature_dim=config["feature_dim"],
+	...             num_nodes=config["num_nodes"],
+	...             edge_list=dataset.get_edge_split()['train']['edge'],
+	...         ),
+	...     )
+	...     print(f"Epoch: {epoch:03d}, Loss: {loss:.4f}")
+	Epoch: 000, Loss: 0...
+
+
+Model Evaluation
+================
+
+Evaluating the performance of our link prediction model is the final step to understand its efficacy and reliability.
+We'll be utilizing the OGB dataset for this purpose, specifically focusing on various edge splits to assess how well does
+the model generalize to unseen data. We'll use the Evaluator class from OGB to compute the Hits@K score, a popular metric for link prediction tasks.
+We calculate this score for multiple values of K, such as 10, 50, and 100. The Hits@K score indicates how often
+the actual links appear within the top K ranked links predicted by the model.
+
+.. code-block:: python
+
+	>>> def create_eval_dataset(edges, config):
+	...     return SageDataset(
+	...         batch_size=config["batch_size"],
+	...         fanout=config["fanout"],
+	...         graph=client,
+	...         feature_dim=config["feature_dim"],
+	...         num_nodes=config["num_nodes"],
+	...         edge_list=edges,
+	...         generate_negs=False
+	...     )
+
+	>>> def evaluate_on_batch(model, predictor, batch):
+	...    node_features, cols, rows, edge_label_index, _ = (batch[0][0], batch[2][0], batch[1][0], batch[3][0], batch[4][0])
+	...    edge_index = torch.stack([cols, rows], dim=0)
+	...    h = model(node_features, edge_index)
+	...    return predictor(h[edge_label_index[0]], h[edge_label_index[1]]).squeeze().cpu()
+
+	>>> def test(model, predictor, split_edge, evaluator, config):
+	...    model.eval()
+	...    predictor.eval()
+	...
+	...    edge_keys = ['train', 'valid', 'valid', 'test', 'test']
+	...    edge_sub_keys = ['edge', 'edge', 'edge_neg', 'edge', 'edge_neg']
+	...
+	...    edge_preds = [[] for _ in range(5)]
+	...
+	...    for i, (key, sub_key) in enumerate(zip(edge_keys, edge_sub_keys)):
+	...        edge_list = split_edge[key][sub_key]
+	...        dataset = create_eval_dataset(edge_list, config)
+	...
+	...        for batch in DataLoader(dataset):
+	...            edge_preds[i].append(evaluate_on_batch(model, predictor, batch))
+	...
+	...        edge_preds[i] = torch.cat(edge_preds[i], dim=0)
+	...
+	...    results = {}
+	...    for K in [10, 50, 100]:
+	...        evaluator.K = K
+	...        results[f'Hits@{K}'] = (
+	...            evaluator.eval({'y_pred_pos': edge_preds[0], 'y_pred_neg': edge_preds[2]})[f'hits@{K}'],
+	...            evaluator.eval({'y_pred_pos': edge_preds[1], 'y_pred_neg': edge_preds[2]})[f'hits@{K}'],
+	...            evaluator.eval({'y_pred_pos': edge_preds[3], 'y_pred_neg': edge_preds[4]})[f'hits@{K}']
+	...        )
+	...
+	...    return results
+
+We can now evaluate our model on the test splits with ogb's evaluator.
+
+.. code-block:: python
+
+	>>> from ogb.linkproppred import Evaluator
+	>>> evaluator = Evaluator(name='ogbl-collab',)
+	>>> test(model, predictor, dataset.get_edge_split(), evaluator, config)
+	{'Hits@10'...

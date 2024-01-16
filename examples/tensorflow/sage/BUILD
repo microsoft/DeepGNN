@@ -22,6 +22,8 @@ py_library(
         "//src/python/deepgnn/tf/common:deepgnn_tf_common",
         "//src/python/deepgnn/tf/nn:deepgnn_tf_nn",
     ],
+    tags = ["manual"],
+    deprecation = "This target is deprecated",
 )
 
 py_test(
@@ -46,6 +48,8 @@ py_test(
         requirement("azure-datalake-store"),
         requirement("tenacity"),
     ],
+    tags = ["manual"],
+    deprecation = "This test is deprecated",
 )
 
 
@@ -71,4 +75,6 @@ py_test(
         requirement("azure-datalake-store"),
         requirement("tenacity"),
     ],
+    tags = ["manual"],
+    deprecation = "This test is deprecated",
 )
