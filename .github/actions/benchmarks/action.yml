@@ -4,8 +4,12 @@ runs:
   using: "composite"
   steps:
     - run: |
-        bazel run -c opt src/cc/lib/benchmark:grpc_benchmark --config=linux --remote_cache=http://localhost:8080
-        bazel run -c opt src/cc/lib/benchmark:sampler_benchmark --config=linux --remote_cache=http://localhost:8080
-        bazel run -c opt src/cc/lib/benchmark:neighbor_sampler_benchmark --config=linux --remote_cache=http://localhost:8080
+        if [ ping -c 1 ${{ inputs.cache_address }} &> /dev/null ] && [ $(curl ${{ inputs.cache_address }}/status | python -c "import sys, json; print(json.load(sys.stdin)['NumFiles'])") -ne 0 ]
+        then
+          echo "REMOTE_CACHE=--remote_cache=${{ inputs.cache_address }}" >> $GITHUB_ENV
+        fi
+        bazel run -c opt src/cc/lib/benchmark:grpc_benchmark --config=linux ${{ env.REMOTE_CACHE }}
+        bazel run -c opt src/cc/lib/benchmark:sampler_benchmark --config=linux ${{ env.REMOTE_CACHE }}
+        bazel run -c opt src/cc/lib/benchmark:neighbor_sampler_benchmark --config=linux ${{ env.REMOTE_CACHE }}
       shell: bash
       if: runner.os == 'Linux'

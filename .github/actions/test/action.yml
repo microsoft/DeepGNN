@@ -6,7 +6,11 @@ runs:
     - run: echo "BAZEL_CONFIG=linux" >> $GITHUB_ENV
       shell: bash
       if: runner.os == 'Linux'
-    - run: echo "REMOTE_CACHE=--remote_cache=http://localhost:8080" >> $GITHUB_ENV
+    - run: |
+        if [ ping -c 1 ${{ inputs.cache_address }} &> /dev/null ] && [ $(curl ${{ inputs.cache_address }}/status | python -c "import sys, json; print(json.load(sys.stdin)['NumFiles'])") -ne 0 ]
+        then
+          echo "REMOTE_CACHE=--remote_cache=${{ inputs.cache_address }}" >> $GITHUB_ENV
+        fi
       shell: bash
       if: runner.os == 'Linux'
     - run: echo "BAZEL_CONFIG=windows" >> $GITHUB_ENV
@@ -20,7 +24,7 @@ runs:
       shell: bash
       name: run cpp tests
     - run: |
-        bazel test -c dbg //src/python/deepgnn/...:* --jobs 1 --test_output=all --test_timeout 600 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }}  --verbose_failures
+        bazel test -c dbg //src/python/deepgnn/...:* --jobs 1 --test_output=all --test_timeout 600 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }} --verbose_failures
         bazel clean
       shell: bash
       name: run python tests

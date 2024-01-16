@@ -160,9 +160,9 @@ http_archive(
 http_archive(
     name = "hadoop",
     build_file = "//config:hadoop.BUILD",
-    sha256 = "ad770ae3293c8141cc074df4b623e40d79782d952507f511ef0a6b0fa3097bac",
-    strip_prefix = "hadoop-3.3.1",
-    urls = ["https://dlcdn.apache.org/hadoop/common/hadoop-3.3.1/hadoop-3.3.1.tar.gz"],
+    sha256 = "f5195059c0d4102adaa7fff17f7b2a85df906bcb6e19948716319f9978641a04",
+    strip_prefix = "hadoop-3.3.6",
+    urls = ["https://dlcdn.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz"],
 )
 
 http_archive(
