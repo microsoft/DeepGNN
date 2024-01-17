@@ -1,5 +1,10 @@
 name: "Benchmarks"
 description: "Run benchmarks"
+inputs:
+  cache_address:
+    description: 'Address of bazel remote cache.'
+    required: true
+    default: http://localhost:8080
 runs:
   using: "composite"
   steps:
