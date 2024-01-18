@@ -5,6 +5,10 @@ inputs:
     description: 'Package version'
     required: true
     default: '0.1.1'
+  cache_address:
+    description: 'Address of bazel remote cache.'
+    required: true
+    default: localhost:8080
 runs:
   using: "composite"
   steps:
