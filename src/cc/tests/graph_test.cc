@@ -368,30 +368,27 @@ TEST_P(StorageTypeGraphTest, EdgeFeaturesInverseOrder)
     }
     {
         auto filepath = path / "node_0_0.map";
-        auto f = fopen(reinterpret_cast<const char *>(filepath.c_str()), "wb");
+        std::fstream f(path / "node_0_0.map", std::ios_base::binary | std::ios_base::out);
         int64_t node_id = 4;
         int32_t node_type = 0;
         int64_t offset = 0;
-        fwrite(&node_id, sizeof(node_id), 1, f);
-        fwrite(&offset, sizeof(offset), 1, f);
-        fwrite(&node_type, sizeof(node_type), 1, f);
+        f.write(reinterpret_cast<const char *>(&node_id), sizeof(node_id));
+        f.write(reinterpret_cast<const char *>(&offset), sizeof(offset));
+        f.write(reinterpret_cast<const char *>(&node_type), sizeof(node_type));
         node_id = 5;
         offset = 1;
-        fwrite(&node_id, sizeof(node_id), 1, f);
-        fwrite(&offset, sizeof(offset), 1, f);
-        fwrite(&node_type, sizeof(node_type), 1, f);
-        fclose(f);
+        f.write(reinterpret_cast<const char *>(&node_id), sizeof(node_id));
+        f.write(reinterpret_cast<const char *>(&offset), sizeof(offset));
+        f.write(reinterpret_cast<const char *>(&node_type), sizeof(node_type));
     }
     {
-        auto filepath = path / "neighbors_0_0.index";
-        auto f = fopen(reinterpret_cast<const char *>(filepath.c_str()), "wb");
+        std::fstream f(path / "neighbors_0_0.index", std::ios_base::binary | std::ios_base::out);
         int64_t offset = 0;
-        fwrite(&offset, sizeof(offset), 1, f);
+        f.write(reinterpret_cast<const char *>(&offset), sizeof(offset));
         offset = 0; // no edges in the first node. original offset - current offset = 0
-        fwrite(&offset, sizeof(offset), 1, f);
+        f.write(reinterpret_cast<const char *>(&offset), sizeof(offset));
         offset = 3; // 3 edges in the last node.
-        fwrite(&offset, sizeof(offset), 1, f);
-        fclose(f);
+        f.write(reinterpret_cast<const char *>(&offset), sizeof(offset));
     }
     {
         struct EdgeRecord
@@ -401,39 +398,34 @@ TEST_P(StorageTypeGraphTest, EdgeFeaturesInverseOrder)
             int32_t m_type;
             float m_weight;
         };
-        auto filepath = path / "edge_0_0.index";
-        auto f = fopen(reinterpret_cast<const char *>(filepath.c_str()), "wb");
+        std::fstream f(path / "edge_0_0.index", std::ios_base::binary | std::ios_base::out);
         EdgeRecord edge{.m_dst = 4, .m_feature_offset = 0, .m_type = 1, .m_weight = 1.0f};
-        fwrite(&edge, sizeof(edge), 1, f);
+        f.write(reinterpret_cast<const char *>(&edge), sizeof(edge));
         edge = {.m_dst = 2, .m_feature_offset = 2, .m_type = 1, .m_weight = 0.5f};
-        fwrite(&edge, sizeof(edge), 1, f);
+        f.write(reinterpret_cast<const char *>(&edge), sizeof(edge));
         edge = {.m_dst = 3, .m_feature_offset = 3, .m_type = 1, .m_weight = 1.0f};
-        fwrite(&edge, sizeof(edge), 1, f);
+        f.write(reinterpret_cast<const char *>(&edge), sizeof(edge));
         // Finish with stub for feature size calculation
         edge = {.m_dst = -1, .m_feature_offset = 4, .m_type = 1, .m_weight = 1.0f};
-        fwrite(&edge, sizeof(edge), 1, f);
-        fclose(f);
+        f.write(reinterpret_cast<const char *>(&edge), sizeof(edge));
     }
 
     {
-        auto filepath = path / "edge_features_0_0.index";
-        auto f = fopen(reinterpret_cast<const char *>(filepath.c_str()), "wb");
+        std::fstream f(path / "edge_features_0_0.index", std::ios_base::binary | std::ios_base::out);
         int64_t offset = 0;
-        fwrite(&offset, sizeof(offset), 1, f);
+        f.write(reinterpret_cast<const char *>(&offset), sizeof(offset));
         offset = 0; // no edges of type 0
-        fwrite(&offset, sizeof(offset), 1, f);
+        f.write(reinterpret_cast<const char *>(&offset), sizeof(offset));
         offset = 12;
-        fwrite(&offset, sizeof(offset), 1, f);
+        f.write(reinterpret_cast<const char *>(&offset), sizeof(offset));
         offset = 24;
-        fwrite(&offset, sizeof(offset), 1, f);
+        f.write(reinterpret_cast<const char *>(&offset), sizeof(offset));
         offset = 36;
-        fwrite(&offset, sizeof(offset), 1, f);
-        fclose(f);
+        f.write(reinterpret_cast<const char *>(&offset), sizeof(offset));
     }
 
     {
-        auto filepath = path / "edge_features_0_0.data";
-        auto f = fopen(reinterpret_cast<const char *>(filepath.c_str()), "wb");
+        std::fstream f(path / "edge_features_0_0.data", std::ios_base::binary | std::ios_base::out);
         struct Values
         {
             int32_t a;
@@ -441,12 +433,11 @@ TEST_P(StorageTypeGraphTest, EdgeFeaturesInverseOrder)
             int32_t c;
         } vals;
         vals = {8, 9, 10};
-        fwrite(&vals, sizeof(vals), 1, f);
+        f.write(reinterpret_cast<const char *>(&vals), sizeof(vals));
         vals = {5, 6, 7};
-        fwrite(&vals, sizeof(vals), 1, f);
+        f.write(reinterpret_cast<const char *>(&vals), sizeof(vals));
         vals = {1, 2, 3};
-        fwrite(&vals, sizeof(vals), 1, f);
-        fclose(f);
+        f.write(reinterpret_cast<const char *>(&vals), sizeof(vals));
     }
 
     snark::Metadata metadata(path.string());
