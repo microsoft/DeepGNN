@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.62] - 2024-01-18
+## [0.1.62] - 2024-01-19
 
 ### Fixed
 - Fixes edge feature fetching when edges are not sorted by destination id.
