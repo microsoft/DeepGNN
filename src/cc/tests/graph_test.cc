@@ -368,7 +368,7 @@ TEST_P(StorageTypeGraphTest, EdgeFeaturesInverseOrder)
     }
     {
         auto filepath = path / "node_0_0.map";
-        auto f = fopen(filepath.c_str(), "wb");
+        auto f = fopen(reinterpret_cast<const char *>(filepath.c_str()), "wb");
         int64_t node_id = 4;
         int32_t node_type = 0;
         int64_t offset = 0;
@@ -384,7 +384,7 @@ TEST_P(StorageTypeGraphTest, EdgeFeaturesInverseOrder)
     }
     {
         auto filepath = path / "neighbors_0_0.index";
-        auto f = fopen(filepath.c_str(), "wb");
+        auto f = fopen(reinterpret_cast<const char *>(filepath.c_str()), "wb");
         int64_t offset = 0;
         fwrite(&offset, sizeof(offset), 1, f);
         offset = 0; // no edges in the first node. original offset - current offset = 0
@@ -402,7 +402,7 @@ TEST_P(StorageTypeGraphTest, EdgeFeaturesInverseOrder)
             float m_weight;
         };
         auto filepath = path / "edge_0_0.index";
-        auto f = fopen(filepath.c_str(), "wb");
+        auto f = fopen(reinterpret_cast<const char *>(filepath.c_str()), "wb");
         EdgeRecord edge{.m_dst = 4, .m_feature_offset = 0, .m_type = 1, .m_weight = 1.0f};
         fwrite(&edge, sizeof(edge), 1, f);
         edge = {.m_dst = 2, .m_feature_offset = 2, .m_type = 1, .m_weight = 0.5f};
@@ -417,7 +417,7 @@ TEST_P(StorageTypeGraphTest, EdgeFeaturesInverseOrder)
 
     {
         auto filepath = path / "edge_features_0_0.index";
-        auto f = fopen(filepath.c_str(), "wb");
+        auto f = fopen(reinterpret_cast<const char *>(filepath.c_str()), "wb");
         int64_t offset = 0;
         fwrite(&offset, sizeof(offset), 1, f);
         offset = 0; // no edges of type 0
@@ -433,7 +433,7 @@ TEST_P(StorageTypeGraphTest, EdgeFeaturesInverseOrder)
 
     {
         auto filepath = path / "edge_features_0_0.data";
-        auto f = fopen(filepath.c_str(), "wb");
+        auto f = fopen(reinterpret_cast<const char *>(filepath.c_str()), "wb");
         struct Values
         {
             int32_t a;
