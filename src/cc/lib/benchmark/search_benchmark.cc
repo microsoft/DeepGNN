@@ -2,10 +2,8 @@
 // Licensed under the MIT License.
 
 #include <algorithm>
-#include <iostream>
 #include <numeric>
 #include <random>
-#include <string>
 #include <vector>
 
 #include <benchmark/benchmark.h>
@@ -62,6 +60,7 @@ static void BM_STD_FIND(benchmark::State &state)
     }
 }
 
+// Results of this benchmark are used to set split value for edge feature fetching
 BENCHMARK(BM_LOWER_BOUND)->RangeMultiplier(4)->Range(1 << 3, 1 << 10);
 BENCHMARK(BM_STD_FIND)->RangeMultiplier(4)->Range(1 << 3, 1 << 10);
 
