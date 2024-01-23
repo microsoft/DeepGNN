@@ -12,6 +12,7 @@
 #include <cassert>
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
 #include <span>
 #include <vector>
 
@@ -349,6 +350,108 @@ TEST_P(StorageTypeGraphTest, NodeTypesMultipleNodes)
 
     g.GetNodeType(std::span(nodes), std::span(output), -1);
     EXPECT_EQ(output, std::vector<snark::Type>({0, 2, -1}));
+}
+
+TEST_P(StorageTypeGraphTest, EdgeFeaturesInverseOrder)
+{
+    auto path = std::filesystem::path(::testing::UnitTest::GetInstance()->current_test_info()->name());
+    assert(std::filesystem::create_directories(path));
+    {
+        std::fstream meta_json(path / "meta.json", std::ios::out);
+        meta_json << "{\"node_count\": 2, \"edge_count\": 3, \"node_type_count\": 1, \"edge_type_count\": 2, "
+                     "\"node_feature_count\": 0, \"edge_feature_count\": 1, \"binary_data_version\": \"v2\",";
+        meta_json << "\"partitions\": {\"0\": {\"node_weight\": [5], \"edge_weight\": [0, 10]}}, "
+                     "\"node_count_per_type\": [2],\"edge_count_per_type\": [0, 3],\"watermark\": -1}";
+        std::fstream node_features_index(path / "node_features_0_0.index", std::ios::out);
+        std::fstream node_features_data(path / "node_features_0_0.data", std::ios::out);
+        std::fstream node_index(path / "node_0_0.index", std::ios::out);
+    }
+    {
+        auto filepath = path / "node_0_0.map";
+        std::fstream f(path / "node_0_0.map", std::ios_base::binary | std::ios_base::out);
+        int64_t node_id = 4;
+        int32_t node_type = 0;
+        int64_t offset = 0;
+        f.write(reinterpret_cast<const char *>(&node_id), sizeof(node_id));
+        f.write(reinterpret_cast<const char *>(&offset), sizeof(offset));
+        f.write(reinterpret_cast<const char *>(&node_type), sizeof(node_type));
+        node_id = 5;
+        offset = 1;
+        f.write(reinterpret_cast<const char *>(&node_id), sizeof(node_id));
+        f.write(reinterpret_cast<const char *>(&offset), sizeof(offset));
+        f.write(reinterpret_cast<const char *>(&node_type), sizeof(node_type));
+    }
+    {
+        std::fstream f(path / "neighbors_0_0.index", std::ios_base::binary | std::ios_base::out);
+        int64_t offset = 0;
+        f.write(reinterpret_cast<const char *>(&offset), sizeof(offset));
+        offset = 0; // no edges in the first node. original offset - current offset = 0
+        f.write(reinterpret_cast<const char *>(&offset), sizeof(offset));
+        offset = 3; // 3 edges in the last node.
+        f.write(reinterpret_cast<const char *>(&offset), sizeof(offset));
+    }
+    {
+        struct EdgeRecord
+        {
+            int64_t m_dst;
+            uint64_t m_feature_offset;
+            int32_t m_type;
+            float m_weight;
+        };
+        std::fstream f(path / "edge_0_0.index", std::ios_base::binary | std::ios_base::out);
+        EdgeRecord edge{.m_dst = 4, .m_feature_offset = 0, .m_type = 1, .m_weight = 1.0f};
+        f.write(reinterpret_cast<const char *>(&edge), sizeof(edge));
+        edge = {.m_dst = 2, .m_feature_offset = 2, .m_type = 1, .m_weight = 0.5f};
+        f.write(reinterpret_cast<const char *>(&edge), sizeof(edge));
+        edge = {.m_dst = 3, .m_feature_offset = 3, .m_type = 1, .m_weight = 1.0f};
+        f.write(reinterpret_cast<const char *>(&edge), sizeof(edge));
+        // Finish with stub for feature size calculation
+        edge = {.m_dst = -1, .m_feature_offset = 4, .m_type = 1, .m_weight = 1.0f};
+        f.write(reinterpret_cast<const char *>(&edge), sizeof(edge));
+    }
+
+    {
+        std::fstream f(path / "edge_features_0_0.index", std::ios_base::binary | std::ios_base::out);
+        int64_t offset = 0;
+        f.write(reinterpret_cast<const char *>(&offset), sizeof(offset));
+        offset = 0; // no edges of type 0
+        f.write(reinterpret_cast<const char *>(&offset), sizeof(offset));
+        offset = 12;
+        f.write(reinterpret_cast<const char *>(&offset), sizeof(offset));
+        offset = 24;
+        f.write(reinterpret_cast<const char *>(&offset), sizeof(offset));
+        offset = 36;
+        f.write(reinterpret_cast<const char *>(&offset), sizeof(offset));
+    }
+
+    {
+        std::fstream f(path / "edge_features_0_0.data", std::ios_base::binary | std::ios_base::out);
+        struct Values
+        {
+            int32_t a;
+            int32_t b;
+            int32_t c;
+        } vals;
+        vals = {8, 9, 10};
+        f.write(reinterpret_cast<const char *>(&vals), sizeof(vals));
+        vals = {5, 6, 7};
+        f.write(reinterpret_cast<const char *>(&vals), sizeof(vals));
+        vals = {1, 2, 3};
+        f.write(reinterpret_cast<const char *>(&vals), sizeof(vals));
+    }
+
+    snark::Metadata metadata(path.string());
+    snark::Graph g(std::move(metadata), {path.string()}, std::vector<uint32_t>{0}, GetParam());
+    std::vector<snark::NodeId> src_ids = {5, 5, 5};
+    std::vector<snark::NodeId> dst_ids = {2, 3, 5};
+    std::vector<snark::Type> edge_types = {1, 1, 1};
+    std::vector<uint8_t> output(4 * 3 * 3);
+    std::vector<snark::FeatureMeta> features = {{0, 12}};
+
+    g.GetEdgeFeature(std::span(src_ids), std::span(dst_ids), std::span(edge_types), {}, std::span(features),
+                     std::span(output));
+    std::span res(reinterpret_cast<int32_t *>(output.data()), output.size() / sizeof(int32_t));
+    EXPECT_EQ(std::vector<int32_t>(std::begin(res), std::end(res)), std::vector<int32_t>({5, 6, 7, 1, 2, 3, 0, 0, 0}));
 }
 
 TEST_P(StorageTypeGraphTest, NodeFeaturesMultipleNodesSingleFeature)

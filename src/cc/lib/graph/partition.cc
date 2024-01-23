@@ -908,16 +908,30 @@ std::optional<size_t> Partition::EdgeFeatureOffset(uint64_t internal_src_node_id
     {
         return std::nullopt;
     }
+
     const auto tp_count = m_edge_type_offset[type_offset + 1] - m_edge_type_offset[type_offset];
     auto fst = std::begin(m_edge_destination) + m_edge_type_offset[type_offset];
     auto lst = fst + tp_count;
-    auto it = std::lower_bound(fst, lst, input_edge_dst);
-    if (it == lst)
+
+    // Fast path: linear search outperforms binary search for small number of elements.
+    if (tp_count > 16)
     {
-        // Edge was not found in this partition.
-        return std::nullopt;
+        auto it = std::lower_bound(fst, lst, input_edge_dst);
+        if (it != lst && *it == input_edge_dst)
+        {
+            return {it - std::begin(m_edge_destination)};
+        }
+        // For temporal graphs we need to use fallback to linear search, since edges are stored based on timestamps
+        // first order or for older graphs with malformed data.
     }
-    return {it - std::begin(m_edge_destination)};
+
+    auto it = std::find(fst, lst, input_edge_dst);
+    if (it != lst && *it == input_edge_dst)
+    {
+        return {it - std::begin(m_edge_destination)};
+    }
+
+    return std::nullopt;
 }
 
 void Partition::GetEdgeFeature(uint64_t internal_src_node_id, NodeId input_edge_dst, Type input_edge_type,

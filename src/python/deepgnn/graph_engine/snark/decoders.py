@@ -417,6 +417,7 @@ class JsonDecoder(Decoder):
                     edge.get("removed_at", 0)
                     if edge.get("removed_at") != -1
                     else float("inf"),
+                    edge["dst_id"],
                 ),
             )
 
@@ -526,7 +527,12 @@ class TsvDecoder(Decoder):
             return
 
         neighbors = columns[4].split("|")
-        for n in sorted(neighbors, key=lambda x: int(x.split(",")[1])):
+
+        def order(edge):
+            edge_items = edge.split(",")
+            return int(edge_items[1]), int(edge_items[0])
+
+        for n in sorted(neighbors, key=order):
             neighbor_columns = n.split(",")
             # make sure the destination id is valid
             assert len(neighbor_columns) > 0 and len(neighbor_columns[0]) > 0

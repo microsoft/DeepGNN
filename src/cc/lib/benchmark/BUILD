@@ -25,6 +25,22 @@ cc_binary(
 )
 
 cc_binary(
+    name = "search_benchmark",
+    srcs = ["search_benchmark.cc"],
+    copts = CXX_OPTS,
+    linkopts = ["-lm"],
+    deps = select({
+        "//conditions:default": [
+            "@com_google_benchmark//:benchmark",
+        ],
+        "@platforms//os:linux": [
+            "@mimalloc//:mimalloc",  # mimalloc should go first to ensure malloc is overridden everywhere
+            "@com_google_benchmark//:benchmark",
+        ],
+    }),
+)
+
+cc_binary(
     name = "neighbor_sampler_benchmark",
     srcs = ["neighbor_sampler_benchmark.cc"],
     copts = CXX_OPTS,
