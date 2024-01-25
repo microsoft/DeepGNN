@@ -100,10 +100,12 @@ bazel test //src/cc/tests:* --test_output=all --test_timeout 4 --config=linux
 # run deepgnn python tests:
 bazel test -c opt //src/python/deepgnn/...:* --test_output=all --test_timeout 6000 --config=linux
 
-# run tests in examples folder:
-bazel test -c opt //examples/tensorflow/...:* --test_output=all --test_timeout 6000 --config=linux
-bazel test -c opt //examples/pytorch/...:* --test_output=all --test_timeout 6000 --config=linux
+# run examples:
+bazel run -c opt //examples/tensorflow/sage:test_sage --test_output=all --test_timeout 6000 --config=linux
+bazel run -c opt //examples/pytorch:sage --test_output=all --test_timeout 6000 --config=linux
 
+# run example docs:
+bazel test -c opt //docs:* --test_output=all --test_timeout 6000 --config=linux
 ```
 
 To run individual python tests you can add arguments to pytests from bazel:
