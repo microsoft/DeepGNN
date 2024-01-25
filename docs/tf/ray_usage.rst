@@ -256,4 +256,4 @@ Ray Usage Example for Node Classification with GAT
     ...     scaling_config=ScalingConfig(num_workers=1, use_gpu=False),
     ... )
     >>> result = trainer.fit()
-    <BLANKLINE>...
+    >>>
