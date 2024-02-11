@@ -2,7 +2,7 @@ aiohttp==3.9.2
 attr==0.3.1
 fsspec==2021.8.1
 # Preferably the vershion should match C++ version defined in the WORKSPACE file.
-grpcio==1.53.0
+grpcio==1.53.2
 grpcio-health-checking==1.35.0
 importlib_metadata==2.0.0
 iniconfig==1.0.1
