@@ -57,7 +57,7 @@ contextvars==2.4
 contourpy==1.0.5
 coverage==6.5.0
 cramjam==2.5.0
-cryptography==42.0.0
+cryptography==42.0.2
 cycler==0.11.0
 dask[complete]==2021.12.0
 debugpy==1.6.3
