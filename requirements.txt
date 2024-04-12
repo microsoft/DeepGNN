@@ -93,7 +93,7 @@ h5py==3.7.0
 heapdict==1.0.1
 horovod==0.26.0;sys_platform != 'win32'
 huggingface-hub==0.20.2
-idna==3.4
+idna==3.7
 idna-ssl==1.1.0
 imagesize==1.4.1
 immutables==0.19
