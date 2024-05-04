@@ -804,18 +804,83 @@ void GRPCClient::UniformSampleNeighbor(bool without_replacement, bool return_edg
 
         auto response_reader =
             m_engine_stubs[shard]->PrepareAsyncUniformSampleNeighbors(&call->context, request, NextCompletionQueue());
-        call->callback = [&reply = replies[shard], count, output_types, output_edge_created_ts, node_ids, &mtx, &engine,
-                          &shard_counts, output_neighbors, default_node_id, default_type, return_edge_created_ts]() {
-            MergeUniformSampledNeighbors(reply, mtx, count, output_neighbors, output_types, output_edge_created_ts,
-                                         node_ids, engine, shard_counts, default_node_id, default_type,
-                                         return_edge_created_ts);
-        };
+        call->callback = []() {};
         futures.emplace_back(call->promise.get_future());
         response_reader->StartCall();
         response_reader->Finish(&replies[shard], &call->status, static_cast<void *>(call));
     }
 
     WaitForFutures(futures);
+    std::fill(std::begin(output_neighbors), std::end(output_neighbors), default_node_id);
+    std::fill(std::begin(output_types), std::end(output_types), default_type);
+    if (return_edge_created_ts)
+    {
+        std::fill(std::begin(output_edge_created_ts), std::end(output_edge_created_ts), snark::PLACEHOLDER_TIMESTAMP);
+    }
+
+    // Node ids in responses have the same order as in the request. We can zip them together in linear time,
+    // rather than iterating through all responses for each node.
+    using ResponseIterator = google::protobuf::RepeatedField<int64_t>::const_iterator;
+    std::vector<ResponseIterator> node_id_iterators(replies.size());
+    for (size_t i = 0; i < replies.size(); ++i)
+    {
+        node_id_iterators[i] = replies[i].node_ids().begin();
+    }
+
+    WithoutReplacementMerge merger_without_replacement(count, engine);
+    WithReplacement merger_with_replacement(count, engine);
+    for (size_t node_index = 0; node_index < node_ids.size(); ++node_index)
+    {
+        if (without_replacement)
+        {
+            merger_without_replacement.reset();
+        }
+        else
+        {
+            merger_with_replacement.reset();
+        }
+        const auto node_id = node_ids[node_index];
+        auto neighbor_reservoir = output_neighbors.subspan(node_index * count, count);
+        auto type_reservoir = output_types.subspan(node_index * count, count);
+        std::span<snark::Timestamp> edge_created_ts_reservoir;
+        if (return_edge_created_ts)
+        {
+            edge_created_ts_reservoir = output_edge_created_ts.subspan(node_index * count, count);
+        }
+        for (size_t reply_index = 0; reply_index < replies.size(); ++reply_index)
+        {
+            const auto &reply = replies[reply_index];
+            if (node_id_iterators[reply_index] == reply.node_ids().end() || *node_id_iterators[reply_index] != node_id)
+            {
+                continue;
+            }
+
+            const auto &node_id_iterator = node_id_iterators[reply_index];
+            const auto reply_node_offset = node_id_iterator - reply.node_ids().begin();
+            const auto neighbors_offset = count * reply_node_offset;
+            const auto reply_weight = reply.shard_counts(reply_node_offset);
+            auto update = [&reply, neighbor_reservoir, type_reservoir, edge_created_ts_reservoir, count,
+                           neighbors_offset, return_edge_created_ts, reply_weight](size_t pick, size_t offset) {
+                // In case of merging neighbors from larger universe, we'll have to normalize by count.
+                auto reply_offset = neighbors_offset + (offset % count);
+                neighbor_reservoir[pick] = reply.neighbor_ids(reply_offset);
+                type_reservoir[pick] = reply.neighbor_types(reply_offset);
+                if (return_edge_created_ts)
+                {
+                    edge_created_ts_reservoir[pick] = reply.timestamps(reply_offset);
+                }
+            };
+            if (without_replacement)
+            {
+                merger_without_replacement.add(reply_weight, update);
+            }
+            else
+            {
+                merger_with_replacement.add(reply_weight, update);
+            }
+            ++node_id_iterators[reply_index];
+        }
+    }
 }
 
 uint64_t GRPCClient::CreateSampler(bool is_edge, CreateSamplerRequest_Category category, std::span<Type> types)

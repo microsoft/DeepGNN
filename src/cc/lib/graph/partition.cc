@@ -705,7 +705,7 @@ auto find_start(const std::span<const std::pair<Timestamp, Timestamp>> &range, T
         return std::end(range);
     }
 
-    if (range.front().first <= ts && range.front().second > ts)
+    if (range.front().first <= ts && (range.front().second > ts || range.front().second == -1))
     {
         return std::begin(range);
     }
@@ -718,17 +718,17 @@ auto find_start(const std::span<const std::pair<Timestamp, Timestamp>> &range, T
 
 using cspan_it = std::span<const std::pair<Timestamp, Timestamp>>::iterator;
 
-cspan_it find_last(const std::span<const std::pair<Timestamp, Timestamp>> &range, int ts)
+cspan_it find_last(const std::span<const std::pair<Timestamp, Timestamp>> &range, Timestamp ts)
 {
     if (range.front().first > ts)
     {
         return std::begin(range);
     }
 
-    int last = range.front().second;
+    auto last = range.front().second;
     return std::upper_bound(
         std::begin(range), std::end(range), ts,
-        [last](int ts, const std::pair<Timestamp, Timestamp> &a) { return a.second > last || a.first > ts; });
+        [last](int64_t ts, const std::pair<Timestamp, Timestamp> &a) { return a.second > last || a.first > ts; });
 }
 
 } // anonymous namespace
@@ -1111,7 +1111,6 @@ void Partition::SampleNeighbor(bool return_edge_created_ts, int64_t seed, uint64
 
     const auto offset = m_neighbors_index[internal_node_id];
     const auto nb_count = m_neighbors_index[internal_node_id + 1] - offset;
-
     // Check if node doesn't have any neighbors
     if (nb_count == 0)
     {
@@ -1169,10 +1168,17 @@ void Partition::SampleNeighbor(bool return_edge_created_ts, int64_t seed, uint64
                 auto local_ts = timestamp_span.subspan(diff);
                 auto last = find_last(local_ts, node_ts.value());
                 const auto end_dist = size_t(last - std::begin(local_ts)) + start_dist + diff;
-                total_weight += m_edge_weights[end_dist - 1];
-                if (start_dist + diff != fst)
+                if (end_dist == 0)
                 {
-                    total_weight -= m_edge_weights[start_dist - 1 + (it - std::begin(timestamp_span))];
+                    total_weight += m_edge_weights[0];
+                }
+                else
+                {
+                    total_weight += m_edge_weights[end_dist - 1];
+                    if (start_dist + diff != fst)
+                    {
+                        total_weight -= m_edge_weights[start_dist - 1 + (it - std::begin(timestamp_span))];
+                    }
                 }
 
                 if (last == std::begin(local_ts))
@@ -1248,7 +1254,11 @@ void Partition::SampleNeighbor(bool return_edge_created_ts, int64_t seed, uint64
                     auto lst = find_last(it_subspan, node_ts.value());
                     const size_t local_offset = global_offset + it_dist;
                     const auto end_dist = size_t(lst - std::begin(it_subspan)) + global_offset + it_dist;
-                    auto type_weight = m_edge_weights[end_dist - 1];
+                    auto type_weight = m_edge_weights[0];
+                    if (end_dist > 0)
+                    {
+                        type_weight = m_edge_weights[end_dist - 1];
+                    }
                     if (local_offset != first)
                     {
                         type_weight -= m_edge_weights[local_offset - 1];

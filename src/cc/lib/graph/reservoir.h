@@ -48,12 +48,36 @@ class WithReplacement
 
     void add(size_t n, std::function<void(size_t, size_t)> update);
 
+    void reset();
+
   private:
     size_t m_seen;
     size_t m_k;
     snark::Xoroshiro128PlusGenerator &m_gen;
     boost::random::uniform_real_distribution<float> m_dist;
 };
+
+// Used for merging multiple sampled neighbors lists into one. We can't use WithReplacement directly,
+// because we need to consider intervals with smaller than k elements: if we have two lists
+// of equal sizes 10, we can't use bernulli trials to merge them into one list of size 15,
+// because we need to backfill first and then sample from the merged reservoir, but with updated weights.
+class WithoutReplacementMerge
+{
+  public:
+    WithoutReplacementMerge(size_t k, snark::Xoroshiro128PlusGenerator &gen);
+
+    // n in this case is the weight of the interval, not the number of elements.
+    void add(size_t n, std::function<void(size_t, size_t)> update);
+
+    void reset();
+
+  private:
+    size_t m_seen;
+    size_t m_k;
+    snark::Xoroshiro128PlusGenerator &m_gen;
+    boost::random::uniform_real_distribution<float> m_dist;
+};
+
 } // namespace snark
 
 #endif
