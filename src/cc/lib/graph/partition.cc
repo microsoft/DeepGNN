@@ -728,7 +728,7 @@ cspan_it find_last(const std::span<const std::pair<Timestamp, Timestamp>> &range
     auto last = range.front().second;
     return std::upper_bound(
         std::begin(range), std::end(range), ts,
-        [last](int64_t ts, const std::pair<Timestamp, Timestamp> &a) { return a.second > last || a.first > ts; });
+        [last](Timestamp ts, const std::pair<Timestamp, Timestamp> &a) { return a.second > last || a.first > ts; });
 }
 
 } // anonymous namespace
