@@ -255,7 +255,7 @@ torch-scatter==2.1.1
 torch-sparse==0.6.17
 torch_geometric==2.3.0
 tornado==6.3.3
-tqdm==4.64.1
+tqdm==4.66.3
 traitlets==5.4.0
 transformers==4.36.2
 typeguard==2.13.3
