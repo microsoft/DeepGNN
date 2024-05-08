@@ -819,12 +819,18 @@ void GRPCClient::UniformSampleNeighbor(bool without_replacement, bool return_edg
     }
 
     // Node ids in responses have the same order as in the request. We can zip them together in linear time,
-    // rather than iterating through all responses for each node.
+    // rather than iterating through all responses to find each node.
     using ResponseIterator = google::protobuf::RepeatedField<int64_t>::const_iterator;
     std::vector<ResponseIterator> node_id_iterators(replies.size());
     for (size_t i = 0; i < replies.size(); ++i)
     {
         node_id_iterators[i] = replies[i].node_ids().begin();
+        std::cout << "Reply " << i << " has neighbors ids:";
+        for (auto it = replies[i].neighbor_ids().begin(); it != replies[i].neighbor_ids().end(); ++it)
+        {
+            std::cout << " " << *it;
+        }
+        std::cout << std::endl;
     }
 
     WithoutReplacementMerge merger_without_replacement(count, engine);
@@ -839,6 +845,7 @@ void GRPCClient::UniformSampleNeighbor(bool without_replacement, bool return_edg
         {
             merger_with_replacement.reset();
         }
+
         const auto node_id = node_ids[node_index];
         auto neighbor_reservoir = output_neighbors.subspan(node_index * count, count);
         auto type_reservoir = output_types.subspan(node_index * count, count);
@@ -863,6 +870,7 @@ void GRPCClient::UniformSampleNeighbor(bool without_replacement, bool return_edg
                            neighbors_offset, return_edge_created_ts, reply_weight](size_t pick, size_t offset) {
                 // In case of merging neighbors from larger universe, we'll have to normalize by count.
                 auto reply_offset = neighbors_offset + (offset % count);
+                std::cout << "Updating " << pick << " with " << offset << " reply offset " << reply_offset << std::endl;
                 neighbor_reservoir[pick] = reply.neighbor_ids(reply_offset);
                 type_reservoir[pick] = reply.neighbor_types(reply_offset);
                 if (return_edge_created_ts)
