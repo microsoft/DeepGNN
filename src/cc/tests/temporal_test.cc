@@ -155,6 +155,8 @@ class TemporalTest : public ::testing::Test
             }
 
             TestGraph::MemoryGraph m2;
+
+            // clang-format off
             m2.m_nodes.push_back(
                 TestGraph::Node{.m_id = 1,
                                 .m_type = 1,
@@ -165,6 +167,7 @@ class TemporalTest : public ::testing::Test
                                                                                     {12, 1, 1.0f},
                                                                                     {13, 1, 1.0f},
                                                                                     {14, 1, 1.0f}}}});
+            // clang-format on
 
             m2.m_watermark = 3;
             for (uint32_t i = 0; i < 7; ++i)
