@@ -860,7 +860,7 @@ void GRPCClient::UniformSampleNeighbor(bool without_replacement, bool return_edg
             const auto neighbors_offset = count * reply_node_offset;
             const auto reply_weight = reply.shard_counts(reply_node_offset);
             auto update = [&reply, neighbor_reservoir, type_reservoir, edge_created_ts_reservoir, count,
-                           neighbors_offset, return_edge_created_ts, reply_weight](size_t pick, size_t offset) {
+                           neighbors_offset, return_edge_created_ts](size_t pick, size_t offset) {
                 // In case of merging neighbors from larger universe, we'll have to normalize by count.
                 auto reply_offset = neighbors_offset + (offset % count);
                 neighbor_reservoir[pick] = reply.neighbor_ids(reply_offset);

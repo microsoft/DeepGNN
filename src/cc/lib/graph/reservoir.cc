@@ -59,15 +59,15 @@ WithReplacement::WithReplacement(size_t k, snark::Xoroshiro128PlusGenerator &gen
     assert(k > 0);
 }
 
-void WithReplacement::add(size_t n, std::function<void(size_t, size_t)> update)
+void WithReplacement::add(size_t w, std::function<void(size_t, size_t)> update)
 {
-    m_seen += n;
-    const float rate = float(n) / m_seen;
+    m_seen += w;
+    const float rate = float(w) / m_seen;
     for (size_t i = 0; i < m_k; ++i)
     {
         if (rate == 1.0f || m_dist(m_gen) < rate)
         {
-            update(i, size_t(n * m_dist(m_gen)));
+            update(i, size_t(w * m_dist(m_gen)));
         }
     }
 }

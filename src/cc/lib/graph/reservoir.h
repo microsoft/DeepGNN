@@ -66,8 +66,8 @@ class WithoutReplacementMerge
   public:
     WithoutReplacementMerge(size_t k, snark::Xoroshiro128PlusGenerator &gen);
 
-    // n in this case is the weight of the interval, not the number of elements.
-    void add(size_t n, std::function<void(size_t, size_t)> update);
+    // w in this case is the weight of the interval, not the number of elementsas in classes above.
+    void add(size_t w, std::function<void(size_t, size_t)> update);
 
     void reset();
 
