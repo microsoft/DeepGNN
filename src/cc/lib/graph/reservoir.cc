@@ -4,6 +4,7 @@
 #include "reservoir.h"
 #include <algorithm>
 #include <numeric>
+#include <vector>
 
 namespace snark
 {
