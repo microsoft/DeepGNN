@@ -6,6 +6,8 @@
 #include <numeric>
 #include <vector>
 
+#include <iostream>
+
 namespace snark
 {
 
@@ -129,6 +131,18 @@ void WithoutReplacementMerge::add(size_t n, std::function<void(size_t, size_t)> 
     // Pick first left_count and right_count elements from the shuffled arrays to avoid repetitive subsampling
     // of the same element.
     std::sort(std::begin(left_indices), std::begin(left_indices) + left_count);
+    std::cout << "Left indices: ";
+    for (size_t i = 0; i < left_count; ++i)
+    {
+        std::cout << left_indices[i] << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "Right indices: ";
+    for (size_t i = 0; i < right_size; ++i)
+    {
+        std::cout << right_indices[i] << " ";
+    }
+    std::cout << std::endl;
     size_t left_index = 0;
     size_t right_index = 0;
     for (size_t i = 0; i < m_k; ++i)
