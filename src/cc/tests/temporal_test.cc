@@ -751,7 +751,7 @@ TEST_F(TemporalTest, StatisticalUniformNeighborSamplingWithoutDeletions)
     size_t sample_count = 3;
     std::vector<snark::NodeId> output_neighbor_ids(sample_count);
     std::vector<snark::Type> output_neighbor_types(sample_count);
-    std::vector<size_t> output_neighbors_counts(sample_count);
+    std::vector<uint64_t> output_neighbors_counts(sample_count);
     std::vector<snark::Timestamp> output_edge_created_ts(sample_count);
     std::vector<size_t> output_neighbor_ids_count(15, 0);
     for (size_t i = 0; i < 1000; i++)
