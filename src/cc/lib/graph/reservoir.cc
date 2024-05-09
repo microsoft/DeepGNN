@@ -125,7 +125,9 @@ void WithoutReplacementMerge::add(size_t n, std::function<void(size_t, size_t)> 
     std::vector<size_t> right_indices(right_size);
     std::iota(std::begin(left_indices), std::end(left_indices), 0);
     std::iota(std::begin(right_indices), std::end(right_indices), 0);
+    std::cout << "Left state" << m_gen() << std::endl;
     std::shuffle(std::begin(left_indices), std::end(left_indices), m_gen);
+    std::cout << "Right state" << m_gen() << std::endl;
     std::shuffle(std::begin(right_indices), std::end(right_indices), m_gen);
 
     // Pick first left_count and right_count elements from the shuffled arrays to avoid repetitive subsampling
