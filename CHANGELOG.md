@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.63] - 2024-05-08
+## [0.1.63] - 2024-05-10
 
 ### Fixed
 - Fixes temporal sampling bug, in graphs with multiple edge types that were not deleted, neighbors will be repeated with uniform sampling.
