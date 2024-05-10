@@ -2,6 +2,7 @@
 #include <cassert>
 #include <cmath>
 #include <numeric>
+#include <random>
 #include <vector>
 
 #include "reservoir.h"
