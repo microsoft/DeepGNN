@@ -819,7 +819,7 @@ void GRPCClient::UniformSampleNeighbor(bool without_replacement, bool return_edg
     }
 
     // Node ids in responses have the same order as in the request. We can zip them together in linear time,
-    // rather than iterating through all responses for each node.
+    // rather than iterating through all responses to find each node.
     using ResponseIterator = google::protobuf::RepeatedField<int64_t>::const_iterator;
     std::vector<ResponseIterator> node_id_iterators(replies.size());
     for (size_t i = 0; i < replies.size(); ++i)
@@ -839,6 +839,7 @@ void GRPCClient::UniformSampleNeighbor(bool without_replacement, bool return_edg
         {
             merger_with_replacement.reset();
         }
+
         const auto node_id = node_ids[node_index];
         auto neighbor_reservoir = output_neighbors.subspan(node_index * count, count);
         auto type_reservoir = output_types.subspan(node_index * count, count);

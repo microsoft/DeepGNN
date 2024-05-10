@@ -682,7 +682,7 @@ TEST(DistributedTest, UniformSampleNeighborsWithoutReplacementMultipleServers)
     c.UniformSampleNeighbor(true, true, 23, std::span(input_nodes), std::span(input_types), {}, nb_count,
                             std::span(output_nodes), std::span(output_types), std::span(output_edge_ts), -1, -1);
     EXPECT_EQ(output_types, std::vector<snark::Type>({0, 0, 0, 0, 0, 0}));
-    EXPECT_EQ(output_nodes, std::vector<snark::NodeId>({3, 2, 58, 57, 80, 79}));
+    EXPECT_EQ(output_nodes, std::vector<snark::NodeId>({2, 3, 57, 58, 79, 80}));
     EXPECT_EQ(output_edge_ts, std::vector<snark::Timestamp>(6, snark::PLACEHOLDER_TIMESTAMP));
 }
 

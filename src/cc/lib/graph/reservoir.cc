@@ -1,10 +1,10 @@
+#include <algorithm>
 #include <cassert>
 #include <cmath>
-
-#include "reservoir.h"
-#include <algorithm>
 #include <numeric>
 #include <vector>
+
+#include "reservoir.h"
 
 namespace snark
 {
@@ -83,6 +83,25 @@ WithoutReplacementMerge::WithoutReplacementMerge(size_t k, snark::Xoroshiro128Pl
     assert(k > 0);
 }
 
+namespace
+{
+// Use custom sample, because std::sample is not guaranteed to be deterministic across platforms.
+using It = std::vector<size_t>::iterator;
+void sample_n(It first, It last, size_t n, snark::Xoroshiro128PlusGenerator &gen)
+{
+    size_t total_elements = size_t(last - first);
+    assert(total_elements > 0);
+    assert(n <= total_elements && "Sample size is larger than the range");
+    // There is no need to swap the last element with itself.
+    total_elements -= 1;
+    for (size_t i = 0; i < total_elements; ++i)
+    {
+        std::uniform_int_distribution<size_t> dist(i + 1, total_elements);
+        std::swap(first[i], first[dist(gen)]);
+    }
+}
+} // namespace
+
 void WithoutReplacementMerge::add(size_t n, std::function<void(size_t, size_t)> update)
 {
     if (m_seen + n <= m_k)
@@ -123,8 +142,14 @@ void WithoutReplacementMerge::add(size_t n, std::function<void(size_t, size_t)> 
     std::vector<size_t> right_indices(right_size);
     std::iota(std::begin(left_indices), std::end(left_indices), 0);
     std::iota(std::begin(right_indices), std::end(right_indices), 0);
-    std::shuffle(std::begin(left_indices), std::end(left_indices), m_gen);
-    std::shuffle(std::begin(right_indices), std::end(right_indices), m_gen);
+    if (left_count > 0)
+    {
+        sample_n(std::begin(left_indices), std::end(left_indices), left_count, m_gen);
+    }
+    if (right_count > 0)
+    {
+        sample_n(std::begin(right_indices), std::end(right_indices), right_count, m_gen);
+    }
 
     // Pick first left_count and right_count elements from the shuffled arrays to avoid repetitive subsampling
     // of the same element.
