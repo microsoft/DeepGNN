@@ -22,6 +22,21 @@ cc_grpc_library(
     deps = [":service_cc_proto"],
 )
 
+windows_deps = [
+        "//src/cc/lib/graph",
+        # Order matters on windows. We want to use latest abseil instead of transitive from grpc.
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@boost//:random",
+        ":service_cc_grpc",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_benchmark//:benchmark",
+        "@com_github_google_glog//:glog"
+]
+
+# Windows builds use a system provided openssl defined in .bazelrc file.
+macos_linux_deps = windows_deps + ["@openssl"]
+
 cc_library(
     name = "grpc",
     srcs = [
@@ -43,16 +58,9 @@ cc_library(
     linkstatic = True,
     visibility = ["//visibility:public"],
     # ERROR macro is defined in glog and windows.h
-    defines = ["GLOG_NO_ABBREVIATED_SEVERITIES"],
-    deps = [
-        "//src/cc/lib/graph",
-        # Order matters on windows. We want to use latest abseil instead of transitive from grpc.
-        "@com_google_absl//absl/container:flat_hash_map",
-        "@com_google_absl//absl/container:flat_hash_set",
-        "@boost//:random",
-        ":service_cc_grpc",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_benchmark//:benchmark",
-        "@com_github_google_glog//:glog",
-    ],
+    defines = ["GLOG_NO_ABBREVIATED_SEVERITIES", "OPENSSL_IS_BORINGSSL"],
+    deps = select({
+        "@platforms//os:windows": windows_deps,
+        "//conditions:default": macos_linux_deps,
+    }),
 )

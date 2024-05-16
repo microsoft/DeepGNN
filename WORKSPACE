@@ -121,14 +121,27 @@ http_archive(
 
 http_archive(
     name = "rules_foreign_cc",
-    sha256 = "bcd0c5f46a49b85b384906daae41d277b3dc0ff27c7c752cc51e43048a58ec83",
-    strip_prefix = "rules_foreign_cc-0.7.1",
-    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/0.7.1.tar.gz",
+    sha256 = "2a4d07cd64b0719b39a7c12218a3e507672b82a97b98c6a89d38565894cf7c51",
+    strip_prefix = "rules_foreign_cc-0.9.0",
+    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/refs/tags/0.9.0.tar.gz",
 )
 
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
-
 rules_foreign_cc_dependencies()
+
+http_archive(
+    name = "openssl",
+    urls = ["https://github.com/openssl/openssl/releases/download/openssl-3.3.0/openssl-3.3.0.tar.gz"],
+    sha256 = "53e66b043322a606abf0087e7699a0e033a37fa13feb9742df35c3a33b18fb02",
+    strip_prefix = "openssl-3.3.0",
+    build_file = "//config:openssl.BUILD",
+)
+
+load("//config:openssl_deps.bzl", "openssl_deps")
+openssl_deps()
+
+load("//config:openssl_setup.bzl", "openssl_setup")
+openssl_setup()
 
 http_archive(
     name = "mimalloc",
