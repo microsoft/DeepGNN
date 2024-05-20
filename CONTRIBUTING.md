@@ -84,8 +84,7 @@ $env:PATH+=";"+${env:ProgramFiles(x86)}+"\Microsoft Visual Studio\2019\Enterpris
 Install and run linters(same on all systems):
 ```sh
 pip install --upgrade pip
-pip install -r tests/requirements.txt
-pip install wheel pre-commit==2.17.0 mypy==0.971 numpy==1.22.4 torch==1.13.1 tensorflow==2.13.0
+pip install -r requirements.txt
 pre-commit install
 pre-commit run --all-files
 ```
