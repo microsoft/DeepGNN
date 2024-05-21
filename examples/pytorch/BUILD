@@ -14,6 +14,7 @@ common_deps = [
     requirement("opencensus"),
     requirement("opencensus-context"),
     requirement("opencensus-ext-azure"),
+    requirement("nvidia_cublas_cu12"),
     requirement("packaging"),
     requirement("pyyaml"),
     requirement("ray"),

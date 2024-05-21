@@ -32,6 +32,7 @@ pip_parse(
     name = "pip_deps",
     python_interpreter = "python",
     requirements_lock = "//:requirements.txt",
+    extra_pip_args = ["--extra-index-url", "https://download.pytorch.org/whl/cpu"],
 )
 
 load("@pip_deps//:requirements.bzl", "install_deps")
