@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-    - '*' 
+    - '*'
 jobs:
 - job: sanity_checks
   pool:
