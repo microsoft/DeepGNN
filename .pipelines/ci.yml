@@ -16,7 +16,7 @@ jobs:
     inputs:
       targetType: 'inline'
       script: 'bazelisk build -c dbg //src/cc/lib:wrapper --config=windows'
-  - task: BinSkim@3
+  - task: BinSkim@4
     inputs:
        toolVersion: Latest
        InputType:   CommandLine
