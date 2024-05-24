@@ -34,7 +34,6 @@ runs:
       shell: bash
       name: run python tests
     - run: |
-        bazel build -c dbg //examples/pytorch:base_deps --config=${{ env.BAZEL_CONFIG }}
         bazel run -c dbg //examples/pytorch:aml --config=${{ env.BAZEL_CONFIG }}
         bazel run -c dbg //examples/pytorch:gcn --config=${{ env.BAZEL_CONFIG }}
         bazel run -c dbg //examples/pytorch:gat --config=${{ env.BAZEL_CONFIG }}
