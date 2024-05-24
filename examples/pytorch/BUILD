@@ -26,14 +26,7 @@ common_deps = [
     requirement("tenacity"),
 ]
 
-# Needed to install torch before torch-sparse
-py_library(
-    name = "base_deps",
-    srcs = [],
-    deps = common_deps,
-)
-
-sparse_deps = ["base_deps"] + [
+sparse_deps = common_deps + [
     requirement("torch-sparse"),
     requirement("torch-scatter"),
     requirement("torch-cluster"),
