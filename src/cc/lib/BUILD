@@ -14,7 +14,7 @@ cc_binary(
     defines = ["GLOG_NO_ABBREVIATED_SEVERITIES"],
     # ERROR macro is defined in glog and windows.h
     linkopts = select({
-        "@platforms//os:windows": [""],
+        "@platforms//os:windows": ["/DEBUG", "/guard:cf"],
         # Explicitly list functions we want to export.
         "@platforms//os:macos": [
             "-Wl,-exported_symbols_list,$(location version-script.darwin.lds)",

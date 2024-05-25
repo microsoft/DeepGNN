@@ -11,7 +11,7 @@ CXX_OPTS = select({
         "-fvisibility-inlines-hidden",
         "-Wno-error=non-pod-varargs",
     ],
-    "@platforms//os:windows": ["/std:c++20", "/W0"],
+    "@platforms//os:windows": ["/std:c++20", "/W3", "/guard:cf", "/Qspectre"],
     "//conditions:default": ["-std=c++20", "-Werror", "-fvisibility=hidden", "-fvisibility-inlines-hidden"],
 })
 
