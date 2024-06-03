@@ -4,6 +4,7 @@ trigger:
     - '*'
 jobs:
 - job: sanity_checks
+  timeoutInMinutes: 120
   pool:
     vmImage: 'windows-latest'
   steps:
