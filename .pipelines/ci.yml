@@ -18,12 +18,12 @@ jobs:
       targetType: 'inline'
       script: 'bazelisk build -c dbg //src/cc/lib:wrapper --config=windows'
   - task: onebranch.pipeline.signing@1
-      inputs:
-        command: 'sign'
-        signing_profile: 'external_distribution'
-        files_to_sign: '**/*.exe;**/*.dll'
-        search_root: '$(Build.BinariesDirectory)\RelWithDebInfo\RelWithDebInfo'
-      displayName: 'Sign runtime DLLs'
+    inputs:
+      command: 'sign'
+      signing_profile: 'external_distribution'
+      files_to_sign: '**/*.exe;**/*.dll'
+      search_root: '$(Build.BinariesDirectory)\RelWithDebInfo\RelWithDebInfo'
+    displayName: 'Sign runtime DLLs'
   - task: BinSkim@4
     inputs:
        toolVersion: Latest
