@@ -20,13 +20,36 @@ jobs:
   - task: EsrpCodeSigning@4
     inputs:
       ConnectedServiceName: 'gnn-sign'
-      FolderPath: 'bazel-bin/src/cc/lib/'
+      FolderPath: '$(Build.SourcesDirectory)/bazel-bin/src/cc/lib/'
       Pattern: '*.dll,*.exe'
       signConfigType: 'inlineSignParams'
       SessionTimeout: '90'
       MaxConcurrency: '50'
       MaxRetryAttempts: '5'
       PendingAnalysisWaitTimeoutMinutes: '5'
+      inlineOperation: |
+        [
+            {
+                "KeyCode" : "CP-230012",
+                "OperationCode" : "SigntoolSign",
+                "Parameters" : {
+                    "OpusName" : "Microsoft",
+                    "OpusInfo" : "http://www.microsoft.com",
+                    "FileDigest" : "/fd \"SHA256\"",
+                    "PageHash" : "/NPH",
+                    "TimeStamp" : "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
+                },
+                "ToolName" : "sign",
+                "ToolVersion" : "1.0"
+            },
+            {
+                "KeyCode" : "CP-230012",
+                "OperationCode" : "SigntoolVerify",
+                "Parameters" : {},
+                "ToolName" : "sign",
+                "ToolVersion" : "1.0"
+            }
+        ]
   - task: BinSkim@4
     inputs:
        toolVersion: Latest
