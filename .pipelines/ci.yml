@@ -20,7 +20,7 @@ jobs:
   - task: PowerShell@2
     inputs:
       targetType: 'inline'
-      script: 'ls $(Build.SourcesDirectory)'
+      script: 'ls $(Build.SourcesDirectory)/bazel-bin/src/cc/lib'
   - task: EsrpCodeSigning@4
     inputs:
       ConnectedServiceName: 'gnn-sign'
