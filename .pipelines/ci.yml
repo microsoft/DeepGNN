@@ -29,3 +29,13 @@ jobs:
        toolVersion: Latest
        InputType:   CommandLine
        arguments:   analyze bazel-bin/src/cc/lib/*.dll --recurse
+  - task: EsrpCodeSigning@4
+    inputs:
+      ConnectedServiceName: 'gnn-sign'
+      FolderPath: 'bazel-bin/src/cc/lib/'
+      Pattern: '*.dll,*.exe'
+      signConfigType: 'inlineSignParams'
+      SessionTimeout: '90'
+      MaxConcurrency: '50'
+      MaxRetryAttempts: '5'
+      PendingAnalysisWaitTimeoutMinutes: '5'
