@@ -17,11 +17,15 @@ jobs:
     inputs:
       targetType: 'inline'
       script: 'bazelisk build -c dbg //src/cc/lib:wrapper --config=windows'
+  - task: PowerShell@2
+    inputs:
+      targetType: 'inline'
+      script: 'ls $(Build.SourcesDirectory)'
   - task: EsrpCodeSigning@4
     inputs:
       ConnectedServiceName: 'gnn-sign'
-      FolderPath: '$(Build.SourcesDirectory)/bazel-bin/src/cc/lib/'
-      Pattern: '*.dll,*.exe'
+      FolderPath: '$(Build.SourcesDirectory)'
+      Pattern: '**/*.dll'
       signConfigType: 'inlineSignParams'
       SessionTimeout: '90'
       MaxConcurrency: '50'
