@@ -20,12 +20,12 @@ jobs:
   - task: PowerShell@2
     inputs:
       targetType: 'inline'
-      script: 'ls $(Build.SourcesDirectory)/bazel-bin/src/cc/lib'
+      script: 'ls $(Build.SourcesDirectory)\bazel-bin\src\cc\lib'
   - task: EsrpCodeSigning@4
     inputs:
       ConnectedServiceName: 'gnn-sign'
-      FolderPath: '$(Build.SourcesDirectory)'
-      Pattern: '**/*.dll'
+      FolderPath: '$(Build.SourcesDirectory)\bazel-bin\src\cc\lib'
+      Pattern: '*.dll'
       signConfigType: 'inlineSignParams'
       SessionTimeout: '90'
       MaxConcurrency: '50'
