@@ -8,11 +8,11 @@ jobs:
   pool:
     vmImage: 'windows-latest'
   steps:
-  # - task: CredScan@3
-  #   displayName: 'Credscan'
-  #   inputs:
-  #     outputFormat: sarif
-  #     debugMode: false
+  - task: CredScan@3
+    displayName: 'Credscan'
+    inputs:
+      outputFormat: sarif
+      debugMode: false
   - task: PowerShell@2
     inputs:
       targetType: 'inline'
@@ -63,4 +63,10 @@ jobs:
     inputs:
        toolVersion: Latest
        InputType:   CommandLine
-       arguments:   analyze bazel-bin/src/cc/lib/*.dll --recurse
+       arguments:   analyze $(Build.SourcesDirectory)\bazel-bin\src\cc\lib\*.dll --recurse
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish build artifacts'
+    inputs:
+      PathtoPublish: '$(Build.SourcesDirectory)\bazel-bin\src\cc\lib\wrapper.dll'
+      ArtifactName: 'drop'
+      publishLocation: 'Container'
