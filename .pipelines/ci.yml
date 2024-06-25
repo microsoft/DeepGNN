@@ -20,10 +20,6 @@ jobs:
   - task: PowerShell@2
     inputs:
       targetType: 'inline'
-      script: 'ls $(Build.SourcesDirectory)\bazel-bin\src\cc\lib'
-  - task: PowerShell@2
-    inputs:
-      targetType: 'inline'
       script: 'Set-ItemProperty -Path $(Build.SourcesDirectory)\bazel-bin\src\cc\lib\wrapper.dll -Name "IsReadOnly" -Value $false'
 
   - task: EsrpCodeSigning@4
