@@ -17,8 +17,52 @@ jobs:
     inputs:
       targetType: 'inline'
       script: 'bazelisk build -c dbg //src/cc/lib:wrapper --config=windows'
+  - task: PowerShell@2
+    inputs:
+      targetType: 'inline'
+      script: 'Set-ItemProperty -Path $(Build.SourcesDirectory)\bazel-bin\src\cc\lib\wrapper.dll -Name "IsReadOnly" -Value $false'
+
+  - task: EsrpCodeSigning@4
+    inputs:
+      ConnectedServiceName: 'gnn-sign'
+      FolderPath: '$(Build.SourcesDirectory)\bazel-bin\src\cc\lib'
+      Pattern: '*.dll'
+      signConfigType: 'inlineSignParams'
+      SessionTimeout: '90'
+      MaxConcurrency: '50'
+      MaxRetryAttempts: '5'
+      PendingAnalysisWaitTimeoutMinutes: '5'
+      inlineOperation: |
+        [
+            {
+                "KeyCode" : "CP-230012",
+                "OperationCode" : "SigntoolSign",
+                "Parameters" : {
+                    "OpusName" : "Microsoft",
+                    "OpusInfo" : "http://www.microsoft.com",
+                    "FileDigest" : "/fd \"SHA256\"",
+                    "PageHash" : "/NPH",
+                    "TimeStamp" : "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
+                },
+                "ToolName" : "sign",
+                "ToolVersion" : "1.0"
+            },
+            {
+                "KeyCode" : "CP-230012",
+                "OperationCode" : "SigntoolVerify",
+                "Parameters" : {},
+                "ToolName" : "sign",
+                "ToolVersion" : "1.0"
+            }
+        ]
   - task: BinSkim@4
     inputs:
        toolVersion: Latest
        InputType:   CommandLine
-       arguments:   analyze bazel-bin/src/cc/lib/*.dll --recurse
+       arguments:   analyze $(Build.SourcesDirectory)\bazel-bin\src\cc\lib\*.dll --recurse
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish build artifacts'
+    inputs:
+      PathtoPublish: '$(Build.SourcesDirectory)\bazel-bin\src\cc\lib\wrapper.dll'
+      ArtifactName: 'drop'
+      publishLocation: 'Container'
