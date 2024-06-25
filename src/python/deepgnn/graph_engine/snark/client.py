@@ -635,8 +635,8 @@ class MemoryGraph:
             timestamps (np.array): list of timestamps corresponding to each node
 
         Returns:
-            np.array: dimensions of returned features (#nodes, #features)
             np.array: feature values
+            np.array: dimensions of returned features (#nodes, #features)
         """
         nodes = np.array(nodes, dtype=np.int64)
         features = np.array(features, dtype=np.int32)
@@ -784,8 +784,8 @@ class MemoryGraph:
             timestamps (np.array): list of timestamps corresponding to each edge
 
         Returns:
-            np.array: dimensions of returned features (#edges, #features)
             np.array: feature values
+            np.array: dimensions of returned features (#edges, #features)
         """
         assert len(edge_src) == len(edge_dst)
         assert len(edge_src) == len(edge_tp)
@@ -941,7 +941,7 @@ class MemoryGraph:
             return_edge_created_ts (Optional[bool], optional): Return timestamps when edges connecting nodes were created,
 
         Returns:
-            Tuple[np.ndarray, np.ndarray, np.ndarray]: a tuple of neighbor nodes, edge types and weights. If return_edge_created_ts specified,
+            Tuple[np.ndarray, np.ndarray, np.ndarray]: a tuple of neighbor nodes, weights, and edge types. If return_edge_created_ts specified,
             then this tuple will have a fourth element, list of timestamps when edges were created.
         """
         nodes = np.array(nodes, dtype=np.int64)
