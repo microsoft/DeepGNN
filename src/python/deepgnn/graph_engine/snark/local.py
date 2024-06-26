@@ -149,9 +149,11 @@ class Client(Graph):
                 result[0],
                 np.empty(result[0].shape, dtype=np.float32),
                 result[1],
-                result[2]
-                if return_edge_created_ts
-                else np.full(result[0].shape, -1, dtype=np.int64),
+                (
+                    result[2]
+                    if return_edge_created_ts
+                    else np.full(result[0].shape, -1, dtype=np.int64)
+                ),
             )
         if strategy == "ppr-go":
             result = self.graph.ppr_neighbors(  # type: ignore

@@ -152,9 +152,9 @@ def test_converter_0_workers(triangle_graph):
             graph_path=data_name,
             partition_count=1,
             output_dir=output.name,
-            decoder=JsonDecoder()
-            if isinstance(decoder(), TsvDecoder)
-            else TsvDecoder(),
+            decoder=(
+                JsonDecoder() if isinstance(decoder(), TsvDecoder) else TsvDecoder()
+            ),
             debug=True,
         ).convert()
 

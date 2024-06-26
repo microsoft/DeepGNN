@@ -64,7 +64,7 @@ class EdgeListDecoder(Decoder):
         Sort the file so the first line has the first node's info, the next few lines have all the first node's
         outgoing edges. Then the next line will have the second node's info and so on.
 
-        Feature fectors to fill <features> can be dense or sparse. Features will be given
+        Feature vectors to fill <features> can be dense or sparse. Features will be given
         indexes starting at 0 and indexes can be skipped with 0 length vectors. Each node and
         edge does not have to have the same number of features or feature types.
 
@@ -414,9 +414,11 @@ class JsonDecoder(Decoder):
                 key=lambda edge: (
                     edge["edge_type"],
                     edge.get("created_at", 0),
-                    edge.get("removed_at", 0)
-                    if edge.get("removed_at") != -1
-                    else float("inf"),
+                    (
+                        edge.get("removed_at", 0)
+                        if edge.get("removed_at") != -1
+                        else float("inf")
+                    ),
                     edge["dst_id"],
                 ),
             )
