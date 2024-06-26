@@ -51,7 +51,7 @@ The EdgeList format,
 Sort the file so the first line has the first node's info, the next few lines have all the first node's
 outgoing edges. Then the next line will have the second node's info and so on.
 
-Feature fectors to fill <features> can be dense or sparse. Features will be given
+Feature vectors to fill <features> can be dense or sparse. Features will be given
 indexes starting at 0 and indexes can be skipped with 0 length vectors. Each node and
 edge does not have to have the same number of features or feature types.
 

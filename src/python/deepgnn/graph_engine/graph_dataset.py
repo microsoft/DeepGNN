@@ -18,7 +18,7 @@ INVALID_NODE_ID = -1
 class BackendType(Enum):
     """Backend types for DeepGNN's graph engine.
 
-    Graph engine servers can be hosted on VM cluster or kubernetes.
+    Graph engine servers can be hosted on VM cluster or Kubernetes.
     """
 
     SNARK = "snark"
@@ -30,11 +30,11 @@ class BackendType(Enum):
 
 
 class DeepGNNDataset:
-    """Unified dataset shared by both TF and Torch.
+    """Unified dataset shared by both TensorFlow and PyTorch.
 
     DeepGNNDataset initializes and executes a node or edge sampler given as
     sampler_class. For every batch of data requested, batch_size items are sampled
-    from the sampler and passed to the given query_fn which pulls all necessaary
+    from the sampler and passed to the given query_fn which pulls all necessary
     information about the samples using the graph engine API. The output from
     the query function is passed to the trainer worker as the input to the
     model forward function.
@@ -70,7 +70,7 @@ class DeepGNNDataset:
         **kwargs,
     ):
         """Initialize DeepGNN dataset."""
-        assert sampler_class is not None
+        assert sampler_class is not None, "sampler_class cannot be None"
 
         self.num_workers = num_workers
         self.sampler_class = sampler_class
@@ -103,7 +103,7 @@ class DeepGNNDataset:
             # Here we inject the graph dependency into sampler
             # if its __init__ needs a graph client,
             if sig.parameters[key].annotation == Graph:
-                assert self.graph is not None
+                assert self.graph is not None, "Graph client must be initialized"
                 sampler_args[key] = self.graph
             elif key in self.kwargs.keys():
                 sampler_args[key] = self.kwargs[key]
@@ -115,16 +115,8 @@ class DeepGNNDataset:
     def __iter__(self) -> Iterator:
         """Create an iterator for graph."""
         if self.enable_prefetch:
-            prefetch_size = (
-                self.kwargs["prefetch_queue_size"]
-                if "prefetch_queue_size" in self.kwargs
-                else 10
-            )
-            max_parallel = (
-                self.kwargs["prefetch_worker_size"]
-                if "prefetch_worker_size" in self.kwargs
-                else 2
-            )
+            prefetch_size = self.kwargs.get("prefetch_queue_size", 10)
+            max_parallel = self.kwargs.get("prefetch_worker_size", 2)
 
             return Generator(
                 graph=self.graph,
@@ -153,7 +145,7 @@ def create_backend(
         backend_class = backend_options.custom_backendclass
     elif BackendType(backend_type) == BackendType.SNARK:
         if backend_options.graph_type == GraphType.LOCAL:
-            assert backend_options.data_dir
+            assert backend_options.data_dir, "Data directory must be provided for local graph"
             from deepgnn.graph_engine.backends.snark.client import (  # type: ignore
                 SnarkLocalBackend as backend_class,
             )
