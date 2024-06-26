@@ -33,7 +33,9 @@ def sample_mask(idx: Union[List[int], np.ndarray], size: int) -> np.ndarray:
     return np.array(mask, dtype=np.bool8)
 
 
-def load_data(data_dir: str, dataset_str: str) -> Tuple[
+def load_data(
+    data_dir: str, dataset_str: str
+) -> Tuple[
     sp.csr_matrix,
     sp.lil_matrix,
     np.ndarray,
