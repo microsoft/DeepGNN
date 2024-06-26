@@ -145,7 +145,9 @@ def create_backend(
         backend_class = backend_options.custom_backendclass
     elif BackendType(backend_type) == BackendType.SNARK:
         if backend_options.graph_type == GraphType.LOCAL:
-            assert backend_options.data_dir, "Data directory must be provided for local graph"
+            assert (
+                backend_options.data_dir
+            ), "Data directory must be provided for local graph"
             from deepgnn.graph_engine.backends.snark.client import (  # type: ignore
                 SnarkLocalBackend as backend_class,
             )

@@ -568,9 +568,13 @@ class MemoryGraph:
             self.g_,
             nodes.ctypes.data_as(POINTER(c_int64)),
             c_size_t(len(nodes)),
-            None
-            if timestamps is None or len(timestamps) == 0
-            else np.array(timestamps, dtype=np.int64).ctypes.data_as(POINTER(c_int64)),
+            (
+                None
+                if timestamps is None or len(timestamps) == 0
+                else np.array(timestamps, dtype=np.int64).ctypes.data_as(
+                    POINTER(c_int64)
+                )
+            ),
             features_in_bytes.ctypes.data_as(POINTER(c_int32)),
             c_size_t(len(features)),
             result.ctypes.data_as(POINTER(c_uint8)),
@@ -610,9 +614,13 @@ class MemoryGraph:
             self.g_,
             nodes.ctypes.data_as(POINTER(c_int64)),
             c_size_t(len(nodes)),
-            None
-            if timestamps is None or len(timestamps) == 0
-            else np.array(timestamps, dtype=np.int64).ctypes.data_as(POINTER(c_int64)),
+            (
+                None
+                if timestamps is None or len(timestamps) == 0
+                else np.array(timestamps, dtype=np.int64).ctypes.data_as(
+                    POINTER(c_int64)
+                )
+            ),
             features.ctypes.data_as(POINTER(c_int32)),
             c_size_t(len(features)),
             _SPARSE_FEATURE_CALLBACKFUNC(py_cb),
@@ -649,9 +657,13 @@ class MemoryGraph:
             self.g_,
             nodes.ctypes.data_as(POINTER(c_int64)),
             c_size_t(len(nodes)),
-            None
-            if timestamps is None or len(timestamps) == 0
-            else np.array(timestamps, dtype=np.int64).ctypes.data_as(POINTER(c_int64)),
+            (
+                None
+                if timestamps is None or len(timestamps) == 0
+                else np.array(timestamps, dtype=np.int64).ctypes.data_as(
+                    POINTER(c_int64)
+                )
+            ),
             features.ctypes.data_as(POINTER(c_int32)),
             c_size_t(len(features)),
             dimensions.ctypes.data_as(POINTER(c_int64)),
@@ -702,9 +714,13 @@ class MemoryGraph:
             edge_dst.ctypes.data_as(POINTER(c_int64)),
             edge_tp.ctypes.data_as(POINTER(c_int32)),
             c_size_t(len(edge_src)),
-            None
-            if timestamps is None or len(timestamps) == 0
-            else np.array(timestamps, dtype=np.int64).ctypes.data_as(POINTER(c_int64)),
+            (
+                None
+                if timestamps is None or len(timestamps) == 0
+                else np.array(timestamps, dtype=np.int64).ctypes.data_as(
+                    POINTER(c_int64)
+                )
+            ),
             features_in_bytes.ctypes.data_as(POINTER(c_int32)),
             c_size_t(len(features)),
             result.ctypes.data_as(POINTER(c_uint8)),
@@ -754,9 +770,13 @@ class MemoryGraph:
             edge_dst.ctypes.data_as(POINTER(c_int64)),
             edge_tp.ctypes.data_as(POINTER(c_int32)),
             c_size_t(len(edge_src)),
-            None
-            if timestamps is None or len(timestamps) == 0
-            else np.array(timestamps, dtype=np.int64).ctypes.data_as(POINTER(c_int64)),
+            (
+                None
+                if timestamps is None or len(timestamps) == 0
+                else np.array(timestamps, dtype=np.int64).ctypes.data_as(
+                    POINTER(c_int64)
+                )
+            ),
             features.ctypes.data_as(POINTER(c_int32)),
             c_size_t(len(features)),
             _SPARSE_FEATURE_CALLBACKFUNC(py_cb),
@@ -806,9 +826,13 @@ class MemoryGraph:
             edge_dst.ctypes.data_as(POINTER(c_int64)),
             edge_tp.ctypes.data_as(POINTER(c_int32)),
             c_size_t(len(edge_src)),
-            None
-            if timestamps is None or len(timestamps) == 0
-            else np.array(timestamps, dtype=np.int64).ctypes.data_as(POINTER(c_int64)),
+            (
+                None
+                if timestamps is None or len(timestamps) == 0
+                else np.array(timestamps, dtype=np.int64).ctypes.data_as(
+                    POINTER(c_int64)
+                )
+            ),
             features.ctypes.data_as(POINTER(c_int32)),
             c_size_t(len(features)),
             dimensions.ctypes.data_as(POINTER(c_int64)),
@@ -844,9 +868,13 @@ class MemoryGraph:
             self.g_,
             nodes.ctypes.data_as(POINTER(c_int64)),
             nodes.size,
-            None
-            if timestamps is None or len(timestamps) == 0
-            else np.array(timestamps, dtype=np.int64).ctypes.data_as(POINTER(c_int64)),
+            (
+                None
+                if timestamps is None or len(timestamps) == 0
+                else np.array(timestamps, dtype=np.int64).ctypes.data_as(
+                    POINTER(c_int64)
+                )
+            ),
             etypes_arr,
             len(edge_types),
             counts.ctypes.data_as(POINTER(c_uint64)),
@@ -894,9 +922,13 @@ class MemoryGraph:
             c_bool(return_edge_created_ts),
             nodes.ctypes.data_as(POINTER(c_int64)),
             nodes.size,
-            None
-            if timestamps is None or len(timestamps) == 0
-            else np.array(timestamps, dtype=np.int64).ctypes.data_as(POINTER(c_int64)),
+            (
+                None
+                if timestamps is None or len(timestamps) == 0
+                else np.array(timestamps, dtype=np.int64).ctypes.data_as(
+                    POINTER(c_int64)
+                )
+            ),
             etypes_arr,
             len(edge_types),
             result_counts.ctypes.data_as(POINTER(c_uint64)),
@@ -967,16 +999,22 @@ class MemoryGraph:
             c_size_t(nodes.size),
             etypes_arr,
             c_size_t(len(edge_types)),
-            None
-            if timestamps is None or len(timestamps) == 0
-            else np.array(timestamps, dtype=np.int64).ctypes.data_as(POINTER(c_int64)),
+            (
+                None
+                if timestamps is None or len(timestamps) == 0
+                else np.array(timestamps, dtype=np.int64).ctypes.data_as(
+                    POINTER(c_int64)
+                )
+            ),
             c_size_t(count),
             result_nodes.ctypes.data_as(POINTER(c_int64)),
             result_types.ctypes.data_as(POINTER(c_int32)),
             result_weights.ctypes.data_as(POINTER(c_float)),
-            result_ts.ctypes.data_as(POINTER(c_int64))
-            if return_edge_created_ts
-            else None,
+            (
+                result_ts.ctypes.data_as(POINTER(c_int64))
+                if return_edge_created_ts
+                else None
+            ),
             c_int64(default_node),
             c_float(default_weight),
             c_int32(default_edge_type),
@@ -1041,17 +1079,23 @@ class MemoryGraph:
             c_size_t(nodes.size),
             etypes_arr,
             c_size_t(len(edge_types)),
-            None
-            if timestamps is None or len(timestamps) == 0
-            else np.array(timestamps, dtype=np.int64).ctypes.data_as(POINTER(c_int64)),
+            (
+                None
+                if timestamps is None or len(timestamps) == 0
+                else np.array(timestamps, dtype=np.int64).ctypes.data_as(
+                    POINTER(c_int64)
+                )
+            ),
             c_size_t(count),
             result_nodes.ctypes.data_as(POINTER(c_int64)),
             result_types.ctypes.data_as(POINTER(c_int32)),
-            None
-            if timestamps is None
-            or len(timestamps) == 0
-            or (not return_edge_created_ts)
-            else result_ts.ctypes.data_as(POINTER(c_int64)),
+            (
+                None
+                if timestamps is None
+                or len(timestamps) == 0
+                or (not return_edge_created_ts)
+                else result_ts.ctypes.data_as(POINTER(c_int64))
+            ),
             c_int64(default_node),
             c_int32(default_type),
         )
@@ -1098,9 +1142,13 @@ class MemoryGraph:
             self.g_,
             nodes.ctypes.data_as(POINTER(c_int64)),
             c_size_t(nodes.size),
-            None
-            if timestamps is None or len(timestamps) == 0
-            else np.array(timestamps, dtype=np.int64).ctypes.data_as(POINTER(c_int64)),
+            (
+                None
+                if timestamps is None or len(timestamps) == 0
+                else np.array(timestamps, dtype=np.int64).ctypes.data_as(
+                    POINTER(c_int64)
+                )
+            ),
             etypes_arr,
             c_size_t(len(edge_types)),
             c_size_t(count),
@@ -1173,9 +1221,11 @@ class MemoryGraph:
             result_nodes.ctypes.data_as(POINTER(c_int64)),
             result_types.ctypes.data_as(POINTER(c_int32)),
             result_weights.ctypes.data_as(POINTER(c_float)),
-            result_ts.ctypes.data_as(POINTER(c_int64))
-            if return_edge_created_ts
-            else None,
+            (
+                result_ts.ctypes.data_as(POINTER(c_int64))
+                if return_edge_created_ts
+                else None
+            ),
             c_int64(default_node),
             c_float(default_weight),
             c_int32(default_edge_type),
@@ -1250,9 +1300,13 @@ class MemoryGraph:
             c_int64(default_node),
             node_ids.ctypes.data_as(POINTER(c_int64)),
             c_size_t(node_ids.size),
-            None
-            if timestamps is None or len(timestamps) == 0
-            else np.array(timestamps, dtype=np.int64).ctypes.data_as(POINTER(c_int64)),
+            (
+                None
+                if timestamps is None or len(timestamps) == 0
+                else np.array(timestamps, dtype=np.int64).ctypes.data_as(
+                    POINTER(c_int64)
+                )
+            ),
             etypes_arr,
             c_size_t(len(edge_types)),
             c_size_t(walk_len),

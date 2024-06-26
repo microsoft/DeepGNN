@@ -414,9 +414,11 @@ class JsonDecoder(Decoder):
                 key=lambda edge: (
                     edge["edge_type"],
                     edge.get("created_at", 0),
-                    edge.get("removed_at", 0)
-                    if edge.get("removed_at") != -1
-                    else float("inf"),
+                    (
+                        edge.get("removed_at", 0)
+                        if edge.get("removed_at") != -1
+                        else float("inf")
+                    ),
                     edge["dst_id"],
                 ),
             )
