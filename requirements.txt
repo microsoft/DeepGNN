@@ -253,7 +253,7 @@ torch-cluster==1.6.1
 torch-scatter==2.1.1
 torch-sparse==0.6.17
 torch_geometric==2.3.0
-tornado==6.3.3
+tornado==6.4.1
 tqdm==4.66.3
 traitlets==5.4.0
 transformers==4.38.0
