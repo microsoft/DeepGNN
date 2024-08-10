@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Make DeepGNN snark server feature loading skippable
+
 ## [0.1.63] - 2024-05-10
 
 ### Fixed
