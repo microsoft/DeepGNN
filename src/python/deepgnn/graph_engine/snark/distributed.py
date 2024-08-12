@@ -71,6 +71,7 @@ class Server:
         storage_type: client.PartitionStorageType = client.PartitionStorageType.memory,
         config_path: str = "",
         stream: bool = False,
+        skip_feature_loading: bool = False,
     ):
         """Init snark server."""
         temp_dir = tempfile.TemporaryDirectory()
@@ -104,6 +105,7 @@ class Server:
             storage_type,
             config_path,
             stream,  # type: ignore
+            skip_feature_loading,
         )
 
     def reset(self):
