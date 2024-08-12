@@ -19,7 +19,7 @@ struct Metadata
 {
     Metadata() = default;
     explicit Metadata(std::filesystem::path path, std::string config_path = "",
-                      std::shared_ptr<Logger> logger = nullptr);
+                      std::shared_ptr<Logger> logger = nullptr, bool skip_feature_loading = false);
     void Write(std::filesystem::path path) const;
 
     // Graph information.
