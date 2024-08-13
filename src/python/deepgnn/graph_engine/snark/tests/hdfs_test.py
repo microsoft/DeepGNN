@@ -67,7 +67,7 @@ def test_hdfs_remote(hdfs_data):
     if "CLASSPATH" in os.environ:
         del os.environ["CLASSPATH"]
 
-    address = ["localhost:9999"]
+    address = ["localhost:10000"]
     location = "file://" + hdfs_data
     s = server.Server(
         location, [(location, 0)], address[0], config_path="", stream=True
