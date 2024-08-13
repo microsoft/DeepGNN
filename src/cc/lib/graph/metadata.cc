@@ -16,8 +16,8 @@ using json = nlohmann::json;
 namespace snark
 {
 
-Metadata::Metadata(std::filesystem::path path, std::string config_path, std::shared_ptr<Logger> logger,
-                   bool skip_feature_loading)
+Metadata::Metadata(std::filesystem::path path, std::string config_path, bool skip_feature_loading,
+                   std::shared_ptr<Logger> logger)
     : m_version(MINIMUM_SUPPORTED_VERSION), m_path(path.string()), m_config_path(config_path), m_watermark(-1)
 {
 

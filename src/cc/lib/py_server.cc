@@ -35,7 +35,7 @@ int32_t StartServer(PyServer *graph, const char *meta_location, size_t count, ui
                     bool skip_feature_loading)
 {
     snark::PartitionStorageType storage_type = static_cast<snark::PartitionStorageType>(storage_type_);
-    snark::Metadata metadata(safe_convert(meta_location), safe_convert(config_path), nullptr, skip_feature_loading);
+    snark::Metadata metadata(safe_convert(meta_location), safe_convert(config_path), skip_feature_loading);
     std::vector<std::string> partition_paths;
     partition_paths.reserve(count);
     for (size_t i = 0; i < count; ++i)
