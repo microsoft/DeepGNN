@@ -18,7 +18,7 @@ const size_t MINIMUM_SUPPORTED_VERSION = 2;
 struct Metadata
 {
     Metadata() = default;
-    explicit Metadata(std::filesystem::path path, std::string config_path = "",
+    explicit Metadata(std::filesystem::path path, std::string config_path = "", bool skip_feature_loading = false,
                       std::shared_ptr<Logger> logger = nullptr);
     void Write(std::filesystem::path path) const;
 
