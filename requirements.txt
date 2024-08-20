@@ -2,6 +2,7 @@
 absl-py==1.2.0
 adal==1.2.7
 adlfs==2021.10.0
+aiohappyeyeballs-2.4.0
 aiohttp==3.10.2
 aiosignal==1.2.0
 aiosignal==1.2.0
