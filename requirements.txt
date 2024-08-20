@@ -32,7 +32,6 @@ azure-mgmt-resource==21.2.0
 azure-mgmt-storage==20.1.0
 azure-nspkg==3.0.2
 azure-storage-blob==12.14.0
-azureml-core==1.57.0
 Babel==2.10.3
 backcall==0.2.0
 backports.tempfile==1.0
@@ -249,16 +248,15 @@ toml==0.10.2
 tomli==2.0.1
 toolz==0.12.0
 torch==1.13.1
-torch-cluster==1.6.1+pt113cpu
 torch-geometric==2.3.0
-torch-scatter==2.1.1+pt113cpu
-torch-sparse==0.6.17+pt113cpu
+torch-cluster==1.6.1
+torch-scatter==2.1.1
+torch-sparse==0.6.17
 tornado==6.4.1
 tqdm==4.66.3
 traitlets==5.4.0
 transformers==4.38.0
 typeguard==2.13.3
-types-cryptography==3.3.23.2
 typing_extensions==4.4.0
 tzdata==2023.3
 urllib3==1.26.19
