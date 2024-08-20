@@ -3,7 +3,16 @@
 
 """Stanalone graph engine server."""
 from datetime import datetime
-from ctypes import POINTER, Structure, byref, c_char_p, c_size_t, c_uint32, c_int32
+from ctypes import (
+    POINTER,
+    Structure,
+    byref,
+    c_char_p,
+    c_size_t,
+    c_uint32,
+    c_int32,
+    c_bool,
+)
 from typing import Optional, Any, Dict, List, Tuple, Union, Sequence
 
 from deepgnn.graph_engine.snark._lib import _get_c_lib
@@ -39,6 +48,7 @@ class Server:
         storage_type: PartitionStorageType = PartitionStorageType.memory,
         config_path: str = "",
         stream: bool = False,
+        skip_feature_loading: bool = False,
     ):
         """Create server and start it.
 
@@ -54,6 +64,7 @@ class Server:
             config_path (str, optional): Path to folder with configuration files for hdfs access.
             stream (bool, default=False): If remote path is given: by default, download files first then load,
                 if stream = True and libhdfs present, stream data directly to memory.
+            skip_feature_loading (bool, default=False): Skip loading node and edge features into DeepGNN server.
         """
         if storage_type == PartitionStorageType.disk and stream:
             raise ValueError(
@@ -103,6 +114,7 @@ class Server:
             c_char_p,
             c_int32,
             c_char_p,
+            c_bool,
         ]
 
         self.lib.StartServer.errcheck = _ErrCallback("start server")  # type: ignore
@@ -137,6 +149,7 @@ class Server:
             ssl_root,
             c_int32(storage_type),
             c_char_p(bytes(config_path, "utf-8")),
+            skip_feature_loading,
         )
 
     def reset(self):
@@ -207,6 +220,12 @@ if __name__ == "__main__":
         default=False,
         help="If ADL data path, stream directly to memory or download to disk first.",
     )
+    parser.add_argument(
+        "--skip_feature_loading",
+        action="store_true",
+        default=False,
+        help="If True, skip loading node and edge features into DeepGNN server.",
+    )
 
     args, _ = parser.parse_known_args()
     if args.server_group is not None:
@@ -228,6 +247,7 @@ if __name__ == "__main__":
         storage_type=args.storage_type,
         config_path=args.config_path,
         stream=args.stream,
+        skip_feature_loading=args.skip_feature_loading,
     )
     logger.info("Server started...")
     try:

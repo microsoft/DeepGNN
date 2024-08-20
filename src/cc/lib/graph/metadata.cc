@@ -16,7 +16,8 @@ using json = nlohmann::json;
 namespace snark
 {
 
-Metadata::Metadata(std::filesystem::path path, std::string config_path, std::shared_ptr<Logger> logger)
+Metadata::Metadata(std::filesystem::path path, std::string config_path, bool skip_feature_loading,
+                   std::shared_ptr<Logger> logger)
     : m_version(MINIMUM_SUPPORTED_VERSION), m_path(path.string()), m_config_path(config_path), m_watermark(-1)
 {
 
@@ -66,6 +67,12 @@ Metadata::Metadata(std::filesystem::path path, std::string config_path, std::sha
     m_edge_feature_count = meta["edge_feature_count"];
     m_partition_count = meta["partitions"].size();
     m_watermark = meta["watermark"];
+    // Skip feature loading if requested. This is useful when the feature loading is done in a separate feature store.
+    if (skip_feature_loading == true)
+    {
+        m_node_feature_count = 0;
+        m_edge_feature_count = 0;
+    }
 
     m_partition_node_weights =
         std::vector<std::vector<float>>(m_partition_count, std::vector<float>(m_node_type_count, 0.0f));
