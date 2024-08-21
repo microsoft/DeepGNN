@@ -247,7 +247,7 @@ tokenizers==0.15.0
 toml==0.10.2
 tomli==2.0.1
 toolz==0.12.0
-torch==1.13.1
+torch==2.2.0
 torch-cluster==1.6.1
 torch-geometric==2.3.0
 torch-scatter==2.1.1
