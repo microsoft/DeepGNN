@@ -232,6 +232,7 @@ py_test(
         requirement("ray"),
         requirement("pyarrow"),
         requirement("torch"),
+        requirement("setuptools"),
     ],
 )
 
