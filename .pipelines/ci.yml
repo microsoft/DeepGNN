@@ -24,7 +24,12 @@ jobs:
 
   - task: EsrpCodeSigning@4
     inputs:
-      ConnectedServiceName: 'gnn-sign'
+      ConnectedServiceName: 'DeepGNNFederated'
+      AppRegistrationClientId: 'e66e717d-3443-4fdd-a04e-cf2cc8e29f4f'
+      AppRegistrationTenantId: '975f013f-7f24-47e8-a7d3-abc4752bf346'
+      AuthAKVName: 'DeepGNNKeyVault'
+      AuthCertName: 'DeepGNN-SSL-Autorotation'
+      AuthSignCertName: 'DeepGNNSigning'
       FolderPath: '$(Build.SourcesDirectory)\bazel-bin\src\cc\lib'
       Pattern: '*.dll'
       signConfigType: 'inlineSignParams'
