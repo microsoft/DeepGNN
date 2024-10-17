@@ -30,7 +30,7 @@ jobs:
       UseMSIAuthentication: 'true'
       AuthAKVName: 'DeepGNNKeyVault'
       AuthCertName: 'DeepGNN-SSL-Autorotation'
-      AuthSignCertName: 'DeepGNNSigning'
+      AuthSignCertName: 'DeepGNNSigningMSI'
       FolderPath: '$(Build.SourcesDirectory)\bazel-bin\src\cc\lib'
       Pattern: '*.dll'
       signConfigType: 'inlineSignParams'
