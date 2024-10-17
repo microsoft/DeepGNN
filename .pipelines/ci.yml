@@ -25,7 +25,7 @@ jobs:
   - task: SFP.build-tasks.custom-build-task-1.EsrpCodeSigning@5
     inputs:
       ConnectedServiceName: 'DeepGNNFederated'
-      AppRegistrationClientId: 'e66e717d-3443-4fdd-a04e-cf2cc8e29f4f'
+      AppRegistrationClientId: '494d6cb8-c82d-4c9e-b784-fa2931a49e8e'
       AppRegistrationTenantId: '975f013f-7f24-47e8-a7d3-abc4752bf346'
       AuthAKVName: 'DeepGNNKeyVault'
       AuthCertName: 'DeepGNN-SSL-Autorotation'
