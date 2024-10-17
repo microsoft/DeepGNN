@@ -22,7 +22,7 @@ jobs:
       targetType: 'inline'
       script: 'Set-ItemProperty -Path $(Build.SourcesDirectory)\bazel-bin\src\cc\lib\wrapper.dll -Name "IsReadOnly" -Value $false'
 
-  - task: EsrpCodeSigning@4
+  - task: EsrpCodeSigning@5
     inputs:
       ConnectedServiceName: 'DeepGNNFederated'
       AppRegistrationClientId: 'e66e717d-3443-4fdd-a04e-cf2cc8e29f4f'
