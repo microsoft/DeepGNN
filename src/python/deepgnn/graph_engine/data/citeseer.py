@@ -7,7 +7,6 @@ import tempfile
 from collections import defaultdict
 from deepgnn.graph_engine.data.data_util import Dataset, select_training_test_nodes
 from typing import Optional, List, Tuple, Dict, Set, DefaultDict
-from pathlib import Path
 
 
 class CiteseerFull(Dataset):
@@ -34,18 +33,18 @@ class CiteseerFull(Dataset):
         output_dir: Optional[str] = None,
         train_node_ratio: float = 1.0,
         random_selection: bool = False,
-        url="local",
+        url="https://deepgraphpub.blob.core.windows.net/public/testdata/citeseer.tgz",
     ):
         """Initialize dataset."""
         super().__init__(
-            input_location=f"{str(Path(__file__).parent)}",
-            name="citeseer",
+            name="citeseer_full",
             num_nodes=3312,
             feature_dim=3703,
             num_classes=6,
+            url=url,
             train_node_ratio=train_node_ratio,
             random_selection=random_selection,
-            output_dir=f"{str(Path(__file__).parent)}",
+            output_dir=output_dir,
         )
 
     def _load_raw_graph(
@@ -56,8 +55,8 @@ class CiteseerFull(Dataset):
         DefaultDict[int, Set[int]],
         DefaultDict[int, Set[int]],
     ]:
-        node_file = os.path.join(data_dir, "citeseer.content")
-        edge_file = os.path.join(data_dir, "citeseer.cites")
+        node_file = os.path.join(data_dir, "citeseer", "citeseer.content")
+        edge_file = os.path.join(data_dir, "citeseer", "citeseer.cites")
         paper_nodeid = {}
         labelid = {}  # type: ignore
         nodes = {}
