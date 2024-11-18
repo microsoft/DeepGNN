@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.10"]
-        os: ["ubuntu-22.04", "macos-12", "windows-2019"]
+        os: ["ubuntu-22.04", "macos-13", "windows-2019"]
     steps:
       - uses: actions/checkout@v3.5.3
       - name: Set up Python ${{ matrix.python-version }}
