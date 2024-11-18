@@ -6,7 +6,6 @@
 CXX_OPTS = select({
     "@platforms//os:macos": [
         "-std=c++20",
-        "-Werror",
         "-fvisibility=hidden",
         "-fvisibility-inlines-hidden",
         "-Wno-error=non-pod-varargs",
