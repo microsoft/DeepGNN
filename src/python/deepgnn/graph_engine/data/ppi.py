@@ -45,7 +45,7 @@ class PPI(Client):
           output_dir (string): file directory for graph data.
           num_partitions (int, default=1): Number of partitions
         """
-        self.url = "https://deepgraphpub.blob.core.windows.net/public/testdata/ppi.zip"
+        self.url = "https://snap.stanford.edu/graphsage/ppi.zip"
         self._num_partitions = num_partitions
         self.GRAPH_NAME = "ppi"
         self.output_dir = output_dir
