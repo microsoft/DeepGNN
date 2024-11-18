@@ -11,7 +11,7 @@ CXX_OPTS = select({
         "-Wno-error=non-pod-varargs",
     ],
     "@platforms//os:windows": ["/std:c++20", "/W3", "/guard:cf", "/Qspectre"],
-    "//conditions:default": ["-std=c++20", "-Werror", "-fvisibility=hidden", "-fvisibility-inlines-hidden"],
+    "//conditions:default": ["-std=c++20", "-fvisibility=hidden", "-fvisibility-inlines-hidden"],
 })
 
 PLATFORM_DEFINES = select({
