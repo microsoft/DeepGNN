@@ -25,8 +25,8 @@ cc_grpc_library(
 windows_deps = [
         "//src/cc/lib/graph",
         # Order matters on windows. We want to use latest abseil instead of transitive from grpc.
-        "@com_google_absl//absl/container:flat_hash_map",
-        "@com_google_absl//absl/container:flat_hash_set",
+        "@abseil-cpp//absl/container:flat_hash_map",
+        "@abseil-cpp//absl/container:flat_hash_set",
         "@boost//:random",
         ":service_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",

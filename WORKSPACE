@@ -115,7 +115,7 @@ grpc_extra_deps()
 
 http_archive(
     name = "abseil-cpp",
-    sha256 = "5b7640be0e119de1a9d941cb6b2607d76978eba5720196f1d4fc6de0421d2241",
+    sha256 = "95e90be7c3643e658670e0dd3c1b27092349c34b632c6e795686355f67eca89f",
     strip_prefix = "abseil-cpp-20240722.0",
     urls = ["https://github.com/abseil/abseil-cpp/archive/refs/tags/20240722.0.zip"],
 )
