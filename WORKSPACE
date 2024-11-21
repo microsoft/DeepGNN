@@ -92,10 +92,10 @@ rules_proto_dependencies()
 rules_proto_toolchains()
 
 http_archive(
-    name = "com_google_protobuf",
+    name = "protobuf",
     sha256 = "89ac31a93832e204db6d73b1e80f39f142d5747b290f17340adce5be5b122f94",
-    strip_prefix = "protobuf-3.19.4",
-    urls = ["https://github.com/protocolbuffers/protobuf/releases/download/v3.19.4/protobuf-cpp-3.19.4.tar.gz"],
+    strip_prefix = "protobuf-28.3",
+    urls = ["https://github.com/protocolbuffers/protobuf/releases/download/v28.3/protobuf-28.3.tar.gz"],
 )
 
 http_archive(
