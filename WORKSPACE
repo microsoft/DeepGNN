@@ -49,6 +49,13 @@ load("@doc_deps//:requirements.bzl", install_doc_deps = "install_deps")
 
 install_doc_deps()
 
+http_archive(
+    name = "abseil-cpp",
+    sha256 = "95e90be7c3643e658670e0dd3c1b27092349c34b632c6e795686355f67eca89f",
+    strip_prefix = "abseil-cpp-20240722.0",
+    urls = ["https://github.com/abseil/abseil-cpp/archive/refs/tags/20240722.0.zip"],
+)
+
 git_repository(
     name = "googletest",
     remote = "https://github.com/google/googletest",
@@ -112,13 +119,6 @@ grpc_deps()
 load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
 
 grpc_extra_deps()
-
-http_archive(
-    name = "abseil-cpp",
-    sha256 = "95e90be7c3643e658670e0dd3c1b27092349c34b632c6e795686355f67eca89f",
-    strip_prefix = "abseil-cpp-20240722.0",
-    urls = ["https://github.com/abseil/abseil-cpp/archive/refs/tags/20240722.0.zip"],
-)
 
 http_archive(
     name = "rules_foreign_cc",
