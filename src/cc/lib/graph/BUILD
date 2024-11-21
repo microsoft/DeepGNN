@@ -42,7 +42,7 @@ cc_library(
     deps = [
         "@boost//:random",
         "@json//:json",
-        "@com_github_google_glog//:glog",
+        "@glog//:glog",
         "@abseil-cpp//absl/container:flat_hash_map",
         "@abseil-cpp//absl/container:flat_hash_set",
         "@abseil-cpp//absl/container:inlined_vector",

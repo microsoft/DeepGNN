@@ -64,16 +64,16 @@ http_archive(
 )
 
 http_archive(
-    name = "com_github_google_glog",
-    sha256 = "62efeb57ff70db9ea2129a16d0f908941e355d09d6d83c9f7b18557c0a7ab59e",
-    strip_prefix = "glog-d516278b1cd33cd148e8989aec488b6049a4ca0b",
-    urls = ["https://github.com/google/glog/archive/d516278b1cd33cd148e8989aec488b6049a4ca0b.zip"],
+    name = "glog",
+    sha256 = "c17d85c03ad9630006ef32c7be7c65656aba2e7e2fbfc82226b7e680c771fc88",
+    strip_prefix = "glog-0.7.1",
+    urls = ["https://github.com/google/glog/archive/refs/tags/v0.7.1.zip"],
 )
 
 git_repository(
     name = "com_google_benchmark",
     remote = "https://github.com/google/benchmark.git",
-    tag = "v1.6.1",
+    tag = "v1.9.0",
 )
 
 http_archive(

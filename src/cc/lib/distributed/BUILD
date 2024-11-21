@@ -31,7 +31,7 @@ windows_deps = [
         ":service_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_benchmark//:benchmark",
-        "@com_github_google_glog//:glog"
+        "@glog//:glog"
 ]
 
 # Windows builds use a system provided openssl defined in .bazelrc file.
