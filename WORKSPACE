@@ -52,7 +52,7 @@ install_doc_deps()
 git_repository(
     name = "googletest",
     remote = "https://github.com/google/googletest",
-    tag = "release-1.11.0",
+    tag = "release-1.15.2",
 )
 
 # Needed by glog below.
