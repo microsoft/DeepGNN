@@ -107,7 +107,7 @@ http_archive(
 
 http_archive(
     name = "com_github_grpc_grpc",
-    sha256 = "86f0f28b75b1562c82b7fc5d436b4f5f5da6cb8d67f59e9fec5f8aa1fe924037",
+    sha256 = "437068b8b777d3b339da94d3498f1dc20642ac9bfa76db43abdd522186b1542b",
     strip_prefix = "grpc-1.60.0",
     urls = ["https://github.com/grpc/grpc/archive/refs/tags/v1.60.0.tar.gz"],
 )
