@@ -84,6 +84,15 @@ git_repository(
 )
 
 http_archive(
+    name = "bazel_features",
+    sha256 = "c2596994cf63513bd44180411a4ac3ae95d32bf59148fcb6087a4642b3ffef11",
+    strip_prefix = "bazel_features-1.20.0",
+    url = "https://github.com/bazel-contrib/bazel_features/releases/download/v1.20.0/bazel_features-v1.20.0.tar.gz",
+)
+load("@bazel_features//:deps.bzl", "bazel_features_deps")
+bazel_features_deps()
+
+http_archive(
     name = "rules_proto",
     sha256 = "303e86e722a520f6f326a50b41cfc16b98fe6d1955ce46642a5b7a67c11c0f5d",
     strip_prefix = "rules_proto-6.0.0",
