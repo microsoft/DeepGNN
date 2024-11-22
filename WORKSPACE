@@ -90,10 +90,10 @@ http_archive(
     url = "https://github.com/bazelbuild/rules_proto/releases/download/6.0.0/rules_proto-6.0.0.tar.gz",
 )
 
-load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
-
+load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies")
 rules_proto_dependencies()
 
+load("@rules_proto//proto:toolchains.bzl", "rules_proto_toolchains")
 rules_proto_toolchains()
 
 http_archive(
