@@ -108,8 +108,8 @@ http_archive(
 http_archive(
     name = "com_github_grpc_grpc",
     sha256 = "86f0f28b75b1562c82b7fc5d436b4f5f5da6cb8d67f59e9fec5f8aa1fe924037",
-    strip_prefix = "grpc-1.68.0",
-    urls = ["https://github.com/grpc/grpc/archive/refs/tags/v1.68.0.tar.gz"],
+    strip_prefix = "grpc-1.60.0",
+    urls = ["https://github.com/grpc/grpc/archive/refs/tags/v1.60.0.tar.gz"],
 )
 
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
