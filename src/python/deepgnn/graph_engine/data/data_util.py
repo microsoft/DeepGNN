@@ -8,7 +8,7 @@ import random
 from typing import Optional, List, Tuple, Dict, Set, DefaultDict
 
 import urllib.request
-import tarfile
+from zipfile import ZipFile
 import deepgnn.graph_engine.snark.convert as convert
 import deepgnn.graph_engine.snark.decoders as decoders
 
@@ -84,19 +84,18 @@ class Dataset(Client):
 
     def __init__(
         self,
+        input_location: str,
         name: str,
         num_nodes: int,
         feature_dim: int,
         num_classes: int,
-        url: str,
         train_node_ratio: float,
         random_selection: bool,
         output_dir: Optional[str] = None,
         num_partitions: int = 1,
     ):
         """Initialize Dataset."""
-        assert name in ["cora_full", "citeseer_full"]
-        self.url = url
+        self.input_location = input_location
         self.GRAPH_NAME = name
         self.NUM_NODES = num_nodes
         self.FEATURE_DIM = feature_dim
@@ -105,28 +104,27 @@ class Dataset(Client):
         self._num_partitions = num_partitions
         if self.output_dir is None:
             self.output_dir = os.path.join(
-                f"{tempfile.gettempdir()}/citation", self.GRAPH_NAME
+                f"{tempfile.gettempdir()}", self.GRAPH_NAME
             )
-        self._build_graph_impl(self.output_dir, train_node_ratio, random_selection)
+        self._build_graph_impl(self.input_location, self.output_dir, train_node_ratio, random_selection)
         super().__init__(self.output_dir, partitions=[0])
 
-    def data_dir(self):
-        """Graph location on disk."""
-        return self.output_dir
-
     def _build_graph_impl(
-        self, data_dir: str, train_node_ratio: float, random_selection: bool
+        self, input_location: str, output_dir, train_node_ratio: float, random_selection: bool
     ) -> str:
-        filename = self.GRAPH_NAME + ".tgz"
-        download_file(self.url, data_dir, filename)
-        with tarfile.open(os.path.join(data_dir, filename)) as tar:
-            tar.extractall(data_dir)
+        filename = self.GRAPH_NAME + ".zip"
+        if "http" in self.input_location:
+            url = input_location
+            input_location = "."
+            download_file(url, input_location, filename)
+        with ZipFile(os.path.join(input_location, filename)) as zip:
+            zip.extractall(output_dir)
         nodes, node_types, train_adjs, test_adjs = self._load_raw_graph(
-            data_dir, train_node_ratio, random_selection
+            output_dir, train_node_ratio, random_selection
         )
 
         # build graph - edge_list
-        graph_file = os.path.join(data_dir, "graph.csv")
+        graph_file = os.path.join(output_dir, "graph.csv")
         self._write_edge_list_graph(
             nodes, node_types, train_adjs, test_adjs, graph_file
         )
@@ -135,17 +133,17 @@ class Dataset(Client):
         convert.MultiWorkersConverter(
             graph_path=graph_file,
             partition_count=self._num_partitions,
-            output_dir=data_dir,
+            output_dir=output_dir,
             decoder=decoders.EdgeListDecoder(),
         ).convert()
 
         # write training/testing nodes.
-        train_file = os.path.join(data_dir, "train.nodes")
-        test_file = os.path.join(data_dir, "test.nodes")
+        train_file = os.path.join(output_dir, "train.nodes")
+        test_file = os.path.join(output_dir, "test.nodes")
         write_node_files(node_types, train_file, test_file)
 
         self._log_graph_statistic(nodes, node_types)
-        return data_dir
+        return output_dir
 
     def _load_raw_graph(
         self, data_dir: str, train_node_ratio: float, random_selection: bool
