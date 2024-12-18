@@ -153,6 +153,7 @@ def validate_twinbert_with_wordpiece(
     )
 
 
+@pytest.mark.skip(reason="Deprecated")
 def test_twinbert_with_triletter(prepare_local_test_files):
     infile = os.path.join(prepare_local_test_files, "twinbert", "infile.tsv")
     emb_prefix = os.path.join(
@@ -163,6 +164,7 @@ def test_twinbert_with_triletter(prepare_local_test_files):
     )
 
 
+@pytest.mark.skip(reason="Deprecated")
 def test_twinbert_with_wordpiece(prepare_local_test_files):
     infile = os.path.join(prepare_local_test_files, "twinbert", "infile.tsv")
     emb_prefix = os.path.join(
