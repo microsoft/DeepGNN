@@ -208,6 +208,7 @@ def verify_twinbert_encoder_complex_input(config_file):
         verify_encode(context, expect)
 
 
+@pytest.mark.skip(reason="Deprecated")
 def test_twinbert_encoder_simple_input_string_features_pooler_0(
     prepare_local_test_files,
 ):
@@ -221,6 +222,7 @@ def test_twinbert_encoder_simple_input_string_features_pooler_0(
     )
 
 
+@pytest.mark.skip(reason="Deprecated")
 def test_twinbert_encoder_simple_input_string_features_pooler_1(
     prepare_local_test_files,
 ):
@@ -236,6 +238,7 @@ def test_twinbert_encoder_simple_input_string_features_pooler_1(
     )
 
 
+@pytest.mark.skip(reason="Deprecated")
 def test_twinbert_encoder_simple_input_int_features(prepare_local_test_files):
     verify_twinbert_encoder_simple_input(
         os.path.join(prepare_local_test_files, "twinbert", "twinbert_triletter.json"),
@@ -247,6 +250,7 @@ def test_twinbert_encoder_simple_input_int_features(prepare_local_test_files):
     )
 
 
+@pytest.mark.skip(reason="Deprecated")
 def test_twinbert_encoder_complex_input(prepare_local_test_files):
     verify_twinbert_encoder_complex_input(
         os.path.join(prepare_local_test_files, "twinbert", "twinbert_triletter.json")

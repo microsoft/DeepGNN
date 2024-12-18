@@ -21,6 +21,10 @@ from deepgnn.graph_engine.snark.local import Client
 class MOOC(Client):
     """Temporal MOOC dataset.
 
+    OUT OF SUPPORT - Dataset loading needs to be modified for deepgnn loading.
+
+    https://snap.stanford.edu/data/act-mooc.html
+
     The graph is a student interaction network formed from online course content units
     like problem sets and videos. Each edge represents a student interacting with a content
     unit and has 4 features. Graph Statistics:
@@ -41,7 +45,7 @@ class MOOC(Client):
             output_dir (Optional[str]): Path to the directory where the graph data will be saved.
                 If None, a temporary directory is used.
         """
-        self.url = "https://deepgraphpub.blob.core.windows.net/public/testdata/mooc.zip"
+        self.url = "https://snap.stanford.edu/data/act-mooc.tar.gz"
         self.GRAPH_NAME = "mooc"
 
         if output_dir is None:
@@ -172,7 +176,7 @@ class MOOC(Client):
         the graph using the BinaryWriter. The graph is written to the output directory.
         """
         raw_data_dir = os.path.join(self.output_dir, "raw")
-        download_file(self.url, raw_data_dir, f"{self.GRAPH_NAME}.zip")
+        download_file(self.url, raw_data_dir, f"{self.GRAPH_NAME}.tar.gz")
         fname = os.path.join(raw_data_dir, f"{self.GRAPH_NAME}.zip")
         with zipfile.ZipFile(fname) as z:
             z.extractall(raw_data_dir)
