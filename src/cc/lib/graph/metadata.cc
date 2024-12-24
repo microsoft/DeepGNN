@@ -17,7 +17,7 @@ namespace snark
 {
 
 Metadata::Metadata(std::filesystem::path path, std::string config_path, bool skip_feature_loading,
-                   std::shared_ptr<Logger> logger)
+                   bool skip_watermark_loading, std::shared_ptr<Logger> logger)
     : m_version(MINIMUM_SUPPORTED_VERSION), m_path(path.string()), m_config_path(config_path), m_watermark(-1)
 {
 
@@ -72,6 +72,12 @@ Metadata::Metadata(std::filesystem::path path, std::string config_path, bool ski
     {
         m_node_feature_count = 0;
         m_edge_feature_count = 0;
+    }
+    // Skip watermark loading if requested. This is useful when the watermark is not needed for the training/inference
+    // job.
+    if (skip_watermark_loading == true)
+    {
+        m_watermark = -1;
     }
 
     m_partition_node_weights =
