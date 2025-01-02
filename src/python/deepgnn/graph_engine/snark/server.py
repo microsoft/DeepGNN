@@ -49,7 +49,7 @@ class Server:
         config_path: str = "",
         stream: bool = False,
         skip_feature_loading: bool = False,
-        skip_watermark_loading: bool = False,
+        skip_temporal_loading: bool = False,
     ):
         """Create server and start it.
 
@@ -66,7 +66,7 @@ class Server:
             stream (bool, default=False): If remote path is given: by default, download files first then load,
                 if stream = True and libhdfs present, stream data directly to memory.
             skip_feature_loading (bool, default=False): Skip loading node and edge features into DeepGNN server.
-            skip_watermark_loading (bool, default=False): Skip loading node and edge watermarks into DeepGNN server.
+            skip_temporal_loading (bool, default=False): Skip loading node and edge watermarks into DeepGNN server.
         """
         if storage_type == PartitionStorageType.disk and stream:
             raise ValueError(
@@ -153,7 +153,7 @@ class Server:
             c_int32(storage_type),
             c_char_p(bytes(config_path, "utf-8")),
             skip_feature_loading,
-            skip_watermark_loading,
+            skip_temporal_loading,
         )
 
     def reset(self):
@@ -231,10 +231,10 @@ if __name__ == "__main__":
         help="If True, skip loading node and edge features into DeepGNN server.",
     )
     parser.add_argument(
-        "--skip_watermark_loading",
+        "--skip_temporal_loading",
         action="store_true",
         default=False,
-        help="If True, skip loading node and edge watermarks into DeepGNN server.",
+        help="If True, skip loading node and edge temporal watermarks into DeepGNN server.",
     )
 
     args, _ = parser.parse_known_args()
@@ -258,7 +258,7 @@ if __name__ == "__main__":
         config_path=args.config_path,
         stream=args.stream,
         skip_feature_loading=args.skip_feature_loading,
-        skip_watermark_loading=args.skip_watermark_loading,
+        skip_temporal_loading=args.skip_temporal_loading,
     )
     logger.info("Server started...")
     try:

@@ -17,8 +17,9 @@ namespace snark
 {
 
 Metadata::Metadata(std::filesystem::path path, std::string config_path, bool skip_feature_loading,
-                   bool skip_watermark_loading, std::shared_ptr<Logger> logger)
-    : m_version(MINIMUM_SUPPORTED_VERSION), m_path(path.string()), m_config_path(config_path), m_watermark(-1)
+                   bool skip_temporal_loading, std::shared_ptr<Logger> logger)
+    : m_version(MINIMUM_SUPPORTED_VERSION), m_path(path.string()), m_config_path(config_path), m_watermark(-1),
+      m_node_feature_count(0), m_edge_feature_count(0)
 {
 
     if (!logger)
@@ -63,21 +64,19 @@ Metadata::Metadata(std::filesystem::path path, std::string config_path, bool ski
     m_edge_count = meta["edge_count"];
     m_node_type_count = meta["node_type_count"];
     m_edge_type_count = meta["edge_type_count"];
-    m_node_feature_count = meta["node_feature_count"];
-    m_edge_feature_count = meta["edge_feature_count"];
     m_partition_count = meta["partitions"].size();
-    m_watermark = meta["watermark"];
-    // Skip feature loading if requested. This is useful when the feature loading is done in a separate feature store.
-    if (skip_feature_loading == true)
+    // Load features if skip feature loading is not requested.
+    // This is useful when the feature loading is done in a separate feature store.
+    if (skip_feature_loading != true)
     {
-        m_node_feature_count = 0;
-        m_edge_feature_count = 0;
+        m_node_feature_count = meta["node_feature_count"];
+        m_edge_feature_count = meta["edge_feature_count"];
     }
-    // Skip watermark loading if requested. This is useful when the watermark is not needed for the training/inference
-    // job.
-    if (skip_watermark_loading == true)
+    // Load temporal watermark if skip temporal loading is not requested.
+    // This is useful when the temporal watermark is not needed for the training/inference job.
+    if (skip_temporal_loading != true)
     {
-        m_watermark = -1;
+        m_watermark = meta["watermark"];
     }
 
     m_partition_node_weights =

@@ -114,7 +114,7 @@ def test_hdfs_remote_skip_feature_loading(hdfs_data):
         config_path="",
         stream=True,
         skip_feature_loading=True,
-        skip_watermark_loading=True,
+        skip_temporal_loading=True,
     )
     cl = client.DistributedGraph(address)
 

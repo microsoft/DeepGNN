@@ -72,7 +72,7 @@ class Server:
         config_path: str = "",
         stream: bool = False,
         skip_feature_loading: bool = False,
-        skip_watermark_loading: bool = False,
+        skip_temporal_loading: bool = False,
     ):
         """Init snark server."""
         temp_dir = tempfile.TemporaryDirectory()
@@ -107,7 +107,7 @@ class Server:
             config_path,
             stream,  # type: ignore
             skip_feature_loading,
-            skip_watermark_loading,
+            skip_temporal_loading,
         )
 
     def reset(self):

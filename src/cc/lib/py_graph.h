@@ -86,7 +86,7 @@ extern "C"
                                            const char *host_name, const char *ssl_key, const char *ssl_cert,
                                            const char *ssl_root, const PyPartitionStorageType storage_type,
                                            const char *config_path, bool skip_feature_loading,
-                                           bool skip_watermark_loading);
+                                           bool skip_temporal_loading);
 
     DEEPGNN_DLL extern int32_t CreateRemoteClient(PyGraph *graph, const char *output_folder, const char **connection,
                                                   size_t connection_count, const char *ssl_cert, size_t num_threads,

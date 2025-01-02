@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- Make DeepGNN snark server watermark loading skippable
+- Make DeepGNN snark server temporal loading skippable
 
 ## [0.1.64] - 2024-08-13
 
