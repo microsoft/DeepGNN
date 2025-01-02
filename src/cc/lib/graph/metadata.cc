@@ -18,8 +18,7 @@ namespace snark
 
 Metadata::Metadata(std::filesystem::path path, std::string config_path, bool skip_feature_loading,
                    bool skip_temporal_loading, std::shared_ptr<Logger> logger)
-    : m_version(MINIMUM_SUPPORTED_VERSION), m_path(path.string()), m_config_path(config_path), m_watermark(-1),
-      m_node_feature_count(0), m_edge_feature_count(0)
+    : m_version(MINIMUM_SUPPORTED_VERSION), m_path(path.string()), m_config_path(config_path), m_watermark(-1)
 {
 
     if (!logger)
@@ -60,6 +59,10 @@ Metadata::Metadata(std::filesystem::path path, std::string config_path, bool ski
                           m_version, MINIMUM_SUPPORTED_VERSION);
     }
 
+    // Default meta.json values
+    m_node_feature_count = 0;
+    m_edge_feature_count = 0;
+    m_watermark = -1;
     m_node_count = meta["node_count"];
     m_edge_count = meta["edge_count"];
     m_node_type_count = meta["node_type_count"];
