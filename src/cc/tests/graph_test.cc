@@ -583,7 +583,7 @@ TEST_P(StorageTypeGraphTest, NodeFeaturesMultipleNodesWithDifferentFeatureTimest
               std::vector<float>({1.f, 2.f, 3.f, 13.f, 14.f, 0.f}));
 }
 
-TEST_P(StorageTypeGraphTest, NodeFeaturesMultipleNodesWithoutTimestamps)
+TEST_P(StorageTypeGraphTest, NodeFeaturesMultipleNodesWithoutLoadingEdgeTimestamps)
 {
     TestGraph::MemoryGraph m;
     std::vector<std::vector<float>> f1 = {TestGraph::serialize_temporal_features(
@@ -607,7 +607,8 @@ TEST_P(StorageTypeGraphTest, NodeFeaturesMultipleNodesWithoutTimestamps)
     g.GetNodeFeature(std::span(nodes), std::span(ts), std::span(features), std::span(large_output));
     std::span large_res(reinterpret_cast<float *>(large_output.data()), large_output.size() / 4);
     EXPECT_EQ(std::vector<float>(std::begin(large_res), std::end(large_res)),
-              std::vector<float>({1.f, 2.f, 3.f, 0.f, 0.f, 0.f}));
+              std::vector<float>({1.f, 2.f, 3.f, 13.f, 14.f, 0.f}));
+    EXPECT_EQ(metadata.m_watermark, -1);
 }
 
 TEST_P(StorageTypeGraphTest, NodeFeaturesSameNodeFeatureDifferentPartitionsWithoutDeleteTimestamp)
