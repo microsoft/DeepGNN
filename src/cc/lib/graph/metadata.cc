@@ -62,7 +62,6 @@ Metadata::Metadata(std::filesystem::path path, std::string config_path, bool ski
     // Default meta.json values
     m_node_feature_count = 0;
     m_edge_feature_count = 0;
-    m_watermark = -1;
     m_node_count = meta["node_count"];
     m_edge_count = meta["edge_count"];
     m_node_type_count = meta["node_type_count"];
