@@ -583,6 +583,33 @@ TEST_P(StorageTypeGraphTest, NodeFeaturesMultipleNodesWithDifferentFeatureTimest
               std::vector<float>({1.f, 2.f, 3.f, 13.f, 14.f, 0.f}));
 }
 
+TEST_P(StorageTypeGraphTest, NodeFeaturesMultipleNodesWithoutTimestamps)
+{
+    TestGraph::MemoryGraph m;
+    std::vector<std::vector<float>> f1 = {TestGraph::serialize_temporal_features(
+        std::vector<snark::Timestamp>{0}, {std::vector<float>{1.0f, 2.0f, 3.0f}})};
+    std::vector<std::vector<float>> f2 = {TestGraph::serialize_temporal_features(
+        std::vector<snark::Timestamp>{1, 2}, {std::vector<float>{11.0f, 12.0f}, std::vector<float>{13.0f, 14.0f}})};
+
+    m.m_nodes.push_back(TestGraph::Node{.m_id = 0, .m_type = 0, .m_weight = 1.0f, .m_float_features = f1});
+    m.m_nodes.push_back(TestGraph::Node{.m_id = 1, .m_type = 1, .m_weight = 1.0f, .m_float_features = f2});
+    m.m_nodes.push_back(TestGraph::Node{.m_id = 2, .m_type = 1, .m_weight = 1.0f, .m_float_features = f2});
+    auto path = std::filesystem::path(::testing::UnitTest::GetInstance()->current_test_info()->name());
+    assert(std::filesystem::create_directories(path));
+    TestGraph::convert(path, "0_0", std::move(m), 2);
+    snark::Metadata metadata(path.string(), "", false, true);
+    snark::Graph g(std::move(metadata), {path.string()}, std::vector<uint32_t>{0}, GetParam());
+    std::vector<snark::NodeId> nodes = {0, 1};
+    std::vector<uint8_t> large_output(2 * 4 * 3);
+    std::vector<snark::FeatureMeta> features = {{0, 12}};
+    std::vector<snark::Timestamp> ts({2, 2});
+
+    g.GetNodeFeature(std::span(nodes), std::span(ts), std::span(features), std::span(large_output));
+    std::span large_res(reinterpret_cast<float *>(large_output.data()), large_output.size() / 4);
+    EXPECT_EQ(std::vector<float>(std::begin(large_res), std::end(large_res)),
+              std::vector<float>({1.f, 2.f, 3.f, 0.f, 0.f, 0.f}));
+}
+
 TEST_P(StorageTypeGraphTest, NodeFeaturesSameNodeFeatureDifferentPartitionsWithoutDeleteTimestamp)
 {
     TestGraph::MemoryGraph m1;
