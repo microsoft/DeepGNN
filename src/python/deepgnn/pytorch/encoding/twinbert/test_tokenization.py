@@ -23,6 +23,7 @@ def prepare_local_test_files():
     yield working_dir.name
     working_dir.cleanup()
 
+
 @pytest.mark.skip(reason="Deprecated")
 def test_stdberttokenizer(prepare_local_test_files):
     sentence = "hello world"
