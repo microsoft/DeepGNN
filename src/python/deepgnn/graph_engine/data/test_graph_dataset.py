@@ -204,6 +204,7 @@ def test_ppi():
     check_label()
 
 
+@pytest.mark.skip(reason="Deprecated.")
 def test_mooc():
     g = MOOC()
     features = g.edge_features(

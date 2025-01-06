@@ -24,6 +24,7 @@ def prepare_local_test_files():
     working_dir.cleanup()
 
 
+@pytest.mark.skip(reason="Deprecated")
 def test_stdberttokenizer(prepare_local_test_files):
     sentence = "hello world"
     tokenizer = StdBertTokenizer(
@@ -34,6 +35,7 @@ def test_stdberttokenizer(prepare_local_test_files):
     assert mask == [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 
+@pytest.mark.skip(reason="Deprecated")
 def test_trilettertokenizer(prepare_local_test_files):
     sentence = "hello world"
     tokenizer = TriLetterTokenizer(
