@@ -32,10 +32,11 @@ std::string safe_convert(const char *buffer)
 int32_t StartServer(PyServer *graph, const char *meta_location, size_t count, uint32_t *partition_indices,
                     const char **partition_locations, const char *host_name, const char *ssl_key, const char *ssl_cert,
                     const char *ssl_root, const PyPartitionStorageType storage_type_, const char *config_path,
-                    bool skip_feature_loading)
+                    bool skip_feature_loading, bool skip_temporal_loading)
 {
     snark::PartitionStorageType storage_type = static_cast<snark::PartitionStorageType>(storage_type_);
-    snark::Metadata metadata(safe_convert(meta_location), safe_convert(config_path), skip_feature_loading);
+    snark::Metadata metadata(safe_convert(meta_location), safe_convert(config_path), skip_feature_loading,
+                             skip_temporal_loading);
     std::vector<std::string> partition_paths;
     partition_paths.reserve(count);
     for (size_t i = 0; i < count; ++i)
