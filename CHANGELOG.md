@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Removed MOOC dataset.
+
+## [0.1.64] - 2025-01-06
+
 - Make DeepGNN snark server temporal loading skippable
 
 ## [0.1.64] - 2024-08-13
