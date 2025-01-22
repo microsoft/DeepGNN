@@ -124,6 +124,7 @@ class Dataset(Client):
         if self.input_location == "local":
             package_name = "deepgnn.graph_engine.data"
             zip_filename = f"{self.GRAPH_NAME}.zip"
+            # pylint: disable=no-member
             if hasattr(pkg_resources, "resource_filename"):  # 3.8
                 input_location = pkg_resources.resource_filename(
                     package_name, zip_filename
@@ -132,6 +133,8 @@ class Dataset(Client):
                 input_location = str(
                     pkg_resources.files(package_name).joinpath(zip_filename)
                 )
+            # pylint: enable=no-member
+
 
         with ZipFile(input_location) as zip:
             zip.extractall(output_dir)
