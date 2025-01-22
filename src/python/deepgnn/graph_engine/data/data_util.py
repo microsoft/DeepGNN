@@ -6,6 +6,7 @@ import logging
 import tempfile
 import random
 from typing import Optional, List, Tuple, Dict, Set, DefaultDict
+import importlib.resources as pkg_resources
 
 import urllib.request
 from zipfile import ZipFile
@@ -117,8 +118,14 @@ class Dataset(Client):
             url = input_location
             input_location = "."
             download_file(url, input_location, filename)
-        with ZipFile(os.path.join(input_location, filename)) as zip:
-            zip.extractall(output_dir)
+        if self.input_location == "local":
+            with pkg_resources.files("deepgnn.graph_engine.data").joinpath(f"{self.GRAPH_NAME}.zip").open('rb') as zip_file:
+                with ZipFile(zip_file) as zip:
+                    zip.extractall(output_dir)
+        else:
+            with ZipFile(os.path.join(input_location, filename)) as zip:
+                    zip.extractall(output_dir)
+
         nodes, node_types, train_adjs, test_adjs = self._load_raw_graph(
             output_dir, train_node_ratio, random_selection
         )

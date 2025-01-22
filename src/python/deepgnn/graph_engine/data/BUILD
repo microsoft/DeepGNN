@@ -24,6 +24,7 @@ py_library(
 
 py_test(
     name = "test_graph_dataset",
+    data = ["cora_full.zip", "citeseer.zip"],
     srcs = ["test_graph_dataset.py"],
     imports = ["../../../"],
     main = "test_graph_dataset.py",

@@ -40,7 +40,7 @@ class CoraFull(Dataset):
     ):
         """Initialize dataset."""
         super().__init__(
-            f"/home/user/DeepGNNMain/src/python/deepgnn/graph_engine/data" if url == "local" else url,
+            url,
             "cora_full",
             2708,
             1433,

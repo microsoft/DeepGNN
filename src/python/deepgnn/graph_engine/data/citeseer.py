@@ -38,7 +38,7 @@ class CiteseerFull(Dataset):
     ):
         """Initialize dataset."""
         super().__init__(
-            f"/home/user/DeepGNNMain/src/python/deepgnn/graph_engine/data" if url == "local" else url,
+            url,
             name="citeseer",
             num_nodes=3312,
             feature_dim=3703,
