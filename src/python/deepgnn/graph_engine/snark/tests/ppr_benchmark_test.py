@@ -44,26 +44,26 @@ def sample(graph, batches, alpha, epsilon):
 @dataclass
 class BenchmarkData:
     graph: str
+    data_dir: str
     inputs: np.array
     returned_nodes_count: int = 0
 
 
 @pytest.fixture(scope="session")
 def dataset():
-    graph = CoraFull()
+    data_dir = "/tmp/cora"
+    graph = CoraFull(data_dir)
     batch_size = 256
     nodes = np.arange(
         graph.NUM_NODES + (batch_size - graph.NUM_NODES % batch_size),
         dtype=np.int64,
     )
     batches = nodes.reshape(-1, batch_size)
-    return BenchmarkData(graph, batches, len(nodes))
+    return BenchmarkData(graph, data_dir, batches, len(nodes))
 
 
 def test_ppr_on_cora_distributed(benchmark, dataset):
-    s = server.Server(
-        dataset.graph.data_dir(), partitions=[0], hostname="localhost:50051"
-    )
+    s = server.Server(dataset.data_dir, partitions=[0], hostname="localhost:50051")
     c = distributed.Client(["localhost:50051"])
     result = benchmark(
         sample,
