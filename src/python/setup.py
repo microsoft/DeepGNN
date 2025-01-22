@@ -69,14 +69,7 @@ def graph_engine(version: str):
                 "deepgnn.migrate.*",
             ]
         ),
-        package_data={
-            "": [
-                "*.so",
-                "*.dll",
-                "*.dylib",
-                "*.zip"
-            ]
-        },
+        package_data={"": ["*.so", "*.dll", "*.dylib", "*.zip"]},
         install_requires=[
             "numpy>=1.17.0",
             "networkx==2.5.1",
