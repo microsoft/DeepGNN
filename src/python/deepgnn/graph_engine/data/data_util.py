@@ -119,18 +119,20 @@ class Dataset(Client):
     ) -> str:
         filename = self.GRAPH_NAME + ".zip"
         if "http" in self.input_location:
-            url = input_location
-            input_location = "."
-            download_file(url, input_location, filename)
+            download_file(input_location, ".", filename)
+            input_location = os.path.join(input_location, filename)
         if self.input_location == "local":
-            with pkg_resources.files("deepgnn.graph_engine.data").joinpath(
-                f"{self.GRAPH_NAME}.zip"
-            ).open("rb") as zip_file:
-                with ZipFile(zip_file) as zip:
-                    zip.extractall(output_dir)
-        else:
-            with ZipFile(os.path.join(input_location, filename)) as zip:
-                zip.extractall(output_dir)
+            package_name = "deepgnn.graph_engine.data"
+            zip_filename = f"{self.GRAPH_NAME}.zip"
+            if hasattr(pkg_resources, "resource_filename"):  # 3.8
+                input_location = pkg_resources.resource_filename(package_name, zip_filename)
+            else: # 3.9+
+                input_location = pkg_resources.files(package_name).joinpath(zip_filename)
+
+
+
+        with ZipFile(input_location) as zip:
+            zip.extractall(output_dir)
 
         nodes, node_types, train_adjs, test_adjs = self._load_raw_graph(
             output_dir, train_node_ratio, random_selection
