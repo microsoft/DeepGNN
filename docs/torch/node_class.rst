@@ -12,7 +12,7 @@ First we download the Cora dataset and convert it to a valid binary representati
 .. code-block:: python
 
     >>> from deepgnn.graph_engine.data.citation import Cora
-    >>> graph = Cora()
+    >>> graph = CoraFull()
 
 GAT Model
 =========

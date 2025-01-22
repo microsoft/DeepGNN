@@ -176,7 +176,11 @@ def random_split(
 
 
 class CitationGraph(Client):
-    """Citation graph dataset."""
+    """
+    Citation graph dataset.
+    
+    OUT OF SUPPORT - Dataset loading needs to be modified for deepgnn loading.
+    """
 
     def __init__(
         self, name: str, output_dir: Optional[str] = None, split: str = "public"

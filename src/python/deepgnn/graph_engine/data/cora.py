@@ -7,6 +7,7 @@ import tempfile
 from collections import defaultdict
 from typing import Optional, List, Tuple, Dict, Set, DefaultDict
 from deepgnn.graph_engine.data.data_util import Dataset, select_training_test_nodes
+from pathlib import Path
 
 
 class CoraFull(Dataset):
@@ -34,19 +35,19 @@ class CoraFull(Dataset):
         output_dir: Optional[str] = None,
         train_node_ratio: float = 1.0,
         random_selection: bool = False,
-        url="https://deepgraphpub.blob.core.windows.net/public/testdata/cora.tgz",
+        url="local",
         num_partitions: int = 1,
     ):
         """Initialize dataset."""
         super().__init__(
-            name="cora_full",
-            num_nodes=2708,
-            feature_dim=1433,
-            num_classes=7,
-            url=url,
-            train_node_ratio=train_node_ratio,
-            random_selection=random_selection,
-            output_dir=output_dir,
+            f"/home/user/DeepGNNMain/src/python/deepgnn/graph_engine/data" if url == "local" else url,
+            "cora_full",
+            2708,
+            1433,
+            7,
+            train_node_ratio,
+            random_selection,
+            output_dir=f"{str(Path(__file__).parent)}" if output_dir is None else output_dir,
             num_partitions=num_partitions,
         )
 
