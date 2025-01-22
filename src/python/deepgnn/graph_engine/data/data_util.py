@@ -135,7 +135,6 @@ class Dataset(Client):
                 )
             # pylint: enable=no-member
 
-
         with ZipFile(input_location) as zip:
             zip.extractall(output_dir)
 
