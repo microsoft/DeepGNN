@@ -19,7 +19,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, IterableDataset
 from torch_geometric.nn import GATConv
 
-from deepgnn.graph_engine.data.citation import Cora
+from deepgnn.graph_engine.data.cora import CoraFull
 from deepgnn.graph_engine import Graph, graph_ops
 from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
 
@@ -211,7 +211,7 @@ if __name__ == "__main__":
     ray.init(num_cpus=3)
 
     address = "localhost:9999"
-    dataset = Cora()
+    dataset = CoraFull()
     s = Server(address, dataset.data_dir(), 0, 1)
 
     def get_graph():

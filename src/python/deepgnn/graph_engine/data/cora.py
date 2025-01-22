@@ -47,7 +47,9 @@ class CoraFull(Dataset):
             7,
             train_node_ratio,
             random_selection,
-            output_dir=f"{str(Path(__file__).parent)}" if output_dir is None else output_dir,
+            output_dir=f"{str(Path(__file__).parent)}"
+            if output_dir is None
+            else output_dir,
             num_partitions=num_partitions,
         )
 

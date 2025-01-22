@@ -104,14 +104,18 @@ class Dataset(Client):
         self.output_dir = output_dir
         self._num_partitions = num_partitions
         if self.output_dir is None:
-            self.output_dir = os.path.join(
-                f"{tempfile.gettempdir()}", self.GRAPH_NAME
-            )
-        self._build_graph_impl(self.input_location, self.output_dir, train_node_ratio, random_selection)
+            self.output_dir = os.path.join(f"{tempfile.gettempdir()}", self.GRAPH_NAME)
+        self._build_graph_impl(
+            self.input_location, self.output_dir, train_node_ratio, random_selection
+        )
         super().__init__(self.output_dir, partitions=[0])
 
     def _build_graph_impl(
-        self, input_location: str, output_dir, train_node_ratio: float, random_selection: bool
+        self,
+        input_location: str,
+        output_dir,
+        train_node_ratio: float,
+        random_selection: bool,
     ) -> str:
         filename = self.GRAPH_NAME + ".zip"
         if "http" in self.input_location:
@@ -119,12 +123,14 @@ class Dataset(Client):
             input_location = "."
             download_file(url, input_location, filename)
         if self.input_location == "local":
-            with pkg_resources.files("deepgnn.graph_engine.data").joinpath(f"{self.GRAPH_NAME}.zip").open('rb') as zip_file:
+            with pkg_resources.files("deepgnn.graph_engine.data").joinpath(
+                f"{self.GRAPH_NAME}.zip"
+            ).open("rb") as zip_file:
                 with ZipFile(zip_file) as zip:
                     zip.extractall(output_dir)
         else:
             with ZipFile(os.path.join(input_location, filename)) as zip:
-                    zip.extractall(output_dir)
+                zip.extractall(output_dir)
 
         nodes, node_types, train_adjs, test_adjs = self._load_raw_graph(
             output_dir, train_node_ratio, random_selection

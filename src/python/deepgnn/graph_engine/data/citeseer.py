@@ -45,7 +45,9 @@ class CiteseerFull(Dataset):
             num_classes=6,
             train_node_ratio=train_node_ratio,
             random_selection=random_selection,
-            output_dir=f"{str(Path(__file__).parent)}" if output_dir is None else output_dir,
+            output_dir=f"{str(Path(__file__).parent)}"
+            if output_dir is None
+            else output_dir,
         )
 
     def _load_raw_graph(
@@ -56,8 +58,12 @@ class CiteseerFull(Dataset):
         DefaultDict[int, Set[int]],
         DefaultDict[int, Set[int]],
     ]:
-        node_file = os.path.join(data_dir, "citeseer-doc-classification", "citeseer.content")
-        edge_file = os.path.join(data_dir, "citeseer-doc-classification", "citeseer.cites")
+        node_file = os.path.join(
+            data_dir, "citeseer-doc-classification", "citeseer.content"
+        )
+        edge_file = os.path.join(
+            data_dir, "citeseer-doc-classification", "citeseer.cites"
+        )
         paper_nodeid = {}
         labelid = {}  # type: ignore
         nodes = {}

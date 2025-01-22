@@ -178,7 +178,7 @@ def random_split(
 class CitationGraph(Client):
     """
     Citation graph dataset.
-    
+
     OUT OF SUPPORT - Dataset loading needs to be modified for deepgnn loading.
     """
 

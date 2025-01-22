@@ -88,11 +88,11 @@ class ServerContext:
 def train_func(config: dict):
     """Training loop for ray trainer."""
     data_dir = tempfile.TemporaryDirectory()
-    cora = CoraFull(data_dir.name, num_partitions=session.get_world_size())
+    _ = CoraFull(data_dir.name, num_partitions=session.get_world_size())
 
     address = f"127.0.0.1:999{session.get_world_rank()}"
 
-    Server(address, cora.data_dir(), session.get_world_rank(), 1)
+    Server(address, data_dir.name, session.get_world_rank(), 1)
 
     with ServerContext(
         session.get_world_size(), session.get_world_rank(), address
