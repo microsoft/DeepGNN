@@ -211,8 +211,9 @@ if __name__ == "__main__":
     ray.init(num_cpus=3)
 
     address = "localhost:9999"
-    dataset = CoraFull()
-    s = Server(address, dataset.data_dir(), 0, 1)
+    data_dir = "/tmp/cora"
+    dataset = CoraFull(data_dir)
+    s = Server(address, data_dir, 0, 1)
 
     def get_graph():
         """Create a new client for each worker."""
@@ -222,7 +223,7 @@ if __name__ == "__main__":
         _train_func,
         train_loop_config={
             "get_graph": get_graph,
-            "data_dir": dataset.data_dir(),
+            "data_dir": data_dir,
             "device": torch.device("cpu"),
             "num_epochs": 200,
             "graph_query": {
