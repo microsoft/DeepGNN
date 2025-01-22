@@ -74,6 +74,7 @@ def graph_engine(version: str):
                 "*.so",
                 "*.dll",
                 "*.dylib",
+                "deepgnn/graph_engine/data/*.zip"
             ]
         },
         install_requires=[
