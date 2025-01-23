@@ -109,7 +109,7 @@ def test_gat_tf1():
     hyper_param = "--head_num 8,1 --l2_coef 0.0005 --hidden_dim 8 --gpu"
     # TF1Trainer
     tmp_dir = tempfile.TemporaryDirectory()
-    acc = run_citation_graph_test(Cora(output_dir=tmp_dir.name), 140, hyper_param, enable_eager=False, run_inference=True, attn_drop=0.2)
+    acc = run_citation_graph_test(CoraFull(output_dir=tmp_dir.name), 140, hyper_param, enable_eager=False, run_inference=True, attn_drop=0.2)
     assert acc > 0.823
     # fmt: on
 
@@ -119,7 +119,7 @@ def test_gat_eager():
     hyper_param = "--head_num 8,1 --l2_coef 0.0005 --hidden_dim 8 --gpu"
     # EagerTrainer
     tmp_dir = tempfile.TemporaryDirectory()
-    acc = run_citation_graph_test(Cora(output_dir=tmp_dir.name), 140, hyper_param, enable_eager=True, run_inference=True, attn_drop=0.2)
+    acc = run_citation_graph_test(CoraFull(output_dir=tmp_dir.name), 140, hyper_param, enable_eager=True, run_inference=True, attn_drop=0.2)
     assert acc > 0.823
     # fmt: on
 

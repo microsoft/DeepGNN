@@ -15,6 +15,7 @@ py_library(
         "ppi.py",
         "reddit.py",
     ],
+    data = ["cora_full.zip", "citeseer.zip"],
     visibility = ["//visibility:public"],
     deps = [
         "//src/python/deepgnn/graph_engine:graph_engine",

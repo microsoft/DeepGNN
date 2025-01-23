@@ -11,7 +11,7 @@ from torch_geometric.data.feature_store import FeatureStore, TensorAttr
 from torch_geometric.data.graph_store import GraphStore, EdgeAttr
 
 from deepgnn.graph_engine import SamplingStrategy
-from deepgnn.graph_engine.data.citation import Cora
+from deepgnn.graph_engine.data.cora import CoraFull
 from deepgnn import get_logger
 
 
@@ -132,11 +132,12 @@ def test():
 
 
 if __name__ == "__main__":
-    ge = Cora()
+    data_dir = "/tmp/cora"
+    ge = CoraFull(data_dir)
     loader = LinkNeighborLoader(
         (
             DeepGNNFeatureStore(ge),
-            DeepGNNGraphStore(ge, f"{ge.data_dir()}/train.nodes"),
+            DeepGNNGraphStore(ge, f"{data_dir}/train.nodes"),
         ),
         batch_size=140,
         shuffle=True,
@@ -155,7 +156,7 @@ if __name__ == "__main__":
     )
 
     test_loader = LinkNeighborLoader(
-        (DeepGNNFeatureStore(ge), DeepGNNGraphStore(ge, f"{ge.data_dir()}/test.nodes")),
+        (DeepGNNFeatureStore(ge), DeepGNNGraphStore(ge, f"{data_dir}/test.nodes")),
         batch_size=140,
         shuffle=True,
         neg_sampling_ratio=1.0,
