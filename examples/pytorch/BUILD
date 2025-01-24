@@ -18,7 +18,6 @@ common_deps = [
     requirement("pyyaml"),
     requirement("ray"),
     requirement("referencing"),
-    requirement("rpds"),
     requirement("rpds-py"),
     requirement("scikit-learn"),
     requirement("torch"),
