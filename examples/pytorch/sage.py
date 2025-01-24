@@ -230,13 +230,14 @@ def _main(config: dict, graph: Graph):
 
 
 if __name__ == "__main__":
-    graph = CoraFull()
+    data_dir = "/tmp/cora"
+    graph = CoraFull(data_dir)
     _main(
         config={
             "batch_size": 256,
             "fanout": [5, 5],
             "feature_dim": 1433,
-            "data_dir": graph.data_dir(),
+            "data_dir": data_dir,
             "num_nodes": graph.NUM_NODES,
             "num_epochs": 10,
         },
