@@ -8,7 +8,6 @@ import logging
 import os
 from deepgnn.tf.common.utils import run_commands, get_metrics_from_event_file
 from deepgnn.tf.common.test_helper import TestHelper
-from deepgnn.graph_engine.data.citation import Cora
 
 logging.basicConfig(
     level=logging.DEBUG,

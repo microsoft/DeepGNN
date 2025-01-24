@@ -13,7 +13,7 @@ from sklearn.linear_model import LogisticRegression
 from torch_geometric.nn import GraphSAGE
 
 from deepgnn import get_logger
-from deepgnn.graph_engine.data.citation import Cora
+from deepgnn.graph_engine.data.cora import CoraFull
 from deepgnn.graph_engine import Graph, SamplingStrategy
 
 
@@ -230,7 +230,7 @@ def _main(config: dict, graph: Graph):
 
 
 if __name__ == "__main__":
-    graph = Cora()
+    graph = CoraFull()
     _main(
         config={
             "batch_size": 256,

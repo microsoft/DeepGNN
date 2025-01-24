@@ -14,7 +14,7 @@ from torch_geometric.nn.conv.gcn_conv import gcn_norm
 from torch_sparse.tensor import SparseTensor
 
 from deepgnn.graph_engine import Graph, graph_ops, get_logger
-from deepgnn.graph_engine.data.citation import Cora
+from deepgnn.graph_engine.data.cora import CoraFull
 
 
 @dataclass
@@ -196,11 +196,12 @@ def _train_func(config: dict):
 if __name__ == "__main__":
     torch.random.manual_seed(42)
     np.random.seed(42)
-    dataset = Cora()
+    data_dir = "/tmp/cora"
+    dataset = CoraFull(data_dir)
     _train_func(
         {
             "graph": dataset,
-            "data_dir": dataset.data_dir(),
+            "data_dir": data_dir,
             "device": torch.device("cpu"),
             "num_epochs": 101,
             "graph_query": {
