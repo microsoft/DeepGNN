@@ -230,7 +230,7 @@ def _main(config: dict, graph: Graph):
 
 
 if __name__ == "__main__":
-    graph = Cora()
+    graph = CoraFull()
     _main(
         config={
             "batch_size": 256,

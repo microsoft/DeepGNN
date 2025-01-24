@@ -11,7 +11,7 @@ First we download the Cora dataset and convert it to a valid binary representati
 
 .. code-block:: python
 
-    >>> from deepgnn.graph_engine.data.citation import Cora
+    >>> from deepgnn.graph_engine.data.cora import CoraFull
     >>> graph = CoraFull()
 
 GAT Model

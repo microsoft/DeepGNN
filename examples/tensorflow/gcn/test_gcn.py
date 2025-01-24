@@ -10,7 +10,7 @@ import numpy as np
 
 from deepgnn.tf.common.utils import run_commands, get_metrics_from_event_file
 from deepgnn.tf.common.test_helper import TestHelper
-from deepgnn.graph_engine.data.citation import Cora
+from deepgnn.graph_engine.data.cora import CoraFull
 
 logging.basicConfig(
     level=logging.DEBUG,

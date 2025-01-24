@@ -5,10 +5,10 @@ Ray Usage Example for Node Classification with GAT
 .. code-block:: python
 
     >>> import tempfile
-	>>> from deepgnn.graph_engine.data.citation import CoraFull
+	>>> from deepgnn.graph_engine.data.cora import CoraFull
     >>> data_dir = tempfile.TemporaryDirectory()
 	>>> CoraFull(data_dir.name)
-	<deepgnn.graph_engine.data.citation.Cora object at 0x...>
+	<deepgnn.graph_engine.data.cora.CoraFull object at 0x...>
 
 .. code-block:: python
 

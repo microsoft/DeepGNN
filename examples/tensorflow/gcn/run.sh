@@ -17,7 +17,7 @@ fi
 CLEANUP=${2:-"no_cleanup"}
 
 DATA_DIR=/tmp/cora/
-python -m deepgnn.graph_engine.data.citation --data_dir $DATA_DIR
+python -m deepgnn.graph_engine.data.cora --data_dir $DATA_DIR
 
 BASE_DIR=$HOME/tmp/gcn-cora-$(date +"%Y%m%d_%H%M%N")
 ### =================== EagerTrainer (singler worker) ===================
