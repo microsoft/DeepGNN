@@ -31,5 +31,5 @@ jobs:
       - name: Upload wheel file
         uses: actions/upload-artifact@v4
         with:
-          name: deepgnn
+          name: deepgnn-${{ matrix.os }}
           path: src/python/dist/*.whl
