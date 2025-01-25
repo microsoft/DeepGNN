@@ -252,7 +252,7 @@ torch-cluster==1.6.1
 torch-geometric==2.3.0
 torch-scatter==2.1.1
 torch-sparse==0.6.17
-tornado==6.4.1
+tornado==6.4.2
 tqdm==4.66.3
 traitlets==5.4.0
 transformers==4.38.0
@@ -260,7 +260,7 @@ typeguard==2.13.3
 typing_extensions==4.4.0
 tzdata==2023.3
 urllib3==1.26.19
-virtualenv==20.16.5
+virtualenv==20.26.6
 wcwidth==0.2.5
 webencodings==0.5.1
 websocket-client==1.4.1
