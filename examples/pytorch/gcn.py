@@ -196,11 +196,12 @@ def _train_func(config: dict):
 if __name__ == "__main__":
     torch.random.manual_seed(42)
     np.random.seed(42)
-    dataset = CoraFull()
+    data_dir = "/tmp/cora"
+    dataset = CoraFull(data_dir)
     _train_func(
         {
             "graph": dataset,
-            "data_dir": dataset.data_dir(),
+            "data_dir": data_dir,
             "device": torch.device("cpu"),
             "num_epochs": 101,
             "graph_query": {
