@@ -7,14 +7,14 @@ import tempfile
 import os
 from typing import Optional, List, Tuple, Union
 
-import deepgnn.graph_engine.snark.convert as convert
-import deepgnn.graph_engine.snark.decoders as decoders
 import numpy as np
 import pickle as pkl
 import networkx as nx
 import scipy.sparse as sp  # type: ignore
+from zipfile import ZipFile
+import importlib.resources as pkg_resources
+from distutils.dir_util import copy_tree
 
-from deepgnn.graph_engine.data.data_util import download_file
 from deepgnn.graph_engine.snark.local import Client
 
 
@@ -140,12 +140,17 @@ def preprocess_features(features: sp.lil_matrix) -> np.ndarray:
 
 def download_gcn_data(dataset: str, data_dir: str):
     """Download GCN data."""
-    url = "https://deepgraphpub.blob.core.windows.net/public/testdata/gcndata"
-    names = ["x", "tx", "allx", "y", "ty", "ally", "graph", "test.index"]
-    all_files = ["ind.{}.{}".format(dataset.lower(), name) for name in names]
-    for name in all_files:
-        furl = "{}/{}".format(url, name)
-        download_file(furl, data_dir, name)
+    package_name = "deepgnn.graph_engine.data"
+    zip_filename = f"{dataset}.zip"
+    if hasattr(pkg_resources, "resource_filename"):  # 3.8
+        input_location = pkg_resources.resource_filename(package_name, zip_filename)
+    else:  # 3.9+
+        input_location = str(
+            pkg_resources.files(package_name).joinpath(zip_filename)  # type: ignore
+        )
+
+    with ZipFile(input_location) as zip:
+        zip.extractall(data_dir)
 
 
 def random_split(
@@ -176,11 +181,7 @@ def random_split(
 
 
 class CitationGraph(Client):
-    """
-    Citation graph dataset.
-
-    OUT OF SUPPORT - Dataset loading needs to be modified for deepgnn loading.
-    """
+    """Citation graph dataset."""
 
     def __init__(
         self, name: str, output_dir: Optional[str] = None, split: str = "public"
@@ -188,6 +189,15 @@ class CitationGraph(Client):
         """Initialize dataset."""
         assert name in ["cora", "citeseer"]
         self.GRAPH_NAME = name
+        if name == "cora":
+            self.NUM_CLASSES = 7
+            self.NUM_NODES = 2706
+            self.FEATURE_DIM = 1433
+        elif name == "citeseer":
+            self.NUM_CLASSES = 6
+            self.NUM_NODES = 3312
+            self.FEATURE_DIM = 3703
+
         self.output_dir = output_dir
         if self.output_dir is None:
             self.output_dir = os.path.join(
@@ -214,8 +224,10 @@ class CitationGraph(Client):
     def _build_graph(self, output_dir: str, split: str) -> str:
         assert split in ["public", "random"]
         data_dir = output_dir
-        raw_data_dir = os.path.join(output_dir, "raw")
-        download_gcn_data(self.GRAPH_NAME, raw_data_dir)
+        download_gcn_data(self.GRAPH_NAME, data_dir)
+
+        copy_tree(os.path.join(data_dir, self.GRAPH_NAME), data_dir)
+        """
         adj, features, labels, train_mask, val_mask, test_mask = self._load_raw_graph(
             raw_data_dir
         )
@@ -238,9 +250,11 @@ class CitationGraph(Client):
             decoder=decoders.EdgeListDecoder(),
         ).convert()
 
+
         train_file = os.path.join(data_dir, "train.nodes")
         test_file = os.path.join(data_dir, "test.nodes")
         self._write_node_files(node_types, train_file, test_file)
+        """
         return output_dir
 
     def get_node_types(

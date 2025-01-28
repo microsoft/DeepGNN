@@ -110,8 +110,8 @@ def test_gcn_new():
     # fmt: off
     def run_cora_test():
         hyper_param = "--l2_coef 0.0005 --hidden_dim 16 --gpu"
-        run_citation_graph_test(CoraFull(), 140, hyper_param, enable_eager=False, run_inference=False)
-        run_citation_graph_test(CoraFull(), 140, hyper_param, enable_eager=True, run_inference=False, desired_acc=0.808)
+        run_citation_graph_test(Cora(), 140, hyper_param, enable_eager=False, run_inference=False)
+        run_citation_graph_test(Cora(), 140, hyper_param, enable_eager=True, run_inference=False, desired_acc=0.808)
 
     # fmt: on
 
@@ -121,8 +121,8 @@ def test_gcn_new():
 def test_minibatch_test():
     # fmt: off
     hyper_param = "--l2_coef 0.0005 --hidden_dim 16 --gpu"
-    run_citation_graph_test(CoraFull(), 10, hyper_param, enable_eager=False, run_inference=True, epochs=2)
-    run_citation_graph_test(CoraFull(), 10, hyper_param, enable_eager=True, run_inference=True, epochs=2)
+    run_citation_graph_test(Cora(), 10, hyper_param, enable_eager=False, run_inference=True, epochs=2)
+    run_citation_graph_test(Cora(), 10, hyper_param, enable_eager=True, run_inference=True, epochs=2)
     # fmt: on
 
 

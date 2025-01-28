@@ -19,7 +19,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, IterableDataset
 from torch_geometric.nn import GATConv
 
-from deepgnn.graph_engine.data.cora import CoraFull
+from deepgnn.graph_engine.data.citation import Cora
 from deepgnn.graph_engine import Graph, graph_ops
 from deepgnn.graph_engine.snark.distributed import Server, Client as DistributedClient
 
@@ -211,9 +211,8 @@ if __name__ == "__main__":
     ray.init(num_cpus=3)
 
     address = "localhost:9999"
-    data_dir = "/tmp/cora"
-    dataset = CoraFull(data_dir)
-    s = Server(address, data_dir, 0, 1)
+    dataset = Cora()
+    s = Server(address, dataset.data_dir(), 0, 1)
 
     def get_graph():
         """Create a new client for each worker."""
@@ -223,7 +222,7 @@ if __name__ == "__main__":
         _train_func,
         train_loop_config={
             "get_graph": get_graph,
-            "data_dir": data_dir,
+            "data_dir": dataset.data_dir(),
             "device": torch.device("cpu"),
             "num_epochs": 200,
             "graph_query": {

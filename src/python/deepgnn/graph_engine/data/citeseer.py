@@ -39,7 +39,7 @@ class CiteseerFull(Dataset):
         """Initialize dataset."""
         super().__init__(
             url,
-            name="citeseer",
+            name="citeseer_full",
             num_nodes=3312,
             feature_dim=3703,
             num_classes=6,
