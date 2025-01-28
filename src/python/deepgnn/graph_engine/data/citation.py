@@ -191,7 +191,7 @@ class CitationGraph(Client):
         self.GRAPH_NAME = name
         if name == "cora":
             self.NUM_CLASSES = 7
-            self.NUM_NODES = 2706
+            self.NUM_NODES = 2708
             self.FEATURE_DIM = 1433
         elif name == "citeseer":
             self.NUM_CLASSES = 6
