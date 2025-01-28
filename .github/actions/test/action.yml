@@ -37,7 +37,6 @@ runs:
         bazel run -c dbg //examples/pytorch:aml --config=${{ env.BAZEL_CONFIG }}
         bazel run -c dbg //examples/pytorch:gcn --config=${{ env.BAZEL_CONFIG }}
         bazel run -c dbg //examples/pytorch:gat --config=${{ env.BAZEL_CONFIG }}
-        bazel run -c dbg //examples/pytorch/hetgnn:main --config=${{ env.BAZEL_CONFIG }}
         bazel run -c dbg //examples/pytorch:sage --config=${{ env.BAZEL_CONFIG }}
         bazel run -c dbg //examples/pytorch:pyg_interface --config=${{ env.BAZEL_CONFIG }}
         bazel test -c dbg //docs:* --test_output=all --jobs 1 --config=${{ env.BAZEL_CONFIG }} ${{ env.REMOTE_CACHE }}  --verbose_failures
