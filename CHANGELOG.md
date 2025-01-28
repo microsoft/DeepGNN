@@ -6,7 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- Removed MOOC, citation(CoraFull and CiteSeer still live) dataset.
+- Removed MOOC dataset.
+
+- Remove random split from citeseer and cora.
 
 ## [0.1.64] - 2025-01-06
 

@@ -129,7 +129,6 @@ def test_citeseer_train_ratio():
     verify_random_train_test_nodes(data_dir, g, train_ratio)
 
 
-@pytest.mark.skip(reason="Deprecated.")
 def test_citation_graph():
     for name, train_cnt in [("cora", 140), ("citeseer", 120)]:
         g = CitationGraph(name)
