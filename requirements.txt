@@ -113,7 +113,7 @@ jsonpickle==2.2.0
 jsonschema==4.16.0
 jupyter_client==7.4.2
 jupyterlab_pygments==0.3.0
-keras==2.13.1
+keras==3.9.0
 Keras-Preprocessing==1.1.2
 keyring==23.9.3
 kiwisolver==1.4.4
