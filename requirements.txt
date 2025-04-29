@@ -255,7 +255,7 @@ torch-sparse==0.6.17
 tornado==6.4.2
 tqdm==4.66.3
 traitlets==5.4.0
-transformers==4.38.0
+transformers==4.50.0
 typeguard==2.13.3
 typing_extensions==4.4.0
 tzdata==2023.3
