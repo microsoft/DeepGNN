@@ -165,7 +165,7 @@ portalocker==2.5.1
 prettytable==3.4.1
 prometheus-client==0.14.1
 prompt-toolkit==3.0.31
-protobuf==4.25.4
+protobuf==4.25.8
 psutil==5.9.2
 ptyprocess==0.7.0
 pure-eval==0.2.2
