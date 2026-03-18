@@ -39,9 +39,21 @@ brew install bazel
 The easiest way to use bazel on windows is via bazelisk, install [golang](https://golang.org/dl/), [bazelisk](https://github.com/bazelbuild/bazelisk), [compilers and language runtimes](https://bazel.build/install/windows#install-compilers).
 Run all the build commands in the sections below in a powershell window, but replace `bazel` with `bazelisk` and use `--config=windows`.
 
+**Visual Studio version:** The `.bazelrc` pins `BAZEL_VC` to VS 2022 (`C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC`) via `--repo_env` so that Bazel's toolchain auto-detection uses the correct compiler. If you have Visual Studio installed at a different path, override it locally by creating a `.bazelrc.user` file:
+```
+build:windows --repo_env="BAZEL_VC=C:/your/path/to/VC"
+```
+
+**Stale convenience symlinks:** If you see warnings about `bazel-bin` or `bazel-deepgnn` junctions, delete any existing real directories with those names so Bazel can create junctions in their place:
+```powershell
+Remove-Item -Recurse -Force .\bazel-bin, .\bazel-deepgnn
+```
+
+**Fast Python builds (recommended):** By default, Bazel on Windows zips all transitive Python dependencies into an ~81 MB archive on every `.py` change (~28 s). Create a `.bazelrc.windows` file to switch to near-instant runfiles symlinks (~5 s). See the "Windows: Fast Python Incremental Builds" section in `skills/BUILD.md` for setup instructions. Without this step, builds still work but are slower for Python targets.
+
 # Build
 
-* Ensure your default python command is for version 3, see "python --version".
+The build uses a hermetic Python 3.10 toolchain managed by Bazel — no system Python installation is required for building or running tests.
 
 Get the repo and build it:
 

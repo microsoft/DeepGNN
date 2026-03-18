@@ -23,14 +23,23 @@ http_archive(
     url = "https://github.com/bazelbuild/rules_python/releases/download/0.24.0/rules_python-0.24.0.tar.gz",
 )
 
-load("@rules_python//python:repositories.bzl", "py_repositories")
+load("@rules_python//python:repositories.bzl", "py_repositories", "python_register_toolchains")
 py_repositories()
 
+# Register a hermetic Python toolchain so builds don't depend on the host
+# Python installation (Windows Store Python AppExecLink aliases are not
+# compatible with Bazel's CreateProcessW).
+python_register_toolchains(
+    name = "python3_10",
+    python_version = "3.10",
+)
+
+load("@python3_10//:defs.bzl", "interpreter")
 load("@rules_python//python:pip.bzl", "pip_parse")
 
 pip_parse(
     name = "pip_deps",
-    python_interpreter = "python",
+    python_interpreter_target = interpreter,
     requirements_lock = "//:requirements.txt",
     extra_pip_args = ["--extra-index-url", "https://download.pytorch.org/whl/cpu"],
 )
@@ -41,7 +50,7 @@ install_deps()
 
 pip_parse(
     name = "doc_deps",
-    python_interpreter = "python",
+    python_interpreter_target = interpreter,
     requirements_lock = "//:docs/requirements.txt",
 )
 
@@ -209,4 +218,4 @@ http_archive(
 )
 
 load("@jvolkman_rules_pycross//pycross:repositories.bzl", "rules_pycross_dependencies")
-rules_pycross_dependencies()
+rules_pycross_dependencies(python_interpreter_target = interpreter)
