@@ -176,3 +176,50 @@ pre-commit run --all-files
 | `cl.exe` not found | Install Visual Studio with "Desktop development with C++" workload |
 | OpenSSL headers missing on Windows | `choco install openssl` — installs to `C:\Program Files\OpenSSL-Win64` |
 | Bazel version mismatch | Use `bazelisk` which reads `.bazelversion` and auto-downloads the right version |
+
+---
+
+## Windows: Fast Python Incremental Builds
+
+By default on Windows, Bazel zips **all** transitive Python dependencies (~81 MB, ~6,500 files) into a single archive on every `.py` change. This takes **~28 seconds** even for a one-line edit.
+
+The fix uses runfiles symlinks instead of the zip, dropping incremental Python builds to **~5 seconds**. It requires two things:
+
+1. **Windows Developer Mode** enabled (Settings → System → For Developers) — needed for unprivileged symlink creation.
+2. A **short Bazel output root** to keep DLL paths under the Win32 260-char `MAX_PATH` limit.
+
+### Setup
+
+Create a `.bazelrc.windows` file in the repo root (it's gitignored):
+
+```powershell
+@"
+# Short output root keeps .pyd DLL paths under 260 chars.
+startup --output_user_root=C:/_b
+
+# Use runfiles symlinks instead of PythonZipper.
+build:windows --enable_runfiles
+build:windows --nobuild_python_zip
+"@ | Set-Content .bazelrc.windows -Encoding UTF8
+```
+
+Then restart the Bazel server to pick up the new output root:
+
+```powershell
+bazelisk shutdown
+```
+
+> **Note:** Changing `output_user_root` creates a new cache, so the first build after setup will be a full rebuild. After that, all incremental builds use the fast path.
+
+### How It Works
+
+| | Without `.bazelrc.windows` | With `.bazelrc.windows` |
+|---|---|---|
+| **Mechanism** | PythonZipper packs ~81 MB zip | Symlink tree (near-instant) |
+| **Python-only incremental** | ~28 s | ~5 s |
+| **C++ incremental** | ~14 s | ~14 s (unchanged) |
+| **No-change rebuild** | ~4 s | ~4 s (unchanged) |
+
+### Why It Can't Be Checked In
+
+`startup --output_user_root=C:/_b` is a startup option that cannot be conditioned on `--config=windows`. If this file were checked in, it would break Linux/macOS builds (the `C:` path is invalid on those platforms). The `.bazelrc` uses `try-import` so it silently skips the file if it doesn't exist.

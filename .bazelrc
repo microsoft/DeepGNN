@@ -27,6 +27,7 @@ build:macos --cxxopt="-std=c++20"
 build:macos --action_env=SETUPTOOLS_USE_DISTUTILS="false"
 build:macos --action_env=HADOOP_HOME="/tmp/snark/"
 
+build:windows --repo_env="BAZEL_VC=C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC"
 build:windows --action_env=BAZEL_LINKOPTS=/MT
 build:windows --action_env=SETUPTOOLS_USE_DISTUTILS="false"
 build:windows --action_env=HADOOP_HOME="C:/usr/local/hadoop/"
@@ -34,3 +35,11 @@ build:windows --action_env=APPDATA="C:/usr/local/hadoop/datalake"
 build:windows --action_env=LIB="C:/Program Files/OpenSSL-Win64/lib"
 build:windows --action_env=INCLUDE="C:/Program Files/OpenSSL-Win64/include"
 build:windows --action_env=USERPROFILE="."  # needed for python3.8 pathlib Path.home()
+
+# Fast Python incremental builds on Windows.
+# Create a .bazelrc.windows file to enable runfiles symlinks (instead of the
+# ~28s PythonZipper) and shorten the Bazel output root to stay under the
+# Windows 260-char MAX_PATH limit.
+# See skills/BUILD.md "Windows: Fast Python Incremental Builds" for setup.
+# Without this file, builds still work but use the slower PythonZipper path.
+try-import %workspace%/.bazelrc.windows
