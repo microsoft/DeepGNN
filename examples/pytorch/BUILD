@@ -20,6 +20,7 @@ common_deps = [
     requirement("referencing"),
     requirement("rpds-py"),
     requirement("scikit-learn"),
+    requirement("setuptools"),
     requirement("torch"),
     requirement("torch_geometric"),
     requirement("tenacity"),
