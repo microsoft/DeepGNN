@@ -121,7 +121,7 @@ kubernetes==24.2.0
 libclang==14.0.6
 littleutils==0.2.2
 locket==1.0.0
-Markdown==3.4.1
+Markdown==3.8.1
 MarkupSafe==2.1.1
 matplotlib==3.6.1
 matplotlib-inline==0.1.6
