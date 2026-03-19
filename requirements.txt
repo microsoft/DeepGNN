@@ -264,7 +264,7 @@ virtualenv==20.26.6
 wcwidth==0.2.5
 webencodings==0.5.1
 websocket-client==1.4.1
-Werkzeug==3.0.6
+Werkzeug==3.1.6
 wheel==0.38.1
 wrapt==1.14.1
 yacs==0.1.8
