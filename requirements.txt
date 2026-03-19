@@ -64,7 +64,7 @@ debugpy==1.6.3
 decorator==4.4.2
 defusedxml==0.7.1
 distlib==0.3.6
-distributed==2021.12.0
+distributed==2026.1.0
 distro==1.8.0
 docker==6.0.0
 docutils==0.19
