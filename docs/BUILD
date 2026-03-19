@@ -155,6 +155,7 @@ py_test(
     srcs_version = "PY3",
     deps = common_torch_deps + [
         requirement("ray"),
+        requirement("setuptools"),
     ],
 )
 
