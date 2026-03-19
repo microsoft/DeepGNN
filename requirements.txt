@@ -17,7 +17,7 @@ atomicwrites==1.4.1
 attrs==24.2.0
 avro-python3==1.10.2
 azure-common==1.1.28
-azure-core==1.26.0
+azure-core==1.38.0
 azure-datalake-store==0.0.52
 azure-graphrbac==0.61.1
 azure-identity==1.16.1
