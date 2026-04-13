@@ -184,7 +184,7 @@ pyOpenSSL==26.0.0
 pyparsing==3.0.9
 pyrsistent==0.18.1
 pyspark==3.3.2
-pytest==7.1.3
+pytest==9.0.3
 pytest-benchmark==4.0.0
 pytest-forked==1.4.0
 pytest-rerunfailures==10.2
