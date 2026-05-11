@@ -260,7 +260,7 @@ transformers==4.38.0
 typeguard==2.13.3
 typing_extensions==4.6.0
 tzdata==2023.3
-urllib3==2.6.3
+urllib3==2.7.0
 virtualenv==20.36.1
 wcwidth==0.2.5
 webencodings==0.5.1
