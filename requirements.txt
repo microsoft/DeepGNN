@@ -125,7 +125,7 @@ Markdown==3.8.1
 MarkupSafe==2.1.1
 matplotlib==3.6.1
 matplotlib-inline==0.1.6
-mistune==2.0.4
+mistune==3.2.1
 mpmath==1.3.0
 msal==1.28.0
 msal-extensions==1.0.0
