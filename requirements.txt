@@ -93,7 +93,7 @@ HeapDict==1.0.1
 horovod==0.26.0
 httplib2==0.20.2
 huggingface-hub==0.20.2
-idna==3.7
+idna==3.15
 idna-ssl==1.1.0
 imagesize==1.4.1
 immutables==0.19
