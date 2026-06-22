@@ -129,7 +129,7 @@ mistune==3.2.1
 mpmath==1.3.0
 msal==1.28.0
 msal-extensions==1.0.0
-msgpack==1.0.4
+msgpack==1.2.1
 msrest==0.7.1
 msrestazure==0.6.4
 multidict==6.7.1
