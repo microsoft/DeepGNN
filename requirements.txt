@@ -91,7 +91,7 @@ grpcio-tools==1.49.1
 h5py==3.7.0
 HeapDict==1.0.1
 horovod==0.26.0
-httplib2==0.20.2
+httplib2==0.32.0
 huggingface-hub==0.20.2
 idna==3.15
 idna-ssl==1.1.0
