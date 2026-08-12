@@ -19,9 +19,9 @@ jobs:
         os: ["ubuntu-22.04", "windows-2022"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3.5.3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4.7.0
+        uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1 # v4.7.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Run lint
@@ -34,9 +34,9 @@ jobs:
         os: ["ubuntu-22.04", "windows-2022"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3.5.3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4.7.0
+        uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1 # v4.7.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Start build cache proxy
@@ -49,7 +49,7 @@ jobs:
     needs: tests
     runs-on: "ubuntu-22.04"
     steps:
-      - uses: actions/checkout@v3.5.3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Start build cache proxy
         uses: ./.github/actions/buildcache
         env:
@@ -60,13 +60,13 @@ jobs:
     runs-on: ubuntu-22.04
     needs: tests
     steps:
-      - uses: actions/checkout@v3.5.3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Set up Python 3.10
-        uses: actions/setup-python@v4.7.0
+        uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1 # v4.7.0
         with:
           python-version: "3.10"
       - name: Upload examples
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: examples
           path: examples/*
@@ -79,7 +79,7 @@ jobs:
         with:
           package_version: "0.1.1"
       - name: Upload wheel file
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: deepgnn
           path: src/python/dist/*.whl
