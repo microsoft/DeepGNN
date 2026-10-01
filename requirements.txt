@@ -261,7 +261,7 @@ typeguard==2.13.3
 typing_extensions==4.6.0
 tzdata==2023.3
 urllib3==2.7.0
-virtualenv==20.36.1
+virtualenv==21.7.13
 wcwidth==0.2.5
 webencodings==0.5.1
 websocket-client==1.4.1
